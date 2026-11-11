@@ -2,7 +2,9 @@ import AppKit
 import MacHostCore
 import MacHostKit
 import MacHostUI
+import ServiceManagement
 import SwiftUI
+import UserNotifications
 
 // 앱 대상에는 진입점·수명 주기·실제 코어 연결만 둔다. 화면과 미리보기는 MacHostUI(Go 런타임을 링크하지 않는다)에 있다.
 
@@ -17,6 +19,7 @@ struct RemoteDebugMacApp: App {
                 case .ready(let model):
                     RootView()
                         .environment(model)
+                        .environment(appDelegate.projects)
                 case .failed(let failure):
                     LaunchFailureView(
                         failure: failure,
@@ -32,6 +35,42 @@ struct RemoteDebugMacApp: App {
                 ImportCommand()
             }
         }
+
+        // 창을 닫아도 앱은 메뉴 막대에 남아 공유와 Xcode 감시를 계속한다.
+        MenuBarExtra("RemoteDebug", systemImage: "iphone.and.arrow.forward") {
+            MenuBarContent(model: appDelegate.model, projects: appDelegate.projects)
+        }
+    }
+}
+
+private struct MenuBarContent: View {
+    @Environment(\.openWindow) private var openWindow
+    let model: HostModel?
+    let projects: ProjectsModel?
+    @State private var opensAtLogin = SMAppService.mainApp.status == .enabled
+
+    var body: some View {
+        if let model {
+            Text(model.isRunning ? "공유 중 · 빌드 \(model.builds.count)개" : "공유 꺼짐")
+        }
+        if let count = projects?.suggestions.count, count > 0 {
+            Text("등록을 기다리는 프로젝트 \(count)개")
+        }
+        Button("RemoteDebug 창 열기") {
+            openWindow(id: "main")
+            NSApp.activate()
+        }
+        Divider()
+        Toggle("로그인할 때 열기", isOn: Binding(get: { opensAtLogin }, set: { on in
+            do {
+                if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            } catch {
+                model?.lastError = "로그인 항목을 바꾸지 못했습니다: \(HostErrorText.message(for: error))"
+            }
+            opensAtLogin = SMAppService.mainApp.status == .enabled
+        }))
+        Button("RemoteDebug 종료") { NSApp.terminate(nil) }
+            .keyboardShortcut("q")
     }
 }
 
@@ -47,6 +86,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     let launch: Launch
+    /// 연결한 프로젝트와 Xcode 감시. 테스트 호스트와 실행 실패 때는 없다.
+    private(set) var projects: ProjectsModel?
     let options: LaunchOptions
     /// 저장 폴더. 테스트 호스트면 지울 임시 폴더.
     let paths: HostPaths?
@@ -89,7 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let appPaths = try storage(options)
                 paths = appPaths
                 lock = try StateDirLock.acquire(root: appPaths.root)
-                let bookmarks = UserDefaultsFolderBookmarks(defaults: defaults, key: options.folderBookmarkKey)
+                let bookmarks = UserDefaultsFolderBookmarks(defaults: defaults, key: options.folderBookmarkKey, securityScoped: false)
                 let model = HostModel(core: RDCoreHost(), paths: appPaths, bookmarks: bookmarks, id8: options.nodeID8)
                 model.controlURL = options.controlURL
                 launch = .ready(model)
@@ -103,6 +144,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.stateLock = lock
         self.launch = launch
         super.init()
+        if !options.isTesting, case .ready(let model) = launch, let paths {
+            projects = ProjectsModel(
+                root: paths.root,
+                hostStatus: { [weak model] in
+                    ProjectsModel.HostStatus(sharing: model?.isRunning ?? false, installPage: model?.installPageURL?.absoluteString)
+                },
+                importer: { [weak model] url in await model?.importBuild(url) })
+        }
     }
 
     var model: HostModel? {
@@ -121,11 +170,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let model, !options.isTesting else { return }
         installTerminationSignalHandler()
         let startSharing = options.startSharing
+        let projects = self.projects
         launchTask = Task {
             await model.load()
             if startSharing, !Task.isCancelled { await model.start() }
+            guard !Task.isCancelled else { return }
+            projects?.startMonitoring()
+        }
+        installSuggestionNotifications()
+    }
+
+    /// 끌어 놓거나 `open -a RemoteDebug <폴더>`로 넘긴 프로젝트를 연결하고 빌드한다. `.app`·`.ipa`는 빌드로 가져온다.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard let model, let projects else { return }
+        Task {
+            await model.load()
+            for url in urls {
+                if ["app", "ipa"].contains(url.pathExtension.lowercased()) {
+                    await model.importBuild(url)
+                } else {
+                    await projects.connectAndBuild(url)
+                }
+            }
         }
     }
+
+    // MARK: 등록 제안 알림
+
+    private static let suggestionCategory = "rd.project.suggestion"
+    private static let registerAction = "rd.project.register"
+    private static let dismissAction = "rd.project.dismiss"
+
+    /// Xcode에서 연결하지 않은 프로젝트의 기기용 Debug 빌드가 보이면 시스템 알림으로 등록을 묻는다.
+    private func installSuggestionNotifications() {
+        guard let projects else { return }
+        let center = UNUserNotificationCenter.current()
+        center.delegate = self
+        center.setNotificationCategories([UNNotificationCategory(
+            identifier: Self.suggestionCategory,
+            actions: [
+                UNNotificationAction(identifier: Self.registerAction, title: "등록"),
+                UNNotificationAction(identifier: Self.dismissAction, title: "등록하지 않음"),
+            ],
+            intentIdentifiers: [])])
+        projects.onSuggestion = { suggestion in
+            Task {
+                guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true else { return }
+                let content = UNMutableNotificationContent()
+                content.title = "\(suggestion.name)을(를) RemoteDebug에 등록할까요?"
+                content.body = "Xcode에서 기기용 Debug 빌드를 시작했습니다. 등록하면 빌드할 때마다 iPhone에 게시합니다."
+                content.categoryIdentifier = Self.suggestionCategory
+                content.userInfo = ["container": suggestion.container]
+                try? await center.add(UNNotificationRequest(identifier: suggestion.container, content: content, trigger: nil))
+            }
+        }
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { true }
 
     /// SIGTERM(`kill`, 로그아웃 스크립트 등)도 메뉴의 종료처럼 공유를 멈춘 뒤 끝낸다.
     private func installTerminationSignalHandler() {
@@ -150,7 +251,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         termSource = source
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    /// 창을 닫아도 메뉴 막대에 남는다. 종료는 메뉴 막대나 ⌘Q로 한다.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     /// 공유 중지가 끝난 뒤 종료한다.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -169,6 +271,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func beginShutdown(finish: @escaping @MainActor () -> Void) -> TerminationSequence.Answer {
         termination.request(shutdown: { [self] in
             launchTask?.cancel()
+            projects?.stopMonitoring()
             if let model { await stopModel(model) }
             releaseState()
         }, finish: finish)
@@ -196,5 +299,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if options.isTesting, let root = paths?.root {
             try? FileManager.default.removeItem(at: root)
         }
+    }
+}
+
+extension AppDelegate: UNUserNotificationCenterDelegate {
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        let container = response.notification.request.content.userInfo["container"] as? String
+        let action = response.actionIdentifier
+        await MainActor.run {
+            guard let container, let projects = self.projects,
+                  let suggestion = projects.suggestions.first(where: { $0.container == container })
+            else { return }
+            switch action {
+            case Self.registerAction: projects.register(suggestion)
+            case Self.dismissAction: projects.dismiss(suggestion)
+            default: NSApp.activate()
+            }
+        }
+    }
+
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
     }
 }

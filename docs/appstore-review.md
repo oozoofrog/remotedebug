@@ -76,6 +76,8 @@
 
 > [guidelines 2.4.5] They may not auto-launch or have other code run automatically at startup or login without consent nor spawn processes that continue to run without consent after a user has quit the app.
 
+2026-11-11 이후 Mac 앱은 App Sandbox를 쓰지 않고 `xcodebuild`를 실행하며 메뉴 막대에 상주한다(README의 "설계 문서와 달라진 구현"). 아래 해석은 그 전 구조에 대한 것이고, 지금 구조로는 2.4.5를 충족하지 않는다.
+
 해석: Mac 앱은 샌드박스와 호환되도록 만들고(빌드 실행·xcodebuild 호출 없음), Mac에 아무것도 설치하지 않으며, 로그인 시 자동 실행을 넣지 않고 앱을 종료하면 서버도 멈춘다. 2.4.5 자체는 충족할 수 있어 차단 요인이 아니다. 2.5.2 앞부분의 "outside the designated container area"는 사용자가 직접 고른 폴더를 읽는 동작이라 샌드박스가 허용하는 방식으로 보지만 이는 기억 기반이다.
 
 ### 2.3.1(a) — 기능을 숨기지 않는다

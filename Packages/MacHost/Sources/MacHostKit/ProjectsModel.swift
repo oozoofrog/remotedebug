@@ -1,0 +1,572 @@
+import Foundation
+import Observation
+import RDModels
+
+/// 연결한 프로젝트 목록, 스킴 빌드, Xcode 빌드 감시, 에이전트 명령 처리.
+///
+/// 빌드 결과는 Xcode와 같은 DerivedData에서 찾는다. 그래서 이 앱이 시작한 빌드와 Xcode에서 한 빌드를 같은 방법으로 가져온다.
+@MainActor
+@Observable
+public final class ProjectsModel {
+    /// Xcode에서 기기용 Debug 빌드가 감지된, 아직 연결하지 않은 프로젝트.
+    public struct Suggestion: Sendable, Hashable, Identifiable {
+        public var container: String
+        public var id: String { container }
+        public var name: String { URL(fileURLWithPath: container).deletingPathExtension().lastPathComponent }
+    }
+
+    public enum Phase: Sendable, Hashable {
+        case loadingSchemes
+        case building(scheme: String)
+        case importing
+    }
+
+    public struct Published: Codable, Sendable, Hashable {
+        public var buildId: String
+        public var bundleId: String
+        public var name: String
+        public var version: String
+        public var buildNumber: String
+    }
+
+    /// 마지막 빌드·가져오기 결과.
+    public struct Report: Codable, Sendable, Hashable {
+        public var ok: Bool
+        public var scheme: String?
+        public var published: [Published] = []
+        public var message: String?
+        public var logTail: String?
+        public var logPath: String?
+    }
+
+    public struct HostStatus: Sendable {
+        public var sharing: Bool
+        public var installPage: String?
+
+        public init(sharing: Bool, installPage: String?) {
+            self.sharing = sharing
+            self.installPage = installPage
+        }
+    }
+
+    public typealias Importer = @MainActor (URL) async -> ImportOutcome?
+
+    struct Stored: Codable, Sendable {
+        var projects: [ConnectedProject] = []
+        /// "등록하지 않음"을 고른 프로젝트.
+        var dismissed: [String] = []
+        /// 이미 가져온 빌드의 지문(`.app` 경로 → 지문).
+        var imported: [String: BuildFingerprint] = [:]
+    }
+
+    public private(set) var projects: [ConnectedProject] = []
+    public private(set) var suggestions: [Suggestion] = []
+    public private(set) var schemes: [String: [String]] = [:]
+    public private(set) var phases: [String: Phase] = [:]
+    public private(set) var reports: [String: Report] = [:]
+    public var lastError: String?
+    /// 새 등록 제안이 생기면 부른다(시스템 알림용).
+    @ObservationIgnored public var onSuggestion: (@MainActor (Suggestion) -> Void)?
+
+    @ObservationIgnored private let file: JSONFile<Stored>
+    @ObservationIgnored private let root: URL
+    @ObservationIgnored private let builder: any ProjectBuilding
+    @ObservationIgnored private let scanner: DerivedDataScanner
+    @ObservationIgnored private let importer: Importer
+    @ObservationIgnored private let hostStatus: @MainActor () -> HostStatus
+    @ObservationIgnored private let now: @Sendable () -> Date
+    @ObservationIgnored private var stored = Stored()
+    @ObservationIgnored private var isLoaded = false
+    /// 연결하지 않은 프로젝트의 마지막 빌드 활동 시각. 처음 본 값은 기준으로만 쓴다.
+    @ObservationIgnored private var seenActivity: [String: Date] = [:]
+    /// 지문이 같은 채로 이어진 검사 횟수(빌드가 끝났는지 본다).
+    @ObservationIgnored private var settling: [String: (fingerprint: BuildFingerprint, count: Int)] = [:]
+    @ObservationIgnored private var agentRequestsInFlight: Set<String> = []
+    @ObservationIgnored private var monitor: Task<Void, Never>?
+
+    /// `root`는 호스트 저장 폴더(`HostPaths.root`)다.
+    public init(
+        root: URL,
+        builder: any ProjectBuilding = XcodeBuildTool(),
+        scanner: DerivedDataScanner = DerivedDataScanner(),
+        hostStatus: @escaping @MainActor () -> HostStatus = { HostStatus(sharing: false, installPage: nil) },
+        now: @escaping @Sendable () -> Date = { Date() },
+        importer: @escaping Importer
+    ) {
+        self.root = root
+        self.file = JSONFile(url: root.appendingPathComponent("projects.json"))
+        self.builder = builder
+        self.scanner = scanner
+        self.hostStatus = hostStatus
+        self.now = now
+        self.importer = importer
+    }
+
+    public var agentDir: URL { root.appendingPathComponent("agent", isDirectory: true) }
+    public var agentScript: URL { agentDir.appendingPathComponent("rd") }
+    var logsDir: URL { root.appendingPathComponent("ProjectLogs", isDirectory: true) }
+
+    public func load() {
+        guard !isLoaded else { return }
+        isLoaded = true
+        do {
+            stored = try file.load() ?? Stored()
+        } catch {
+            lastError = "프로젝트 목록을 읽지 못했습니다: \(HostErrorText.message(for: error))"
+        }
+        projects = stored.projects
+    }
+
+    private func save() {
+        stored.projects = projects
+        do {
+            try file.save(stored)
+        } catch {
+            lastError = "프로젝트 목록을 저장하지 못했습니다: \(HostErrorText.message(for: error))"
+        }
+    }
+
+    // MARK: 연결
+
+    /// 프로젝트 파일이나 폴더를 연결한다. 이미 연결돼 있으면 그 항목을 돌려준다.
+    @discardableResult
+    public func connect(_ url: URL) -> ConnectedProject? {
+        load()
+        guard let container = ProjectLocator.container(for: url) else {
+            lastError = "\(url.lastPathComponent)에서 Xcode 프로젝트(.xcodeproj, .xcworkspace)를 찾지 못했습니다."
+            return nil
+        }
+        if let existing = projects.first(where: { $0.container == container.path }) { return existing }
+        let project = ConnectedProject(container: container.path, addedAt: now())
+        projects.append(project)
+        suggestions.removeAll { $0.container == project.container }
+        stored.dismissed.removeAll { $0 == project.container }
+        save()
+        return project
+    }
+
+    /// 연결한 뒤 스킴을 읽고, 빌드할 스킴이 정해지면 바로 빌드한다.
+    public func connectAndBuild(_ url: URL) async {
+        guard let project = connect(url) else { return }
+        await loadSchemes(for: project)
+        if let scheme = preferredScheme(for: project) {
+            await build(project, scheme: scheme)
+        }
+    }
+
+    public func remove(_ project: ConnectedProject) {
+        projects.removeAll { $0.id == project.id }
+        schemes[project.id] = nil
+        reports[project.id] = nil
+        save()
+    }
+
+    /// 마지막에 쓴 스킴, 스킴이 하나면 그것, 아니면 프로젝트와 이름이 같은 스킴.
+    public func preferredScheme(for project: ConnectedProject) -> String? {
+        let list = schemes[project.id] ?? []
+        if let saved = currentProject(project.id)?.scheme, list.contains(saved) { return saved }
+        if list.count == 1 { return list[0] }
+        return list.first { $0 == project.name }
+    }
+
+    private func currentProject(_ id: String) -> ConnectedProject? {
+        projects.first { $0.id == id }
+    }
+
+    @discardableResult
+    public func loadSchemes(for project: ConnectedProject) async -> [String] {
+        guard phases[project.id] == nil else { return schemes[project.id] ?? [] }
+        phases[project.id] = .loadingSchemes
+        defer { phases[project.id] = nil }
+        do {
+            let list = try await builder.schemes(container: project.containerURL)
+            schemes[project.id] = list
+            return list
+        } catch {
+            reports[project.id] = Report(ok: false, message: HostErrorText.message(for: error))
+            return []
+        }
+    }
+
+    // MARK: 빌드
+
+    /// 스킴을 Debug 기기용으로 빌드하고, 만들어진 앱을 가져와 게시한다.
+    @discardableResult
+    public func build(_ project: ConnectedProject, scheme: String) async -> Report {
+        if phases[project.id] != nil {
+            return Report(ok: false, scheme: scheme, message: "이 프로젝트는 이미 작업 중입니다.")
+        }
+        if let index = projects.firstIndex(where: { $0.id == project.id }) {
+            projects[index].scheme = scheme
+            save()
+        }
+        phases[project.id] = .building(scheme: scheme)
+        defer { phases[project.id] = nil }
+        let log = logsDir.appendingPathComponent("\(project.name).log")
+        var report: Report
+        do {
+            try await builder.build(container: project.containerURL, scheme: scheme, log: log)
+            phases[project.id] = .importing
+            report = await importProducts(of: project, finished: true)
+            report.scheme = scheme
+        } catch let failure as ProjectBuildFailure {
+            report = Report(ok: false, scheme: scheme, message: failure.message, logTail: failure.logTail)
+        } catch {
+            report = Report(ok: false, scheme: scheme, message: HostErrorText.message(for: error))
+        }
+        report.logPath = log.path
+        reports[project.id] = report
+        return report
+    }
+
+    /// 프로젝트의 DerivedData에서 `Debug-iphoneos/*.app`을 가져온다.
+    /// `finished`가 false면(Xcode가 빌드 중일 수 있다) 서명이 끝났거나 지문이 여러 번 그대로일 때만 가져온다.
+    private func importProducts(of project: ConnectedProject, finished: Bool) async -> Report {
+        let entries = scanner.entries().filter { $0.workspacePath == project.container && $0.hasDeviceDebug }
+        var report = Report(ok: true)
+        var sawApp = false
+        var rejections: [String] = []
+        for app in entries.flatMap({ Self.apps(in: $0.debugProducts) }) {
+            guard case .ready(let fingerprint) = FolderScanner.state(of: app) else { continue }
+            sawApp = true
+            if stored.imported[app.path] == fingerprint { continue }
+            if !finished, !isSettled(app, fingerprint) { continue }
+            settling[app.path] = nil
+            let outcome = await importer(app)
+            // 가져오기가 실패했으면(nil) 지문을 기억하지 않아 다음에 다시 본다.
+            guard let outcome else { continue }
+            stored.imported[app.path] = fingerprint
+            switch outcome {
+            case .accepted(let build):
+                let d = build.descriptor
+                report.published.append(Published(buildId: d.id, bundleId: d.bundleId, name: d.displayName, version: d.version, buildNumber: d.buildNumber))
+            case .rejected(let rejected):
+                rejections.append("\(app.lastPathComponent): " + rejected.reasons.map(RejectionText.sentence(for:)).joined(separator: " "))
+            case .needsConfirmation:
+                rejections.append("\(app.lastPathComponent): Debug 구성인지 확인할 수 없습니다.")
+            }
+        }
+        if !report.published.isEmpty || !rejections.isEmpty { save() }
+        guard finished else {
+            if !rejections.isEmpty {
+                report.ok = false
+                report.message = rejections.joined(separator: "\n")
+            }
+            return report
+        }
+        if !rejections.isEmpty {
+            report.ok = !report.published.isEmpty
+            report.message = rejections.joined(separator: "\n")
+        } else if !sawApp {
+            report.ok = false
+            report.message = "빌드는 끝났지만 Debug-iphoneos 폴더에서 앱을 찾지 못했습니다. iPhone 앱을 만드는 스킴인지 확인하세요."
+        } else if report.published.isEmpty {
+            report.message = "빌드 결과가 전과 같습니다. 이미 가져온 빌드입니다."
+        }
+        return report
+    }
+
+    static func apps(in products: URL) -> [URL] {
+        let items = (try? FileManager.default.contentsOfDirectory(at: products, includingPropertiesForKeys: nil)) ?? []
+        return items.filter { $0.pathExtension == "app" && !$0.deletingPathExtension().lastPathComponent.hasSuffix("-Runner") }
+            .sorted { $0.path < $1.path }
+    }
+
+    /// 서명 파일이 실행 파일보다 늦게 쓰였고 지문이 한 번 그대로였거나, 지문이 네 번 그대로였으면 끝난 빌드로 본다.
+    private func isSettled(_ app: URL, _ fingerprint: BuildFingerprint) -> Bool {
+        var entry = settling[app.path] ?? (fingerprint, 0)
+        entry = entry.fingerprint == fingerprint ? (fingerprint, entry.count + 1) : (fingerprint, 1)
+        settling[app.path] = entry
+        let signature = DerivedDataScanner.modified(app.appendingPathComponent("_CodeSignature/CodeResources"))
+        let signed = signature.map { $0 >= fingerprint.executableModified } ?? false
+        return (signed && entry.count >= 2) || entry.count >= 4
+    }
+
+    // MARK: Xcode 감시
+
+    /// DerivedData를 한 번 훑는다. 연결한 프로젝트는 새 빌드를 가져오고, 연결하지 않은 프로젝트에서
+    /// 기기용 Debug 빌드 활동이 새로 보이면 등록을 제안한다.
+    public func scanXcode() async {
+        load()
+        let entries = scanner.entries()
+        for entry in entries where entry.hasDeviceDebug {
+            if projects.contains(where: { $0.container == entry.workspacePath }) { continue }
+            guard let activity = entry.activity else { continue }
+            let previous = seenActivity[entry.dir.path]
+            seenActivity[entry.dir.path] = activity
+            guard let previous, activity > previous else { continue }
+            let suggestion = Suggestion(container: entry.workspacePath)
+            guard !stored.dismissed.contains(suggestion.container), !suggestions.contains(suggestion),
+                  FileManager.default.fileExists(atPath: suggestion.container)
+            else { continue }
+            suggestions.append(suggestion)
+            onSuggestion?(suggestion)
+        }
+        // 처음 훑을 때 Debug-iphoneos가 없던 프로젝트도 기준을 잡아 둔다(폴더가 생기는 것이 곧 빌드 시작이다).
+        for entry in entries where !entry.hasDeviceDebug && seenActivity[entry.dir.path] == nil {
+            seenActivity[entry.dir.path] = entry.activity ?? .distantPast
+        }
+        for project in projects where phases[project.id] == nil {
+            let report = await importProducts(of: project, finished: false)
+            if !report.published.isEmpty || report.message != nil { reports[project.id] = report }
+        }
+    }
+
+    /// 제안을 받아들여 연결한다. 이미 만들어진 빌드가 있으면 다음 검사에서 가져온다.
+    @discardableResult
+    public func register(_ suggestion: Suggestion) -> ConnectedProject? {
+        connect(URL(fileURLWithPath: suggestion.container))
+    }
+
+    /// 이 프로젝트는 다시 제안하지 않는다.
+    public func dismiss(_ suggestion: Suggestion) {
+        suggestions.removeAll { $0 == suggestion }
+        if !stored.dismissed.contains(suggestion.container) { stored.dismissed.append(suggestion.container) }
+        save()
+    }
+
+    /// 1초마다 에이전트 요청을 처리하고 3초마다 DerivedData를 훑는다.
+    public func startMonitoring() {
+        guard monitor == nil else { return }
+        load()
+        installAgentScript()
+        monitor = Task { [weak self] in
+            var tick = 0
+            while !Task.isCancelled {
+                guard let self else { return }
+                self.processAgentRequests()
+                if tick % 3 == 0 { await self.scanXcode() }
+                tick += 1
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
+    }
+
+    public func stopMonitoring() {
+        monitor?.cancel()
+        monitor = nil
+        try? FileManager.default.removeItem(at: agentDir.appendingPathComponent("pid"))
+    }
+
+    // MARK: 에이전트
+
+    struct AgentResponse: Codable {
+        var ok: Bool
+        var error: String?
+        var sharing: Bool?
+        var installPage: String?
+        var projects: [AgentProject]?
+        var schemes: [String]?
+        var report: Report?
+    }
+
+    struct AgentProject: Codable {
+        var container: String
+        var name: String
+        var scheme: String?
+    }
+
+    var requestsDir: URL { agentDir.appendingPathComponent("requests", isDirectory: true) }
+    var responsesDir: URL { agentDir.appendingPathComponent("responses", isDirectory: true) }
+
+    /// 에이전트가 부르는 명령 스크립트(`rd`)와 요청·응답 폴더를 만든다. 요청은 이 사용자만 쓸 수 있다.
+    public func installAgentScript(bundleID: String = Bundle.main.bundleIdentifier ?? "com.oozoofrog.app.RemoteDebugMac") {
+        let fm = FileManager.default
+        do {
+            for dir in [agentDir, requestsDir, responsesDir] {
+                try fm.createDirectory(at: dir, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+            }
+            // 전에 남은 요청은 처리하지 않는다(보낸 쪽이 이미 없다).
+            for dir in [requestsDir, responsesDir] {
+                for item in (try? fm.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? [] { try? fm.removeItem(at: item) }
+            }
+            try Data(AgentScript.text(agentDir: agentDir.path, bundleID: bundleID).utf8).write(to: agentScript, options: [.atomic])
+            try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: agentScript.path)
+            try Data("\(ProcessInfo.processInfo.processIdentifier)\n".utf8).write(to: agentDir.appendingPathComponent("pid"), options: [.atomic])
+        } catch {
+            lastError = "에이전트 명령을 준비하지 못했습니다: \(HostErrorText.message(for: error))"
+        }
+    }
+
+    /// 요청 폴더의 새 요청을 각각 따로 처리한다(빌드가 도는 동안에도 다른 명령에 답한다).
+    func processAgentRequests() {
+        let items = (try? FileManager.default.contentsOfDirectory(at: requestsDir, includingPropertiesForKeys: nil)) ?? []
+        for item in items where item.pathExtension == "req" {
+            let id = item.deletingPathExtension().lastPathComponent
+            guard agentRequestsInFlight.insert(id).inserted else { continue }
+            let text = (try? String(contentsOf: item, encoding: .utf8)) ?? ""
+            try? FileManager.default.removeItem(at: item)
+            Task {
+                let response = await self.handleAgentRequest(text)
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+                if let data = try? encoder.encode(response) {
+                    try? data.write(to: self.responsesDir.appendingPathComponent("\(id).json"), options: [.atomic])
+                }
+                self.agentRequestsInFlight.remove(id)
+            }
+        }
+    }
+
+    /// 요청은 줄 단위다: 명령, 경로, 스킴.
+    func handleAgentRequest(_ text: String) async -> AgentResponse {
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        let command = lines.first ?? ""
+        let path = lines.count > 1 ? lines[1] : ""
+        let scheme = lines.count > 2 ? lines[2] : ""
+        load()
+        switch command {
+        case "status", "projects":
+            let host = hostStatus()
+            return AgentResponse(ok: true, sharing: host.sharing, installPage: host.installPage,
+                                 projects: projects.map { AgentProject(container: $0.container, name: $0.name, scheme: $0.scheme) })
+        case "connect", "schemes", "build":
+            guard !path.isEmpty else { return AgentResponse(ok: false, error: "프로젝트 경로가 필요합니다.") }
+            lastError = nil
+            guard let project = connect(URL(fileURLWithPath: path)) else {
+                defer { lastError = nil }
+                return AgentResponse(ok: false, error: lastError ?? "프로젝트를 연결하지 못했습니다.")
+            }
+            let list = await loadSchemes(for: project)
+            if command != "build" {
+                return AgentResponse(ok: true, projects: [AgentProject(container: project.container, name: project.name, scheme: project.scheme)], schemes: list)
+            }
+            guard let chosen = scheme.isEmpty ? preferredScheme(for: project) : scheme else {
+                return AgentResponse(ok: false, error: "스킴을 정해 주세요.", schemes: list)
+            }
+            let report = await build(project, scheme: chosen)
+            let host = hostStatus()
+            return AgentResponse(ok: report.ok, error: report.ok ? nil : report.message, sharing: host.sharing,
+                                 installPage: host.installPage, report: report)
+        default:
+            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, connect, schemes, build 중 하나를 쓰세요.")
+        }
+    }
+
+    /// 프로젝트 폴더에 에이전트용 안내를 쓴다: Claude 스킬 파일과 `AGENTS.md`의 RemoteDebug 단락. 쓴 파일 경로를 돌려준다.
+    @discardableResult
+    public func connectAgents(for project: ConnectedProject) -> [URL] {
+        let fm = FileManager.default
+        var written: [URL] = []
+        do {
+            let skill = project.folder.appendingPathComponent(".claude/skills/remotedebug/SKILL.md")
+            try fm.createDirectory(at: skill.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data(AgentScript.skill(script: agentScript.path, container: project.container).utf8).write(to: skill, options: [.atomic])
+            written.append(skill)
+
+            let agents = project.folder.appendingPathComponent("AGENTS.md")
+            let existing = (try? String(contentsOf: agents, encoding: .utf8)) ?? ""
+            let block = AgentScript.agentsBlock(script: agentScript.path, container: project.container)
+            let updated = AgentScript.replacingBlock(in: existing, with: block)
+            if updated != existing {
+                try Data(updated.utf8).write(to: agents, options: [.atomic])
+                written.append(agents)
+            }
+        } catch {
+            lastError = "에이전트 안내를 쓰지 못했습니다: \(HostErrorText.message(for: error))"
+        }
+        return written
+    }
+}
+
+/// 에이전트용 명령 스크립트와 안내문.
+enum AgentScript {
+    static let blockStart = "<!-- remotedebug:start -->"
+    static let blockEnd = "<!-- remotedebug:end -->"
+
+    static func quoted(_ s: String) -> String {
+        "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+
+    static func text(agentDir: String, bundleID: String) -> String {
+        """
+        #!/bin/sh
+        # RemoteDebug Mac 앱에 명령을 보낸다. 앱이 이 파일을 실행할 때마다 새로 쓴다.
+        # 사용법: rd status | connect <경로> | schemes <경로> | build <경로> [스킴]
+        dir=\(quoted(agentDir))
+        bundle=\(quoted(bundleID))
+        [ $# -ge 1 ] || { echo "사용법: rd status | connect <경로> | schemes <경로> | build <경로> [스킴]" >&2; exit 2; }
+        cmd=$1
+        path=${2:-}
+        scheme=${3:-}
+        case "$path" in ""|/*) ;; *) path="$PWD/$path" ;; esac
+        alive() { [ -f "$dir/pid" ] && kill -0 "$(cat "$dir/pid")" 2>/dev/null; }
+        if ! alive; then
+          open -gb "$bundle" 2>/dev/null
+          i=0
+          while ! alive && [ $i -lt 30 ]; do sleep 1; i=$((i+1)); done
+        fi
+        alive || { echo '{"ok":false,"error":"RemoteDebug 앱이 실행 중이 아닙니다. 앱을 열고 다시 시도하세요."}'; exit 1; }
+        id="$(date +%s)-$$"
+        printf '%s\\n%s\\n%s\\n' "$cmd" "$path" "$scheme" > "$dir/requests/$id.tmp" && mv "$dir/requests/$id.tmp" "$dir/requests/$id.req" || exit 1
+        res="$dir/responses/$id.json"
+        while [ ! -f "$res" ]; do
+          alive || { echo '{"ok":false,"error":"응답을 기다리는 중에 RemoteDebug 앱이 종료됐습니다."}'; exit 1; }
+          sleep 1
+        done
+        out=$(cat "$res")
+        rm -f "$res"
+        printf '%s\\n' "$out"
+        case "$out" in *'"ok":true'*) exit 0 ;; *) exit 1 ;; esac
+
+        """
+    }
+
+    static func usage(script: String, container: String) -> String {
+        let rd = quoted(script)
+        let project = quoted(container)
+        return """
+        명령은 JSON 한 줄을 출력하고, 성공하면 종료 코드 0이다.
+
+        ```sh
+        \(rd) build \(project)            # 마지막에 쓴 스킴으로 Debug 기기용 빌드 후 게시
+        \(rd) build \(project) <스킴>     # 스킴을 정해서 빌드
+        \(rd) schemes \(project)          # 스킴 목록
+        \(rd) status                      # 공유 중인지, 설치 페이지 주소, 연결한 프로젝트
+        ```
+
+        - `build`는 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 실패하면 `error`와 `report.logTail`에 컴파일 오류가, `report.logPath`에 전체 로그 경로가 있다.
+        - `report.published`가 게시된 빌드다. 비어 있고 `ok`가 true면 결과가 전과 같아 다시 게시하지 않은 것이다.
+        - Mac은 게시까지만 한다. 설치는 페어링한 iPhone의 RemoteDebug 앱이나 설치 페이지(`installPage`)에서 사용자가 누른다.
+        - `sharing`이 false면 iPhone이 빌드를 받을 수 없다. 사용자에게 RemoteDebug 앱에서 공유를 시작하라고 알린다.
+        - 서명 오류(프로비저닝 프로필, 기기 미등록)는 이 명령으로 고칠 수 없다. Xcode에서 한 번 기기용으로 빌드하라고 사용자에게 알린다.
+        """
+    }
+
+    static func skill(script: String, container: String) -> String {
+        """
+        ---
+        name: remotedebug
+        description: 이 프로젝트의 Debug 빌드를 실제 iPhone에 설치할 수 있게 RemoteDebug Mac 앱으로 빌드·게시한다. "아이폰에 설치", "기기에서 확인", "실기기 빌드", "RemoteDebug로 올려줘" 같은 요청에 사용한다.
+        ---
+
+        # RemoteDebug
+
+        RemoteDebug Mac 앱이 이 프로젝트를 Debug 기기용으로 빌드해 tailnet 너머의 iPhone에 게시한다.
+
+        \(usage(script: script, container: container))
+
+        """
+    }
+
+    static func agentsBlock(script: String, container: String) -> String {
+        """
+        \(blockStart)
+        ## RemoteDebug
+
+        이 프로젝트의 Debug 빌드를 실제 iPhone에 설치할 수 있게 하려면 RemoteDebug Mac 앱으로 빌드·게시한다.
+
+        \(usage(script: script, container: container))
+        \(blockEnd)
+        """
+    }
+
+    /// 표시 사이의 단락을 바꾼다. 없으면 끝에 붙인다.
+    static func replacingBlock(in text: String, with block: String) -> String {
+        if let start = text.range(of: blockStart), let end = text.range(of: blockEnd, range: start.upperBound..<text.endIndex) {
+            return text.replacingCharacters(in: start.lowerBound..<end.upperBound, with: block)
+        }
+        if text.isEmpty { return block + "\n" }
+        return text + (text.hasSuffix("\n") ? "\n" : "\n\n") + block + "\n"
+    }
+}

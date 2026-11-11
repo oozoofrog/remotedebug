@@ -5,6 +5,7 @@ import SwiftUI
 struct BuildsView: View {
     @Environment(HostModel.self) private var model
     @Environment(ImportQueue.self) private var importQueue
+    @Environment(\.connectProjects) private var connectProjects
     let showImporter: () -> Void
 
     @State private var choosingFolder = false
@@ -42,7 +43,9 @@ struct BuildsView: View {
         }
         .dropDestination(for: URL.self) { urls, _ in
             let builds = urls.filter { ["app", "ipa"].contains($0.pathExtension.lowercased()) }
-            guard !builds.isEmpty else { return false }
+            let projectURLs = ProjectConnector.projectURLs(in: urls)
+            if !projectURLs.isEmpty { connectProjects(projectURLs) }
+            guard !builds.isEmpty else { return !projectURLs.isEmpty }
             Task { await importQueue.importURLs(builds) { [model] url, mode in await model.importBuild(url, mode: mode) } }
             return true
         }

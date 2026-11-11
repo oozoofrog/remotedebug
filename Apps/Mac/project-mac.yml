@@ -9,13 +9,8 @@ targets:
           - "project-*.yml"
     entitlements:
       path: Apps/Mac/RemoteDebugMac.entitlements
-      properties:
-        com.apple.security.app-sandbox: true
-        com.apple.security.network.client: true
-        com.apple.security.network.server: true
-        # 고른 빌드·감시 폴더는 읽기만 한다(쓰기는 컨테이너 안에서만). 북마크도 읽기 전용 보안 범위로 만든다.
-        com.apple.security.files.user-selected.read-only: true
-        com.apple.security.files.bookmarks.app-scope: true
+      # App Sandbox를 쓰지 않는다. 연결한 프로젝트를 xcodebuild로 빌드하고 Xcode의 DerivedData를 읽어야 한다.
+      properties: {}
     info:
       path: Apps/Mac/Info.plist
       properties:
@@ -24,6 +19,18 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.developer-tools
         LSMinimumSystemVersion: "26.0"
+        NSUserNotificationAlertStyle: alert
+        # 프로젝트 폴더·프로젝트 파일·빌드를 Dock 아이콘에 끌어 놓거나 `open -a RemoteDebug <경로>`로 넘길 수 있다.
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: 프로젝트 폴더 또는 빌드
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: None
+            LSItemContentTypes:
+              - public.folder
+              - com.apple.xcode.project
+              - com.apple.dt.document.workspace
+              - com.apple.application-bundle
+              - com.apple.itunes.ipa
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.oozoofrog.app.RemoteDebugMac

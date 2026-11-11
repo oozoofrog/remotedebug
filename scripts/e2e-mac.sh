@@ -2,7 +2,7 @@
 # Mac 호스트 E2E: 실제 Go 코어(RDCoreHost) + 가짜 tailnet(rdtestenv).
 #
 # 1단계(항상): rdtestenv를 새로 빌드하고 Packages/MacHost의 E2E 테스트를 돌린다.
-# 2단계(RD_E2E_APP=1): 샌드박스 앱(RemoteDebug.app)을 빌드해 -RDControlURL/-RDNodeId8/-RDStartSharing으로 띄우고,
+# 2단계(RD_E2E_APP=1): 앱(RemoteDebug.app)을 빌드해 -RDControlURL/-RDNodeId8/-RDStartSharing으로 띄우고,
 #   가짜 iPhone이 403 not_paired를 받는지, 앱을 종료(SIGTERM = 메뉴의 종료와 같은 경로, 두 번 보낸다)하면 20초 안에 종료 코드 0으로
 #   끝나는지 확인한다. 코어는 앱에 정적으로 링크돼 프로세스가 끝나면 서빙도 끝난다. 리스너가 닫히는 순서는 1단계 E2E가 본다.
 #   앱은 컨테이너 안 Application Support/RemoteDebug-e2e-<실행 id>를 쓰고, 끝나면 그 폴더를 지운다(개발자의 실제 상태는 건드리지 않는다).
@@ -22,7 +22,7 @@ APP_PURPOSE="e2e-mac-app-$RUN_ID"
 WORK="$(eyebuild -p remotedebug dir "$PURPOSE")"
 BUNDLE_ID="com.oozoofrog.app.RemoteDebugMac"
 APP_STATE_NAME="RemoteDebug-e2e-$(printf '%s' "$RUN_ID" | tr -cd 'A-Za-z0-9-')"
-CONTAINER_SUPPORT="$HOME/Library/Containers/$BUNDLE_ID/Data/Library/Application Support"
+CONTAINER_SUPPORT="$HOME/Library/Application Support"
 CHILD_PIDS=()
 APP_PID=""
 
@@ -121,22 +121,17 @@ eyebuild -p remotedebug swift mac-host -- test --package-path Packages/MacHost -
 
 [ "${RD_E2E_APP:-0}" = "1" ] || exit 0
 
-# 2. 샌드박스 앱 스모크.
-log "샌드박스 앱을 빌드합니다."
+# 2. 앱 스모크.
+log "앱을 빌드합니다."
 APP_DIR="$(eyebuild -p remotedebug dir "$APP_PURPOSE")"
 eyebuild -p remotedebug xcodebuild "$APP_PURPOSE" -- -project RemoteDebug.xcodeproj -scheme RemoteDebugMac \
   -configuration Debug -destination 'platform=macOS,arch=arm64' build >"$WORK/app-build.log" 2>&1 \
   || { tail -40 "$WORK/app-build.log" >&2; log "앱 빌드 실패"; exit 1; }
 APP="$APP_DIR/DerivedData/Build/Products/Debug/RemoteDebug.app"
 [ -x "$APP/Contents/MacOS/RemoteDebug" ] || { log "빌드한 앱이 없습니다: $APP"; exit 1; }
-codesign -d --entitlements - --xml "$APP" >"$WORK/entitlements.plist" 2>/dev/null \
-  || { log "앱의 권한을 읽지 못했습니다."; exit 1; }
-entitlement() { /usr/libexec/PlistBuddy -c "Print :$1" "$WORK/entitlements.plist" 2>/dev/null; }
-[ "$(entitlement com.apple.security.app-sandbox)" = "true" ] || { log "앱에 샌드박스 권한이 없습니다."; exit 1; }
-[ "$(entitlement com.apple.security.files.user-selected.read-only)" = "true" ] \
-  || { log "앱에 user-selected.read-only 권한이 없습니다."; exit 1; }
-if entitlement com.apple.security.files.user-selected.read-write >/dev/null; then
-  log "앱에 user-selected.read-write 권한이 있습니다. 고른 폴더는 읽기만 해야 합니다."
+# App Sandbox는 쓰지 않는다(연결한 프로젝트를 xcodebuild로 빌드한다). 다시 켜지면 프로젝트 빌드가 막히므로 확인한다.
+if codesign -d --entitlements - --xml "$APP" 2>/dev/null | grep -A1 'com.apple.security.app-sandbox' | grep -q '<true/>'; then
+  log "앱에 샌드박스 권한이 있습니다. 프로젝트 빌드와 Xcode 감시가 동작하지 않습니다."
   exit 1
 fi
 
@@ -176,7 +171,7 @@ case "$result" in
   *'"status":403'*'"not_paired"'*|*'"not_paired"'*'"status":403'*) log "페어링하지 않은 기기: $result";;
   *) log "403 not_paired를 받지 못했습니다: $result"; tail -20 "$WORK/peer.err" >&2; exit 1;;
 esac
-[ -d "$CONTAINER_SUPPORT/$APP_STATE_NAME/state" ] || { log "앱이 컨테이너 안 저장 폴더를 쓰지 않았습니다."; exit 1; }
+[ -d "$CONTAINER_SUPPORT/$APP_STATE_NAME/state" ] || { log "앱이 저장 폴더를 쓰지 않았습니다."; exit 1; }
 
 # 종료: SIGTERM은 메뉴의 종료처럼 공유를 멈춘 뒤 끝난다. 정리 중에 온 두 번째 신호는 그 정리를 끊지 않는다.
 # 스모크가 확인하는 것: 앱이 10초 강제 종료(종료 코드 1) 전에 종료 코드 0으로 끝난다. 코어는 앱에 정적으로 링크돼 있어
@@ -192,4 +187,4 @@ wait "$APP_PID" 2>/dev/null || app_rc=$?
 [ "$app_rc" -eq 0 ] || { log "앱이 정상 종료 경로로 끝나지 않았습니다(종료 코드 $app_rc)."; exit 1; }
 APP_PID=""
 
-log "샌드박스 앱 스모크 통과"
+log "앱 스모크 통과"

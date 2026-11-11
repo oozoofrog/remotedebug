@@ -5,13 +5,14 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case builds, devices, network, activity
+    case builds, projects, devices, network, activity
 
     public var id: String { rawValue }
 
     var title: String {
         switch self {
         case .builds: "빌드"
+        case .projects: "프로젝트"
         case .devices: "기기"
         case .network: "네트워크"
         case .activity: "활동"
@@ -21,6 +22,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable 
     var symbol: String {
         switch self {
         case .builds: "shippingbox"
+        case .projects: "hammer"
         case .devices: "iphone"
         case .network: "network"
         case .activity: "list.bullet.rectangle"
@@ -45,6 +47,7 @@ final class AuthKeyDraft {
 
 public struct RootView: View {
     @Environment(HostModel.self) private var model
+    @Environment(ProjectsModel.self) private var projects: ProjectsModel?
     @State private var selection: SidebarItem
     @State private var showingImporter = false
     @State private var showingPairing = false
@@ -119,6 +122,14 @@ public struct RootView: View {
         .environment(authKey)
         .environment(\.showPairing, PairingPresenter { showingPairing = true })
         .environment(\.showNetwork, NetworkPresenter { selection = .network })
+        .environment(\.connectProjects, ProjectConnector { urls in
+            guard let projects else { return }
+            selection = .projects
+            Task { for url in urls { await projects.connectAndBuild(url) } }
+        })
+        .onChange(of: projects?.suggestions.count ?? 0) { old, new in
+            if new > old { selection = .projects }
+        }
         .focusedSceneValue(\.importBuilds, ImportBuildsAction { showingImporter = true })
     }
 
@@ -129,6 +140,12 @@ public struct RootView: View {
     @ViewBuilder private var detail: some View {
         switch selection {
         case .builds: BuildsView(showImporter: { showingImporter = true })
+        case .projects:
+            if let projects {
+                ProjectsView(projects: projects)
+            } else {
+                ContentUnavailableView("프로젝트를 쓸 수 없습니다", systemImage: "hammer")
+            }
         case .devices: DevicesView()
         case .network: NetworkView()
         case .activity: ActivityView()
@@ -157,6 +174,7 @@ public struct RootView: View {
         switch item {
         case .devices: model.pendingPairRequests.count
         case .builds: importQueue.pending.count
+        case .projects: projects?.suggestions.count ?? 0
         default: 0
         }
     }
@@ -174,7 +192,23 @@ struct NetworkPresenter {
     func callAsFunction() { open() }
 }
 
+/// 끌어 놓은 프로젝트 파일·폴더를 연결하고 빌드하는 동작(창에 하나).
+struct ProjectConnector {
+    let connect: ([URL]) -> Void
+    func callAsFunction(_ urls: [URL]) { connect(urls) }
+
+    /// 끌어 놓은 항목 중 빌드 파일(.app, .ipa)이 아닌 프로젝트 파일과 폴더.
+    static func projectURLs(in urls: [URL]) -> [URL] {
+        urls.filter { url in
+            if ["app", "ipa"].contains(url.pathExtension.lowercased()) { return false }
+            return ProjectLocator.isContainer(url) || url.hasDirectoryPath
+                || (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+        }
+    }
+}
+
 extension EnvironmentValues {
+    @Entry var connectProjects = ProjectConnector { _ in }
     @Entry var showPairing = PairingPresenter {}
     @Entry var showNetwork = NetworkPresenter {}
 }

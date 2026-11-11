@@ -4,6 +4,8 @@ Mac 앱은 Debug(개발 서명) 빌드를 검사해 게시하고, 페어링한 i
 
 RemoteDebug iPhone 앱 없이 설치하는 두 번째 경로도 있다. Mac 호스트가 `https://<Mac의 FQDN>/`에서 설치 웹 페이지를 내주고, 공식 Tailscale 앱으로 같은 tailnet에 접속한 iPhone이 Safari로 그 페이지를 열어 페어링 코드를 넣고, Mac 앱에서 허용받은 뒤 빌드를 설치한다. 허용한 기기만, Debug 빌드만, 허용은 Mac 화면에서만이라는 규칙은 앱 경로와 같다. 실제 iPhone의 Safari에서는 한 번도 열어 보지 않았다. 절차는 [설정 문서](docs/setup.md#iphone에서-앱-없이-설치웹-페이지), 규칙은 [`docs/protocol-addenda.md`](docs/protocol-addenda.md)의 E에 있다.
 
+다른 프로젝트는 Mac 앱에 연결해서 쓴다. 프로젝트 폴더나 `.xcodeproj`, `.xcworkspace`를 창이나 Dock 아이콘에 끌어 놓으면 앱이 스킴을 읽고 `xcodebuild`로 Debug 기기용 빌드를 만들어 게시한다. 연결한 프로젝트는 목록에 남고, Xcode에서 그 프로젝트를 기기용 Debug로 빌드할 때마다 결과를 자동으로 가져온다. 연결하지 않은 프로젝트의 기기용 Debug 빌드가 Xcode에서 보이면 등록할지 묻는다. 앱은 창을 닫아도 메뉴 막대에 남는다. 프로젝트 행의 **에이전트 연결…**은 그 프로젝트에 Claude 스킬과 `AGENTS.md` 단락을 써서 에이전트가 빌드·게시 명령을 쓰게 한다. 순서는 [설정 문서의 프로젝트 절](docs/setup.md#다른-프로젝트-연결)에 있다. Mac은 게시까지만 하고, 설치는 iPhone에서 누른다.
+
 ## 현재 상태
 
 실기기, 실제 tailnet, 실제 TLS 인증서, 실제 iOS 설치기에서는 아무것도 시험하지 않았다. 실행 중인 두 앱의 화면을 직접 조작해 보지도 않았다. 아래 "확인함"은 표에 적은 범위까지만 뜻한다.
@@ -14,9 +16,11 @@ RemoteDebug iPhone 앱 없이 설치하는 두 번째 경로도 있다. Mac 호�
 | Go 코어 터널 모드: 가짜 tailnet과 메모리 TUN으로 | 확인함 | `scripts/go.sh test -race -count=1 -run TestTunnel -v ./...` |
 | `RDCore.xcframework` 생성(macOS, iOS, iOS 시뮬레이터 arm64) | 확인함 | `scripts/build-core.sh` |
 | 디버그 빌드 검사와 IPA 묶기: 단위 시험, 픽스처, 작성 환경의 실제 Debug 빌드 | 확인함 | `swift test --package-path Packages/RemoteDebugKit`, `scripts/check-ipa-roundtrip.sh`, `scripts/check-real-builds.sh` |
-| Mac 호스트: 실제 Go 코어와 가짜 tailnet, 샌드박스 앱 실행과 종료 | 확인함 | `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost`, `RD_E2E_APP=1 scripts/e2e-mac.sh` |
+| Mac 호스트: 실제 Go 코어와 가짜 tailnet, 앱 실행과 종료 | 확인함 | `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost`, `RD_E2E_APP=1 scripts/e2e-mac.sh` |
 | iPhone 로직과 앱: 단위 시험, 시뮬레이터 빌드·시험, 기기용 컴파일(서명 없음) | 확인함 | `swift test --package-path Packages/PhoneClient`, [설정 문서의 xcodebuild 명령](docs/setup.md#명령줄-빌드와-시험) |
 | Mac과 iPhone 로직의 통합 흐름: 가짜 tailnet으로 페어링·목록·설치 세션·기기 제거 | 확인함 | `scripts/e2e-full.sh` |
+| 프로젝트 연결 로직: 폴더에서 프로젝트 찾기, 스킴 목록 해석, 가짜 빌더로 빌드 뒤 가져오기, DerivedData 변화로 등록 제안, 에이전트 명령 스크립트 왕복, 스킬·`AGENTS.md` 쓰기 | 확인함 | `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost` |
+| 프로젝트 연결을 실제로 쓰기: 실제 `xcodebuild`로 다른 프로젝트 빌드, Xcode가 빌드를 시작한 시점의 감지와 시스템 알림, 메뉴 막대 상주와 로그인 항목, Dock 아이콘에 끌어 놓기, 프로젝트 화면 조작 | 확인하지 않음 | 절차 없음 |
 | 화면 상태별 표시: 미리보기 시나리오 데이터를 저장소 밖 도구로 오프스크린에 그린 스크린샷 검토(Mac 10장, iPhone 18개 상태). 실제 앱 화면은 iPhone 시뮬레이터 첫 화면 1장뿐이다. VoiceOver, 다크 모드, 다이내믹 타입은 보지 않았다 | 확인함 | 재현 명령 없음(그린 도구가 저장소에 없다). 결과 `.agent-loop/remotedebug-bridge/evidence/ui/`, 방법 `.agent-loop/remotedebug-bridge/evidence/mac-app-a2-ui-smoke.log`, `.agent-loop/remotedebug-bridge/evidence/phone-app-a1-ui-smoke.log` |
 | 설치 웹 페이지 Go 시험: 경로·보안 헤더·404·405·`denied` 이벤트 없음, 가짜 tailnet에서 허용 목록 밖 기기가 페이지를 받고 페어링 뒤 목록과 설치 세션을 여는 흐름 | 확인함 | `scripts/go.sh test -race -count=1 ./...` |
 | 설치 웹 페이지 로직(`logic.js`)과 화면 도움 함수: JavaScriptCore 시험, 규칙과 문구를 iPhone 앱 로직과 비교 | 확인함 | `swift test --package-path Packages/WebPage` |
@@ -99,6 +103,11 @@ iPhone에 RemoteDebug 앱을 설치하지 않으려면 Mac 앱만 실행하고, 
 - 페어링 코드를 다섯 번 틀리면 코어는 코드를 폐기하지만 `denied` 이벤트가 5초에 하나로 제한되어, Mac 화면은 다음 이벤트가 올 때까지 폐기된 코드를 계속 보여 줄 수 있다. "새 코드 만들기"로 새 코드를 연다. 코어 쪽 수정은 하지 않았다.
 - Mac 앱을 종료할 때 이미 진행 중인 가져오기는 저장 폴더 잠금이 풀린 뒤에도 파일을 쓸 수 있다. 종료 직후 앱을 다시 열면 두 프로세스가 잠시 같은 저장 폴더에 쓸 수 있으므로, 가져오기가 끝난 뒤 종료하고 바로 다시 열지 않는다.
 - 두 앱 모두 VoiceOver, 다크 모드, 다이내믹 타입으로 확인하지 않았다. 페어링 요청의 VoiceOver 알림도 코드만 있고 실제로 들어 보지 않았다. 설치 웹 페이지는 오류 안내를 live region 대신 초점 이동으로 알리게 했지만 VoiceOver에서 읽히는지 확인하지 않았다.
+- Mac 앱은 App Sandbox를 쓰지 않는다. 저장 폴더가 컨테이너(`~/Library/Containers/com.oozoofrog.app.RemoteDebugMac/Data/Library/Application Support/RemoteDebug`)에서 `~/Library/Application Support/RemoteDebug`로 바뀌었고, 옮겨 주는 코드는 없다. 샌드박스 빌드를 쓰던 Mac은 tailnet 로그인과 페어링을 다시 하거나, 앱을 끈 채 폴더를 직접 옮긴다.
+- 프로젝트 빌드는 `xcodebuild`에 `-allowProvisioningUpdates`를 주지 않는다. 프로비저닝 프로필이 없거나 기기가 등록되지 않은 프로젝트는 Xcode에서 한 번 기기용으로 빌드해야 한다.
+- 프로젝트의 빌드 결과는 Xcode의 DerivedData(`info.plist`의 `WorkspacePath`)에서 찾는다. Xcode 설정의 DerivedData 위치가 "Relative"면 찾지 못한다. `xcodebuild`가 만든 폴더에도 같은 `info.plist`가 생기는지는 실제 빌드로 확인하지 않았다.
+- Xcode 빌드 감지는 3초마다 DerivedData의 `Build/Products/Debug-iphoneos`와 빌드 기록의 수정 시각을 보는 방식이다. 빌드가 시작한 순간이 아니라 그 폴더가 바뀐 뒤에 등록을 묻는다. 그 프로젝트의 첫 기기용 빌드는 폴더가 생기는 시점만 기준으로 잡혀 다음 빌드에서 묻는다.
+- 에이전트 명령(`~/Library/Application Support/RemoteDebug/agent/rd`)은 같은 사용자 계정의 어떤 프로세스든 쓸 수 있다. 연결한 프로젝트나 넘긴 경로의 프로젝트를 빌드해 게시하는 것까지만 한다.
 - iOS는 VPN을 한 번에 하나만 켠다. 이 앱의 VPN이 켜진 동안 공식 Tailscale 앱의 VPN은 꺼진다.
 - 설치 웹 페이지의 허용 단위는 브라우저가 아니라 iPhone의 tailnet 노드다. 한 번 허용하면 그 iPhone에서 Mac에 닿는 모든 앱과 브라우저가 같은 허용을 쓴다. 접근을 끊으려면 Mac의 **기기** 화면에서 그 기기를 제거한다.
 - 설치 웹 페이지는 iPhone의 공식 Tailscale 앱 VPN이 켜져 있고 tailnet의 HTTPS Certificates가 켜져 있어야 열린다. tailnet 정책이 그 iPhone 노드에서 Mac의 443 포트를 막으면 페이지가 열리지 않는다([설정 문서의 ACL 설명](docs/setup.md#tailnet-정책acl)).
@@ -117,6 +126,9 @@ iPhone에 RemoteDebug 앱을 설치하지 않으려면 Mac 앱만 실행하고, 
 | `docs/protocol.md:3`: 바꿀 때 이 문서를 먼저 고친다 | 바뀐 규칙은 [`docs/protocol-addenda.md`](docs/protocol-addenda.md)에 있다. 둘이 다르면 addenda를 따른다 | 6 |
 | `docs/architecture.md:5`: 공식 Tailscale 앱 없이 각 앱에 내장한 Tailscale만으로 설치 | 내장 경로는 그대로 두고, 공식 Tailscale 앱만 있는 iPhone이 Safari로 여는 설치 웹 페이지를 더했다([`docs/protocol-addenda.md`](docs/protocol-addenda.md) E). 내장 VPN 경로를 끝낸 뒤 사용자가 요청했다 | 61, 62, 63, 64, 65 |
 | `docs/architecture.md:86`: Xcode·TestFlight 내부 배포 | Xcode 직접 설치나 Ad Hoc. [판정서](docs/appstore-review.md)가 TestFlight를 권하지 않는다(지침 2.2) | 2 |
+
+| `docs/appstore-review.md`의 2.4.5 해석: Mac 앱은 샌드박스와 호환(빌드 실행·xcodebuild 호출 없음), 로그인 시 자동 실행 없음 | App Sandbox를 쓰지 않고 연결한 프로젝트를 `xcodebuild`로 빌드한다. 메뉴 막대에 상주하고 "로그인할 때 열기"를 켤 수 있다. 사용자가 요청했다. Mac 앱의 App Store 제출 가능성 판단은 이 변경을 반영하지 않았다 | 기록 없음(2026-11-11 사용자 요청) |
+| `docs/architecture.md` 가정 A3: App Sandbox를 켠 Mac 앱 | 같은 표의 대안("비샌드박스 배포로 전환")을 택했다 | 기록 없음(2026-11-11 사용자 요청) |
 
 ### 설계 문서에 없는 현재 동작
 
