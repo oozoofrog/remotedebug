@@ -1,0 +1,198 @@
+import PhoneClientKit
+import RDModels
+import SwiftUI
+
+/// Mac이 공유 중인 빌드 목록.
+struct BuildListSection: View {
+    var state: PhoneViewState
+    var actions: PhoneActions
+
+    var body: some View {
+        Section {
+            if state.buildsLoadedAt == nil {
+                notLoaded
+            } else {
+                if let error = state.refreshError {
+                    Label {
+                        Text("목록을 새로 받지 못했습니다. 아래는 이전 목록입니다.")
+                    } icon: {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                    }
+                    .font(.footnote)
+                    .accessibilityHint(error)
+                }
+                if state.builds.isEmpty {
+                    ContentUnavailableView {
+                        Label("공유 중인 빌드가 없습니다", systemImage: "shippingbox")
+                    } description: {
+                        Text("Mac 앱에서 빌드를 공유한 뒤 새로고침하세요.")
+                    }
+                } else {
+                    ForEach(state.builds) { build in
+                        BuildRow(build: build, install: state.installs[build.id], actions: actions)
+                    }
+                }
+            }
+        } header: {
+            HStack {
+                Text("빌드")
+                Spacer()
+                if state.isRefreshing {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Button {
+                        Task { await actions.refresh() }
+                    } label: {
+                        Label("새로고침", systemImage: "arrow.clockwise")
+                            .labelStyle(.iconOnly)
+                    }
+                    .accessibilityLabel("빌드 목록 새로고침")
+                }
+            }
+        } footer: {
+            if let loaded = state.buildsLoadedAt {
+                Text("\(loaded.formatted(date: .omitted, time: .shortened))에 받은 목록")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var notLoaded: some View {
+        if state.isRefreshing {
+            HStack(spacing: 12) {
+                ProgressView()
+                Text("빌드 목록을 받는 중")
+            }
+        } else if let error = state.refreshError {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(error).font(.subheadline)
+                Button("다시 시도") { Task { await actions.refresh() } }
+                    .buttonStyle(.borderless)
+            }
+        } else if state.tunnel != .connected {
+            Text("VPN이 연결되면 빌드 목록을 받습니다.")
+                .foregroundStyle(.secondary)
+        } else {
+            Button("빌드 목록 받기") { Task { await actions.refresh() } }
+        }
+    }
+}
+
+/// 빌드 하나: 이름·버전·크기와 설치 상태.
+struct BuildRow: View {
+    var build: BuildDescriptor
+    var install: InstallState?
+    var actions: PhoneActions
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(build.displayName).font(.headline)
+                    Text("버전 \(build.version) (\(build.buildNumber)) · \(Self.size(build.ipa.size))")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Text(build.bundleId)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if install == nil {
+                    Button("설치") { actions.install(build) }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .accessibilityLabel("\(build.displayName) 설치")
+                }
+            }
+            if build.signing.profileExpires < .now {
+                Label("프로비저닝 프로파일이 \(build.signing.profileExpires.formatted(date: .abbreviated, time: .omitted))에 만료되었습니다. 설치해도 실행되지 않을 수 있습니다.", systemImage: "calendar.badge.exclamationmark")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+            if let install {
+                InstallStatusView(build: build, state: install, actions: actions)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    static func size(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+}
+
+struct InstallStatusView: View {
+    var build: BuildDescriptor
+    var state: InstallState
+    var actions: PhoneActions
+
+    var body: some View {
+        switch state {
+        case .preparing:
+            progressLine("Mac이 빌드를 확인하는 중")
+        case .waitingForInstaller:
+            VStack(alignment: .leading, spacing: 6) {
+                progressLine("iOS 설치 창에서 ‘설치’를 누르세요")
+                HStack(spacing: 16) {
+                    Button("다시 열기") { Task { await actions.reopenInstaller(build.id) } }
+                        .accessibilityLabel("\(build.displayName) 설치 창 다시 열기")
+                    Button("취소") { actions.cancelInstall(build.id) }
+                        .accessibilityLabel("\(build.displayName) 설치 취소")
+                }
+                .font(.footnote)
+                .buttonStyle(.borderless)
+            }
+        case .transferring(let served, let size):
+            VStack(alignment: .leading, spacing: 4) {
+                if let fraction = state.fraction {
+                    ProgressView(value: fraction)
+                        .accessibilityLabel("전송")
+                        .accessibilityValue("\(Int(fraction * 100))%")
+                    Text("전송 중 \(BuildRow.size(served)) / \(BuildRow.size(size))")
+                } else {
+                    ProgressView()
+                    Text("전송 중 \(BuildRow.size(served))")
+                }
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+        case .completed:
+            VStack(alignment: .leading, spacing: 6) {
+                Label("전송 완료", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.subheadline.bold())
+                Text("Mac이 빌드를 모두 보냈습니다. 설치 진행은 홈 화면의 앱 아이콘에서 확인하세요.")
+                    .font(.footnote)
+                Label(InstallState.developerModeHint, systemImage: "hammer")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("확인") { actions.clearInstall(build.id) }
+                    .font(.footnote)
+                    .buttonStyle(.borderless)
+            }
+        case .expired, .failed:
+            VStack(alignment: .leading, spacing: 6) {
+                Label(state.message ?? "", systemImage: state == .expired ? "clock.badge.exclamationmark" : "xmark.octagon.fill")
+                    .foregroundStyle(state == .expired ? .orange : .red)
+                    .font(.footnote)
+                HStack(spacing: 16) {
+                    Button("다시 설치") { actions.install(build) }
+                        .buttonStyle(.bordered)
+                    Button("닫기") { actions.clearInstall(build.id) }
+                }
+                .font(.footnote)
+                .buttonStyle(.borderless)
+            }
+        }
+    }
+
+    private func progressLine(_ text: String) -> some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.small)
+            Text(text)
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
+    }
+}

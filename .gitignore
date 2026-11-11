@@ -1,0 +1,21 @@
+# macOS
+.DS_Store
+
+# Xcode. RemoteDebug.xcodeproj는 xcodegen으로 만든다.
+*.xcodeproj
+xcuserdata/
+DerivedData/
+*.xcresult
+
+# SwiftPM
+.build/
+.swiftpm/
+
+# scripts/build-core.sh가 만드는 링크
+Packages/RDCore/RDCore.xcframework
+
+# 개발 팀 ID
+Config/Signing.local.xcconfig
+
+# 실기기 확인의 로그·스크린샷. 노드 이름과 tailnet 주소가 들어 있을 수 있다.
+device-evidence/

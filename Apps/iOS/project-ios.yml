@@ -1,0 +1,114 @@
+# RemoteDebugPhone·RemoteDebugTunnel 대상 정의. project.yml이 포함한다(경로는 저장소 루트 기준).
+targets:
+  RemoteDebugPhone:
+    type: application
+    platform: iOS
+    # 개발 팀 ID는 Config/Signing.local.xcconfig(저장소에 올리지 않음)에서 읽는다. xcodegen을 다시 돌려도 남는다.
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    sources:
+      - path: Apps/iOS
+        excludes:
+          - "project-*.yml"
+      # 앱과 확장이 함께 쓰는 형식(TunnelProviderConfig, 메시지, SettingsTranslator).
+      - path: Apps/iOSTunnel/Shared
+    entitlements:
+      path: Apps/iOS/RemoteDebugPhone.entitlements
+      properties:
+        com.apple.developer.networking.networkextension:
+          - packet-tunnel-provider
+    info:
+      path: Apps/iOS/Info.plist
+      properties:
+        CFBundleDisplayName: RemoteDebug
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSCameraUsageDescription: 페어링 QR 코드를 읽는 데 카메라를 사용합니다.
+        CFBundleURLTypes:
+          - CFBundleURLName: com.oozoofrog.app.RemoteDebugPhone.pair
+            CFBundleURLSchemes:
+              - remotedebug
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.oozoofrog.app.RemoteDebugPhone
+        PRODUCT_NAME: RemoteDebug
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        # 시뮬레이터만 로컬 서명. 기기 빌드는 Xcode 기본 신원(Apple Development)과 DEVELOPMENT_TEAM으로 서명한다.
+        "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
+        # RDCore.xcframework의 iOS 슬라이스는 arm64 전용이다.
+        ARCHS: arm64
+    dependencies:
+      - target: RemoteDebugTunnel
+        embed: true
+      - package: RemoteDebugKit
+        product: RDModels
+      - package: PhoneClient
+        product: PhoneClientKit
+  RemoteDebugTunnel:
+    type: app-extension
+    platform: iOS
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    sources:
+      - path: Apps/iOSTunnel
+    entitlements:
+      path: Apps/iOSTunnel/RemoteDebugTunnel.entitlements
+      properties:
+        com.apple.developer.networking.networkextension:
+          - packet-tunnel-provider
+    info:
+      path: Apps/iOSTunnel/Info.plist
+      properties:
+        CFBundleDisplayName: RemoteDebug 터널
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.oozoofrog.app.RemoteDebugPhone.Tunnel
+        SKIP_INSTALL: YES
+        CODE_SIGN_STYLE: Automatic
+        # 시뮬레이터만 로컬 서명. 기기 빌드는 Xcode 기본 신원(Apple Development)과 DEVELOPMENT_TEAM으로 서명한다.
+        "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
+        ARCHS: arm64
+    dependencies:
+      - package: RDCore
+        product: RDCoreBridge
+      - package: RemoteDebugKit
+        product: RDModels
+  RemoteDebugPhoneTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Apps/iOSTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.oozoofrog.app.RemoteDebugPhoneTests
+        GENERATE_INFOPLIST_FILE: YES
+        # 앱의 PRODUCT_NAME이 RemoteDebug라서 XcodeGen 기본값(대상 이름)과 다르다.
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/RemoteDebug.app/RemoteDebug
+        BUNDLE_LOADER: $(TEST_HOST)
+        ARCHS: arm64
+    dependencies:
+      - target: RemoteDebugPhone
+schemes:
+  RemoteDebugPhone:
+    build:
+      targets:
+        RemoteDebugPhone: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - RemoteDebugPhoneTests

@@ -1,0 +1,4658 @@
+{
+  "decisions": {
+    "d-auth-signing": {
+      "answer": null,
+      "artifact_version": null,
+      "outcome": null,
+      "status": "pending"
+    },
+    "d-auth-tailnet": {
+      "answer": null,
+      "artifact_version": null,
+      "outcome": null,
+      "status": "pending"
+    },
+    "d-device-info": {
+      "answer": null,
+      "artifact_version": null,
+      "outcome": null,
+      "status": "pending"
+    },
+    "d-priority": {
+      "answer": "요청대로 양쪽 내장 (권장)",
+      "artifact_version": null,
+      "outcome": "answered",
+      "source": "AskUserQuestion answer in this session (2026-11-11)",
+      "status": "resolved"
+    }
+  },
+  "history": [
+    {
+      "action": "resolve-decision",
+      "decision": "d-priority",
+      "previous_decisions": {
+        "d-priority": {
+          "answer": null,
+          "artifact_version": null,
+          "outcome": null,
+          "status": "pending"
+        }
+      },
+      "previous_tasks": {},
+      "resolution": {
+        "answer": "요청대로 양쪽 내장 (권장)",
+        "artifact_version": null,
+        "outcome": "answered",
+        "source": "AskUserQuestion answer in this session (2026-11-11)",
+        "status": "resolved"
+      },
+      "timestamp": "2026-11-10T23:54:03.815878+00:00"
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:18.109558+00:00",
+      "todo": {
+        "id": "ct-scripts",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "contract",
+        "title": "scripts/go.sh, check_protocol_examples.py 작성"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:18.189454+00:00",
+      "todo": {
+        "id": "ct-verify",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "contract",
+        "title": "JSON 예제 파싱과 xcodegen 생성 확인"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:19.184206+00:00",
+      "todo": {
+        "id": "kt-models",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "kit",
+        "title": "공용 모델 RDModels"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:20.559326+00:00",
+      "todo": {
+        "id": "ho-setup",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "handoff",
+        "title": "docs/setup.md: tailnet HTTPS·ACL 태그·개발자 모드·서명 준비"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:20.668718+00:00",
+      "todo": {
+        "id": "ho-check",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "handoff",
+        "title": "check-docs.sh 작성과 README 갱신"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:20.716784+00:00",
+      "todo": {
+        "id": "de-ask",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "device-e2e",
+        "title": "정보 질문 1개와 허가 2개를 한 번에 요청"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:40.682699+00:00",
+      "todo": {
+        "id": "ct-protocol",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "contract",
+        "title": "프로토콜 문서: 역할·페어링·REST·설치 세션·C API·이벤트 확정"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:40.803039+00:00",
+      "todo": {
+        "id": "ct-architecture",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "contract",
+        "title": "구조 문서: 설치 경로·NE 프록시 가정·위험·대안 정리"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:40.893304+00:00",
+      "todo": {
+        "id": "ct-skeleton",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "contract",
+        "title": "project.yml과 대상 골격(맥 앱·아이폰 앱·터널·테스트) 작성"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:41.116496+00:00",
+      "todo": {
+        "id": "co-node",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "core",
+        "title": "tsnet 노드 수명주기·상태·AuthURL 감시"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:41.299771+00:00",
+      "todo": {
+        "id": "co-host",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "core",
+        "title": "호스트 API: WhoIs 허용 목록·페어링 코드·승인 이벤트"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:41.530034+00:00",
+      "todo": {
+        "id": "co-session",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "core",
+        "title": "설치 세션: 1회용 토큰·노드 결속·만료·해시 재검증·비디버그 거부"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:41.637891+00:00",
+      "todo": {
+        "id": "co-proxy",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "core",
+        "title": "클라이언트 CONNECT 프록시(허용 대상 한정)"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:41.707630+00:00",
+      "todo": {
+        "id": "co-capi",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "core",
+        "title": "C API(JSON)와 이벤트 큐"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:41.780639+00:00",
+      "todo": {
+        "id": "co-e2e",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "core",
+        "title": "testcontrol 가짜 tailnet E2E 테스트"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:41.888055+00:00",
+      "todo": {
+        "id": "co-xcfw",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "core",
+        "title": "build-core.sh로 XCFramework 3슬라이스, RDCore 패키지와 Swift 브리지"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:42.000056+00:00",
+      "todo": {
+        "id": "kt-profile",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "kit",
+        "title": "프로비저닝 프로필(CMS) 파서와 서명 엔타이틀먼트 판독"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:42.262764+00:00",
+      "todo": {
+        "id": "kt-policy",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "kit",
+        "title": "DebugBuildPolicy, 거부 사유 코드, Debug 구성 판별"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:42.405768+00:00",
+      "todo": {
+        "id": "kt-ipa",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "kit",
+        "title": "ZIP/IPA 빌더와 OTA 매니페스트 빌더"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:42.558046+00:00",
+      "todo": {
+        "id": "kt-tests",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "kit",
+        "title": "정책 행렬 테스트, IPA 왕복, 실제 빌드 읽기 전용 검사"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:42.650463+00:00",
+      "todo": {
+        "id": "vd-draft",
+        "requirement_id": "r5-appstore",
+        "status": "pending",
+        "task_id": "verdict",
+        "title": "iPhone·Mac 앱별 조항 판정서 초안"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:42.743150+00:00",
+      "todo": {
+        "id": "vd-quotes",
+        "requirement_id": "r5-appstore",
+        "status": "pending",
+        "task_id": "verdict",
+        "title": "인용문 원문 일치 검사 스크립트"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:42.869741+00:00",
+      "todo": {
+        "id": "vd-review",
+        "requirement_id": "r5-appstore",
+        "status": "pending",
+        "task_id": "verdict",
+        "title": "독립 검토 결과 반영"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:43.041669+00:00",
+      "todo": {
+        "id": "ma-bridge",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "mac-app",
+        "title": "RDCore Swift 브리지로 호스트 모드 연결"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:43.192793+00:00",
+      "todo": {
+        "id": "ma-builds",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "mac-app",
+        "title": "빌드 가져오기·폴더 감시·검증·거부 사유 목록"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:43.409149+00:00",
+      "todo": {
+        "id": "ma-devices",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "mac-app",
+        "title": "기기 등록: 페어링 코드·승인 UI·허용 목록 저장"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:43.509503+00:00",
+      "todo": {
+        "id": "ma-network",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "mac-app",
+        "title": "tailnet 로그인(인증 키·브라우저)과 노드 상태 화면"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:43.679230+00:00",
+      "todo": {
+        "id": "ma-verify",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "mac-app",
+        "title": "빌드·단위 테스트·가짜 tailnet E2E·UI 스크린샷 검토"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:43.854706+00:00",
+      "todo": {
+        "id": "pa-tunnel",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "phone-app",
+        "title": "Packet Tunnel 확장: 노드·프록시·NEProxySettings"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:44.279445+00:00",
+      "todo": {
+        "id": "pa-vpn",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "phone-app",
+        "title": "VPN 관리자(NETunnelProviderManager)와 상태 메시지"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:44.650541+00:00",
+      "todo": {
+        "id": "pa-pair",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "phone-app",
+        "title": "페어링(코드 입력·QR)과 승인 대기 상태"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:44.904382+00:00",
+      "todo": {
+        "id": "pa-install",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "phone-app",
+        "title": "빌드 목록·설치 세션·itms-services 호출"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:45.089282+00:00",
+      "todo": {
+        "id": "pa-verify",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "phone-app",
+        "title": "시뮬레이터 빌드·기기 컴파일·단위 테스트·UI 스크린샷 검토"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:45.329708+00:00",
+      "todo": {
+        "id": "ho-device",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "handoff",
+        "title": "docs/device-test.md: 실기기 검증 절차(구조 가정 1 검증)"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-10T23:54:45.499113+00:00",
+      "todo": {
+        "id": "de-run",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "device-e2e",
+        "title": "실기기 검증 실행과 결과 기록"
+      }
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "contract": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "contract",
+      "timestamp": "2026-11-10T23:56:08.365715+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ct-protocol",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "contract",
+        "title": "프로토콜 문서: 역할·페어링·REST·설치 세션·C API·이벤트 확정"
+      },
+      "timestamp": "2026-11-10T23:56:08.406118+00:00",
+      "todo": {
+        "id": "ct-protocol",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "contract",
+        "title": "프로토콜 문서: 역할·페어링·REST·설치 세션·C API·이벤트 확정"
+      }
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "contract": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "b6ff1a2942a96b41f761c660460a52150d0f34ecce7ad8572a32b14dc0a4ea80",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "문서·project.yml·골격 소스 작성 및 xcodegen 생성 후 측정",
+      "revision": "b6ff1a2942a96b41f761c660460a52150d0f34ecce7ad8572a32b14dc0a4ea80",
+      "task": "contract",
+      "timestamp": "2026-11-10T23:58:53.550190+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ct-protocol",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "contract",
+        "title": "프로토콜 문서: 역할·페어링·REST·설치 세션·C API·이벤트 확정"
+      },
+      "timestamp": "2026-11-10T23:58:53.655196+00:00",
+      "todo": {
+        "id": "ct-protocol",
+        "requirement_id": "r1-install",
+        "status": "completed",
+        "task_id": "contract",
+        "title": "프로토콜 문서: 역할·페어링·REST·설치 세션·C API·이벤트 확정"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ct-architecture",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "contract",
+        "title": "구조 문서: 설치 경로·NE 프록시 가정·위험·대안 정리"
+      },
+      "timestamp": "2026-11-10T23:58:53.799090+00:00",
+      "todo": {
+        "id": "ct-architecture",
+        "requirement_id": "r2-embedded",
+        "status": "completed",
+        "task_id": "contract",
+        "title": "구조 문서: 설치 경로·NE 프록시 가정·위험·대안 정리"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ct-skeleton",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "contract",
+        "title": "project.yml과 대상 골격(맥 앱·아이폰 앱·터널·테스트) 작성"
+      },
+      "timestamp": "2026-11-10T23:58:53.947240+00:00",
+      "todo": {
+        "id": "ct-skeleton",
+        "requirement_id": "r1-install",
+        "status": "completed",
+        "task_id": "contract",
+        "title": "project.yml과 대상 골격(맥 앱·아이폰 앱·터널·테스트) 작성"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ct-scripts",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "contract",
+        "title": "scripts/go.sh, check_protocol_examples.py 작성"
+      },
+      "timestamp": "2026-11-10T23:58:54.142523+00:00",
+      "todo": {
+        "id": "ct-scripts",
+        "requirement_id": null,
+        "status": "completed",
+        "task_id": "contract",
+        "title": "scripts/go.sh, check_protocol_examples.py 작성"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ct-verify",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "contract",
+        "title": "JSON 예제 파싱과 xcodegen 생성 확인"
+      },
+      "timestamp": "2026-11-10T23:58:54.250594+00:00",
+      "todo": {
+        "id": "ct-verify",
+        "requirement_id": null,
+        "status": "in_progress",
+        "task_id": "contract",
+        "title": "JSON 예제 파싱과 xcodegen 생성 확인"
+      }
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "contract": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "b6ff1a2942a96b41f761c660460a52150d0f34ecce7ad8572a32b14dc0a4ea80",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "프로토콜·구조 문서, project.yml, 골격·자리표시자 패키지 작성과 xcodegen 생성 후 측정(첫 지문은 쉘 단어 분리 오류로 무효)",
+      "revision": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+      "task": "contract",
+      "timestamp": "2026-11-10T23:59:56.521594+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "contract": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+        "check_id": "protocol-examples",
+        "path": "evidence/contract-a1-protocol-examples-r2.log",
+        "result": "passed",
+        "sha256": "f9c17baae7b060f2e8efe91bed0644699bbdd8e266ccbfe3e87b5dd69c88d216"
+      },
+      "task": "contract",
+      "timestamp": "2026-11-11T00:00:10.134268+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "contract": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+              "check_id": "protocol-examples",
+              "path": "evidence/contract-a1-protocol-examples-r2.log",
+              "result": "passed",
+              "sha256": "f9c17baae7b060f2e8efe91bed0644699bbdd8e266ccbfe3e87b5dd69c88d216"
+            }
+          ],
+          "running_revision": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+        "check_id": "xcodegen-skeleton",
+        "path": "evidence/contract-a1-xcodegen-skeleton-r2.log",
+        "result": "passed",
+        "sha256": "538dd314f494026193f49eeb52db6d35b1b7a7bfef3e30266038ee2a5adbc135"
+      },
+      "task": "contract",
+      "timestamp": "2026-11-11T00:00:10.180890+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ct-verify",
+        "requirement_id": null,
+        "status": "in_progress",
+        "task_id": "contract",
+        "title": "JSON 예제 파싱과 xcodegen 생성 확인"
+      },
+      "timestamp": "2026-11-11T00:00:10.231548+00:00",
+      "todo": {
+        "id": "ct-verify",
+        "requirement_id": null,
+        "status": "completed",
+        "task_id": "contract",
+        "title": "JSON 예제 파싱과 xcodegen 생성 확인"
+      }
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "contract": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+              "check_id": "protocol-examples",
+              "path": "evidence/contract-a1-protocol-examples-r2.log",
+              "result": "passed",
+              "sha256": "f9c17baae7b060f2e8efe91bed0644699bbdd8e266ccbfe3e87b5dd69c88d216"
+            },
+            {
+              "artifact_version": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+              "check_id": "xcodegen-skeleton",
+              "path": "evidence/contract-a1-xcodegen-skeleton-r2.log",
+              "result": "passed",
+              "sha256": "538dd314f494026193f49eeb52db6d35b1b7a7bfef3e30266038ee2a5adbc135"
+            }
+          ],
+          "running_revision": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "두 검사 통과(JSON 예제 13개·필수 항목 전부 / xcodegen 대상 5개·xcodebuild 패키지 그래프 해석)",
+      "task": "contract",
+      "timestamp": "2026-11-11T00:00:10.283554+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "core": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "core",
+      "timestamp": "2026-11-11T00:01:01.635719+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "kit": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "kit",
+      "timestamp": "2026-11-11T00:01:01.751166+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "verdict": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "verdict",
+      "timestamp": "2026-11-11T00:01:02.092358+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "co-node",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "core",
+        "title": "tsnet 노드 수명주기·상태·AuthURL 감시"
+      },
+      "timestamp": "2026-11-11T00:01:02.205212+00:00",
+      "todo": {
+        "id": "co-node",
+        "requirement_id": "r2-embedded",
+        "status": "in_progress",
+        "task_id": "core",
+        "title": "tsnet 노드 수명주기·상태·AuthURL 감시"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "kt-models",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "kit",
+        "title": "공용 모델 RDModels"
+      },
+      "timestamp": "2026-11-11T00:01:02.320594+00:00",
+      "todo": {
+        "id": "kt-models",
+        "requirement_id": null,
+        "status": "in_progress",
+        "task_id": "kit",
+        "title": "공용 모델 RDModels"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "vd-draft",
+        "requirement_id": "r5-appstore",
+        "status": "pending",
+        "task_id": "verdict",
+        "title": "iPhone·Mac 앱별 조항 판정서 초안"
+      },
+      "timestamp": "2026-11-11T00:01:02.444662+00:00",
+      "todo": {
+        "id": "vd-draft",
+        "requirement_id": "r5-appstore",
+        "status": "in_progress",
+        "task_id": "verdict",
+        "title": "iPhone·Mac 앱별 조항 판정서 초안"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T00:12:22.278027+00:00",
+      "todo": {
+        "id": "tn-engine",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "tunnel",
+        "title": "Tailscale 엔진(LocalBackend + wgengine) + utun fd TUN 조립(mode tunnel)"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T00:12:22.318592+00:00",
+      "todo": {
+        "id": "tn-settings",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "tunnel",
+        "title": "라우터·DNS 구성기가 network-settings 이벤트를 내보냄"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T00:12:22.357081+00:00",
+      "todo": {
+        "id": "tn-tests",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "tunnel",
+        "title": "가짜 TUN 테스트(TestTunnel*): 설정 이벤트·UDP·TCP·MagicDNS·정리"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T00:12:22.395776+00:00",
+      "todo": {
+        "id": "tn-build",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "tunnel",
+        "title": "build-core.sh 재빌드(임시 폴더 후 링크 교체)와 슬라이스 크기 기록"
+      }
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "verdict": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "453c709982fc55c97f18f44a08f7ba4abc602564a61a5e9b04e50e737d6d649a",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "판정서 작성, 독립 검토 2회 지적 반영, 인용 검사 스크립트 완료 후 측정",
+      "revision": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+      "task": "verdict",
+      "timestamp": "2026-11-11T00:16:55.722706+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "verdict": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+        "check_id": "quotes-verbatim",
+        "path": "evidence/verdict-a1-quotes-verbatim.log",
+        "result": "passed",
+        "sha256": "5fea94bc34ad94a07c7e9ed2902adeb36df978e2b4d9d9422dd0701ff3c3208a"
+      },
+      "task": "verdict",
+      "timestamp": "2026-11-11T00:17:41.264452+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "verdict": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+              "check_id": "quotes-verbatim",
+              "path": "evidence/verdict-a1-quotes-verbatim.log",
+              "result": "passed",
+              "sha256": "5fea94bc34ad94a07c7e9ed2902adeb36df978e2b4d9d9422dd0701ff3c3208a"
+            }
+          ],
+          "running_revision": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+        "check_id": "independent-review",
+        "path": "evidence/verdict-a1-independent-review.log",
+        "result": "passed",
+        "sha256": "bf9a132aecdb7c83babcd9bec686ffe78c7cc130ebd260df044c65eeca7463a8"
+      },
+      "task": "verdict",
+      "timestamp": "2026-11-11T00:17:41.370370+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "vd-draft",
+        "requirement_id": "r5-appstore",
+        "status": "in_progress",
+        "task_id": "verdict",
+        "title": "iPhone·Mac 앱별 조항 판정서 초안"
+      },
+      "timestamp": "2026-11-11T00:17:41.432757+00:00",
+      "todo": {
+        "id": "vd-draft",
+        "requirement_id": "r5-appstore",
+        "status": "completed",
+        "task_id": "verdict",
+        "title": "iPhone·Mac 앱별 조항 판정서 초안"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "vd-quotes",
+        "requirement_id": "r5-appstore",
+        "status": "pending",
+        "task_id": "verdict",
+        "title": "인용문 원문 일치 검사 스크립트"
+      },
+      "timestamp": "2026-11-11T00:17:41.501824+00:00",
+      "todo": {
+        "id": "vd-quotes",
+        "requirement_id": "r5-appstore",
+        "status": "completed",
+        "task_id": "verdict",
+        "title": "인용문 원문 일치 검사 스크립트"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "vd-review",
+        "requirement_id": "r5-appstore",
+        "status": "pending",
+        "task_id": "verdict",
+        "title": "독립 검토 결과 반영"
+      },
+      "timestamp": "2026-11-11T00:17:41.568537+00:00",
+      "todo": {
+        "id": "vd-review",
+        "requirement_id": "r5-appstore",
+        "status": "completed",
+        "task_id": "verdict",
+        "title": "독립 검토 결과 반영"
+      }
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "verdict": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+              "check_id": "quotes-verbatim",
+              "path": "evidence/verdict-a1-quotes-verbatim.log",
+              "result": "passed",
+              "sha256": "5fea94bc34ad94a07c7e9ed2902adeb36df978e2b4d9d9422dd0701ff3c3208a"
+            },
+            {
+              "artifact_version": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+              "check_id": "independent-review",
+              "path": "evidence/verdict-a1-independent-review.log",
+              "result": "passed",
+              "sha256": "bf9a132aecdb7c83babcd9bec686ffe78c7cc130ebd260df044c65eeca7463a8"
+            }
+          ],
+          "running_revision": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "인용 31개 원문 일치, 독립 검토 2회 지적 반영(최종본 3차 검토 없음 명시)",
+      "task": "verdict",
+      "timestamp": "2026-11-11T00:17:41.675701+00:00"
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "core": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "3ad70e557a443e723af542fde7b62d7a059f57e5d7c992f868bed59a1ee5d27d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "초기 구현 + 적대적 검토 29건 수정 + Swift 브리지(RDCoreBridge)·브리지 테스트 추가 후 측정",
+      "revision": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+      "task": "core",
+      "timestamp": "2026-11-11T01:29:57.680671+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "co-node",
+        "requirement_id": "r2-embedded",
+        "status": "in_progress",
+        "task_id": "core",
+        "title": "tsnet 노드 수명주기·상태·AuthURL 감시"
+      },
+      "timestamp": "2026-11-11T01:29:57.723257+00:00",
+      "todo": {
+        "id": "co-node",
+        "requirement_id": "r2-embedded",
+        "status": "completed",
+        "task_id": "core",
+        "title": "tsnet 노드 수명주기·상태·AuthURL 감시"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "co-host",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "core",
+        "title": "호스트 API: WhoIs 허용 목록·페어링 코드·승인 이벤트"
+      },
+      "timestamp": "2026-11-11T01:29:57.764837+00:00",
+      "todo": {
+        "id": "co-host",
+        "requirement_id": "r3-designated",
+        "status": "completed",
+        "task_id": "core",
+        "title": "호스트 API: WhoIs 허용 목록·페어링 코드·승인 이벤트"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "co-session",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "core",
+        "title": "설치 세션: 1회용 토큰·노드 결속·만료·해시 재검증·비디버그 거부"
+      },
+      "timestamp": "2026-11-11T01:29:57.808460+00:00",
+      "todo": {
+        "id": "co-session",
+        "requirement_id": "r4-debug-only",
+        "status": "completed",
+        "task_id": "core",
+        "title": "설치 세션: 1회용 토큰·노드 결속·만료·해시 재검증·비디버그 거부"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "co-proxy",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "core",
+        "title": "클라이언트 CONNECT 프록시(허용 대상 한정)"
+      },
+      "timestamp": "2026-11-11T01:29:57.854277+00:00",
+      "todo": {
+        "id": "co-proxy",
+        "requirement_id": "r2-embedded",
+        "status": "completed",
+        "task_id": "core",
+        "title": "클라이언트 CONNECT 프록시(허용 대상 한정)"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "co-capi",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "core",
+        "title": "C API(JSON)와 이벤트 큐"
+      },
+      "timestamp": "2026-11-11T01:29:57.900479+00:00",
+      "todo": {
+        "id": "co-capi",
+        "requirement_id": "r1-install",
+        "status": "completed",
+        "task_id": "core",
+        "title": "C API(JSON)와 이벤트 큐"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "co-e2e",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "core",
+        "title": "testcontrol 가짜 tailnet E2E 테스트"
+      },
+      "timestamp": "2026-11-11T01:29:57.942839+00:00",
+      "todo": {
+        "id": "co-e2e",
+        "requirement_id": "r3-designated",
+        "status": "completed",
+        "task_id": "core",
+        "title": "testcontrol 가짜 tailnet E2E 테스트"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "co-xcfw",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "core",
+        "title": "build-core.sh로 XCFramework 3슬라이스, RDCore 패키지와 Swift 브리지"
+      },
+      "timestamp": "2026-11-11T01:29:57.986347+00:00",
+      "todo": {
+        "id": "co-xcfw",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "core",
+        "title": "build-core.sh로 XCFramework 3슬라이스, RDCore 패키지와 Swift 브리지"
+      }
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "core": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+        "check_id": "go-tests",
+        "path": "evidence/core-a1-go-tests.log",
+        "result": "passed",
+        "sha256": "7a9937f350d1e50486d400322d7e74bb64183200526d94c4115a2368fa769bfe"
+      },
+      "task": "core",
+      "timestamp": "2026-11-11T01:34:42.559169+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "core": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+              "check_id": "go-tests",
+              "path": "evidence/core-a1-go-tests.log",
+              "result": "passed",
+              "sha256": "7a9937f350d1e50486d400322d7e74bb64183200526d94c4115a2368fa769bfe"
+            }
+          ],
+          "running_revision": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+        "check_id": "fake-tailnet-e2e",
+        "path": "evidence/core-a1-fake-tailnet-e2e.log",
+        "result": "passed",
+        "sha256": "dcb91532d1c6c3e95d8b8e3ac9cf30782f96e56be0902fe60c64c8e7afefe64e"
+      },
+      "task": "core",
+      "timestamp": "2026-11-11T01:34:42.605010+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "core": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+              "check_id": "go-tests",
+              "path": "evidence/core-a1-go-tests.log",
+              "result": "passed",
+              "sha256": "7a9937f350d1e50486d400322d7e74bb64183200526d94c4115a2368fa769bfe"
+            },
+            {
+              "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+              "check_id": "fake-tailnet-e2e",
+              "path": "evidence/core-a1-fake-tailnet-e2e.log",
+              "result": "passed",
+              "sha256": "dcb91532d1c6c3e95d8b8e3ac9cf30782f96e56be0902fe60c64c8e7afefe64e"
+            }
+          ],
+          "running_revision": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+        "check_id": "xcframework",
+        "path": "evidence/core-a1-xcframework.log",
+        "result": "passed",
+        "sha256": "99690d2d56ee4f39800360b3018cf4b427a4ed4c4af1319e05df60d96a99fee0"
+      },
+      "task": "core",
+      "timestamp": "2026-11-11T01:34:42.647493+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "co-xcfw",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "core",
+        "title": "build-core.sh로 XCFramework 3슬라이스, RDCore 패키지와 Swift 브리지"
+      },
+      "timestamp": "2026-11-11T01:34:42.688324+00:00",
+      "todo": {
+        "id": "co-xcfw",
+        "requirement_id": "r1-install",
+        "status": "completed",
+        "task_id": "core",
+        "title": "build-core.sh로 XCFramework 3슬라이스, RDCore 패키지와 Swift 브리지"
+      }
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "core": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+              "check_id": "go-tests",
+              "path": "evidence/core-a1-go-tests.log",
+              "result": "passed",
+              "sha256": "7a9937f350d1e50486d400322d7e74bb64183200526d94c4115a2368fa769bfe"
+            },
+            {
+              "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+              "check_id": "fake-tailnet-e2e",
+              "path": "evidence/core-a1-fake-tailnet-e2e.log",
+              "result": "passed",
+              "sha256": "dcb91532d1c6c3e95d8b8e3ac9cf30782f96e56be0902fe60c64c8e7afefe64e"
+            },
+            {
+              "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+              "check_id": "xcframework",
+              "path": "evidence/core-a1-xcframework.log",
+              "result": "passed",
+              "sha256": "99690d2d56ee4f39800360b3018cf4b427a4ed4c4af1319e05df60d96a99fee0"
+            }
+          ],
+          "running_revision": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "vet+race 전체 통과, E2E 19개 통과, 슬라이스 3개(macOS 23M/iOS 22M/Sim 22M)+브리지 테스트 4개. 적대적 검토 29건(중간 5·낮음 24) 전부 처리(23 수정·6 문서화)",
+      "task": "core",
+      "timestamp": "2026-11-11T01:34:42.740458+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "tunnel": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "tunnel",
+      "timestamp": "2026-11-11T01:35:03.393694+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "tn-engine",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "tunnel",
+        "title": "Tailscale 엔진(LocalBackend + wgengine) + utun fd TUN 조립(mode tunnel)"
+      },
+      "timestamp": "2026-11-11T01:35:03.433541+00:00",
+      "todo": {
+        "id": "tn-engine",
+        "requirement_id": "r2-embedded",
+        "status": "in_progress",
+        "task_id": "tunnel",
+        "title": "Tailscale 엔진(LocalBackend + wgengine) + utun fd TUN 조립(mode tunnel)"
+      }
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "kit": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "43bece4e1dbb5d99e4841852aa7f6420f1e981a1b5b793eeb5ac6d98164a83dd",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "초기 구현 + 적대적 검토 27건 수정(교착 게이트·ZIP 하드닝·모델 계약·스크립트) 후 측정",
+      "revision": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+      "task": "kit",
+      "timestamp": "2026-11-11T01:47:25.829117+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "kt-models",
+        "requirement_id": null,
+        "status": "in_progress",
+        "task_id": "kit",
+        "title": "공용 모델 RDModels"
+      },
+      "timestamp": "2026-11-11T01:47:25.871929+00:00",
+      "todo": {
+        "id": "kt-models",
+        "requirement_id": null,
+        "status": "completed",
+        "task_id": "kit",
+        "title": "공용 모델 RDModels"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "kt-profile",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "kit",
+        "title": "프로비저닝 프로필(CMS) 파서와 서명 엔타이틀먼트 판독"
+      },
+      "timestamp": "2026-11-11T01:47:25.917197+00:00",
+      "todo": {
+        "id": "kt-profile",
+        "requirement_id": "r4-debug-only",
+        "status": "completed",
+        "task_id": "kit",
+        "title": "프로비저닝 프로필(CMS) 파서와 서명 엔타이틀먼트 판독"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "kt-policy",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "kit",
+        "title": "DebugBuildPolicy, 거부 사유 코드, Debug 구성 판별"
+      },
+      "timestamp": "2026-11-11T01:47:25.959546+00:00",
+      "todo": {
+        "id": "kt-policy",
+        "requirement_id": "r4-debug-only",
+        "status": "completed",
+        "task_id": "kit",
+        "title": "DebugBuildPolicy, 거부 사유 코드, Debug 구성 판별"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "kt-ipa",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "kit",
+        "title": "ZIP/IPA 빌더와 OTA 매니페스트 빌더"
+      },
+      "timestamp": "2026-11-11T01:47:26.001467+00:00",
+      "todo": {
+        "id": "kt-ipa",
+        "requirement_id": "r1-install",
+        "status": "completed",
+        "task_id": "kit",
+        "title": "ZIP/IPA 빌더와 OTA 매니페스트 빌더"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "kt-tests",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "kit",
+        "title": "정책 행렬 테스트, IPA 왕복, 실제 빌드 읽기 전용 검사"
+      },
+      "timestamp": "2026-11-11T01:47:26.043593+00:00",
+      "todo": {
+        "id": "kt-tests",
+        "requirement_id": "r4-debug-only",
+        "status": "in_progress",
+        "task_id": "kit",
+        "title": "정책 행렬 테스트, IPA 왕복, 실제 빌드 읽기 전용 검사"
+      }
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "kit": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+        "check_id": "swift-tests",
+        "path": "evidence/kit-a1-swift-tests.log",
+        "result": "passed",
+        "sha256": "3be859c439bb2b8496d91dd68ed5e6e7fab6bdb34eb2ce0feb528019be84973a"
+      },
+      "task": "kit",
+      "timestamp": "2026-11-11T01:49:12.736094+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "kit": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+              "check_id": "swift-tests",
+              "path": "evidence/kit-a1-swift-tests.log",
+              "result": "passed",
+              "sha256": "3be859c439bb2b8496d91dd68ed5e6e7fab6bdb34eb2ce0feb528019be84973a"
+            }
+          ],
+          "running_revision": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+        "check_id": "ipa-roundtrip",
+        "path": "evidence/kit-a1-ipa-roundtrip.log",
+        "result": "passed",
+        "sha256": "789baec420cdd17218167a5c46c9bd1ecf9b7ba16d05284ae13eb448c8c59628"
+      },
+      "task": "kit",
+      "timestamp": "2026-11-11T01:49:12.815711+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "kit": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+              "check_id": "swift-tests",
+              "path": "evidence/kit-a1-swift-tests.log",
+              "result": "passed",
+              "sha256": "3be859c439bb2b8496d91dd68ed5e6e7fab6bdb34eb2ce0feb528019be84973a"
+            },
+            {
+              "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+              "check_id": "ipa-roundtrip",
+              "path": "evidence/kit-a1-ipa-roundtrip.log",
+              "result": "passed",
+              "sha256": "789baec420cdd17218167a5c46c9bd1ecf9b7ba16d05284ae13eb448c8c59628"
+            }
+          ],
+          "running_revision": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+        "check_id": "real-builds",
+        "path": "evidence/kit-a1-real-builds.log",
+        "result": "passed",
+        "sha256": "497e0b68bc8f58b9e3f7bcd39ec12a899f4f7d45109381dd24387816dd2b061f"
+      },
+      "task": "kit",
+      "timestamp": "2026-11-11T01:49:12.928788+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "kt-tests",
+        "requirement_id": "r4-debug-only",
+        "status": "in_progress",
+        "task_id": "kit",
+        "title": "정책 행렬 테스트, IPA 왕복, 실제 빌드 읽기 전용 검사"
+      },
+      "timestamp": "2026-11-11T01:49:13.040857+00:00",
+      "todo": {
+        "id": "kt-tests",
+        "requirement_id": "r4-debug-only",
+        "status": "completed",
+        "task_id": "kit",
+        "title": "정책 행렬 테스트, IPA 왕복, 실제 빌드 읽기 전용 검사"
+      }
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "kit": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+              "check_id": "swift-tests",
+              "path": "evidence/kit-a1-swift-tests.log",
+              "result": "passed",
+              "sha256": "3be859c439bb2b8496d91dd68ed5e6e7fab6bdb34eb2ce0feb528019be84973a"
+            },
+            {
+              "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+              "check_id": "ipa-roundtrip",
+              "path": "evidence/kit-a1-ipa-roundtrip.log",
+              "result": "passed",
+              "sha256": "789baec420cdd17218167a5c46c9bd1ecf9b7ba16d05284ae13eb448c8c59628"
+            },
+            {
+              "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+              "check_id": "real-builds",
+              "path": "evidence/kit-a1-real-builds.log",
+              "result": "passed",
+              "sha256": "497e0b68bc8f58b9e3f7bcd39ec12a899f4f7d45109381dd24387816dd2b061f"
+            }
+          ],
+          "running_revision": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "swift test 22+51개 통과(동시 검사 교착 회귀 포함), iOS 시뮬레이터 RDModels 빌드, IPA 왕복 18 PASS, 실제 Debug 빌드 수락·변형 3종 거부·IPA 왕복(110항목 차이 0). 적대적 검토 27건 처리(26 수정, 1 부분)",
+      "task": "kit",
+      "timestamp": "2026-11-11T01:49:13.323955+00:00"
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T01:51:04.690018+00:00",
+      "todo": {
+        "id": "ml-library",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "mac-logic",
+        "title": "빌드 라이브러리: 가져오기·검사·IPA 패키징·게시·최신 N개 유지·재게시, 폴더 스캐너·감시"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T01:51:04.895793+00:00",
+      "todo": {
+        "id": "ml-devices",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "mac-logic",
+        "title": "기기·페어링 모델: 승인 대기, 승인·거부, 기기 저장과 허용 목록 반영"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T01:51:05.193477+00:00",
+      "todo": {
+        "id": "ml-state",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "mac-logic",
+        "title": "노드 상태 안내: 로그인 필요·HTTPS 미사용·인증서 발급 중·오류"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T01:51:05.352622+00:00",
+      "todo": {
+        "id": "ml-tests",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "mac-logic",
+        "title": "가짜 코어·가짜 검사기 단위 테스트와 위생 검사"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T01:51:05.614886+00:00",
+      "todo": {
+        "id": "pl-client",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "phone-logic",
+        "title": "호스트 API 클라이언트와 오류 코드 한국어 안내"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T01:51:05.811257+00:00",
+      "todo": {
+        "id": "pl-pair",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "phone-logic",
+        "title": "페어링 링크 파싱과 요청·승인·거부·만료 흐름, 등록된 호스트 저장"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T01:51:06.115688+00:00",
+      "todo": {
+        "id": "pl-install",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "phone-logic",
+        "title": "빌드 목록과 설치 세션 생성·설치 URL 열기·진행 폴링"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T01:51:06.240965+00:00",
+      "todo": {
+        "id": "pl-tests",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "phone-logic",
+        "title": "가짜 전송 단위 테스트와 iOS 시뮬레이터 빌드"
+      }
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-logic": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "mac-logic",
+      "timestamp": "2026-11-11T01:52:14.294551+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-logic": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "phone-logic",
+      "timestamp": "2026-11-11T01:52:14.417865+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ml-library",
+        "requirement_id": "r4-debug-only",
+        "status": "pending",
+        "task_id": "mac-logic",
+        "title": "빌드 라이브러리: 가져오기·검사·IPA 패키징·게시·최신 N개 유지·재게시, 폴더 스캐너·감시"
+      },
+      "timestamp": "2026-11-11T01:52:14.488890+00:00",
+      "todo": {
+        "id": "ml-library",
+        "requirement_id": "r4-debug-only",
+        "status": "in_progress",
+        "task_id": "mac-logic",
+        "title": "빌드 라이브러리: 가져오기·검사·IPA 패키징·게시·최신 N개 유지·재게시, 폴더 스캐너·감시"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "pl-client",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "phone-logic",
+        "title": "호스트 API 클라이언트와 오류 코드 한국어 안내"
+      },
+      "timestamp": "2026-11-11T01:52:14.601236+00:00",
+      "todo": {
+        "id": "pl-client",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "phone-logic",
+        "title": "호스트 API 클라이언트와 오류 코드 한국어 안내"
+      }
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-logic": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "8fd7167bda58f033883b16a8963dbed709cdf55be8fc0078fd2ad9803d57789e",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "초기 구현 + 적대적 검토 27건 수정(VPN API 재설계·마감 뒤 서버 확인·설치 URL 엄격 검증 등) 후 측정",
+      "revision": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+      "task": "phone-logic",
+      "timestamp": "2026-11-11T02:24:41.468968+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "pl-client",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "phone-logic",
+        "title": "호스트 API 클라이언트와 오류 코드 한국어 안내"
+      },
+      "timestamp": "2026-11-11T02:24:41.512778+00:00",
+      "todo": {
+        "id": "pl-client",
+        "requirement_id": "r1-install",
+        "status": "completed",
+        "task_id": "phone-logic",
+        "title": "호스트 API 클라이언트와 오류 코드 한국어 안내"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "pl-pair",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "phone-logic",
+        "title": "페어링 링크 파싱과 요청·승인·거부·만료 흐름, 등록된 호스트 저장"
+      },
+      "timestamp": "2026-11-11T02:24:41.552520+00:00",
+      "todo": {
+        "id": "pl-pair",
+        "requirement_id": "r3-designated",
+        "status": "completed",
+        "task_id": "phone-logic",
+        "title": "페어링 링크 파싱과 요청·승인·거부·만료 흐름, 등록된 호스트 저장"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "pl-install",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "phone-logic",
+        "title": "빌드 목록과 설치 세션 생성·설치 URL 열기·진행 폴링"
+      },
+      "timestamp": "2026-11-11T02:24:41.596434+00:00",
+      "todo": {
+        "id": "pl-install",
+        "requirement_id": "r1-install",
+        "status": "completed",
+        "task_id": "phone-logic",
+        "title": "빌드 목록과 설치 세션 생성·설치 URL 열기·진행 폴링"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "pl-tests",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "phone-logic",
+        "title": "가짜 전송 단위 테스트와 iOS 시뮬레이터 빌드"
+      },
+      "timestamp": "2026-11-11T02:24:41.641965+00:00",
+      "todo": {
+        "id": "pl-tests",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "phone-logic",
+        "title": "가짜 전송 단위 테스트와 iOS 시뮬레이터 빌드"
+      }
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-logic": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+        "check_id": "phone-logic-tests",
+        "path": "evidence/phone-logic-a1-tests.log",
+        "result": "passed",
+        "sha256": "187d22b7bddfa9f08b06b5cd1390e8b066f96279dadadbe8160ed44c83da1d62"
+      },
+      "task": "phone-logic",
+      "timestamp": "2026-11-11T02:25:02.332861+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-logic": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+              "check_id": "phone-logic-tests",
+              "path": "evidence/phone-logic-a1-tests.log",
+              "result": "passed",
+              "sha256": "187d22b7bddfa9f08b06b5cd1390e8b066f96279dadadbe8160ed44c83da1d62"
+            }
+          ],
+          "running_revision": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+        "check_id": "phone-logic-ios",
+        "path": "evidence/phone-logic-a1-ios.log",
+        "result": "passed",
+        "sha256": "4b23eef4184cd40cbba54281aab2cf21e6723551d40cdaa6d43de5cb501fad9c"
+      },
+      "task": "phone-logic",
+      "timestamp": "2026-11-11T02:25:02.529094+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "pl-tests",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "phone-logic",
+        "title": "가짜 전송 단위 테스트와 iOS 시뮬레이터 빌드"
+      },
+      "timestamp": "2026-11-11T02:25:02.640701+00:00",
+      "todo": {
+        "id": "pl-tests",
+        "requirement_id": "r1-install",
+        "status": "completed",
+        "task_id": "phone-logic",
+        "title": "가짜 전송 단위 테스트와 iOS 시뮬레이터 빌드"
+      }
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-logic": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+              "check_id": "phone-logic-tests",
+              "path": "evidence/phone-logic-a1-tests.log",
+              "result": "passed",
+              "sha256": "187d22b7bddfa9f08b06b5cd1390e8b066f96279dadadbe8160ed44c83da1d62"
+            },
+            {
+              "artifact_version": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+              "check_id": "phone-logic-ios",
+              "path": "evidence/phone-logic-a1-ios.log",
+              "result": "passed",
+              "sha256": "4b23eef4184cd40cbba54281aab2cf21e6723551d40cdaa6d43de5cb501fad9c"
+            }
+          ],
+          "running_revision": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "swift test 91개 통과, iOS 시뮬레이터 빌드. 적대적 검토 27건(중간 5종·낮음 20) 처리(26 수정, S6 부분: lastError가 문자열)",
+      "task": "phone-logic",
+      "timestamp": "2026-11-11T02:25:02.849243+00:00"
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T02:25:33.735397+00:00",
+      "todo": {
+        "id": "wr-split",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "wire",
+        "title": "project.yml을 앱별 포함 파일(맥·아이폰)로 분할하고 포함 파일이 리소스로 새지 않게 excludes 지정"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T02:25:33.882982+00:00",
+      "todo": {
+        "id": "wr-packages",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "wire",
+        "title": "MacHost·PhoneClient 패키지 연결, ARCHS=arm64, 의존성 연결 후 xcodebuild 해석 확인"
+      }
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "wire": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "wire",
+      "timestamp": "2026-11-11T02:25:34.103032+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "wr-split",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "wire",
+        "title": "project.yml을 앱별 포함 파일(맥·아이폰)로 분할하고 포함 파일이 리소스로 새지 않게 excludes 지정"
+      },
+      "timestamp": "2026-11-11T02:25:34.242754+00:00",
+      "todo": {
+        "id": "wr-split",
+        "requirement_id": null,
+        "status": "in_progress",
+        "task_id": "wire",
+        "title": "project.yml을 앱별 포함 파일(맥·아이폰)로 분할하고 포함 파일이 리소스로 새지 않게 excludes 지정"
+      }
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "wire": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "491c7b168579c339f3714545ddeb2eae46ae87a09bd442d5455146c45149321a",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "project.yml 분할(앱별 포함 파일)·패키지 4개 연결·ARCHS=arm64 후 측정",
+      "revision": "0d29aebad13e96c1ab375feb2239f454e7daeaa84d4b37a1c9c8c1d89293d40e",
+      "task": "wire",
+      "timestamp": "2026-11-11T02:26:03.135256+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "wr-split",
+        "requirement_id": null,
+        "status": "in_progress",
+        "task_id": "wire",
+        "title": "project.yml을 앱별 포함 파일(맥·아이폰)로 분할하고 포함 파일이 리소스로 새지 않게 excludes 지정"
+      },
+      "timestamp": "2026-11-11T02:26:03.184279+00:00",
+      "todo": {
+        "id": "wr-split",
+        "requirement_id": null,
+        "status": "completed",
+        "task_id": "wire",
+        "title": "project.yml을 앱별 포함 파일(맥·아이폰)로 분할하고 포함 파일이 리소스로 새지 않게 excludes 지정"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "wr-packages",
+        "requirement_id": null,
+        "status": "pending",
+        "task_id": "wire",
+        "title": "MacHost·PhoneClient 패키지 연결, ARCHS=arm64, 의존성 연결 후 xcodebuild 해석 확인"
+      },
+      "timestamp": "2026-11-11T02:26:03.234037+00:00",
+      "todo": {
+        "id": "wr-packages",
+        "requirement_id": null,
+        "status": "in_progress",
+        "task_id": "wire",
+        "title": "MacHost·PhoneClient 패키지 연결, ARCHS=arm64, 의존성 연결 후 xcodebuild 해석 확인"
+      }
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "wire": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "0d29aebad13e96c1ab375feb2239f454e7daeaa84d4b37a1c9c8c1d89293d40e",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "0d29aebad13e96c1ab375feb2239f454e7daeaa84d4b37a1c9c8c1d89293d40e",
+        "check_id": "xcodegen-includes",
+        "path": "evidence/wire-a1-xcodegen-includes.log",
+        "result": "passed",
+        "sha256": "02cc0de79fdcf7b762e57c61dd30e150cd68484a2054964fcf8f76565d7e050d"
+      },
+      "task": "wire",
+      "timestamp": "2026-11-11T02:26:13.082882+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "wr-packages",
+        "requirement_id": null,
+        "status": "in_progress",
+        "task_id": "wire",
+        "title": "MacHost·PhoneClient 패키지 연결, ARCHS=arm64, 의존성 연결 후 xcodebuild 해석 확인"
+      },
+      "timestamp": "2026-11-11T02:26:13.138877+00:00",
+      "todo": {
+        "id": "wr-packages",
+        "requirement_id": null,
+        "status": "completed",
+        "task_id": "wire",
+        "title": "MacHost·PhoneClient 패키지 연결, ARCHS=arm64, 의존성 연결 후 xcodebuild 해석 확인"
+      }
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "wire": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "0d29aebad13e96c1ab375feb2239f454e7daeaa84d4b37a1c9c8c1d89293d40e",
+              "check_id": "xcodegen-includes",
+              "path": "evidence/wire-a1-xcodegen-includes.log",
+              "result": "passed",
+              "sha256": "02cc0de79fdcf7b762e57c61dd30e150cd68484a2054964fcf8f76565d7e050d"
+            }
+          ],
+          "running_revision": "0d29aebad13e96c1ab375feb2239f454e7daeaa84d4b37a1c9c8c1d89293d40e",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "대상 5개·패키지 4개 해석, 포함 파일 리소스 유출 0",
+      "task": "wire",
+      "timestamp": "2026-11-11T02:26:13.182528+00:00"
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "tunnel": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "3e4976cf8e8dc1549a9d01361eb99ea948db216c0e4f36205dd5b5539600c11e",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "초기 구현 + 적대적 검토 14건 수정(iOS DNS 한정·기본 인터페이스 재평가·rdtestenv forward 등) + 문서 정정 후 측정",
+      "revision": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+      "task": "tunnel",
+      "timestamp": "2026-11-11T02:28:06.870123+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "tn-engine",
+        "requirement_id": "r2-embedded",
+        "status": "in_progress",
+        "task_id": "tunnel",
+        "title": "Tailscale 엔진(LocalBackend + wgengine) + utun fd TUN 조립(mode tunnel)"
+      },
+      "timestamp": "2026-11-11T02:28:06.911608+00:00",
+      "todo": {
+        "id": "tn-engine",
+        "requirement_id": "r2-embedded",
+        "status": "completed",
+        "task_id": "tunnel",
+        "title": "Tailscale 엔진(LocalBackend + wgengine) + utun fd TUN 조립(mode tunnel)"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "tn-settings",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "tunnel",
+        "title": "라우터·DNS 구성기가 network-settings 이벤트를 내보냄"
+      },
+      "timestamp": "2026-11-11T02:28:06.953209+00:00",
+      "todo": {
+        "id": "tn-settings",
+        "requirement_id": "r2-embedded",
+        "status": "completed",
+        "task_id": "tunnel",
+        "title": "라우터·DNS 구성기가 network-settings 이벤트를 내보냄"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "tn-tests",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "tunnel",
+        "title": "가짜 TUN 테스트(TestTunnel*): 설정 이벤트·UDP·TCP·MagicDNS·정리"
+      },
+      "timestamp": "2026-11-11T02:28:06.994018+00:00",
+      "todo": {
+        "id": "tn-tests",
+        "requirement_id": "r2-embedded",
+        "status": "completed",
+        "task_id": "tunnel",
+        "title": "가짜 TUN 테스트(TestTunnel*): 설정 이벤트·UDP·TCP·MagicDNS·정리"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "tn-build",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "tunnel",
+        "title": "build-core.sh 재빌드(임시 폴더 후 링크 교체)와 슬라이스 크기 기록"
+      },
+      "timestamp": "2026-11-11T02:28:07.037042+00:00",
+      "todo": {
+        "id": "tn-build",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "tunnel",
+        "title": "build-core.sh 재빌드(임시 폴더 후 링크 교체)와 슬라이스 크기 기록"
+      }
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "tunnel": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+        "check_id": "tunnel-tests",
+        "path": "evidence/tunnel-a1-tunnel-tests.log",
+        "result": "passed",
+        "sha256": "2f3a3fe843f6bd55a91e7e9b5c0ef0cdd1fb89f02e135b63ede8b8f850e0c6e3"
+      },
+      "task": "tunnel",
+      "timestamp": "2026-11-11T02:31:29.338910+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "tunnel": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+              "check_id": "tunnel-tests",
+              "path": "evidence/tunnel-a1-tunnel-tests.log",
+              "result": "passed",
+              "sha256": "2f3a3fe843f6bd55a91e7e9b5c0ef0cdd1fb89f02e135b63ede8b8f850e0c6e3"
+            }
+          ],
+          "running_revision": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+        "check_id": "core-regression",
+        "path": "evidence/tunnel-a1-core-regression.log",
+        "result": "passed",
+        "sha256": "2ea2775dcde40370aef13e5fff124ac1da8ca2528118e1dd9a2a85f615e5c266"
+      },
+      "task": "tunnel",
+      "timestamp": "2026-11-11T02:31:29.383742+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "tunnel": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+              "check_id": "tunnel-tests",
+              "path": "evidence/tunnel-a1-tunnel-tests.log",
+              "result": "passed",
+              "sha256": "2f3a3fe843f6bd55a91e7e9b5c0ef0cdd1fb89f02e135b63ede8b8f850e0c6e3"
+            },
+            {
+              "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+              "check_id": "core-regression",
+              "path": "evidence/tunnel-a1-core-regression.log",
+              "result": "passed",
+              "sha256": "2ea2775dcde40370aef13e5fff124ac1da8ca2528118e1dd9a2a85f615e5c266"
+            }
+          ],
+          "running_revision": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+        "check_id": "tunnel-xcframework",
+        "path": "evidence/tunnel-a1-xcframework.log",
+        "result": "passed",
+        "sha256": "3a822fc7b0a1db3f54fdc0e6bee453f9dab2cbff136b6a97ac017f7b4d816013"
+      },
+      "task": "tunnel",
+      "timestamp": "2026-11-11T02:31:29.428139+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "tn-build",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "tunnel",
+        "title": "build-core.sh 재빌드(임시 폴더 후 링크 교체)와 슬라이스 크기 기록"
+      },
+      "timestamp": "2026-11-11T02:31:29.474681+00:00",
+      "todo": {
+        "id": "tn-build",
+        "requirement_id": "r1-install",
+        "status": "completed",
+        "task_id": "tunnel",
+        "title": "build-core.sh 재빌드(임시 폴더 후 링크 교체)와 슬라이스 크기 기록"
+      }
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "tunnel": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+              "check_id": "tunnel-tests",
+              "path": "evidence/tunnel-a1-tunnel-tests.log",
+              "result": "passed",
+              "sha256": "2f3a3fe843f6bd55a91e7e9b5c0ef0cdd1fb89f02e135b63ede8b8f850e0c6e3"
+            },
+            {
+              "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+              "check_id": "core-regression",
+              "path": "evidence/tunnel-a1-core-regression.log",
+              "result": "passed",
+              "sha256": "2ea2775dcde40370aef13e5fff124ac1da8ca2528118e1dd9a2a85f615e5c266"
+            },
+            {
+              "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+              "check_id": "tunnel-xcframework",
+              "path": "evidence/tunnel-a1-xcframework.log",
+              "result": "passed",
+              "sha256": "3a822fc7b0a1db3f54fdc0e6bee453f9dab2cbff136b6a97ac017f7b4d816013"
+            }
+          ],
+          "running_revision": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "TestTunnel* 전부 통과(iOS DNS 6케이스 포함), vet+전체 -race 통과(e2e 133s, tunnel e2e 23s), 슬라이스 3개+ios-arm64 터널 심볼, 브리지 테스트 6개. 적대적 검토 14건 처리",
+      "task": "tunnel",
+      "timestamp": "2026-11-11T02:31:29.518009+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-app": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "phone-app",
+      "timestamp": "2026-11-11T02:31:36.552266+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "pa-tunnel",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "phone-app",
+        "title": "Packet Tunnel 확장: 노드·프록시·NEProxySettings"
+      },
+      "timestamp": "2026-11-11T02:31:36.600457+00:00",
+      "todo": {
+        "id": "pa-tunnel",
+        "requirement_id": "r2-embedded",
+        "status": "in_progress",
+        "task_id": "phone-app",
+        "title": "Packet Tunnel 확장: 노드·프록시·NEProxySettings"
+      }
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-logic": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "be642f0c9869843beaa5986138d181f68697d36e657d104fec29d80111906922",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "초기 구현 + 적대적 검토 36건 수정(게시 바이트 무결성·수명주기 직렬화·감시기 지문 저장·일회용 코드 상태 등) 후 측정",
+      "revision": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+      "task": "mac-logic",
+      "timestamp": "2026-11-11T02:33:55.677535+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ml-library",
+        "requirement_id": "r4-debug-only",
+        "status": "in_progress",
+        "task_id": "mac-logic",
+        "title": "빌드 라이브러리: 가져오기·검사·IPA 패키징·게시·최신 N개 유지·재게시, 폴더 스캐너·감시"
+      },
+      "timestamp": "2026-11-11T02:33:55.725164+00:00",
+      "todo": {
+        "id": "ml-library",
+        "requirement_id": "r4-debug-only",
+        "status": "completed",
+        "task_id": "mac-logic",
+        "title": "빌드 라이브러리: 가져오기·검사·IPA 패키징·게시·최신 N개 유지·재게시, 폴더 스캐너·감시"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ml-devices",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "mac-logic",
+        "title": "기기·페어링 모델: 승인 대기, 승인·거부, 기기 저장과 허용 목록 반영"
+      },
+      "timestamp": "2026-11-11T02:33:55.770985+00:00",
+      "todo": {
+        "id": "ml-devices",
+        "requirement_id": "r3-designated",
+        "status": "completed",
+        "task_id": "mac-logic",
+        "title": "기기·페어링 모델: 승인 대기, 승인·거부, 기기 저장과 허용 목록 반영"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ml-state",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "mac-logic",
+        "title": "노드 상태 안내: 로그인 필요·HTTPS 미사용·인증서 발급 중·오류"
+      },
+      "timestamp": "2026-11-11T02:33:55.818148+00:00",
+      "todo": {
+        "id": "ml-state",
+        "requirement_id": "r2-embedded",
+        "status": "completed",
+        "task_id": "mac-logic",
+        "title": "노드 상태 안내: 로그인 필요·HTTPS 미사용·인증서 발급 중·오류"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ml-tests",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "mac-logic",
+        "title": "가짜 코어·가짜 검사기 단위 테스트와 위생 검사"
+      },
+      "timestamp": "2026-11-11T02:33:55.864292+00:00",
+      "todo": {
+        "id": "ml-tests",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "mac-logic",
+        "title": "가짜 코어·가짜 검사기 단위 테스트와 위생 검사"
+      }
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-logic": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+        "check_id": "mac-logic-tests",
+        "path": "evidence/mac-logic-a1-tests.log",
+        "result": "passed",
+        "sha256": "3abd88c311ac79f130e3a2ce118bbdec3044e8f2d317b6a972c972732dfd8e4e"
+      },
+      "task": "mac-logic",
+      "timestamp": "2026-11-11T02:34:14.084413+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-logic": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+              "check_id": "mac-logic-tests",
+              "path": "evidence/mac-logic-a1-tests.log",
+              "result": "passed",
+              "sha256": "3abd88c311ac79f130e3a2ce118bbdec3044e8f2d317b6a972c972732dfd8e4e"
+            }
+          ],
+          "running_revision": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+        "check_id": "mac-logic-hygiene",
+        "path": "evidence/mac-logic-a1-hygiene.log",
+        "result": "passed",
+        "sha256": "be1e91c5f007c37ba5c413496d002c9355aa864b57febc7d24adea6d26732dd9"
+      },
+      "task": "mac-logic",
+      "timestamp": "2026-11-11T02:34:14.127262+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ml-tests",
+        "requirement_id": "r1-install",
+        "status": "in_progress",
+        "task_id": "mac-logic",
+        "title": "가짜 코어·가짜 검사기 단위 테스트와 위생 검사"
+      },
+      "timestamp": "2026-11-11T02:34:14.169757+00:00",
+      "todo": {
+        "id": "ml-tests",
+        "requirement_id": "r1-install",
+        "status": "completed",
+        "task_id": "mac-logic",
+        "title": "가짜 코어·가짜 검사기 단위 테스트와 위생 검사"
+      }
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-logic": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+              "check_id": "mac-logic-tests",
+              "path": "evidence/mac-logic-a1-tests.log",
+              "result": "passed",
+              "sha256": "3abd88c311ac79f130e3a2ce118bbdec3044e8f2d317b6a972c972732dfd8e4e"
+            },
+            {
+              "artifact_version": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+              "check_id": "mac-logic-hygiene",
+              "path": "evidence/mac-logic-a1-hygiene.log",
+              "result": "passed",
+              "sha256": "be1e91c5f007c37ba5c413496d002c9355aa864b57febc7d24adea6d26732dd9"
+            }
+          ],
+          "running_revision": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "swift test 3회 연속 통과(75개 테스트), 샌드박스 위생 grep 통과. 적대적 검토 36건(높음 1·중간 11·낮음 24) 전부 수정",
+      "task": "mac-logic",
+      "timestamp": "2026-11-11T02:34:14.212980+00:00"
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T02:34:31.279373+00:00",
+      "todo": {
+        "id": "in-stack",
+        "requirement_id": "r1-install",
+        "status": "pending",
+        "task_id": "integration",
+        "title": "Mac 로직+실제 코어+가짜 tailnet+iPhone 로직 종단 흐름(페어링→목록→설치 세션→IPA 해시)"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-11T02:34:31.342496+00:00",
+      "todo": {
+        "id": "in-deny",
+        "requirement_id": "r3-designated",
+        "status": "pending",
+        "task_id": "integration",
+        "title": "미등록·기기 제거·다른 노드 토큰 거부, 비디버그 빌드 비게시 종단 확인"
+      }
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-app": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "mac-app",
+      "timestamp": "2026-11-11T02:34:31.496064+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "ma-bridge",
+        "requirement_id": "r2-embedded",
+        "status": "pending",
+        "task_id": "mac-app",
+        "title": "RDCore Swift 브리지로 호스트 모드 연결"
+      },
+      "timestamp": "2026-11-11T02:34:31.576389+00:00",
+      "todo": {
+        "id": "ma-bridge",
+        "requirement_id": "r2-embedded",
+        "status": "in_progress",
+        "task_id": "mac-app",
+        "title": "RDCore Swift 브리지로 호스트 모드 연결"
+      }
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-app": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "d1fbea62a01d3d72a97445d89436fd7104c89f14a0754e2782341919ef5b7872",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "수정 1·2차 적용 후 실제 산출물 리비전(재검토 확정 8건 코디네이터 수정 포함)",
+      "revision": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+      "task": "phone-app",
+      "timestamp": "2026-11-11T04:30:05.807569+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-app": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+        "check_id": "phone-sim-build",
+        "path": "evidence/phone-app-a1-sim-build.log",
+        "result": "passed",
+        "sha256": "0e480e46adf34ac0d08618154c85eda4fcb4fc704c4710c652a0db526c83635f"
+      },
+      "task": "phone-app",
+      "timestamp": "2026-11-11T04:30:05.854637+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-app": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+              "check_id": "phone-sim-build",
+              "path": "evidence/phone-app-a1-sim-build.log",
+              "result": "passed",
+              "sha256": "0e480e46adf34ac0d08618154c85eda4fcb4fc704c4710c652a0db526c83635f"
+            }
+          ],
+          "running_revision": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+        "check_id": "tunnel-device-compile",
+        "path": "evidence/phone-app-a1-device-compile.log",
+        "result": "passed",
+        "sha256": "f7f9445dadb58614fc1f84cae28b7bf8ea2f46694b41b50fa8a16f679fadc151"
+      },
+      "task": "phone-app",
+      "timestamp": "2026-11-11T04:30:05.915905+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-app": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+              "check_id": "phone-sim-build",
+              "path": "evidence/phone-app-a1-sim-build.log",
+              "result": "passed",
+              "sha256": "0e480e46adf34ac0d08618154c85eda4fcb4fc704c4710c652a0db526c83635f"
+            },
+            {
+              "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+              "check_id": "tunnel-device-compile",
+              "path": "evidence/phone-app-a1-device-compile.log",
+              "result": "passed",
+              "sha256": "f7f9445dadb58614fc1f84cae28b7bf8ea2f46694b41b50fa8a16f679fadc151"
+            }
+          ],
+          "running_revision": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+        "check_id": "phone-tests",
+        "path": "evidence/phone-app-a1-tests.log",
+        "result": "passed",
+        "sha256": "a3f4362ab991fae3361f1ebe2dcefb9b7c0a81ec5d81acf7a1f7eb702a212fa6"
+      },
+      "task": "phone-app",
+      "timestamp": "2026-11-11T04:30:05.967290+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-app": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+              "check_id": "phone-sim-build",
+              "path": "evidence/phone-app-a1-sim-build.log",
+              "result": "passed",
+              "sha256": "0e480e46adf34ac0d08618154c85eda4fcb4fc704c4710c652a0db526c83635f"
+            },
+            {
+              "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+              "check_id": "tunnel-device-compile",
+              "path": "evidence/phone-app-a1-device-compile.log",
+              "result": "passed",
+              "sha256": "f7f9445dadb58614fc1f84cae28b7bf8ea2f46694b41b50fa8a16f679fadc151"
+            },
+            {
+              "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+              "check_id": "phone-tests",
+              "path": "evidence/phone-app-a1-tests.log",
+              "result": "passed",
+              "sha256": "a3f4362ab991fae3361f1ebe2dcefb9b7c0a81ec5d81acf7a1f7eb702a212fa6"
+            }
+          ],
+          "running_revision": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+        "check_id": "phone-ui-smoke",
+        "path": "evidence/phone-app-a1-ui-smoke.log",
+        "result": "passed",
+        "sha256": "11bab5d226415257c0b455a06c3ea1b06ff60bbf577ef047534ab94bce98d9e4"
+      },
+      "task": "phone-app",
+      "timestamp": "2026-11-11T04:30:06.019636+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "phone-app": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+              "check_id": "phone-sim-build",
+              "path": "evidence/phone-app-a1-sim-build.log",
+              "result": "passed",
+              "sha256": "0e480e46adf34ac0d08618154c85eda4fcb4fc704c4710c652a0db526c83635f"
+            },
+            {
+              "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+              "check_id": "tunnel-device-compile",
+              "path": "evidence/phone-app-a1-device-compile.log",
+              "result": "passed",
+              "sha256": "f7f9445dadb58614fc1f84cae28b7bf8ea2f46694b41b50fa8a16f679fadc151"
+            },
+            {
+              "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+              "check_id": "phone-tests",
+              "path": "evidence/phone-app-a1-tests.log",
+              "result": "passed",
+              "sha256": "a3f4362ab991fae3361f1ebe2dcefb9b7c0a81ec5d81acf7a1f7eb702a212fa6"
+            },
+            {
+              "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+              "check_id": "phone-ui-smoke",
+              "path": "evidence/phone-app-a1-ui-smoke.log",
+              "result": "passed",
+              "sha256": "11bab5d226415257c0b455a06c3ea1b06ff60bbf577ef047534ab94bce98d9e4"
+            }
+          ],
+          "running_revision": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "iPhone 앱·터널 확장: 수정 15건+재검토 8건 반영, 시뮬레이터 빌드(경고 없음)·기기용 컴파일·앱 테스트 65개·PhoneClient 97개·화면 18상태 검토 통과. Xcode 캔버스 프리뷰 실패(JIT 연결 시간 초과)는 미해결 기록",
+      "task": "phone-app",
+      "timestamp": "2026-11-11T04:30:10.430144+00:00"
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-app": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "8d33cf91ae25d83c5dc9824119b644d4e807f36b1fc83e1d099dcc1696a52350",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "수정 1~3차와 재검토 3회 반영 후 실제 산출물 리비전",
+      "revision": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+      "task": "mac-app",
+      "timestamp": "2026-11-11T07:28:18.784915+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-app": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+        "check_id": "mac-build",
+        "path": "evidence/mac-app-a2-mac-build.log",
+        "result": "passed",
+        "sha256": "fdb9a406ca17aa78407481ea7161515fd65809ccbc82eb877c31ee1e97fdfde4"
+      },
+      "task": "mac-app",
+      "timestamp": "2026-11-11T07:28:18.835977+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-app": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+              "check_id": "mac-build",
+              "path": "evidence/mac-app-a2-mac-build.log",
+              "result": "passed",
+              "sha256": "fdb9a406ca17aa78407481ea7161515fd65809ccbc82eb877c31ee1e97fdfde4"
+            }
+          ],
+          "running_revision": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+        "check_id": "mac-tests",
+        "path": "evidence/mac-app-a2-mac-tests.log",
+        "result": "passed",
+        "sha256": "d1288b78bab58dbc3eff27a8d5ca4a2c5c0550f4b730f95fcdfc8425484de7ba"
+      },
+      "task": "mac-app",
+      "timestamp": "2026-11-11T07:28:18.887757+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-app": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+              "check_id": "mac-build",
+              "path": "evidence/mac-app-a2-mac-build.log",
+              "result": "passed",
+              "sha256": "fdb9a406ca17aa78407481ea7161515fd65809ccbc82eb877c31ee1e97fdfde4"
+            },
+            {
+              "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+              "check_id": "mac-tests",
+              "path": "evidence/mac-app-a2-mac-tests.log",
+              "result": "passed",
+              "sha256": "d1288b78bab58dbc3eff27a8d5ca4a2c5c0550f4b730f95fcdfc8425484de7ba"
+            }
+          ],
+          "running_revision": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+        "check_id": "mac-host-e2e",
+        "path": "evidence/mac-app-a2-mac-host-e2e.log",
+        "result": "passed",
+        "sha256": "a27a79525c16ccd16c2cd3c411f3c3b58f1eabfb9c0dddae43f07b8f86e6b197"
+      },
+      "task": "mac-app",
+      "timestamp": "2026-11-11T07:28:18.939528+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-app": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+              "check_id": "mac-build",
+              "path": "evidence/mac-app-a2-mac-build.log",
+              "result": "passed",
+              "sha256": "fdb9a406ca17aa78407481ea7161515fd65809ccbc82eb877c31ee1e97fdfde4"
+            },
+            {
+              "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+              "check_id": "mac-tests",
+              "path": "evidence/mac-app-a2-mac-tests.log",
+              "result": "passed",
+              "sha256": "d1288b78bab58dbc3eff27a8d5ca4a2c5c0550f4b730f95fcdfc8425484de7ba"
+            },
+            {
+              "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+              "check_id": "mac-host-e2e",
+              "path": "evidence/mac-app-a2-mac-host-e2e.log",
+              "result": "passed",
+              "sha256": "a27a79525c16ccd16c2cd3c411f3c3b58f1eabfb9c0dddae43f07b8f86e6b197"
+            }
+          ],
+          "running_revision": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+        "check_id": "mac-ui-smoke",
+        "path": "evidence/mac-app-a2-ui-smoke.log",
+        "result": "passed",
+        "sha256": "5ef4cb710342a6138e3679c689d5b6eb31fece95a3a100aee0845c2c8f9ca143"
+      },
+      "task": "mac-app",
+      "timestamp": "2026-11-11T07:28:18.992130+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "mac-app": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+              "check_id": "mac-build",
+              "path": "evidence/mac-app-a2-mac-build.log",
+              "result": "passed",
+              "sha256": "fdb9a406ca17aa78407481ea7161515fd65809ccbc82eb877c31ee1e97fdfde4"
+            },
+            {
+              "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+              "check_id": "mac-tests",
+              "path": "evidence/mac-app-a2-mac-tests.log",
+              "result": "passed",
+              "sha256": "d1288b78bab58dbc3eff27a8d5ca4a2c5c0550f4b730f95fcdfc8425484de7ba"
+            },
+            {
+              "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+              "check_id": "mac-host-e2e",
+              "path": "evidence/mac-app-a2-mac-host-e2e.log",
+              "result": "passed",
+              "sha256": "a27a79525c16ccd16c2cd3c411f3c3b58f1eabfb9c0dddae43f07b8f86e6b197"
+            },
+            {
+              "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+              "check_id": "mac-ui-smoke",
+              "path": "evidence/mac-app-a2-ui-smoke.log",
+              "result": "passed",
+              "sha256": "5ef4cb710342a6138e3679c689d5b6eb31fece95a3a100aee0845c2c8f9ca143"
+            }
+          ],
+          "running_revision": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "Mac 앱: 재검토 3회(확정 19+22+21+1건) 수정 반영, 빌드 경고 0, 패키지 테스트(Kit 129·UI 29·Core 6)·Xcode 테스트 6·샌드박스 앱 스모크 포함 E2E 통과, 화면 상태 10개 검토. 알려진 부분: TQ-6/E2E-FIX2-2 신선도 검사 한계(스크립트 주석), 이미 진행 중인 가져오기의 종료 직전 쓰기, VoiceOver 미확인",
+      "task": "mac-app",
+      "timestamp": "2026-11-11T07:28:19.046130+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "integration": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "integration",
+      "timestamp": "2026-11-11T07:28:31.266932+00:00"
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "integration": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "4ec7393540de448b877e79b0c0e6aa6eb2c15e33862f65556c61989ff0ca712b",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "통합 E2E 작성 완료 후 실제 산출물 리비전",
+      "revision": "4ec7393540de448b877e79b0c0e6aa6eb2c15e33862f65556c61989ff0ca712b",
+      "task": "integration",
+      "timestamp": "2026-11-11T07:32:48.710576+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "integration": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "4ec7393540de448b877e79b0c0e6aa6eb2c15e33862f65556c61989ff0ca712b",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "4ec7393540de448b877e79b0c0e6aa6eb2c15e33862f65556c61989ff0ca712b",
+        "check_id": "e2e-full",
+        "path": "evidence/integration-a1-e2e-full.log",
+        "result": "passed",
+        "sha256": "a80ef32d1fba1105cc06582d649d644384edf55320c830b4d05d33a73bd48dfd"
+      },
+      "task": "integration",
+      "timestamp": "2026-11-11T07:32:48.759244+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "integration": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "4ec7393540de448b877e79b0c0e6aa6eb2c15e33862f65556c61989ff0ca712b",
+              "check_id": "e2e-full",
+              "path": "evidence/integration-a1-e2e-full.log",
+              "result": "passed",
+              "sha256": "a80ef32d1fba1105cc06582d649d644384edf55320c830b4d05d33a73bd48dfd"
+            }
+          ],
+          "running_revision": "4ec7393540de448b877e79b0c0e6aa6eb2c15e33862f65556c61989ff0ca712b",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "Mac HostModel(실제 Go 코어, 가짜 tailnet)↔iPhone ClientModel 종단 시험 9개 시나리오 통과(242초), 수정 담당 3회 연속 통과·변이 13건과 스크립트 실패 경로 6건이 시험을 실패시킴(evidence/integration-a1-mutations.log). 발견 결함 낮음 3건(코어의 denied 속도 제한으로 폐기된 코드가 화면에 남음=알려진 한계, 스크립트 변수 표기·주석은 수정). 미검증: TLS, 실제 iOS 설치기, 실제 제어 서버, 실기기, 터널, 장시간 연결, 메모리, 세션 시간 만료, Mac 재시작",
+      "task": "integration",
+      "timestamp": "2026-11-11T07:32:48.806336+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "handoff": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "handoff",
+      "timestamp": "2026-11-11T07:33:07.029287+00:00"
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "handoff": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "699833ef19f1e93121ba2167dd8cd007c056b826291cd759d4461eeadd0a0e56",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "인계 문서 1차 작성, 사실 검증 45건 수정, 재확인 14건 수정 뒤 실제 산출물 리비전",
+      "revision": "976eeb47e572004213b8cb585b95dd79db0587db1312d3688b5f71a2a81edd4f",
+      "task": "handoff",
+      "timestamp": "2026-11-11T08:10:26.422749+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "handoff": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "976eeb47e572004213b8cb585b95dd79db0587db1312d3688b5f71a2a81edd4f",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "976eeb47e572004213b8cb585b95dd79db0587db1312d3688b5f71a2a81edd4f",
+        "check_id": "docs-match-repo",
+        "path": "evidence/handoff-a1-docs-match-repo.log",
+        "result": "passed",
+        "sha256": "b0c77ab8f143bf641a61d11cc58de3749fed17190efc71279be5313c09e268c9"
+      },
+      "task": "handoff",
+      "timestamp": "2026-11-11T08:10:26.473745+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "handoff": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "976eeb47e572004213b8cb585b95dd79db0587db1312d3688b5f71a2a81edd4f",
+              "check_id": "docs-match-repo",
+              "path": "evidence/handoff-a1-docs-match-repo.log",
+              "result": "passed",
+              "sha256": "b0c77ab8f143bf641a61d11cc58de3749fed17190efc71279be5313c09e268c9"
+            }
+          ],
+          "running_revision": "976eeb47e572004213b8cb585b95dd79db0587db1312d3688b5f71a2a81edd4f",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "README·docs/setup.md·docs/device-test.md(U1~U9 + D1~D13)·docs/device-test-results.md(빈 양식)·scripts/check-docs.sh·.gitignore. 문서 사실 검증 2회(확정 45+14건) 반영, check-docs.sh 변조 사본 시험 통과. 다른 문서의 오류는 README 문서 정정 표에 기록(architecture.md:84·85). 실기기·실제 tailnet 항목은 확인하지 않음으로 표시",
+      "task": "handoff",
+      "timestamp": "2026-11-11T08:10:26.528182+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-core": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "web-core",
+      "timestamp": "2026-11-11T10:12:17.432573+00:00"
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-core": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "설치 웹 페이지(코어) 완료: Go 전체 시험(-race), 페이지 로직 시험 28개, xcframework 3슬라이스 재생성. 변이 시험(web-core-a3-mutants.log)과 리뷰 수정(decisions 68~70줄) 반영",
+      "revision": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+      "task": "web-core",
+      "timestamp": "2026-11-11T10:12:17.480595+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-core": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+        "check_id": "web-go-tests",
+        "path": "evidence/web-core-a3-go-tests.log",
+        "result": "passed",
+        "sha256": "591c46bf8346d8bd372d966b6990ab8b0a852ea9d261aa5ef2270c43e0e19b36"
+      },
+      "task": "web-core",
+      "timestamp": "2026-11-11T10:12:17.527145+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-core": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+              "check_id": "web-go-tests",
+              "path": "evidence/web-core-a3-go-tests.log",
+              "result": "passed",
+              "sha256": "591c46bf8346d8bd372d966b6990ab8b0a852ea9d261aa5ef2270c43e0e19b36"
+            }
+          ],
+          "running_revision": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+        "check_id": "web-page-logic",
+        "path": "evidence/web-core-a3-page-logic.log",
+        "result": "passed",
+        "sha256": "bc2f0e65bf7d1deccc72639555aeb33c4e57d8d7174f3dac34089d9f5d59a5bf"
+      },
+      "task": "web-core",
+      "timestamp": "2026-11-11T10:12:17.574525+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-core": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+              "check_id": "web-go-tests",
+              "path": "evidence/web-core-a3-go-tests.log",
+              "result": "passed",
+              "sha256": "591c46bf8346d8bd372d966b6990ab8b0a852ea9d261aa5ef2270c43e0e19b36"
+            },
+            {
+              "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+              "check_id": "web-page-logic",
+              "path": "evidence/web-core-a3-page-logic.log",
+              "result": "passed",
+              "sha256": "bc2f0e65bf7d1deccc72639555aeb33c4e57d8d7174f3dac34089d9f5d59a5bf"
+            }
+          ],
+          "running_revision": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+        "check_id": "web-xcframework",
+        "path": "evidence/web-core-a3-xcframework.log",
+        "result": "passed",
+        "sha256": "a9739aab825104cf6c67ce9495539160bf0ae86527428d9c29fe959ee3fdbae1"
+      },
+      "task": "web-core",
+      "timestamp": "2026-11-11T10:12:17.622396+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-core": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+              "check_id": "web-go-tests",
+              "path": "evidence/web-core-a3-go-tests.log",
+              "result": "passed",
+              "sha256": "591c46bf8346d8bd372d966b6990ab8b0a852ea9d261aa5ef2270c43e0e19b36"
+            },
+            {
+              "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+              "check_id": "web-page-logic",
+              "path": "evidence/web-core-a3-page-logic.log",
+              "result": "passed",
+              "sha256": "bc2f0e65bf7d1deccc72639555aeb33c4e57d8d7174f3dac34089d9f5d59a5bf"
+            },
+            {
+              "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+              "check_id": "web-xcframework",
+              "path": "evidence/web-core-a3-xcframework.log",
+              "result": "passed",
+              "sha256": "a9739aab825104cf6c67ce9495539160bf0ae86527428d9c29fe959ee3fdbae1"
+            }
+          ],
+          "running_revision": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "설치 웹 페이지(코어) 완료: Go 전체 시험(-race), 페이지 로직 시험 28개, xcframework 3슬라이스 재생성. 변이 시험(web-core-a3-mutants.log)과 리뷰 수정(decisions 68~70줄) 반영",
+      "task": "web-core",
+      "timestamp": "2026-11-11T10:12:17.672207+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-mac-ui": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "web-mac-ui",
+      "timestamp": "2026-11-11T10:12:17.767579+00:00"
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-mac-ui": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "Mac 설치 페이지 주소·시트·네트워크 줄 완료: 패키지 시험과 Xcode 빌드·시험 통과(컴파일러 경고 0, appintents 도구 안내만), 주소 만들기 변이 2개를 시험이 잡음(web-mac-a3-mutants.log), 스크린샷 직접 검토",
+      "revision": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+      "task": "web-mac-ui",
+      "timestamp": "2026-11-11T10:12:17.817986+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-mac-ui": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+        "check_id": "web-mac-tests",
+        "path": "evidence/web-mac-a3-mac-tests.log",
+        "result": "passed",
+        "sha256": "f6f0daa7cfd8b2b1e78189644251993910778cace4f6c5f8a36ad3dcf121ec1b"
+      },
+      "task": "web-mac-ui",
+      "timestamp": "2026-11-11T10:12:17.868631+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-mac-ui": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+              "check_id": "web-mac-tests",
+              "path": "evidence/web-mac-a3-mac-tests.log",
+              "result": "passed",
+              "sha256": "f6f0daa7cfd8b2b1e78189644251993910778cace4f6c5f8a36ad3dcf121ec1b"
+            }
+          ],
+          "running_revision": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+        "check_id": "web-mac-ui-smoke",
+        "path": "evidence/web-mac-a3-ui-smoke.log",
+        "result": "passed",
+        "sha256": "42bff3dc0d66395976183bd5bd73b620b515a254f1c78746f612d79e506bc91d"
+      },
+      "task": "web-mac-ui",
+      "timestamp": "2026-11-11T10:12:17.920348+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-mac-ui": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+              "check_id": "web-mac-tests",
+              "path": "evidence/web-mac-a3-mac-tests.log",
+              "result": "passed",
+              "sha256": "f6f0daa7cfd8b2b1e78189644251993910778cace4f6c5f8a36ad3dcf121ec1b"
+            },
+            {
+              "artifact_version": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+              "check_id": "web-mac-ui-smoke",
+              "path": "evidence/web-mac-a3-ui-smoke.log",
+              "result": "passed",
+              "sha256": "42bff3dc0d66395976183bd5bd73b620b515a254f1c78746f612d79e506bc91d"
+            }
+          ],
+          "running_revision": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "Mac 설치 페이지 주소·시트·네트워크 줄 완료: 패키지 시험과 Xcode 빌드·시험 통과(컴파일러 경고 0, appintents 도구 안내만), 주소 만들기 변이 2개를 시험이 잡음(web-mac-a3-mutants.log), 스크린샷 직접 검토",
+      "task": "web-mac-ui",
+      "timestamp": "2026-11-11T10:12:17.973083+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-verify": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "web-verify",
+      "timestamp": "2026-11-11T10:12:18.076844+00:00"
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-verify": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "새 코어 회귀: Mac 샌드박스 앱 E2E, 통합 9개, iPhone 시뮬레이터 빌드·시험·기기용 컴파일, 브라우저 E2E 최종 소스에서 3회 연속 통과(a2, run2, run3)",
+      "revision": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+      "task": "web-verify",
+      "timestamp": "2026-11-11T10:12:18.131815+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-verify": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+        "check_id": "web-regression-mac",
+        "path": "evidence/web-verify-a3-mac-e2e.log",
+        "result": "passed",
+        "sha256": "fd6ef2378f205e953d06c131511cf30b61d05e022df3e3e46d316f30353e6093"
+      },
+      "task": "web-verify",
+      "timestamp": "2026-11-11T10:12:18.182416+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-verify": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+              "check_id": "web-regression-mac",
+              "path": "evidence/web-verify-a3-mac-e2e.log",
+              "result": "passed",
+              "sha256": "fd6ef2378f205e953d06c131511cf30b61d05e022df3e3e46d316f30353e6093"
+            }
+          ],
+          "running_revision": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+        "check_id": "web-regression-phone",
+        "path": "evidence/web-verify-a3-phone-tests.log",
+        "result": "passed",
+        "sha256": "ba05b923b5459549db2171acc8a1b717f3621d1aa67f0f4bbb363d2da9068df3"
+      },
+      "task": "web-verify",
+      "timestamp": "2026-11-11T10:12:18.237404+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-verify": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+              "check_id": "web-regression-mac",
+              "path": "evidence/web-verify-a3-mac-e2e.log",
+              "result": "passed",
+              "sha256": "fd6ef2378f205e953d06c131511cf30b61d05e022df3e3e46d316f30353e6093"
+            },
+            {
+              "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+              "check_id": "web-regression-phone",
+              "path": "evidence/web-verify-a3-phone-tests.log",
+              "result": "passed",
+              "sha256": "ba05b923b5459549db2171acc8a1b717f3621d1aa67f0f4bbb363d2da9068df3"
+            }
+          ],
+          "running_revision": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+        "check_id": "web-regression-integration",
+        "path": "evidence/web-verify-a3-e2e-full.log",
+        "result": "passed",
+        "sha256": "48903e90674463aa8b2e9dca459fc9590f52aae7cafdf0ab397f2ac11227eb22"
+      },
+      "task": "web-verify",
+      "timestamp": "2026-11-11T10:12:18.294331+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-verify": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+              "check_id": "web-regression-mac",
+              "path": "evidence/web-verify-a3-mac-e2e.log",
+              "result": "passed",
+              "sha256": "fd6ef2378f205e953d06c131511cf30b61d05e022df3e3e46d316f30353e6093"
+            },
+            {
+              "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+              "check_id": "web-regression-phone",
+              "path": "evidence/web-verify-a3-phone-tests.log",
+              "result": "passed",
+              "sha256": "ba05b923b5459549db2171acc8a1b717f3621d1aa67f0f4bbb363d2da9068df3"
+            },
+            {
+              "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+              "check_id": "web-regression-integration",
+              "path": "evidence/web-verify-a3-e2e-full.log",
+              "result": "passed",
+              "sha256": "48903e90674463aa8b2e9dca459fc9590f52aae7cafdf0ab397f2ac11227eb22"
+            }
+          ],
+          "running_revision": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+        "check_id": "web-page-e2e",
+        "path": "evidence/web-verify-a3-page-e2e-run3.log",
+        "result": "passed",
+        "sha256": "9a92b3ae907728088bf49d23c18822c53826589b523675528272c9eac83197d1"
+      },
+      "task": "web-verify",
+      "timestamp": "2026-11-11T10:12:18.349501+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-verify": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+              "check_id": "web-regression-mac",
+              "path": "evidence/web-verify-a3-mac-e2e.log",
+              "result": "passed",
+              "sha256": "fd6ef2378f205e953d06c131511cf30b61d05e022df3e3e46d316f30353e6093"
+            },
+            {
+              "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+              "check_id": "web-regression-phone",
+              "path": "evidence/web-verify-a3-phone-tests.log",
+              "result": "passed",
+              "sha256": "ba05b923b5459549db2171acc8a1b717f3621d1aa67f0f4bbb363d2da9068df3"
+            },
+            {
+              "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+              "check_id": "web-regression-integration",
+              "path": "evidence/web-verify-a3-e2e-full.log",
+              "result": "passed",
+              "sha256": "48903e90674463aa8b2e9dca459fc9590f52aae7cafdf0ab397f2ac11227eb22"
+            },
+            {
+              "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+              "check_id": "web-page-e2e",
+              "path": "evidence/web-verify-a3-page-e2e-run3.log",
+              "result": "passed",
+              "sha256": "9a92b3ae907728088bf49d23c18822c53826589b523675528272c9eac83197d1"
+            }
+          ],
+          "running_revision": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "새 코어 회귀: Mac 샌드박스 앱 E2E, 통합 9개, iPhone 시뮬레이터 빌드·시험·기기용 컴파일, 브라우저 E2E 최종 소스에서 3회 연속 통과(a2, run2, run3)",
+      "task": "web-verify",
+      "timestamp": "2026-11-11T10:12:18.403242+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-docs": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "web-docs",
+      "timestamp": "2026-11-11T10:12:18.509071+00:00"
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-docs": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "bb3ac26a27f32b445167d30b243919bbfa8c920cff3aeae75fa12c214bd4577d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "README·설정·실기기 절차(D14)·결과 기록표에 설치 웹 페이지 경로 반영, scripts/check-docs.sh 통과(문서 9개, 경고 0)",
+      "revision": "bb3ac26a27f32b445167d30b243919bbfa8c920cff3aeae75fa12c214bd4577d",
+      "task": "web-docs",
+      "timestamp": "2026-11-11T10:12:18.563763+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-docs": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "bb3ac26a27f32b445167d30b243919bbfa8c920cff3aeae75fa12c214bd4577d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "bb3ac26a27f32b445167d30b243919bbfa8c920cff3aeae75fa12c214bd4577d",
+        "check_id": "web-docs-match-repo",
+        "path": "evidence/web-docs-a2-docs-match-repo.log",
+        "result": "passed",
+        "sha256": "897ec71447670f610db0aadd885791887fb03ce42f21c03a8a30c8b9ba971a76"
+      },
+      "task": "web-docs",
+      "timestamp": "2026-11-11T10:12:18.615853+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "web-docs": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "bb3ac26a27f32b445167d30b243919bbfa8c920cff3aeae75fa12c214bd4577d",
+              "check_id": "web-docs-match-repo",
+              "path": "evidence/web-docs-a2-docs-match-repo.log",
+              "result": "passed",
+              "sha256": "897ec71447670f610db0aadd885791887fb03ce42f21c03a8a30c8b9ba971a76"
+            }
+          ],
+          "running_revision": "bb3ac26a27f32b445167d30b243919bbfa8c920cff3aeae75fa12c214bd4577d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "README·설정·실기기 절차(D14)·결과 기록표에 설치 웹 페이지 경로 반영, scripts/check-docs.sh 통과(문서 9개, 경고 0)",
+      "task": "web-docs",
+      "timestamp": "2026-11-11T10:12:18.671281+00:00"
+    },
+    {
+      "action": "block",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "device-e2e": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "reason": "사용자 결정과 승인이 필요하다: 시험할 iPhone, 서명 팀, tailnet 로그인 방법, Apple Developer 계정 변경(App ID·Network Extension 권한), 실기기 설치, 실제 tailnet에 노드 추가, 인증 키 사용. 질문 예산을 다 써서 임의 질문을 하지 않았고 승인은 추론하지 않는다. 절차는 docs/device-test.md(U1~U9, D1~D14).",
+      "task": "device-e2e",
+      "timestamp": "2026-11-11T10:12:58.004818+00:00"
+    }
+  ],
+  "plan_sha256": "d6100a712b6287191b13bd49363ac901f91f8aedef697d32ff65a9009a3e0264",
+  "project_root": "/Volumes/eyedisk/develop/oozoofrog/remotedebug",
+  "question_usage": {
+    "questions": 1,
+    "rounds": 1
+  },
+  "run_id": "remotedebug-bridge",
+  "schema_version": 1,
+  "tasks": {
+    "contract": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+          "check_id": "protocol-examples",
+          "path": "evidence/contract-a1-protocol-examples-r2.log",
+          "result": "passed",
+          "sha256": "f9c17baae7b060f2e8efe91bed0644699bbdd8e266ccbfe3e87b5dd69c88d216"
+        },
+        {
+          "artifact_version": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e",
+          "check_id": "xcodegen-skeleton",
+          "path": "evidence/contract-a1-xcodegen-skeleton-r2.log",
+          "result": "passed",
+          "sha256": "538dd314f494026193f49eeb52db6d35b1b7a7bfef3e30266038ee2a5adbc135"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "f42978d5fbbf539e2a76dba6ca5cadb399fad12047dcae8cb30625c390a5b84e"
+    },
+    "core": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+          "check_id": "go-tests",
+          "path": "evidence/core-a1-go-tests.log",
+          "result": "passed",
+          "sha256": "7a9937f350d1e50486d400322d7e74bb64183200526d94c4115a2368fa769bfe"
+        },
+        {
+          "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+          "check_id": "fake-tailnet-e2e",
+          "path": "evidence/core-a1-fake-tailnet-e2e.log",
+          "result": "passed",
+          "sha256": "dcb91532d1c6c3e95d8b8e3ac9cf30782f96e56be0902fe60c64c8e7afefe64e"
+        },
+        {
+          "artifact_version": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9",
+          "check_id": "xcframework",
+          "path": "evidence/core-a1-xcframework.log",
+          "result": "passed",
+          "sha256": "99690d2d56ee4f39800360b3018cf4b427a4ed4c4af1319e05df60d96a99fee0"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "854196fe2e151a7eddf623b7a550661531e9ac90e8cc4c19f6f3b6742c75cea9"
+    },
+    "device-e2e": {
+      "attempts": 0,
+      "block_reason": "사용자 결정과 승인이 필요하다: 시험할 iPhone, 서명 팀, tailnet 로그인 방법, Apple Developer 계정 변경(App ID·Network Extension 권한), 실기기 설치, 실제 tailnet에 노드 추가, 인증 키 사용. 질문 예산을 다 써서 임의 질문을 하지 않았고 승인은 추론하지 않는다. 절차는 docs/device-test.md(U1~U9, D1~D14).",
+      "evidence": [],
+      "status": "blocked",
+      "verified_revision": null
+    },
+    "handoff": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "976eeb47e572004213b8cb585b95dd79db0587db1312d3688b5f71a2a81edd4f",
+          "check_id": "docs-match-repo",
+          "path": "evidence/handoff-a1-docs-match-repo.log",
+          "result": "passed",
+          "sha256": "b0c77ab8f143bf641a61d11cc58de3749fed17190efc71279be5313c09e268c9"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "976eeb47e572004213b8cb585b95dd79db0587db1312d3688b5f71a2a81edd4f"
+    },
+    "integration": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "4ec7393540de448b877e79b0c0e6aa6eb2c15e33862f65556c61989ff0ca712b",
+          "check_id": "e2e-full",
+          "path": "evidence/integration-a1-e2e-full.log",
+          "result": "passed",
+          "sha256": "a80ef32d1fba1105cc06582d649d644384edf55320c830b4d05d33a73bd48dfd"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "4ec7393540de448b877e79b0c0e6aa6eb2c15e33862f65556c61989ff0ca712b"
+    },
+    "kit": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+          "check_id": "swift-tests",
+          "path": "evidence/kit-a1-swift-tests.log",
+          "result": "passed",
+          "sha256": "3be859c439bb2b8496d91dd68ed5e6e7fab6bdb34eb2ce0feb528019be84973a"
+        },
+        {
+          "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+          "check_id": "ipa-roundtrip",
+          "path": "evidence/kit-a1-ipa-roundtrip.log",
+          "result": "passed",
+          "sha256": "789baec420cdd17218167a5c46c9bd1ecf9b7ba16d05284ae13eb448c8c59628"
+        },
+        {
+          "artifact_version": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33",
+          "check_id": "real-builds",
+          "path": "evidence/kit-a1-real-builds.log",
+          "result": "passed",
+          "sha256": "497e0b68bc8f58b9e3f7bcd39ec12a899f4f7d45109381dd24387816dd2b061f"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "f4c0d828fccc07f71c932700092cd720bdcd3d0dbf1f2e003c7e37e7f78dcd33"
+    },
+    "mac-app": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+          "check_id": "mac-build",
+          "path": "evidence/mac-app-a2-mac-build.log",
+          "result": "passed",
+          "sha256": "fdb9a406ca17aa78407481ea7161515fd65809ccbc82eb877c31ee1e97fdfde4"
+        },
+        {
+          "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+          "check_id": "mac-tests",
+          "path": "evidence/mac-app-a2-mac-tests.log",
+          "result": "passed",
+          "sha256": "d1288b78bab58dbc3eff27a8d5ca4a2c5c0550f4b730f95fcdfc8425484de7ba"
+        },
+        {
+          "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+          "check_id": "mac-host-e2e",
+          "path": "evidence/mac-app-a2-mac-host-e2e.log",
+          "result": "passed",
+          "sha256": "a27a79525c16ccd16c2cd3c411f3c3b58f1eabfb9c0dddae43f07b8f86e6b197"
+        },
+        {
+          "artifact_version": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc",
+          "check_id": "mac-ui-smoke",
+          "path": "evidence/mac-app-a2-ui-smoke.log",
+          "result": "passed",
+          "sha256": "5ef4cb710342a6138e3679c689d5b6eb31fece95a3a100aee0845c2c8f9ca143"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "39f815f083910681baf8e400fdb9f8e4611215f51cd02d14d29a04da2da180fc"
+    },
+    "mac-logic": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+          "check_id": "mac-logic-tests",
+          "path": "evidence/mac-logic-a1-tests.log",
+          "result": "passed",
+          "sha256": "3abd88c311ac79f130e3a2ce118bbdec3044e8f2d317b6a972c972732dfd8e4e"
+        },
+        {
+          "artifact_version": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc",
+          "check_id": "mac-logic-hygiene",
+          "path": "evidence/mac-logic-a1-hygiene.log",
+          "result": "passed",
+          "sha256": "be1e91c5f007c37ba5c413496d002c9355aa864b57febc7d24adea6d26732dd9"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "0b9641dc9044c82e246584bed7159299404afdc37a355e1a6070d16f04f211bc"
+    },
+    "phone-app": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+          "check_id": "phone-sim-build",
+          "path": "evidence/phone-app-a1-sim-build.log",
+          "result": "passed",
+          "sha256": "0e480e46adf34ac0d08618154c85eda4fcb4fc704c4710c652a0db526c83635f"
+        },
+        {
+          "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+          "check_id": "tunnel-device-compile",
+          "path": "evidence/phone-app-a1-device-compile.log",
+          "result": "passed",
+          "sha256": "f7f9445dadb58614fc1f84cae28b7bf8ea2f46694b41b50fa8a16f679fadc151"
+        },
+        {
+          "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+          "check_id": "phone-tests",
+          "path": "evidence/phone-app-a1-tests.log",
+          "result": "passed",
+          "sha256": "a3f4362ab991fae3361f1ebe2dcefb9b7c0a81ec5d81acf7a1f7eb702a212fa6"
+        },
+        {
+          "artifact_version": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0",
+          "check_id": "phone-ui-smoke",
+          "path": "evidence/phone-app-a1-ui-smoke.log",
+          "result": "passed",
+          "sha256": "11bab5d226415257c0b455a06c3ea1b06ff60bbf577ef047534ab94bce98d9e4"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "5a3cbbc4c920558818e887b499a06ee37d606563bdbb3ebfbf784e25dd07afc0"
+    },
+    "phone-logic": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+          "check_id": "phone-logic-tests",
+          "path": "evidence/phone-logic-a1-tests.log",
+          "result": "passed",
+          "sha256": "187d22b7bddfa9f08b06b5cd1390e8b066f96279dadadbe8160ed44c83da1d62"
+        },
+        {
+          "artifact_version": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9",
+          "check_id": "phone-logic-ios",
+          "path": "evidence/phone-logic-a1-ios.log",
+          "result": "passed",
+          "sha256": "4b23eef4184cd40cbba54281aab2cf21e6723551d40cdaa6d43de5cb501fad9c"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "023e2e4627f3bcb4e308880eb1ffbc74dfc4f8e56538e7f4196f55d588baa6f9"
+    },
+    "tunnel": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+          "check_id": "tunnel-tests",
+          "path": "evidence/tunnel-a1-tunnel-tests.log",
+          "result": "passed",
+          "sha256": "2f3a3fe843f6bd55a91e7e9b5c0ef0cdd1fb89f02e135b63ede8b8f850e0c6e3"
+        },
+        {
+          "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+          "check_id": "core-regression",
+          "path": "evidence/tunnel-a1-core-regression.log",
+          "result": "passed",
+          "sha256": "2ea2775dcde40370aef13e5fff124ac1da8ca2528118e1dd9a2a85f615e5c266"
+        },
+        {
+          "artifact_version": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d",
+          "check_id": "tunnel-xcframework",
+          "path": "evidence/tunnel-a1-xcframework.log",
+          "result": "passed",
+          "sha256": "3a822fc7b0a1db3f54fdc0e6bee453f9dab2cbff136b6a97ac017f7b4d816013"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "2797818ad8b5c8bcf9801ba088664495ca5af47a5d3dde34fff15460758d6f0d"
+    },
+    "verdict": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+          "check_id": "quotes-verbatim",
+          "path": "evidence/verdict-a1-quotes-verbatim.log",
+          "result": "passed",
+          "sha256": "5fea94bc34ad94a07c7e9ed2902adeb36df978e2b4d9d9422dd0701ff3c3208a"
+        },
+        {
+          "artifact_version": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3",
+          "check_id": "independent-review",
+          "path": "evidence/verdict-a1-independent-review.log",
+          "result": "passed",
+          "sha256": "bf9a132aecdb7c83babcd9bec686ffe78c7cc130ebd260df044c65eeca7463a8"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "21b11d6d99c11c94aacd153dd503f4e40679095c6c82bd52155c34d8d1472da3"
+    },
+    "web-core": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+          "check_id": "web-go-tests",
+          "path": "evidence/web-core-a3-go-tests.log",
+          "result": "passed",
+          "sha256": "591c46bf8346d8bd372d966b6990ab8b0a852ea9d261aa5ef2270c43e0e19b36"
+        },
+        {
+          "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+          "check_id": "web-page-logic",
+          "path": "evidence/web-core-a3-page-logic.log",
+          "result": "passed",
+          "sha256": "bc2f0e65bf7d1deccc72639555aeb33c4e57d8d7174f3dac34089d9f5d59a5bf"
+        },
+        {
+          "artifact_version": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4",
+          "check_id": "web-xcframework",
+          "path": "evidence/web-core-a3-xcframework.log",
+          "result": "passed",
+          "sha256": "a9739aab825104cf6c67ce9495539160bf0ae86527428d9c29fe959ee3fdbae1"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "6328410dd317f5f8f2df1445056be7035f26fcc9bc53812a2123135565c939c4"
+    },
+    "web-docs": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "bb3ac26a27f32b445167d30b243919bbfa8c920cff3aeae75fa12c214bd4577d",
+          "check_id": "web-docs-match-repo",
+          "path": "evidence/web-docs-a2-docs-match-repo.log",
+          "result": "passed",
+          "sha256": "897ec71447670f610db0aadd885791887fb03ce42f21c03a8a30c8b9ba971a76"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "bb3ac26a27f32b445167d30b243919bbfa8c920cff3aeae75fa12c214bd4577d"
+    },
+    "web-mac-ui": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+          "check_id": "web-mac-tests",
+          "path": "evidence/web-mac-a3-mac-tests.log",
+          "result": "passed",
+          "sha256": "f6f0daa7cfd8b2b1e78189644251993910778cace4f6c5f8a36ad3dcf121ec1b"
+        },
+        {
+          "artifact_version": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee",
+          "check_id": "web-mac-ui-smoke",
+          "path": "evidence/web-mac-a3-ui-smoke.log",
+          "result": "passed",
+          "sha256": "42bff3dc0d66395976183bd5bd73b620b515a254f1c78746f612d79e506bc91d"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "d279b57f17dc2da2f5601dd476c35ca38debad8f9b8064aa5c99d43ca58e40ee"
+    },
+    "web-verify": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+          "check_id": "web-regression-mac",
+          "path": "evidence/web-verify-a3-mac-e2e.log",
+          "result": "passed",
+          "sha256": "fd6ef2378f205e953d06c131511cf30b61d05e022df3e3e46d316f30353e6093"
+        },
+        {
+          "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+          "check_id": "web-regression-phone",
+          "path": "evidence/web-verify-a3-phone-tests.log",
+          "result": "passed",
+          "sha256": "ba05b923b5459549db2171acc8a1b717f3621d1aa67f0f4bbb363d2da9068df3"
+        },
+        {
+          "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+          "check_id": "web-regression-integration",
+          "path": "evidence/web-verify-a3-e2e-full.log",
+          "result": "passed",
+          "sha256": "48903e90674463aa8b2e9dca459fc9590f52aae7cafdf0ab397f2ac11227eb22"
+        },
+        {
+          "artifact_version": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1",
+          "check_id": "web-page-e2e",
+          "path": "evidence/web-verify-a3-page-e2e-run3.log",
+          "result": "passed",
+          "sha256": "9a92b3ae907728088bf49d23c18822c53826589b523675528272c9eac83197d1"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "95a627442b4e51c1c7b45725f96a26748c12ccc5ffcfca7aee3da095ce2721c1"
+    },
+    "wire": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "0d29aebad13e96c1ab375feb2239f454e7daeaa84d4b37a1c9c8c1d89293d40e",
+          "check_id": "xcodegen-includes",
+          "path": "evidence/wire-a1-xcodegen-includes.log",
+          "result": "passed",
+          "sha256": "02cc0de79fdcf7b762e57c61dd30e150cd68484a2054964fcf8f76565d7e050d"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "0d29aebad13e96c1ab375feb2239f454e7daeaa84d4b37a1c9c8c1d89293d40e"
+    }
+  },
+  "todos": [
+    {
+      "id": "ct-scripts",
+      "requirement_id": null,
+      "status": "completed",
+      "task_id": "contract",
+      "title": "scripts/go.sh, check_protocol_examples.py 작성"
+    },
+    {
+      "id": "ct-verify",
+      "requirement_id": null,
+      "status": "completed",
+      "task_id": "contract",
+      "title": "JSON 예제 파싱과 xcodegen 생성 확인"
+    },
+    {
+      "id": "kt-models",
+      "requirement_id": null,
+      "status": "completed",
+      "task_id": "kit",
+      "title": "공용 모델 RDModels"
+    },
+    {
+      "id": "ho-setup",
+      "requirement_id": null,
+      "status": "pending",
+      "task_id": "handoff",
+      "title": "docs/setup.md: tailnet HTTPS·ACL 태그·개발자 모드·서명 준비"
+    },
+    {
+      "id": "ho-check",
+      "requirement_id": null,
+      "status": "pending",
+      "task_id": "handoff",
+      "title": "check-docs.sh 작성과 README 갱신"
+    },
+    {
+      "id": "de-ask",
+      "requirement_id": null,
+      "status": "pending",
+      "task_id": "device-e2e",
+      "title": "정보 질문 1개와 허가 2개를 한 번에 요청"
+    },
+    {
+      "id": "ct-protocol",
+      "requirement_id": "r1-install",
+      "status": "completed",
+      "task_id": "contract",
+      "title": "프로토콜 문서: 역할·페어링·REST·설치 세션·C API·이벤트 확정"
+    },
+    {
+      "id": "ct-architecture",
+      "requirement_id": "r2-embedded",
+      "status": "completed",
+      "task_id": "contract",
+      "title": "구조 문서: 설치 경로·NE 프록시 가정·위험·대안 정리"
+    },
+    {
+      "id": "ct-skeleton",
+      "requirement_id": "r1-install",
+      "status": "completed",
+      "task_id": "contract",
+      "title": "project.yml과 대상 골격(맥 앱·아이폰 앱·터널·테스트) 작성"
+    },
+    {
+      "id": "co-node",
+      "requirement_id": "r2-embedded",
+      "status": "completed",
+      "task_id": "core",
+      "title": "tsnet 노드 수명주기·상태·AuthURL 감시"
+    },
+    {
+      "id": "co-host",
+      "requirement_id": "r3-designated",
+      "status": "completed",
+      "task_id": "core",
+      "title": "호스트 API: WhoIs 허용 목록·페어링 코드·승인 이벤트"
+    },
+    {
+      "id": "co-session",
+      "requirement_id": "r4-debug-only",
+      "status": "completed",
+      "task_id": "core",
+      "title": "설치 세션: 1회용 토큰·노드 결속·만료·해시 재검증·비디버그 거부"
+    },
+    {
+      "id": "co-proxy",
+      "requirement_id": "r2-embedded",
+      "status": "completed",
+      "task_id": "core",
+      "title": "클라이언트 CONNECT 프록시(허용 대상 한정)"
+    },
+    {
+      "id": "co-capi",
+      "requirement_id": "r1-install",
+      "status": "completed",
+      "task_id": "core",
+      "title": "C API(JSON)와 이벤트 큐"
+    },
+    {
+      "id": "co-e2e",
+      "requirement_id": "r3-designated",
+      "status": "completed",
+      "task_id": "core",
+      "title": "testcontrol 가짜 tailnet E2E 테스트"
+    },
+    {
+      "id": "co-xcfw",
+      "requirement_id": "r1-install",
+      "status": "completed",
+      "task_id": "core",
+      "title": "build-core.sh로 XCFramework 3슬라이스, RDCore 패키지와 Swift 브리지"
+    },
+    {
+      "id": "kt-profile",
+      "requirement_id": "r4-debug-only",
+      "status": "completed",
+      "task_id": "kit",
+      "title": "프로비저닝 프로필(CMS) 파서와 서명 엔타이틀먼트 판독"
+    },
+    {
+      "id": "kt-policy",
+      "requirement_id": "r4-debug-only",
+      "status": "completed",
+      "task_id": "kit",
+      "title": "DebugBuildPolicy, 거부 사유 코드, Debug 구성 판별"
+    },
+    {
+      "id": "kt-ipa",
+      "requirement_id": "r1-install",
+      "status": "completed",
+      "task_id": "kit",
+      "title": "ZIP/IPA 빌더와 OTA 매니페스트 빌더"
+    },
+    {
+      "id": "kt-tests",
+      "requirement_id": "r4-debug-only",
+      "status": "completed",
+      "task_id": "kit",
+      "title": "정책 행렬 테스트, IPA 왕복, 실제 빌드 읽기 전용 검사"
+    },
+    {
+      "id": "vd-draft",
+      "requirement_id": "r5-appstore",
+      "status": "completed",
+      "task_id": "verdict",
+      "title": "iPhone·Mac 앱별 조항 판정서 초안"
+    },
+    {
+      "id": "vd-quotes",
+      "requirement_id": "r5-appstore",
+      "status": "completed",
+      "task_id": "verdict",
+      "title": "인용문 원문 일치 검사 스크립트"
+    },
+    {
+      "id": "vd-review",
+      "requirement_id": "r5-appstore",
+      "status": "completed",
+      "task_id": "verdict",
+      "title": "독립 검토 결과 반영"
+    },
+    {
+      "id": "ma-bridge",
+      "requirement_id": "r2-embedded",
+      "status": "in_progress",
+      "task_id": "mac-app",
+      "title": "RDCore Swift 브리지로 호스트 모드 연결"
+    },
+    {
+      "id": "ma-builds",
+      "requirement_id": "r4-debug-only",
+      "status": "pending",
+      "task_id": "mac-app",
+      "title": "빌드 가져오기·폴더 감시·검증·거부 사유 목록"
+    },
+    {
+      "id": "ma-devices",
+      "requirement_id": "r3-designated",
+      "status": "pending",
+      "task_id": "mac-app",
+      "title": "기기 등록: 페어링 코드·승인 UI·허용 목록 저장"
+    },
+    {
+      "id": "ma-network",
+      "requirement_id": "r2-embedded",
+      "status": "pending",
+      "task_id": "mac-app",
+      "title": "tailnet 로그인(인증 키·브라우저)과 노드 상태 화면"
+    },
+    {
+      "id": "ma-verify",
+      "requirement_id": "r1-install",
+      "status": "pending",
+      "task_id": "mac-app",
+      "title": "빌드·단위 테스트·가짜 tailnet E2E·UI 스크린샷 검토"
+    },
+    {
+      "id": "pa-tunnel",
+      "requirement_id": "r2-embedded",
+      "status": "in_progress",
+      "task_id": "phone-app",
+      "title": "Packet Tunnel 확장: 노드·프록시·NEProxySettings"
+    },
+    {
+      "id": "pa-vpn",
+      "requirement_id": "r2-embedded",
+      "status": "pending",
+      "task_id": "phone-app",
+      "title": "VPN 관리자(NETunnelProviderManager)와 상태 메시지"
+    },
+    {
+      "id": "pa-pair",
+      "requirement_id": "r3-designated",
+      "status": "pending",
+      "task_id": "phone-app",
+      "title": "페어링(코드 입력·QR)과 승인 대기 상태"
+    },
+    {
+      "id": "pa-install",
+      "requirement_id": "r1-install",
+      "status": "pending",
+      "task_id": "phone-app",
+      "title": "빌드 목록·설치 세션·itms-services 호출"
+    },
+    {
+      "id": "pa-verify",
+      "requirement_id": "r1-install",
+      "status": "pending",
+      "task_id": "phone-app",
+      "title": "시뮬레이터 빌드·기기 컴파일·단위 테스트·UI 스크린샷 검토"
+    },
+    {
+      "id": "ho-device",
+      "requirement_id": "r1-install",
+      "status": "pending",
+      "task_id": "handoff",
+      "title": "docs/device-test.md: 실기기 검증 절차(구조 가정 1 검증)"
+    },
+    {
+      "id": "de-run",
+      "requirement_id": "r1-install",
+      "status": "pending",
+      "task_id": "device-e2e",
+      "title": "실기기 검증 실행과 결과 기록"
+    },
+    {
+      "id": "tn-engine",
+      "requirement_id": "r2-embedded",
+      "status": "completed",
+      "task_id": "tunnel",
+      "title": "Tailscale 엔진(LocalBackend + wgengine) + utun fd TUN 조립(mode tunnel)"
+    },
+    {
+      "id": "tn-settings",
+      "requirement_id": "r2-embedded",
+      "status": "completed",
+      "task_id": "tunnel",
+      "title": "라우터·DNS 구성기가 network-settings 이벤트를 내보냄"
+    },
+    {
+      "id": "tn-tests",
+      "requirement_id": "r2-embedded",
+      "status": "completed",
+      "task_id": "tunnel",
+      "title": "가짜 TUN 테스트(TestTunnel*): 설정 이벤트·UDP·TCP·MagicDNS·정리"
+    },
+    {
+      "id": "tn-build",
+      "requirement_id": "r1-install",
+      "status": "completed",
+      "task_id": "tunnel",
+      "title": "build-core.sh 재빌드(임시 폴더 후 링크 교체)와 슬라이스 크기 기록"
+    },
+    {
+      "id": "ml-library",
+      "requirement_id": "r4-debug-only",
+      "status": "completed",
+      "task_id": "mac-logic",
+      "title": "빌드 라이브러리: 가져오기·검사·IPA 패키징·게시·최신 N개 유지·재게시, 폴더 스캐너·감시"
+    },
+    {
+      "id": "ml-devices",
+      "requirement_id": "r3-designated",
+      "status": "completed",
+      "task_id": "mac-logic",
+      "title": "기기·페어링 모델: 승인 대기, 승인·거부, 기기 저장과 허용 목록 반영"
+    },
+    {
+      "id": "ml-state",
+      "requirement_id": "r2-embedded",
+      "status": "completed",
+      "task_id": "mac-logic",
+      "title": "노드 상태 안내: 로그인 필요·HTTPS 미사용·인증서 발급 중·오류"
+    },
+    {
+      "id": "ml-tests",
+      "requirement_id": "r1-install",
+      "status": "completed",
+      "task_id": "mac-logic",
+      "title": "가짜 코어·가짜 검사기 단위 테스트와 위생 검사"
+    },
+    {
+      "id": "pl-client",
+      "requirement_id": "r1-install",
+      "status": "completed",
+      "task_id": "phone-logic",
+      "title": "호스트 API 클라이언트와 오류 코드 한국어 안내"
+    },
+    {
+      "id": "pl-pair",
+      "requirement_id": "r3-designated",
+      "status": "completed",
+      "task_id": "phone-logic",
+      "title": "페어링 링크 파싱과 요청·승인·거부·만료 흐름, 등록된 호스트 저장"
+    },
+    {
+      "id": "pl-install",
+      "requirement_id": "r1-install",
+      "status": "completed",
+      "task_id": "phone-logic",
+      "title": "빌드 목록과 설치 세션 생성·설치 URL 열기·진행 폴링"
+    },
+    {
+      "id": "pl-tests",
+      "requirement_id": "r1-install",
+      "status": "completed",
+      "task_id": "phone-logic",
+      "title": "가짜 전송 단위 테스트와 iOS 시뮬레이터 빌드"
+    },
+    {
+      "id": "wr-split",
+      "requirement_id": null,
+      "status": "completed",
+      "task_id": "wire",
+      "title": "project.yml을 앱별 포함 파일(맥·아이폰)로 분할하고 포함 파일이 리소스로 새지 않게 excludes 지정"
+    },
+    {
+      "id": "wr-packages",
+      "requirement_id": null,
+      "status": "completed",
+      "task_id": "wire",
+      "title": "MacHost·PhoneClient 패키지 연결, ARCHS=arm64, 의존성 연결 후 xcodebuild 해석 확인"
+    },
+    {
+      "id": "in-stack",
+      "requirement_id": "r1-install",
+      "status": "pending",
+      "task_id": "integration",
+      "title": "Mac 로직+실제 코어+가짜 tailnet+iPhone 로직 종단 흐름(페어링→목록→설치 세션→IPA 해시)"
+    },
+    {
+      "id": "in-deny",
+      "requirement_id": "r3-designated",
+      "status": "pending",
+      "task_id": "integration",
+      "title": "미등록·기기 제거·다른 노드 토큰 거부, 비디버그 빌드 비게시 종단 확인"
+    }
+  ]
+}

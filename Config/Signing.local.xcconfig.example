@@ -1,0 +1,4 @@
+// 이 파일을 Signing.local.xcconfig로 복사하고 개발 팀 ID를 넣는다.
+// 팀 ID는 developer.apple.com > Account > Membership details의 Team ID(10자)다.
+// iPhone 앱과 터널 확장이 같은 팀으로 서명돼야 한다.
+DEVELOPMENT_TEAM = XXXXXXXXXX

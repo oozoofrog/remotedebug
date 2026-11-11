@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<title>RemoteDebug 빌드 설치</title>
+<link rel="stylesheet" href="/assets/install.css">
+<script src="/assets/logic.js" defer></script>
+<script src="/assets/install.js" defer></script>
+</head>
+<body>
+<main id="main">
+  <h1>RemoteDebug</h1>
+
+  <div id="notice" class="notice" tabindex="-1" hidden></div>
+
+  <section id="view-loading" aria-labelledby="loading-title">
+    <h2 id="loading-title" tabindex="-1">빌드 목록을 받는 중</h2>
+    <p class="progress-line"><span class="spinner" aria-hidden="true"></span><span>Mac에 연결하는 중</span></p>
+    <noscript><p class="error">이 페이지는 JavaScript가 켜져 있어야 동작합니다. Safari 설정에서 JavaScript를 켜세요.</p></noscript>
+  </section>
+
+  <section id="view-error" aria-labelledby="error-title" hidden>
+    <h2 id="error-title" tabindex="-1">빌드 목록을 받지 못했습니다</h2>
+    <p id="error-text" class="error"></p>
+    <button type="button" id="retry" class="primary">다시 시도</button>
+  </section>
+
+  <section id="view-pair" aria-labelledby="pair-title" hidden>
+    <h2 id="pair-title" tabindex="-1">Mac 페어링</h2>
+    <p>Mac 앱의 페어링 화면에 표시된 코드를 입력하세요. Mac에서 승인하면 빌드 목록이 열립니다.</p>
+    <form id="pair-form" novalidate>
+      <label for="code">페어링 코드</label>
+      <input id="code" name="code" class="code" type="text" inputmode="text" autocomplete="one-time-code"
+             autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="32"
+             placeholder="K7M2-9QXD" aria-describedby="code-error">
+      <p id="code-error" class="field-error" hidden></p>
+      <label for="device-name">기기 이름</label>
+      <input id="device-name" name="deviceName" type="text" autocomplete="off" maxlength="200"
+             aria-describedby="name-hint">
+      <p id="name-hint" class="hint">Mac의 승인 화면에 이 이름이 표시됩니다.</p>
+      <button type="submit" id="pair-submit" class="primary">페어링 요청</button>
+    </form>
+  </section>
+
+  <section id="view-waiting" aria-labelledby="waiting-title" hidden>
+    <h2 id="waiting-title" tabindex="-1">Mac의 승인을 기다리는 중</h2>
+    <p class="progress-line"><span class="spinner" aria-hidden="true"></span><span id="waiting-text"></span></p>
+    <p class="countdown"><span>남은 시간</span> <span id="countdown" role="timer"></span></p>
+    <button type="button" id="pair-cancel" class="destructive">페어링 취소</button>
+  </section>
+
+  <section id="view-builds" aria-labelledby="builds-title" hidden>
+    <div class="list-header">
+      <h2 id="builds-title" tabindex="-1">빌드</h2>
+      <button type="button" id="refresh" class="secondary">새로고침</button>
+    </div>
+    <p id="refresh-error" class="warn" tabindex="-1" hidden></p>
+    <div id="empty" class="empty" hidden>
+      <p><strong>공유 중인 빌드가 없습니다</strong></p>
+      <p>Mac 앱에서 빌드를 공유한 뒤 새로고침하세요.</p>
+    </div>
+    <ul id="build-list" class="builds"></ul>
+    <p id="loaded-at" class="hint"></p>
+  </section>
+</main>
+<footer>
+  <p id="host-line"></p>
+  <p>이 페이지와 설치는 iPhone의 Tailscale VPN이 켜져 있어야 동작합니다.</p>
+</footer>
+</body>
+</html>

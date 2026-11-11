@@ -1,0 +1,72 @@
+# RemoteDebugMac 대상 정의. project.yml이 포함한다(경로는 저장소 루트 기준).
+targets:
+  RemoteDebugMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Apps/Mac
+        excludes:
+          - "project-*.yml"
+    entitlements:
+      path: Apps/Mac/RemoteDebugMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.network.server: true
+        # 고른 빌드·감시 폴더는 읽기만 한다(쓰기는 컨테이너 안에서만). 북마크도 읽기 전용 보안 범위로 만든다.
+        com.apple.security.files.user-selected.read-only: true
+        com.apple.security.files.bookmarks.app-scope: true
+    info:
+      path: Apps/Mac/Info.plist
+      properties:
+        CFBundleDisplayName: RemoteDebug
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.developer-tools
+        LSMinimumSystemVersion: "26.0"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.oozoofrog.app.RemoteDebugMac
+        PRODUCT_NAME: RemoteDebug
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: YES
+        # RDCore.xcframework는 arm64 전용이다(Apple silicon).
+        ARCHS: arm64
+        ONLY_ACTIVE_ARCH: YES
+    # 화면·미리보기는 MacHostUI(Go 런타임 없음), 실제 코어 연결은 MacHostCore(RDCoreBridge)에 있다.
+    dependencies:
+      - package: MacHost
+        product: MacHostKit
+      - package: MacHost
+        product: MacHostUI
+      - package: MacHost
+        product: MacHostCore
+  RemoteDebugMacTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Apps/MacTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.oozoofrog.app.RemoteDebugMacTests
+        # 앱 PRODUCT_NAME이 RemoteDebug라 xcodegen 기본값(대상 이름)과 다르다.
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/RemoteDebug.app/Contents/MacOS/RemoteDebug
+        BUNDLE_LOADER: $(TEST_HOST)
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_IDENTITY: "-"
+        ARCHS: arm64
+        ONLY_ACTIVE_ARCH: YES
+    dependencies:
+      - target: RemoteDebugMac
+schemes:
+  RemoteDebugMac:
+    build:
+      targets:
+        RemoteDebugMac: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - RemoteDebugMacTests

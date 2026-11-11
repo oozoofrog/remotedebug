@@ -1,0 +1,30 @@
+name: RemoteDebug
+options:
+  bundleIdPrefix: com.oozoofrog.app
+  createIntermediateGroups: true
+  developmentLanguage: ko
+  deploymentTarget:
+    iOS: "26.0"
+    macOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+packages:
+  RemoteDebugKit:
+    path: Packages/RemoteDebugKit
+  RDCore:
+    path: Packages/RDCore
+  MacHost:
+    path: Packages/MacHost
+  PhoneClient:
+    path: Packages/PhoneClient
+# 앱별 대상은 각 앱 작업이 자기 포함 파일만 고친다.
+include:
+  - path: Apps/Mac/project-mac.yml
+    relativePaths: false
+  - path: Apps/iOS/project-ios.yml
+    relativePaths: false

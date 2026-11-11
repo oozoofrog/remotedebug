@@ -1,0 +1,7 @@
+module RDCoreC {
+    header "rdcore.h"
+    link "resolv"
+    link framework "CoreFoundation"
+    link framework "Security"
+    export *
+}
