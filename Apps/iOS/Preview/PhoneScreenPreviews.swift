@@ -140,6 +140,12 @@ private func screen(_ state: PhoneViewState) -> some View {
     screen(PreviewFixtures.paired(builds: [PreviewFixtures.buildA, PreviewFixtures.buildB]))
 }
 
+#Preview("⑦-1 앱 업데이트 있음") {
+    var state = PreviewFixtures.paired(builds: [PreviewFixtures.buildA, PreviewFixtures.buildB])
+    state.selfUpdate = PreviewFixtures.buildB
+    return screen(state)
+}
+
 #Preview("⑧ 설치 진행") {
     screen(PreviewFixtures.paired(
         builds: [PreviewFixtures.buildA, PreviewFixtures.buildB],

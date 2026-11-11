@@ -15,8 +15,16 @@ struct PhoneScreen: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    PhoneHero(hostName: state.host?.hostName)
+                }
+
                 if let message = state.lastError {
                     ErrorBanner(message: message, dismiss: actions.clearError)
+                }
+
+                if let update = state.selfUpdate {
+                    SelfUpdateSection(build: update, install: state.installs[update.id], actions: actions)
                 }
 
                 VPNCard(state: state, actions: actions)
@@ -55,10 +63,12 @@ struct PhoneScreen: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .tint(PhoneTheme.tint)
             .refreshable {
                 if state.host != nil { await actions.refresh() }
             }
             .navigationTitle("RemoteDebug")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if settings != nil {
                     ToolbarItem(placement: .topBarTrailing) {

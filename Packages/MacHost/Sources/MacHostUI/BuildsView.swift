@@ -10,11 +10,27 @@ struct BuildsView: View {
 
     @State private var choosingFolder = false
     @State private var buildToUnpublish: LibraryBuild?
+    @State private var listWidth: CGFloat = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// 카드 두 장이 나란히 들어가는 너비부터 2열로 놓는다.
+    private var columns: Int { listWidth >= 1080 ? 2 : 1 }
+
+    private var buildRows: [[LibraryBuild]] {
+        stride(from: 0, to: model.builds.count, by: columns).map {
+            Array(model.builds[$0..<min($0 + columns, model.builds.count)])
+        }
+    }
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
+            OverviewHero()
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 6)
             if Self.showsEmptyState(model: model, pendingCount: importQueue.pending.count) {
                 emptyState
+                    .frame(maxHeight: .infinity)
             } else {
                 list
             }
@@ -87,6 +103,7 @@ struct BuildsView: View {
 
     private var list: some View {
         List {
+            Group {
             if model.watchedFolder != nil || model.watchProblem != nil {
                 Section("감시 폴더") {
                     WatchedFolderRow(chooseFolder: { choosingFolder = true })
@@ -110,8 +127,16 @@ struct BuildsView: View {
                         Button("빌드 가져오기…", action: showImporter)
                     }
                 }
-                ForEach(model.builds) { build in
-                    PublishedBuildRow(build: build) { buildToUnpublish = build }
+                ForEach(buildRows, id: \.first?.id) { row in
+                    HStack(alignment: .top, spacing: 10) {
+                        ForEach(row) { build in
+                            PublishedBuildRow(build: build, fillsHeight: columns > 1) { buildToUnpublish = build }
+                        }
+                        if row.count < columns {
+                            Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
+                        }
+                    }
+                    .rdListRow()
                 }
             } header: {
                 Text("게시된 빌드 \(model.builds.count)개")
@@ -131,7 +156,13 @@ struct BuildsView: View {
                     }
                 }
             }
+            }
+            .listSectionSeparator(.hidden)
         }
+        .scrollContentBackground(.hidden)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { listWidth = $0 }
+        .animation(reduceMotion ? nil : .snappy, value: model.builds.map(\.id))
+        .animation(reduceMotion ? nil : .snappy, value: columns)
     }
 }
 
@@ -148,19 +179,17 @@ private struct NotSharingRow: View {
 
 struct PublishedBuildRow: View {
     let build: LibraryBuild
+    var fillsHeight = false
     let unpublish: () -> Void
 
     private var d: BuildDescriptor { build.descriptor }
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "app.dashed")
-                .font(.title2)
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
+        HStack(alignment: .top, spacing: 14) {
+            BuildIcon(name: d.displayName, seed: d.bundleId, sourcePath: build.sourcePath)
+            VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(d.displayName).font(.headline)
+                    Text(d.displayName).font(.title3.weight(.semibold))
                     Text("\(d.version) (\(d.buildNumber))")
                         .foregroundStyle(.secondary)
                 }
@@ -168,19 +197,14 @@ struct PublishedBuildRow: View {
                     .font(.callout.monospaced())
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
-                Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 2) {
-                    GridRow {
-                        Text("구성").foregroundStyle(.secondary)
-                        Text(Self.evidence(d))
-                    }
-                    GridRow {
-                        Text("프로필 만료").foregroundStyle(.secondary)
-                        ProfileExpiry(date: d.signing.profileExpires)
-                    }
-                    GridRow {
-                        Text("게시").foregroundStyle(.secondary)
-                        Text(d.publishedAt.formatted(date: .abbreviated, time: .shortened))
-                    }
+                HStack(spacing: 6) {
+                    Chip(text: Self.evidence(d), symbol: "ladybug.fill", color: RDTheme.tint)
+                    Chip(text: "게시 " + d.publishedAt.formatted(.relative(presentation: .named)), symbol: "clock")
+                        .help(d.publishedAt.formatted(date: .abbreviated, time: .shortened))
+                }
+                HStack(spacing: 6) {
+                    Text("프로필 만료").foregroundStyle(.secondary)
+                    ProfileExpiry(date: d.signing.profileExpires)
                 }
                 .font(.callout)
             }
@@ -188,7 +212,7 @@ struct PublishedBuildRow: View {
             Button("게시 취소", action: unpublish)
                 .accessibilityLabel("\(d.displayName) 게시 취소")
         }
-        .padding(.vertical, 4)
+        .rdCardSurface(fillHeight: fillsHeight)
         .accessibilityElement(children: .contain)
     }
 
@@ -246,7 +270,7 @@ struct RejectedBuildRow: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 4)
+        .rdCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Self.accessibilityText(item))
     }

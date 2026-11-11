@@ -200,6 +200,17 @@ RD="$HOME/Library/Application Support/RemoteDebug/agent/rd"
 5. "빌드" 목록에서 **설치**를 누른다. "iOS 설치 창에서 ‘설치’를 누르세요"가 나오면 iOS 설치 창에서 **설치**를 누른다. 창을 닫았으면 **다시 열기**를 누른다.
 6. "전송 완료"가 나오면 홈 화면에서 앱을 연다. 개발자를 신뢰하라는 알림이 나오면 설정 > 일반 > VPN 및 기기 관리에서 신뢰한 뒤 다시 연다. 앱이 실행되지 않으면 설정 > 개인정보 보호 및 보안 > 개발자 모드를 확인한다.
 
+### iPhone 앱 업데이트
+
+iPhone 앱은 Mac에 게시된 자기 자신의 새 빌드를 받아 스스로 업데이트한다. 실기기에서 확인하지 않음.
+
+1. Mac 앱 **프로젝트** 화면에 이 저장소의 `RemoteDebug.xcodeproj`를 연결하고 스킴 `RemoteDebugPhone`으로 **빌드해서 게시**를 누른다. 에이전트는 `remotedebug_build` 도구로 같은 일을 한다.
+2. iPhone 앱을 열거나 빌드 목록을 새로고침한다. 앱이 iPhone에 설치된 시각보다 늦게 게시된 RemoteDebug 빌드가 있으면 "앱 업데이트" 칸에 "새 RemoteDebug 빌드"가 나온다.
+3. **업데이트**를 누르고 iOS 설치 창에서 **설치**를 누른다. 설치가 시작되면 앱이 닫히고 VPN이 꺼진다. 설치가 끝나면 앱을 다시 열고 VPN을 켠다.
+
+- 새 빌드인지는 게시 시각과 설치 시각으로 가린다. Debug 빌드는 버전과 빌드 번호가 같기 때문이다. Mac과 iPhone의 시계가 어긋나 있으면 칸이 나오지 않거나 이미 설치한 빌드에 나올 수 있다.
+- 이 기능이 없는 예전 iPhone 앱에는 "앱 업데이트" 칸이 없다. 그때는 "빌드" 목록의 RemoteDebug에서 **설치**를 누른다.
+
 ## iPhone에서 앱 없이 설치(웹 페이지)
 
 RemoteDebug iPhone 앱 대신 공식 Tailscale 앱과 Safari로 페어링하고 설치한다. 실제 iPhone의 Safari, 실제 TLS 인증서, 공식 Tailscale 앱, Safari에서 여는 iOS 설치 창으로는 확인하지 않음. 화면 문구는 페이지 소스(`core/internal/host/web`)와 Mac 앱 소스에서 옮겼다. 실기기 확인은 [D14](device-test.md#d14-설치-웹-페이지공식-tailscale-앱)다.

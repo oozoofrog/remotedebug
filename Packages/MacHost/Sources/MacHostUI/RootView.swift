@@ -71,10 +71,23 @@ public struct RootView: View {
                     .badge(badge(for: item))
                     .tag(item)
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 220)
+            .safeAreaInset(edge: .top) {
+                HStack(spacing: 10) {
+                    AppMark(size: 34)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("RemoteDebug").font(.headline)
+                        Text(model.nodeName).font(.caption.monospaced()).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 14)
+                .padding(.top, 6)
+                .padding(.bottom, 8)
+            }
             .safeAreaInset(edge: .bottom) {
                 SharingStatusFooter()
-                    .padding(12)
+                    .padding(10)
             }
         } detail: {
             detail
@@ -118,6 +131,7 @@ public struct RootView: View {
                 model.pruneExpiredPairRequests()
             }
         }
+        .tint(RDTheme.tint)
         .environment(importQueue)
         .environment(authKey)
         .environment(\.showPairing, PairingPresenter { showingPairing = true })
@@ -274,10 +288,13 @@ struct SharingStatusFooter: View {
             GuidanceLabel(guidance: model.guidance)
                 .font(.callout)
             SharingButton()
-                .controlSize(.regular)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .controlSize(.large)
+                .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(.background.secondary, in: RDTheme.cardShape)
+        .overlay(RDTheme.cardShape.strokeBorder(.separator.opacity(0.5), lineWidth: 0.5))
     }
 }
 
@@ -291,13 +308,13 @@ struct SharingButton: View {
             Button {
                 Task { await model.stop() }
             } label: {
-                Label("공유 중지", systemImage: "stop.fill")
+                Label("공유 중지", systemImage: "stop.fill").frame(maxWidth: .infinity)
             }
         } else {
             Button {
                 SharingActions.start(model, authKey: authKey)
             } label: {
-                Label("공유 시작", systemImage: "play.fill")
+                Label("공유 시작", systemImage: "play.fill").frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .disabled(authKey.isRestarting)

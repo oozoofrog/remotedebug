@@ -10,6 +10,8 @@ struct PhoneViewState {
     var queuedPairingHost: String?
     var pendingReplacementHost: String?
     var builds: [BuildDescriptor] = []
+    /// Mac에 게시된 이 앱 자신의 새 빌드. 없으면 `nil`.
+    var selfUpdate: BuildDescriptor?
     var buildsLoadedAt: Date?
     var refreshError: String?
     var installs: [String: InstallState] = [:]
@@ -25,7 +27,7 @@ struct PhoneViewState {
 
 extension PhoneViewState {
     @MainActor
-    init(model: ClientModel, tunnelAvailable: Bool, tunnelActive: Bool) {
+    init(model: ClientModel, tunnelAvailable: Bool, tunnelActive: Bool, installedAt: Date? = nil) {
         self.init(
             phase: model.phase,
             host: model.host,
@@ -33,6 +35,7 @@ extension PhoneViewState {
             queuedPairingHost: model.queuedPairing?.host,
             pendingReplacementHost: model.pendingReplacement?.host,
             builds: model.builds,
+            selfUpdate: SelfUpdate.candidate(in: model.builds, bundleID: Bundle.main.bundleIdentifier, installedAt: installedAt),
             buildsLoadedAt: model.buildsLoadedAt,
             refreshError: model.refreshError,
             installs: model.installs,

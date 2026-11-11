@@ -30,11 +30,11 @@ struct ProjectsView: View {
         .navigationTitle("프로젝트")
         .toolbar {
             Button { showingAgentInstall = true } label: {
-                Label("에이전트에 설치…", systemImage: "puzzlepiece.extension")
+                Label("에이전트에 설치…", systemImage: "puzzlepiece.extension").labelStyle(.titleAndIcon)
             }
             .help("Claude Code와 Codex에 RemoteDebug MCP 서버와 스킬을 설치합니다")
             Button { choosing = true } label: {
-                Label("프로젝트 추가…", systemImage: "plus")
+                Label("프로젝트 추가…", systemImage: "plus").labelStyle(.titleAndIcon)
             }
             .help("프로젝트 폴더나 Xcode 프로젝트 파일을 고릅니다")
         }
@@ -88,9 +88,10 @@ struct ProjectsView: View {
             if !projects.suggestions.isEmpty {
                 Section("Xcode에서 기기용 Debug 빌드를 시작한 프로젝트") {
                     ForEach(projects.suggestions) { suggestion in
-                        HStack {
+                        HStack(spacing: 14) {
+                            AppTile(name: suggestion.name, seed: suggestion.container, symbol: "sparkles")
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(suggestion.name)
+                                Text(suggestion.name).font(.title3.weight(.semibold))
                                 Text(suggestion.container).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                             }
                             Spacer()
@@ -99,6 +100,7 @@ struct ProjectsView: View {
                                 .help("이 프로젝트를 연결하고 Xcode에서 빌드할 때마다 게시합니다")
                             Button("등록하지 않음") { projects.dismiss(suggestion) }
                         }
+                        .rdCard()
                     }
                 }
             }
@@ -109,7 +111,9 @@ struct ProjectsView: View {
                                remove: { projectToRemove = project })
                 }
             }
+            .listSectionSeparator(.hidden)
         }
+        .scrollContentBackground(.hidden)
     }
 
     private func connectAgents(_ project: ConnectedProject) {
@@ -132,11 +136,13 @@ private struct ProjectRow: View {
     private var phase: ProjectsModel.Phase? { projects.phases[project.id] }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 14) {
+                AppTile(name: project.name, seed: project.container, symbol: "hammer.fill")
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(project.name).font(.headline)
+                    Text(project.name).font(.title3.weight(.semibold))
                     Text(project.container).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                        .help(project.container)
                 }
                 Spacer()
                 if !schemes.isEmpty {
@@ -145,13 +151,16 @@ private struct ProjectRow: View {
                         ForEach(schemes, id: \.self) { Text($0).tag($0) }
                     }
                     .labelsHidden()
-                    .frame(maxWidth: 220)
+                    .frame(width: 200)
                     .accessibilityLabel("\(project.name) 스킴")
                 }
-                Button("빌드해서 게시") {
+                Button {
                     Task { await projects.build(project, scheme: scheme) }
+                } label: {
+                    Label("빌드해서 게시", systemImage: "paperplane.fill")
                 }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.large)
                 .disabled(scheme.isEmpty || phase != nil)
                 Menu {
                     Button("에이전트 연결…", action: connectAgents)
@@ -168,7 +177,7 @@ private struct ProjectRow: View {
             }
             status
         }
-        .padding(.vertical, 4)
+        .rdCard()
         .onChange(of: schemes) { pickScheme() }
         .task(id: project.id) {
             if schemes.isEmpty { await reloadSchemes() } else { pickScheme() }
@@ -184,9 +193,7 @@ private struct ProjectRow: View {
         } else if let report = projects.reports[project.id] {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(report.published, id: \.buildId) { item in
-                    Label("\(item.name) \(item.version) (\(item.buildNumber)) 게시됨", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .font(.callout)
+                    Chip(text: "\(item.name) \(item.version) (\(item.buildNumber)) 게시됨", symbol: "checkmark.circle.fill", color: .green)
                 }
                 if let message = report.message {
                     Label(message, systemImage: report.ok ? "info.circle" : "exclamationmark.triangle.fill")

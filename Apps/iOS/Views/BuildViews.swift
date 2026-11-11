@@ -21,6 +21,8 @@ struct BuildListSection: View {
                     .font(.footnote)
                     .accessibilityHint(error)
                 }
+                // 이 앱의 업데이트는 위의 업데이트 칸에만 보여 준다.
+                let builds = state.builds.filter { $0.id != state.selfUpdate?.id }
                 if state.builds.isEmpty {
                     ContentUnavailableView {
                         Label("공유 중인 빌드가 없습니다", systemImage: "shippingbox")
@@ -28,7 +30,7 @@ struct BuildListSection: View {
                         Text("Mac 앱에서 빌드를 공유한 뒤 새로고침하세요.")
                     }
                 } else {
-                    ForEach(state.builds) { build in
+                    ForEach(builds) { build in
                         BuildRow(build: build, install: state.installs[build.id], actions: actions)
                     }
                 }
@@ -78,6 +80,51 @@ struct BuildListSection: View {
     }
 }
 
+/// Mac에 게시된 이 앱 자신의 새 빌드. 설치가 시작되면 iOS가 앱을 닫는다.
+struct SelfUpdateSection: View {
+    var build: BuildDescriptor
+    var install: InstallState?
+    var actions: PhoneActions
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .center, spacing: 12) {
+                    Image(systemName: "arrow.down.app.fill")
+                        .font(.system(size: 34))
+                        .foregroundStyle(PhoneTheme.tint)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("새 RemoteDebug 빌드").font(.headline)
+                        Text("버전 \(build.version) (\(build.buildNumber)) · \(BuildRow.size(build.ipa.size))")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text("\(build.publishedAt.formatted(date: .abbreviated, time: .shortened)) 게시")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if install == nil {
+                        Button("업데이트") { actions.install(build) }
+                            .font(.subheadline.weight(.semibold))
+                            .buttonStyle(.borderedProminent)
+                            .buttonBorderShape(.capsule)
+                            .accessibilityLabel("RemoteDebug 업데이트")
+                    }
+                }
+                if let install {
+                    InstallStatusView(build: build, state: install, actions: actions)
+                }
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text("앱 업데이트")
+        } footer: {
+            Text("설치가 시작되면 이 앱이 닫히고 VPN이 꺼집니다. 설치가 끝나면 앱을 다시 열고 VPN을 켜세요.")
+        }
+    }
+}
+
 /// 빌드 하나: 이름·버전·크기와 설치 상태.
 struct BuildRow: View {
     var build: BuildDescriptor
@@ -86,7 +133,8 @@ struct BuildRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .center, spacing: 12) {
+                PhoneAppTile(name: build.displayName, seed: build.bundleId)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(build.displayName).font(.headline)
                     Text("버전 \(build.version) (\(build.buildNumber)) · \(Self.size(build.ipa.size))")
@@ -98,9 +146,12 @@ struct BuildRow: View {
                 }
                 Spacer()
                 if install == nil {
-                    Button("설치") { actions.install(build) }
+                    Button { actions.install(build) } label: {
+                        Label("설치", systemImage: "arrow.down.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                    }
                         .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
+                        .buttonBorderShape(.capsule)
                         .accessibilityLabel("\(build.displayName) 설치")
                 }
             }

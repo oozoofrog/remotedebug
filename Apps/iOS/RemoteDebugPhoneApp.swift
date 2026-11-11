@@ -19,6 +19,8 @@ final class AppServices {
     let tunnel: TunnelController
     let opener: UIKitURLOpener
     let model: ClientModel
+    /// 이 앱이 iPhone에 설치된 시각. 그 뒤에 게시된 같은 앱의 빌드를 업데이트로 보여 준다.
+    let installedAt = SelfUpdate.installDate(of: .main)
 
     init() {
         let settings = TunnelSettingsStore()
@@ -47,7 +49,7 @@ struct RootView: View {
 
     var body: some View {
         PhoneScreen(
-            state: PhoneViewState(model: model, tunnelAvailable: tunnel.isAvailable, tunnelActive: tunnel.isTunnelActive),
+            state: PhoneViewState(model: model, tunnelAvailable: tunnel.isAvailable, tunnelActive: tunnel.isTunnelActive, installedAt: services.installedAt),
             actions: actions,
             settings: SettingsViewState(
                 host: model.host,
@@ -77,7 +79,11 @@ struct RootView: View {
             switch phase {
             case .active:
                 model.resumePolling()
-                Task { await tunnel.reload() }
+                Task {
+                    await tunnel.reload()
+                    // 앱으로 돌아올 때 새 빌드(이 앱의 업데이트 포함)를 바로 보여 준다. VPN이 꺼져 있으면 안내를 다시 띄우지 않는다.
+                    if model.host != nil, model.tunnel == .connected { await model.refresh() }
+                }
             case .background:
                 model.stopPolling()
             default:
