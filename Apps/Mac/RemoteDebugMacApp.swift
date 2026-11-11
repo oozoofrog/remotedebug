@@ -8,7 +8,25 @@ import UserNotifications
 
 // 앱 대상에는 진입점·수명 주기·실제 코어 연결만 둔다. 화면과 미리보기는 MacHostUI(Go 런타임을 링크하지 않는다)에 있다.
 
+/// 진입점. `--mcp` 인자로 띄우면 창 없이 MCP 서버로 돌며, 명령은 실행 중인 앱에 넘긴다.
 @main
+enum RemoteDebugEntry {
+    static func main() {
+        guard CommandLine.arguments.contains(AgentMCPServer.argument) else {
+            RemoteDebugMacApp.main()
+            return
+        }
+        guard let paths = try? HostPaths.applicationSupport() else { exit(1) }
+        let channel = AgentChannel(agentDir: paths.root.appendingPathComponent("agent", isDirectory: true),
+                                   bundleID: Bundle.main.bundleIdentifier ?? "com.oozoofrog.app.RemoteDebugMac")
+        Task.detached {
+            await AgentMCPServer(channel: channel).run()
+            exit(0)
+        }
+        dispatchMain()
+    }
+}
+
 struct RemoteDebugMacApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
@@ -167,13 +185,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // 실행 중인 앱의 Dock 아이콘이 기본 아이콘으로 나오는 경우가 있어 번들 아이콘을 직접 지정한다.
+        if let icon = NSImage(named: "AppIcon") ?? Bundle.main.image(forResource: "AppIcon") {
+            NSApp.applicationIconImage = icon
+        }
         guard let model, !options.isTesting else { return }
         installTerminationSignalHandler()
-        let startSharing = options.startSharing
         let projects = self.projects
         launchTask = Task {
             await model.load()
-            if startSharing, !Task.isCancelled { await model.start() }
+            // 앱을 열면 항상 공유를 시작한다. 처음이면 로그인을 기다리는 상태가 된다.
+            if !Task.isCancelled { await model.start() }
             guard !Task.isCancelled else { return }
             projects?.startMonitoring()
         }

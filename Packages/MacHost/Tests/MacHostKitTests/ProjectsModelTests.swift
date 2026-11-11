@@ -235,3 +235,58 @@ struct ProjectsModelTests {
         #expect(skill.contains(w.model.agentScript.path) && skill.contains(project.path))
     }
 }
+
+@Suite("AgentIntegration")
+struct AgentIntegrationTests {
+    private func object(_ data: Data?) throws -> [String: Any] {
+        let data = try #require(data)
+        let value = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+        return try #require(value)
+    }
+
+    @Test func mcpServerAnswersInitializeListAndCall() async throws {
+        let calls = Mutex<[String]>([])
+        let server = AgentMCPServer { command, path, scheme in
+            calls.withLock { $0.append("\(command)|\(path)|\(scheme)") }
+            return Data((command == "build" ? #"{"ok":true,"report":{"ok":true}}"# : #"{"ok":false,"error":"x"}"#).utf8)
+        }
+        let initialized = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26"}}"#.utf8)))
+        let result = try #require(initialized["result"] as? [String: Any])
+        #expect(result["protocolVersion"] as? String == "2025-03-26")
+        #expect(await server.handle(Data(#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#.utf8)) == nil)
+
+        let listed = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#.utf8)))
+        let tools = try #require((listed["result"] as? [String: Any])?["tools"] as? [[String: Any]])
+        #expect(tools.compactMap { $0["name"] as? String } == ["remotedebug_status", "remotedebug_schemes", "remotedebug_build"])
+
+        let built = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":"a","method":"tools/call","params":{"name":"remotedebug_build","arguments":{"project_path":"/p","scheme":"App"}}}"#.utf8)))
+        #expect((built["result"] as? [String: Any])?["isError"] as? Bool == false)
+        #expect(built["id"] as? String == "a")
+        let failed = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"remotedebug_status"}}"#.utf8)))
+        #expect((failed["result"] as? [String: Any])?["isError"] as? Bool == true)
+        #expect(calls.withLock { $0 } == ["build|/p|App", "status||"])
+
+        let unknown = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":4,"method":"nope"}"#.utf8)))
+        #expect(unknown["error"] != nil)
+    }
+
+    @Test func installerWritesSkillAndRegistersServer() async throws {
+        let tmp = try TempDir("agent-install")
+        let commands = Mutex<[String]>([])
+        let installer = AgentInstaller(home: tmp.path("home"), serverPath: "/Applications/Remote Debug.app/Contents/MacOS/RemoteDebug", scriptPath: "/s/rd") { command in
+            commands.withLock { $0.append(command) }
+            return (command == "command -v codex" ? 1 : 0, "")
+        }
+        #expect(!installer.isInstalled(.claude))
+        #expect(await installer.install(.claude).ok)
+        #expect(installer.isInstalled(.claude))
+        let skill = try String(contentsOf: installer.skillFile(.claude), encoding: .utf8)
+        #expect(skill.contains("remotedebug_build") && skill.contains("'/s/rd' build"))
+        #expect(commands.withLock { $0.last }?.hasSuffix("claude mcp add --scope user remotedebug -- '/Applications/Remote Debug.app/Contents/MacOS/RemoteDebug' --mcp") == true)
+
+        // CLI가 없으면 스킬만 설치하고 그렇게 알린다.
+        let codex = await installer.install(.codex)
+        #expect(!codex.ok && installer.isInstalled(.codex))
+        #expect(await installer.uninstall(.codex).ok && !installer.isInstalled(.codex))
+    }
+}

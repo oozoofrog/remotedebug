@@ -4,7 +4,7 @@ Mac 앱은 Debug(개발 서명) 빌드를 검사해 게시하고, 페어링한 i
 
 RemoteDebug iPhone 앱 없이 설치하는 두 번째 경로도 있다. Mac 호스트가 `https://<Mac의 FQDN>/`에서 설치 웹 페이지를 내주고, 공식 Tailscale 앱으로 같은 tailnet에 접속한 iPhone이 Safari로 그 페이지를 열어 페어링 코드를 넣고, Mac 앱에서 허용받은 뒤 빌드를 설치한다. 허용한 기기만, Debug 빌드만, 허용은 Mac 화면에서만이라는 규칙은 앱 경로와 같다. 실제 iPhone의 Safari에서는 한 번도 열어 보지 않았다. 절차는 [설정 문서](docs/setup.md#iphone에서-앱-없이-설치웹-페이지), 규칙은 [`docs/protocol-addenda.md`](docs/protocol-addenda.md)의 E에 있다.
 
-다른 프로젝트는 Mac 앱에 연결해서 쓴다. 프로젝트 폴더나 `.xcodeproj`, `.xcworkspace`를 창이나 Dock 아이콘에 끌어 놓으면 앱이 스킴을 읽고 `xcodebuild`로 Debug 기기용 빌드를 만들어 게시한다. 연결한 프로젝트는 목록에 남고, Xcode에서 그 프로젝트를 기기용 Debug로 빌드할 때마다 결과를 자동으로 가져온다. 연결하지 않은 프로젝트의 기기용 Debug 빌드가 Xcode에서 보이면 등록할지 묻는다. 앱은 창을 닫아도 메뉴 막대에 남는다. 프로젝트 행의 **에이전트 연결…**은 그 프로젝트에 Claude 스킬과 `AGENTS.md` 단락을 써서 에이전트가 빌드·게시 명령을 쓰게 한다. 순서는 [설정 문서의 프로젝트 절](docs/setup.md#다른-프로젝트-연결)에 있다. Mac은 게시까지만 하고, 설치는 iPhone에서 누른다.
+다른 프로젝트는 Mac 앱에 연결해서 쓴다. 프로젝트 폴더나 `.xcodeproj`, `.xcworkspace`를 창이나 Dock 아이콘에 끌어 놓으면 앱이 스킴을 읽고 `xcodebuild`로 Debug 기기용 빌드를 만들어 게시한다. 연결한 프로젝트는 목록에 남고, Xcode에서 그 프로젝트를 기기용 Debug로 빌드할 때마다 결과를 자동으로 가져온다. 연결하지 않은 프로젝트의 기기용 Debug 빌드가 Xcode에서 보이면 등록할지 묻는다. 앱은 창을 닫아도 메뉴 막대에 남는다. **에이전트에 설치…**는 Claude Code와 Codex의 사용자 전체 설정에 MCP 서버와 스킬을 설치한다. 프로젝트 행의 **에이전트 연결…**은 그 프로젝트에 Claude 스킬과 `AGENTS.md` 단락을 써서 에이전트가 빌드·게시 명령을 쓰게 한다. 순서는 [설정 문서의 프로젝트 절](docs/setup.md#다른-프로젝트-연결)에 있다. Mac은 게시까지만 하고, 설치는 iPhone에서 누른다.
 
 ## 현재 상태
 

@@ -4,7 +4,7 @@ import Foundation
 ///
 /// - `-RDControlURL <url>`: 제어 서버 URL(Headscale 등). 고급 설정에서 저장한 값보다 우선한다.
 /// - `-RDNodeId8 <8자리 소문자 16진수>`: 노드 이름 `rd-mac-<id8>`을 고정한다.
-/// - `-RDStartSharing YES`: 실행하자마자 공유를 시작한다(로그인은 건너뛰지 않는다).
+/// - `-RDStartSharing YES`: 예전 인자. 지금은 앱이 실행하면 항상 공유를 시작하므로 효과가 없다.
 /// - `-RDStateRootName <이름>`: 저장 폴더를 `Application Support/<이름>`으로 바꾼다(스모크 테스트용, 영문·숫자·`-`만).
 ///   저장하는 값(감시 폴더 북마크, 고급 설정의 제어 서버)도 이 이름으로 나눠, 기본 폴더의 값을 읽거나 바꾸지 않는다.
 /// - `-RDTesting YES` 또는 XCTest 호스트: 실제 저장 폴더를 건드리지 않는다(임시 폴더, 불러오기·공유 시작 없음).

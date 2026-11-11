@@ -139,7 +139,7 @@ xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugPhone -destination 
 
 이 절차는 실행 중인 앱에서 손으로 해 보지 않았다. 화면 문구는 소스와 미리보기 스크린샷으로만 확인했다. 실제 tailnet 로그인(2단계)은 실제 tailnet에서 확인하지 않음. 인증서 발급(3단계)은 가짜 tailnet에서도 TLS를 끄고 시험해서 한 번도 실행되지 않았다. [실기기 확인 절차](device-test.md)의 D9, D2, D1, D12에서 확인한다.
 
-1. 앱 왼쪽 아래의 **공유 시작**을 누른다.
+1. 앱을 열면 공유가 자동으로 시작된다. 멈췄다면 앱 왼쪽 아래의 **공유 시작**을 누른다.
 2. 로그인한다. 왼쪽 **네트워크** 화면에서 둘 중 하나를 쓴다.
    - 브라우저: 상태가 "로그인 필요"가 되면 **로그인 페이지 열기**를 누른다.
    - 인증 키: "인증 키(선택)" 칸에 키를 넣고 **인증 키로 다시 시작**을 누른다. 공유를 시작하기 전이면 키를 넣고 **공유 시작**을 누른다.
@@ -159,6 +159,17 @@ xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugPhone -destination 
 4. 연결한 프로젝트를 Xcode에서 기기용 Debug로 빌드하면 앱이 결과를 가져와 게시한다. 따로 누를 것은 없다.
 5. 연결하지 않은 프로젝트를 Xcode에서 기기용 Debug로 빌드하면 "<프로젝트>을(를) RemoteDebug에 등록할까요?" 알림이 온다. **등록**을 누르면 연결되고, **등록하지 않음**을 누르면 그 프로젝트는 다시 묻지 않는다. 같은 제안이 **프로젝트** 화면 위쪽에도 나온다. 알림을 받으려면 처음에 알림 권한을 허용한다.
 6. 창을 닫아도 앱은 메뉴 막대에 남아 공유와 감시를 계속한다. 메뉴 막대 아이콘에서 창을 다시 열거나 **로그인할 때 열기**를 켜고, **RemoteDebug 종료**로 끝낸다.
+
+### 에이전트에 설치(Claude Code, Codex)
+
+**프로젝트** 화면 도구 막대의 **에이전트에 설치…**에서 Claude Code와 Codex를 각각 **설치**한다. 사용자 전체 설정에 두 가지가 들어가고, 어느 프로젝트에서든 에이전트가 RemoteDebug로 빌드·게시할 수 있다.
+
+- 스킬 `remotedebug`: `~/.claude/skills/remotedebug/SKILL.md`, `~/.codex/skills/remotedebug/SKILL.md`
+- MCP 서버 `remotedebug`: `claude mcp add --scope user`, `codex mcp add`로 등록한다. 서버는 앱 실행 파일을 `--mcp` 인자로 띄운 것이고, 도구는 `remotedebug_status`, `remotedebug_schemes`, `remotedebug_build`다.
+
+`claude`나 `codex` 명령을 찾지 못하면 스킬만 설치하고 그렇게 알린다. 새로 여는 세션부터 적용된다. 같은 화면의 **제거**로 되돌린다. 앱을 다른 위치로 옮기면 **다시 설치**를 눌러 서버 경로를 고친다.
+
+화면의 설치 버튼은 손으로 눌러 보지 않았다. MCP 서버는 설치한 앱에 `initialize`, `tools/list`, `remotedebug_status` 호출을 보내 응답을 확인했다.
 
 ### 에이전트 연결
 
