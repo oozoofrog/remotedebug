@@ -10,6 +10,7 @@ private final class FakeBuilder: ProjectBuilding {
         var failure: ProjectBuildFailure?
         var built: [String] = []
         var onBuild: (@Sendable () throws -> Void)?
+        var products: [URL] = []
     }
 
     let state = Mutex(State())
@@ -24,6 +25,8 @@ private final class FakeBuilder: ProjectBuilding {
         if let failure { throw failure }
         try onBuild?()
     }
+
+    func products(container: URL, scheme: String) async throws -> [URL] { state.withLock { $0.products } }
 }
 
 private final class Names: Sendable {
@@ -96,6 +99,8 @@ struct ProjectsModelTests {
         #expect(try XcodeBuildTool.parseSchemes(workspace) == ["One"])
         let args = XcodeBuildTool.buildArguments(container: URL(fileURLWithPath: "/p/App.xcworkspace"), scheme: "App")
         #expect(args == ["-workspace", "/p/App.xcworkspace", "-scheme", "App", "-configuration", "Debug", "-destination", "generic/platform=iOS", "build"])
+        let settings = Data(#"[{"target":"App","buildSettings":{"PLATFORM_NAME":"iphoneos","WRAPPER_EXTENSION":"app","TARGET_BUILD_DIR":"/p/Build/Products/Debug-iphoneos","FULL_PRODUCT_NAME":"App.app"}},{"target":"Watch","buildSettings":{"PLATFORM_NAME":"watchos","WRAPPER_EXTENSION":"app","TARGET_BUILD_DIR":"/p/w","FULL_PRODUCT_NAME":"W.app"}}]"#.utf8)
+        #expect(XcodeBuildTool.parseProducts(settings).map(\.path) == ["/p/Build/Products/Debug-iphoneos/App.app"])
         #expect(XcodeBuildTool.failureTail("a\nx.swift:1: error: boom\nb\nx.swift:1: error: boom") == "x.swift:1: error: boom")
     }
 
@@ -106,6 +111,7 @@ struct ProjectsModelTests {
         w.builder.state.withLock {
             $0.schemes = ["App"]
             $0.onBuild = { try makeFakeApp(at: dir.appendingPathComponent("Build/Products/Debug-iphoneos/App.app")) }
+            $0.products = [dir.appendingPathComponent("Build/Products/Debug-iphoneos/App.app")]
         }
         await w.model.connectAndBuild(project.deletingLastPathComponent())
 
@@ -156,7 +162,7 @@ struct ProjectsModelTests {
         #expect(w.model.suggestions.map(\.container) == [project.path])
         #expect(notified == ["App"])
 
-        w.model.register(w.model.suggestions[0])
+        await w.model.register(w.model.suggestions[0])
         #expect(w.model.suggestions.isEmpty && w.model.projects.count == 1)
 
         // 서명 파일이 없는 앱은 지문이 네 번 그대로일 때 가져온다.
@@ -190,6 +196,7 @@ struct ProjectsModelTests {
         w.builder.state.withLock {
             $0.schemes = ["App"]
             $0.onBuild = { try makeFakeApp(at: dir.appendingPathComponent("Build/Products/Debug-iphoneos/App.app")) }
+            $0.products = [dir.appendingPathComponent("Build/Products/Debug-iphoneos/App.app")]
         }
         w.model.installAgentScript(bundleID: "com.example.none")
 

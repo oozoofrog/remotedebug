@@ -34,8 +34,18 @@ struct ProjectsView: View {
             .help("프로젝트 폴더나 Xcode 프로젝트 파일을 고릅니다")
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if let message = projects.lastError {
-                ErrorBanner(message: message) { projects.lastError = nil }
+            VStack(spacing: 0) {
+                if projects.scanStalled {
+                    Label("Xcode 빌드 폴더(\(projects.derivedDataPath))를 읽지 못하고 있습니다. Xcode에서 한 빌드를 가져오지 못하고 등록 제안도 나오지 않습니다. 디스크 연결과 시스템 설정 > 개인정보 보호 및 보안 > 파일 및 폴더의 RemoteDebug 항목을 확인하세요.", systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(.bar)
+                }
+                if let message = projects.lastError {
+                    ErrorBanner(message: message) { projects.lastError = nil }
+                }
             }
         }
         .fileImporter(isPresented: $choosing, allowedContentTypes: [.folder, .package, .item], allowsMultipleSelection: true) { result in
@@ -76,7 +86,7 @@ struct ProjectsView: View {
                                 Text(suggestion.container).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                             }
                             Spacer()
-                            Button("등록") { projects.register(suggestion) }
+                            Button("등록") { Task { await projects.register(suggestion) } }
                                 .buttonStyle(.borderedProminent)
                                 .help("이 프로젝트를 연결하고 Xcode에서 빌드할 때마다 게시합니다")
                             Button("등록하지 않음") { projects.dismiss(suggestion) }

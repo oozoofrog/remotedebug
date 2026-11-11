@@ -105,7 +105,7 @@ iPhone에 RemoteDebug 앱을 설치하지 않으려면 Mac 앱만 실행하고, 
 - 두 앱 모두 VoiceOver, 다크 모드, 다이내믹 타입으로 확인하지 않았다. 페어링 요청의 VoiceOver 알림도 코드만 있고 실제로 들어 보지 않았다. 설치 웹 페이지는 오류 안내를 live region 대신 초점 이동으로 알리게 했지만 VoiceOver에서 읽히는지 확인하지 않았다.
 - Mac 앱은 App Sandbox를 쓰지 않는다. 저장 폴더가 컨테이너(`~/Library/Containers/com.oozoofrog.app.RemoteDebugMac/Data/Library/Application Support/RemoteDebug`)에서 `~/Library/Application Support/RemoteDebug`로 바뀌었고, 옮겨 주는 코드는 없다. 샌드박스 빌드를 쓰던 Mac은 tailnet 로그인과 페어링을 다시 하거나, 앱을 끈 채 폴더를 직접 옮긴다.
 - 프로젝트 빌드는 `xcodebuild`에 `-allowProvisioningUpdates`를 주지 않는다. 프로비저닝 프로필이 없거나 기기가 등록되지 않은 프로젝트는 Xcode에서 한 번 기기용으로 빌드해야 한다.
-- 프로젝트의 빌드 결과는 Xcode의 DerivedData(`info.plist`의 `WorkspacePath`)에서 찾는다. Xcode 설정의 DerivedData 위치가 "Relative"면 찾지 못한다. `xcodebuild`가 만든 폴더에도 같은 `info.plist`가 생기는지는 실제 빌드로 확인하지 않았다.
+- 앱이 시작한 프로젝트 빌드의 결과 위치는 `xcodebuild -showBuildSettings`로 읽는다(실제 프로젝트 하나로 확인함). Xcode에서 한 빌드를 가져올 때는 DerivedData의 `info.plist`(`WorkspacePath`)와 Xcode의 빌드 위치 설정(기본, 또는 Custom > Relative to Workspace)으로 위치를 계산한다. 그 밖의 빌드 위치 설정은 찾지 못한다. 이 감시 경로는 실제 Xcode 빌드로 확인하지 않았다.
 - Xcode 빌드 감지는 3초마다 DerivedData의 `Build/Products/Debug-iphoneos`와 빌드 기록의 수정 시각을 보는 방식이다. 빌드가 시작한 순간이 아니라 그 폴더가 바뀐 뒤에 등록을 묻는다. 그 프로젝트의 첫 기기용 빌드는 폴더가 생기는 시점만 기준으로 잡혀 다음 빌드에서 묻는다.
 - 에이전트 명령(`~/Library/Application Support/RemoteDebug/agent/rd`)은 같은 사용자 계정의 어떤 프로세스든 쓸 수 있다. 연결한 프로젝트나 넘긴 경로의 프로젝트를 빌드해 게시하는 것까지만 한다.
 - iOS는 VPN을 한 번에 하나만 켠다. 이 앱의 VPN이 켜진 동안 공식 Tailscale 앱의 VPN은 꺼진다.

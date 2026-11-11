@@ -19,3 +19,6 @@ Config/Signing.local.xcconfig
 
 # 실기기 확인의 로그·스크린샷. 노드 이름과 tailnet 주소가 들어 있을 수 있다.
 device-evidence/
+
+# Xcode 빌드 위치가 "Relative to Workspace"일 때 생기는 폴더
+/Build/

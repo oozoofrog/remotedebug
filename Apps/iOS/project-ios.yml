@@ -36,6 +36,7 @@ targets:
               - remotedebug
     settings:
       base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_BUNDLE_IDENTIFIER: com.oozoofrog.app.RemoteDebugPhone
         PRODUCT_NAME: RemoteDebug
         TARGETED_DEVICE_FAMILY: "1"

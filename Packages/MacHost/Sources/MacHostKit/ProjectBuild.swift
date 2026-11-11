@@ -73,6 +73,8 @@ public protocol ProjectBuilding: Sendable {
     func schemes(container: URL) async throws -> [String]
     /// 출력은 `log`에 쓴다. 실패하면 `ProjectBuildFailure`를 던진다.
     func build(container: URL, scheme: String, log: URL) async throws
+    /// 그 스킴이 만드는 iPhone 앱(`.app`)의 경로. Xcode의 빌드 위치 설정이 무엇이든 `xcodebuild`가 알려 준 위치다.
+    func products(container: URL, scheme: String) async throws -> [URL]
 }
 
 /// `xcodebuild`를 실행한다. 빌드 폴더는 Xcode와 같은 DerivedData를 쓴다(따로 지정하지 않는다).
@@ -122,6 +124,32 @@ public struct XcodeBuildTool: ProjectBuilding {
         guard status.code == 0 else {
             let text = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
             throw ProjectBuildFailure(message: "빌드에 실패했습니다(xcodebuild 종료 코드 \(status.code)).", logTail: Self.failureTail(text))
+        }
+    }
+
+    public func products(container: URL, scheme: String) async throws -> [URL] {
+        let pipe = Pipe()
+        var arguments = Self.buildArguments(container: container, scheme: scheme)
+        arguments.removeLast()
+        let status = try await Self.run(executable, arguments + ["-showBuildSettings", "-json"],
+                                        cwd: container.deletingLastPathComponent(), stdout: pipe, stderr: FileHandle.nullDevice)
+        guard status.code == 0 else {
+            throw ProjectBuildFailure(message: "빌드 결과 위치를 읽지 못했습니다(xcodebuild 종료 코드 \(status.code)).")
+        }
+        return Self.parseProducts(status.output)
+    }
+
+    /// `xcodebuild -showBuildSettings -json` 출력에서 iphoneos용 `.app`의 경로를 꺼낸다.
+    public static func parseProducts(_ data: Data) -> [URL] {
+        let targets = (try? JSONSerialization.jsonObject(with: data)) as? [[String: Any]] ?? []
+        return targets.compactMap { target in
+            guard let settings = target["buildSettings"] as? [String: Any],
+                  settings["PLATFORM_NAME"] as? String == "iphoneos",
+                  settings["WRAPPER_EXTENSION"] as? String == "app",
+                  let dir = settings["TARGET_BUILD_DIR"] as? String,
+                  let name = settings["FULL_PRODUCT_NAME"] as? String
+            else { return nil }
+            return URL(fileURLWithPath: dir, isDirectory: true).appendingPathComponent(name, isDirectory: true)
         }
     }
 
@@ -178,22 +206,34 @@ public struct DerivedDataEntry: Sendable, Hashable {
     public var workspacePath: String
     /// 마지막 빌드 활동 시각(빌드 기록과 `Debug-iphoneos` 폴더의 수정 시각 중 늦은 것).
     public var activity: Date?
-    /// `Build/Products/Debug-iphoneos`가 있다(기기용 Debug 빌드를 한 적이 있거나 하는 중이다).
+    /// `Debug-iphoneos` 폴더가 있다(기기용 Debug 빌드를 한 적이 있거나 하는 중이다).
     public var hasDeviceDebug: Bool
-
-    public var debugProducts: URL { Self.debugProducts(in: dir) }
-
-    static func debugProducts(in dir: URL) -> URL {
-        dir.appendingPathComponent("Build/Products/Debug-iphoneos", isDirectory: true)
-    }
+    /// 기기용 Debug 빌드가 놓이는 폴더.
+    public var debugProducts: URL
 }
 
 /// Xcode의 DerivedData를 훑어 어느 프로젝트가 빌드되고 있는지 본다.
 public struct DerivedDataScanner: Sendable {
     public var root: URL
+    /// Xcode의 빌드 위치가 "Custom > Relative to Workspace"일 때 프로젝트 폴더 기준의 Products·Intermediates 경로.
+    public var relativeProducts: String?
+    public var relativeIntermediates: String?
 
-    public init(root: URL = DerivedDataScanner.defaultRoot()) {
+    public init(root: URL = DerivedDataScanner.defaultRoot(), relativeProducts: String? = nil, relativeIntermediates: String? = nil) {
         self.root = root
+        self.relativeProducts = relativeProducts
+        self.relativeIntermediates = relativeIntermediates
+    }
+
+    /// Xcode 설정(DerivedData 위치, 빌드 위치)을 읽어 만든다.
+    public static func fromXcodeSettings(_ defaults: UserDefaults? = UserDefaults(suiteName: "com.apple.dt.Xcode")) -> DerivedDataScanner {
+        var scanner = DerivedDataScanner(root: defaultRoot(xcodeDefaults: defaults))
+        if defaults?.string(forKey: "IDEBuildLocationStyle") == "Custom",
+           defaults?.string(forKey: "IDECustomBuildLocationType") == "RelativeToWorkspace" {
+            scanner.relativeProducts = defaults?.string(forKey: "IDECustomBuildProductsPath")
+            scanner.relativeIntermediates = defaults?.string(forKey: "IDECustomBuildIntermediatesPath")
+        }
+        return scanner
     }
 
     /// Xcode 설정의 사용자 지정 위치(절대 경로일 때만), 없으면 `~/Library/Developer/Xcode/DerivedData`.
@@ -212,11 +252,14 @@ public struct DerivedDataScanner: Sendable {
                   let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
                   let workspace = plist["WorkspacePath"] as? String
             else { return nil }
-            let products = DerivedDataEntry.debugProducts(in: dir)
-            let buildData = dir.appendingPathComponent("Build/Intermediates.noindex/XCBuildData", isDirectory: true)
+            let folder = URL(fileURLWithPath: workspace).deletingLastPathComponent()
+            let products = (relativeProducts.map { folder.appendingPathComponent($0, isDirectory: true) }
+                ?? dir.appendingPathComponent("Build/Products", isDirectory: true)).appendingPathComponent("Debug-iphoneos", isDirectory: true)
+            let buildData = (relativeIntermediates.map { folder.appendingPathComponent($0, isDirectory: true) }
+                ?? dir.appendingPathComponent("Build/Intermediates.noindex", isDirectory: true)).appendingPathComponent("XCBuildData", isDirectory: true)
             let dates = [products, buildData, buildData.appendingPathComponent("build.db")].compactMap(Self.modified)
             return DerivedDataEntry(dir: dir, workspacePath: URL(fileURLWithPath: workspace).standardizedFileURL.path,
-                                    activity: dates.max(), hasDeviceDebug: fm.fileExists(atPath: products.path))
+                                    activity: dates.max(), hasDeviceDebug: fm.fileExists(atPath: products.path), debugProducts: products)
         }
     }
 

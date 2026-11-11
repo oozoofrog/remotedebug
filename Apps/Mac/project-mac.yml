@@ -33,6 +33,7 @@ targets:
               - com.apple.itunes.ipa
     settings:
       base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_BUNDLE_IDENTIFIER: com.oozoofrog.app.RemoteDebugMac
         PRODUCT_NAME: RemoteDebug
         CODE_SIGN_STYLE: Automatic

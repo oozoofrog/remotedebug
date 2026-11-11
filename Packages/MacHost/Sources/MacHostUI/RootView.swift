@@ -197,13 +197,9 @@ struct ProjectConnector {
     let connect: ([URL]) -> Void
     func callAsFunction(_ urls: [URL]) { connect(urls) }
 
-    /// 끌어 놓은 항목 중 빌드 파일(.app, .ipa)이 아닌 프로젝트 파일과 폴더.
+    /// 끌어 놓은 항목 중 빌드 파일(.app, .ipa)이 아닌 것. 프로젝트인지는 연결할 때 메인 스레드 밖에서 확인한다.
     static func projectURLs(in urls: [URL]) -> [URL] {
-        urls.filter { url in
-            if ["app", "ipa"].contains(url.pathExtension.lowercased()) { return false }
-            return ProjectLocator.isContainer(url) || url.hasDirectoryPath
-                || (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
-        }
+        urls.filter { !["app", "ipa"].contains($0.pathExtension.lowercased()) }
     }
 }
 

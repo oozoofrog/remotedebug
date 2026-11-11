@@ -311,7 +311,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                   let suggestion = projects.suggestions.first(where: { $0.container == container })
             else { return }
             switch action {
-            case Self.registerAction: projects.register(suggestion)
+            case Self.registerAction: Task { await projects.register(suggestion) }
             case Self.dismissAction: projects.dismiss(suggestion)
             default: NSApp.activate()
             }

@@ -65,6 +65,10 @@ public final class ProjectsModel {
     public private(set) var phases: [String: Phase] = [:]
     public private(set) var reports: [String: Report] = [:]
     public var lastError: String?
+    /// Xcode 빌드 폴더(DerivedData) 읽기가 10초 넘게 끝나지 않고 있다.
+    public private(set) var scanStalled = false
+    public var derivedDataPath: String { scanner.root.path }
+    @ObservationIgnored private var scanStarted: Date?
     /// 새 등록 제안이 생기면 부른다(시스템 알림용).
     @ObservationIgnored public var onSuggestion: (@MainActor (Suggestion) -> Void)?
 
@@ -88,7 +92,7 @@ public final class ProjectsModel {
     public init(
         root: URL,
         builder: any ProjectBuilding = XcodeBuildTool(),
-        scanner: DerivedDataScanner = DerivedDataScanner(),
+        scanner: DerivedDataScanner = .fromXcodeSettings(),
         hostStatus: @escaping @MainActor () -> HostStatus = { HostStatus(sharing: false, installPage: nil) },
         now: @escaping @Sendable () -> Date = { Date() },
         importer: @escaping Importer
@@ -130,9 +134,9 @@ public final class ProjectsModel {
 
     /// 프로젝트 파일이나 폴더를 연결한다. 이미 연결돼 있으면 그 항목을 돌려준다.
     @discardableResult
-    public func connect(_ url: URL) -> ConnectedProject? {
+    public func connect(_ url: URL) async -> ConnectedProject? {
         load()
-        guard let container = ProjectLocator.container(for: url) else {
+        guard let container = await Self.offMain({ ProjectLocator.container(for: url) }) else {
             lastError = "\(url.lastPathComponent)에서 Xcode 프로젝트(.xcodeproj, .xcworkspace)를 찾지 못했습니다."
             return nil
         }
@@ -147,7 +151,7 @@ public final class ProjectsModel {
 
     /// 연결한 뒤 스킴을 읽고, 빌드할 스킴이 정해지면 바로 빌드한다.
     public func connectAndBuild(_ url: URL) async {
-        guard let project = connect(url) else { return }
+        guard let project = await connect(url) else { return }
         await loadSchemes(for: project)
         if let scheme = preferredScheme(for: project) {
             await build(project, scheme: scheme)
@@ -207,7 +211,8 @@ public final class ProjectsModel {
         do {
             try await builder.build(container: project.containerURL, scheme: scheme, log: log)
             phases[project.id] = .importing
-            report = await importProducts(of: project, finished: true)
+            let built = try await builder.products(container: project.containerURL, scheme: scheme)
+            report = await importProducts(of: project, finished: true, built: built)
             report.scheme = scheme
         } catch let failure as ProjectBuildFailure {
             report = Report(ok: false, scheme: scheme, message: failure.message, logTail: failure.logTail)
@@ -221,16 +226,30 @@ public final class ProjectsModel {
 
     /// 프로젝트의 DerivedData에서 `Debug-iphoneos/*.app`을 가져온다.
     /// `finished`가 false면(Xcode가 빌드 중일 수 있다) 서명이 끝났거나 지문이 여러 번 그대로일 때만 가져온다.
-    private func importProducts(of project: ConnectedProject, finished: Bool) async -> Report {
-        let entries = scanner.entries().filter { $0.workspacePath == project.container && $0.hasDeviceDebug }
+    private func importProducts(of project: ConnectedProject, finished: Bool, built: [URL] = []) async -> Report {
+        let scanner = self.scanner
+        let container = project.container
+        // 파일 읽기는 메인 스레드 밖에서 한다(외장 디스크나 권한 확인 창에서 멈출 수 있다).
+        let candidates = await Self.offMain { () -> [Candidate] in
+            // 방금 빌드했으면 xcodebuild가 알려 준 위치만 본다. 감시할 때는 Xcode 설정에서 계산한 위치를 본다.
+            let apps = built.isEmpty
+                ? scanner.entries().filter { $0.workspacePath == container && $0.hasDeviceDebug }.flatMap { Self.apps(in: $0.debugProducts) }
+                : built
+            return apps.compactMap { app in
+                    guard case .ready(let fingerprint) = FolderScanner.state(of: app) else { return nil }
+                    let signature = DerivedDataScanner.modified(app.appendingPathComponent("_CodeSignature/CodeResources"))
+                    return Candidate(app: app, fingerprint: fingerprint, signed: signature.map { $0 >= fingerprint.executableModified } ?? false)
+                }
+        }
         var report = Report(ok: true)
         var sawApp = false
         var rejections: [String] = []
-        for app in entries.flatMap({ Self.apps(in: $0.debugProducts) }) {
-            guard case .ready(let fingerprint) = FolderScanner.state(of: app) else { continue }
+        for candidate in candidates {
+            let app = candidate.app
+            let fingerprint = candidate.fingerprint
             sawApp = true
             if stored.imported[app.path] == fingerprint { continue }
-            if !finished, !isSettled(app, fingerprint) { continue }
+            if !finished, !isSettled(candidate) { continue }
             settling[app.path] = nil
             let outcome = await importer(app)
             // 가져오기가 실패했으면(nil) 지문을 기억하지 않아 다음에 다시 본다.
@@ -259,27 +278,36 @@ public final class ProjectsModel {
             report.message = rejections.joined(separator: "\n")
         } else if !sawApp {
             report.ok = false
-            report.message = "빌드는 끝났지만 Debug-iphoneos 폴더에서 앱을 찾지 못했습니다. iPhone 앱을 만드는 스킴인지 확인하세요."
+            report.message = "빌드는 끝났지만 iPhone 앱을 찾지 못했습니다. iPhone 앱을 만드는 스킴인지 확인하세요."
         } else if report.published.isEmpty {
             report.message = "빌드 결과가 전과 같습니다. 이미 가져온 빌드입니다."
         }
         return report
     }
 
-    static func apps(in products: URL) -> [URL] {
+    nonisolated static func apps(in products: URL) -> [URL] {
         let items = (try? FileManager.default.contentsOfDirectory(at: products, includingPropertiesForKeys: nil)) ?? []
         return items.filter { $0.pathExtension == "app" && !$0.deletingPathExtension().lastPathComponent.hasSuffix("-Runner") }
             .sorted { $0.path < $1.path }
     }
 
     /// 서명 파일이 실행 파일보다 늦게 쓰였고 지문이 한 번 그대로였거나, 지문이 네 번 그대로였으면 끝난 빌드로 본다.
-    private func isSettled(_ app: URL, _ fingerprint: BuildFingerprint) -> Bool {
-        var entry = settling[app.path] ?? (fingerprint, 0)
+    private func isSettled(_ candidate: Candidate) -> Bool {
+        let fingerprint = candidate.fingerprint
+        var entry = settling[candidate.app.path] ?? (fingerprint, 0)
         entry = entry.fingerprint == fingerprint ? (fingerprint, entry.count + 1) : (fingerprint, 1)
-        settling[app.path] = entry
-        let signature = DerivedDataScanner.modified(app.appendingPathComponent("_CodeSignature/CodeResources"))
-        let signed = signature.map { $0 >= fingerprint.executableModified } ?? false
-        return (signed && entry.count >= 2) || entry.count >= 4
+        settling[candidate.app.path] = entry
+        return (candidate.signed && entry.count >= 2) || entry.count >= 4
+    }
+
+    private struct Candidate: Sendable {
+        var app: URL
+        var fingerprint: BuildFingerprint
+        var signed: Bool
+    }
+
+    private static func offMain<T: Sendable>(_ work: @escaping @Sendable () -> T) async -> T {
+        await Task.detached(priority: .utility, operation: work).value
     }
 
     // MARK: Xcode 감시
@@ -288,7 +316,11 @@ public final class ProjectsModel {
     /// 기기용 Debug 빌드 활동이 새로 보이면 등록을 제안한다.
     public func scanXcode() async {
         load()
-        let entries = scanner.entries()
+        let scanner = self.scanner
+        let (entries, existing) = await Self.offMain { () -> ([DerivedDataEntry], Set<String>) in
+            let entries = scanner.entries()
+            return (entries, Set(entries.map(\.workspacePath).filter { FileManager.default.fileExists(atPath: $0) }))
+        }
         for entry in entries where entry.hasDeviceDebug {
             if projects.contains(where: { $0.container == entry.workspacePath }) { continue }
             guard let activity = entry.activity else { continue }
@@ -297,7 +329,7 @@ public final class ProjectsModel {
             guard let previous, activity > previous else { continue }
             let suggestion = Suggestion(container: entry.workspacePath)
             guard !stored.dismissed.contains(suggestion.container), !suggestions.contains(suggestion),
-                  FileManager.default.fileExists(atPath: suggestion.container)
+                  existing.contains(suggestion.container)
             else { continue }
             suggestions.append(suggestion)
             onSuggestion?(suggestion)
@@ -314,8 +346,8 @@ public final class ProjectsModel {
 
     /// 제안을 받아들여 연결한다. 이미 만들어진 빌드가 있으면 다음 검사에서 가져온다.
     @discardableResult
-    public func register(_ suggestion: Suggestion) -> ConnectedProject? {
-        connect(URL(fileURLWithPath: suggestion.container))
+    public func register(_ suggestion: Suggestion) async -> ConnectedProject? {
+        await connect(URL(fileURLWithPath: suggestion.container))
     }
 
     /// 이 프로젝트는 다시 제안하지 않는다.
@@ -335,7 +367,17 @@ public final class ProjectsModel {
             while !Task.isCancelled {
                 guard let self else { return }
                 self.processAgentRequests()
-                if tick % 3 == 0 { await self.scanXcode() }
+                // 폴더 읽기가 멈춰도(외장 디스크, 권한 확인) 에이전트 명령은 계속 받는다.
+                if let started = self.scanStarted {
+                    if !self.scanStalled, self.now().timeIntervalSince(started) > 10 { self.scanStalled = true }
+                } else if tick % 3 == 0 {
+                    self.scanStarted = self.now()
+                    Task {
+                        await self.scanXcode()
+                        self.scanStarted = nil
+                        self.scanStalled = false
+                    }
+                }
                 tick += 1
                 try? await Task.sleep(for: .seconds(1))
             }
@@ -423,7 +465,7 @@ public final class ProjectsModel {
         case "connect", "schemes", "build":
             guard !path.isEmpty else { return AgentResponse(ok: false, error: "프로젝트 경로가 필요합니다.") }
             lastError = nil
-            guard let project = connect(URL(fileURLWithPath: path)) else {
+            guard let project = await connect(URL(fileURLWithPath: path)) else {
                 defer { lastError = nil }
                 return AgentResponse(ok: false, error: lastError ?? "프로젝트를 연결하지 못했습니다.")
             }
