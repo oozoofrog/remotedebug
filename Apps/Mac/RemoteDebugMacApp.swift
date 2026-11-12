@@ -38,6 +38,8 @@ struct RemoteDebugMacApp: App {
                     RootView()
                         .environment(model)
                         .environment(appDelegate.projects)
+                        .environment(appDelegate.updatePage)
+                        .environment(appDelegate.phoneInstaller)
                 case .failed(let failure):
                     LaunchFailureView(
                         failure: failure,
@@ -106,6 +108,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let launch: Launch
     /// 연결한 프로젝트와 Xcode 감시. 테스트 호스트와 실행 실패 때는 없다.
     private(set) var projects: ProjectsModel?
+    /// iPhone 앱 자신의 업데이트를 공식 Tailscale로 내주는 페이지. 테스트 호스트와 실행 실패 때는 없다.
+    private(set) var updatePage: UpdatePageModel?
+    /// 연결한 iPhone에 RemoteDebug iPhone 앱을 빌드해 설치한다. 테스트 호스트와 실행 실패 때는 없다.
+    private(set) var phoneInstaller: PhoneAppInstaller?
     let options: LaunchOptions
     /// 저장 폴더. 테스트 호스트면 지울 임시 폴더.
     let paths: HostPaths?
@@ -163,11 +169,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.launch = launch
         super.init()
         if !options.isTesting, case .ready(let model) = launch, let paths {
+            let updatePage = UpdatePageModel(root: paths.root, server: RDCoreUpdatePage())
+            self.updatePage = updatePage
+            let source = (Bundle.main.object(forInfoDictionaryKey: "RDSourceRoot") as? String).flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
+            phoneInstaller = PhoneAppInstaller(root: paths.root, sourceRoot: source)
             projects = ProjectsModel(
                 root: paths.root,
-                hostStatus: { [weak model] in
-                    ProjectsModel.HostStatus(sharing: model?.isRunning ?? false, installPage: model?.installPageURL?.absoluteString)
+                hostStatus: { [weak model, weak updatePage] in
+                    ProjectsModel.HostStatus(sharing: model?.isRunning ?? false, installPage: model?.installPageURL?.absoluteString,
+                                             updatePage: updatePage?.pageURL?.absoluteString)
                 },
+                openPairing: { [weak model] in
+                    guard let model else { return .failure(.init("RemoteDebug가 준비되지 않았습니다.")) }
+                    return await model.openPairingForAgent()
+                },
+                pairingRequests: .init(
+                    list: { [weak model] in model?.pairRequestsForAgent ?? [] },
+                    decide: { [weak model] id, allow in
+                        guard let model else { return "RemoteDebug가 준비되지 않았습니다." }
+                        return await model.decideForAgent(id, allow: allow)
+                    }),
+                fileSharing: .init(
+                    list: { [weak model] in model?.sharedFiles ?? [] },
+                    share: { [weak model] url in
+                        guard let model else { return .failure(ShareFileFailure("RemoteDebug가 준비되지 않았습니다.")) }
+                        return await model.shareFile(url)
+                    },
+                    remove: { [weak model] id in await model?.unshareFile(id) },
+                    shareLink: { [weak model] url, title in
+                        guard let model else { return .failure(ShareFileFailure("RemoteDebug가 준비되지 않았습니다.")) }
+                        return await model.shareLink(url, title: title)
+                    }),
                 importer: { [weak model] url in await model?.importBuild(url) })
         }
     }
@@ -192,6 +224,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let model, !options.isTesting else { return }
         installTerminationSignalHandler()
         let projects = self.projects
+        if let updatePage {
+            model.onBuildsChanged = { [weak model, weak updatePage] builds in
+                guard let model, let updatePage else { return }
+                await updatePage.sync(builds: builds) { model.publishedIPA(forBuildID: $0) }
+            }
+            Task {
+                await updatePage.start()
+                updatePage.startMonitoring()
+                await updatePage.sync(builds: model.builds) { model.publishedIPA(forBuildID: $0) }
+            }
+        }
         launchTask = Task {
             await model.load()
             // 앱을 열면 항상 공유를 시작한다. 처음이면 로그인을 기다리는 상태가 된다.

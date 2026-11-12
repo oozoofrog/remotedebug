@@ -14,6 +14,64 @@ import Testing
         )
     }
 
+    @Test func iconRoundTripsAsBase64AndDropsBadValues() throws {
+        var d = sample()
+        let png = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3])
+        d.icon = png
+        let json = try RDJSON.encoder().encode(d)
+        let object = try #require(JSONSerialization.jsonObject(with: json) as? [String: Any])
+        #expect(object["icon"] as? String == png.base64EncodedString())
+        #expect(try RDJSON.decoder().decode(BuildDescriptor.self, from: json).icon == png)
+
+        // 아이콘이 없으면 키도 없다.
+        let plain = try #require(JSONSerialization.jsonObject(with: RDJSON.encoder().encode(sample())) as? [String: Any])
+        #expect(plain["icon"] == nil)
+
+        // PNG가 아니거나 base64가 아니거나 너무 크면 아이콘만 버린다.
+        for bad in ["\"AAAA\"", "\"not base64!\"", "\"" + Data(repeating: 0x89, count: BuildDescriptor.maxIconBytes + 1).base64EncodedString() + "\"", "12"] {
+            var dict = object
+            dict["icon"] = try JSONSerialization.jsonObject(with: Data(bad.utf8), options: .fragmentsAllowed)
+            let decoded = try RDJSON.decoder().decode(BuildDescriptor.self, from: JSONSerialization.data(withJSONObject: dict))
+            #expect(decoded.icon == nil)
+            #expect(decoded.id == d.id)
+        }
+    }
+
+    @Test func deviceLogEventDecodesCoreJSON() throws {
+        let json = #"""
+        {"type":"device-log","deviceId":"d_1","deviceName":"내 iPhone","nodeName":"rd-phone-1",
+         "entries":[{"at":"2026-11-12T00:00:01.25Z","level":"warning","source":"install","message":"설치 시작"},
+                    {"at":"2026-11-12T00:00:02Z","level":"loud","source":"","message":"x"}]}
+        """#
+        guard case .deviceLog(let event) = try RDJSON.decoder().decode(CoreEvent.self, from: Data(json.utf8)) else {
+            Issue.record("not a device-log event")
+            return
+        }
+        #expect(event.deviceName == "내 iPhone" && event.entries.count == 2)
+        #expect(event.entries[0].level == .warning)
+        #expect(event.entries[0].at == Date(timeIntervalSince1970: 1_794_441_601.25))
+        #expect(event.entries[1].level == .info)
+
+        let body = try RDJSON.encoder().encode(DeviceLogBatch(entries: [event.entries[0]]))
+        #expect(String(decoding: body, as: UTF8.self).contains(#""at":"2026-11-12T00:00:01.250Z""#))
+    }
+
+    @Test func groupsBuildsOfSameApp() {
+        func build(_ id: String, _ bundle: String, _ offset: TimeInterval) -> BuildDescriptor {
+            var b = sample()
+            b.id = id
+            b.bundleId = bundle
+            b.publishedAt = Date(timeIntervalSince1970: 1_790_000_000 + offset)
+            return b
+        }
+        let groups = AppBuildGrouping.groups([build("a1", "app.a", 10), build("b1", "app.b", 20), build("a3", "app.a", 30), build("a2", "app.a", 15)])
+        #expect(groups.map(\.bundleId) == ["app.a", "app.b"])
+        #expect(groups[0].latest.id == "a3")
+        #expect(groups[0].older.map(\.id) == ["a2", "a1"])
+        #expect(groups[1].older.isEmpty)
+        #expect(AppBuildGrouping.groups([]).isEmpty)
+    }
+
     @Test func makeIDMatchesSpec() {
         // sha256("com.example.app.Sample\n" + 64×"0") 의 앞 8자리
         let zeros = String(repeating: "0", count: 64)

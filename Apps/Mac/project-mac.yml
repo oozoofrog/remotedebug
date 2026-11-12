@@ -18,6 +18,8 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.developer-tools
+        # 이 앱을 빌드한 저장소. **iPhone 앱 설치…**가 여기의 RemoteDebug.xcodeproj로 iPhone 앱을 빌드한다.
+        RDSourceRoot: $(SRCROOT)
         LSMinimumSystemVersion: "26.0"
         NSUserNotificationAlertStyle: alert
         # 프로젝트 폴더·프로젝트 파일·빌드를 Dock 아이콘에 끌어 놓거나 `open -a RemoteDebug <경로>`로 넘길 수 있다.

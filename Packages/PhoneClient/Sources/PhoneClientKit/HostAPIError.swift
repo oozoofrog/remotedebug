@@ -20,6 +20,8 @@ public struct HostAPIError: Error, Equatable, Sendable {
     public static let invalidResponseCode = "invalid_response"
     /// 제한 시간 안에 응답이 오지 않았다. 연결 실패의 한 종류로 다룬다(`isConnectionFailure`).
     public static let timedOutCode = "timed_out"
+    /// 받은 파일의 크기나 SHA-256이 목록과 다르다.
+    public static let fileMismatchCode = "file_mismatch"
 
     static func connectionFailed(_ detail: String) -> HostAPIError {
         HostAPIError(status: 0, code: connectionFailedCode, message: detail)
@@ -55,6 +57,10 @@ public struct HostAPIError: Error, Equatable, Sendable {
             "설치 세션이 만료되었습니다. 다시 설치하세요."
         case "build_not_found":
             "Mac에 이 빌드가 없습니다. 목록을 새로고침하세요."
+        case "resource_not_found":
+            "Mac에서 이 파일을 지웠습니다. 목록을 새로고침하세요."
+        case Self.fileMismatchCode:
+            "받은 파일이 Mac의 파일과 다릅니다. 다시 받으세요."
         case "build_changed":
             "Mac에서 빌드가 바뀌었습니다. 목록을 새로고침하세요."
         case "not_debug_build":

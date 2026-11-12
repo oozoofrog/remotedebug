@@ -17,7 +17,8 @@ import RDModels
 @MainActor
 @Observable
 final class TunnelController: TunnelControlling {
-    nonisolated static let providerBundleIdentifier = "com.oozoofrog.app.RemoteDebugPhone.Tunnel"
+    /// 터널 확장의 번들 ID는 앱의 번들 ID + `.Tunnel`이다(번들 ID 앞부분은 팀마다 다를 수 있다).
+    nonisolated static let providerBundleIdentifier = (Bundle.main.bundleIdentifier ?? "com.oozoofrog.app.RemoteDebugPhone") + ".Tunnel"
     nonisolated static let serverAddress = "RemoteDebug"
     static let pollInterval: Duration = .seconds(2)
 
@@ -55,6 +56,7 @@ final class TunnelController: TunnelControlling {
     @ObservationIgnored private var manager: NETunnelProviderManager?
     @ObservationIgnored private var continuations: [UUID: AsyncStream<TunnelState>.Continuation] = [:]
     @ObservationIgnored private var pendingAuthKey: String?
+    @ObservationIgnored private var pendingResetLogin = false
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var prepareTask: Task<Void, any Error>?
     @ObservationIgnored private var statusObserver: (any NSObjectProtocol)?
@@ -123,8 +125,9 @@ final class TunnelController: TunnelControlling {
             statusDidChange(connectionID: nil)
             return
         }
-        let options = TunnelStartOptions.options(authKey: pendingAuthKey)
+        let options = TunnelStartOptions.options(authKey: pendingAuthKey, resetLogin: pendingResetLogin)
         pendingAuthKey = nil
+        pendingResetLogin = false
         disconnectMessage = nil
         lastReply = nil
         userStopped = false
@@ -157,6 +160,11 @@ final class TunnelController: TunnelControlling {
             logger.error("VPN 구성을 읽지 못했습니다: \(error.localizedDescription, privacy: .public)")
         }
         statusDidChange(connectionID: nil)
+    }
+
+    /// 다음 `connect()`에서 저장된 Tailscale 로그인을 지우고 새로 로그인하게 한다.
+    func setPendingResetLogin() {
+        pendingResetLogin = true
     }
 
     /// 다음 `connect()`에 한 번만 실어 보낼 인증 키. 저장하지 않는다.

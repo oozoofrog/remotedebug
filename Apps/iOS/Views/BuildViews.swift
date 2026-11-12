@@ -30,8 +30,17 @@ struct BuildListSection: View {
                         Text("Mac 앱에서 빌드를 공유한 뒤 새로고침하세요.")
                     }
                 } else {
-                    ForEach(builds) { build in
-                        BuildRow(build: build, install: state.installs[build.id], actions: actions)
+                    // 같은 앱의 빌드는 최신 것만 보여 주고 나머지는 접어 둔다.
+                    ForEach(AppBuildGrouping.groups(builds)) { group in
+                        BuildRow(build: group.latest, install: state.installs[group.latest.id], actions: actions)
+                        if !group.older.isEmpty {
+                            DisclosureGroup("\(group.latest.displayName) 이전 빌드 \(group.older.count)개") {
+                                ForEach(group.older) { build in
+                                    BuildRow(build: build, install: state.installs[build.id], actions: actions, isOlder: true)
+                                }
+                            }
+                            .font(.subheadline)
+                        }
                     }
                 }
             }
@@ -85,17 +94,16 @@ struct SelfUpdateSection: View {
     var build: BuildDescriptor
     var install: InstallState?
     var actions: PhoneActions
+    var updatePage: URL?
+    @State private var showsGuide = false
 
     var body: some View {
         Section {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .center, spacing: 12) {
-                    Image(systemName: "arrow.down.app.fill")
-                        .font(.system(size: 34))
-                        .foregroundStyle(PhoneTheme.tint)
-                        .accessibilityHidden(true)
+                    PhoneBuildIcon(build: build, size: 44)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("새 RemoteDebug 빌드").font(.headline)
+                        Text("새 RemoteDebug 빌드").font(.headline).lineLimit(1)
                         Text("버전 \(build.version) (\(build.buildNumber)) · \(BuildRow.size(build.ipa.size))")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
@@ -104,13 +112,12 @@ struct SelfUpdateSection: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    if install == nil {
-                        Button("업데이트") { actions.install(build) }
-                            .font(.subheadline.weight(.semibold))
-                            .buttonStyle(.borderedProminent)
-                            .buttonBorderShape(.capsule)
-                            .accessibilityLabel("RemoteDebug 업데이트")
-                    }
+                    Button("업데이트") { showsGuide = true }
+                        .font(.subheadline.weight(.semibold))
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        .fixedSize()
+                        .accessibilityLabel("RemoteDebug 업데이트 순서 보기")
                 }
                 if let install {
                     InstallStatusView(build: build, state: install, actions: actions)
@@ -120,7 +127,17 @@ struct SelfUpdateSection: View {
         } header: {
             Text("앱 업데이트")
         } footer: {
-            Text("설치가 시작되면 이 앱이 닫히고 VPN이 꺼집니다. 설치가 끝나면 앱을 다시 열고 VPN을 켜세요.")
+            Text("이 앱은 설치하는 동안 VPN이 꺼져 자기 VPN으로는 업데이트할 수 없습니다. 공식 Tailscale로 Mac의 업데이트 페이지를 엽니다.")
+        }
+        .sheet(isPresented: $showsGuide) {
+            NavigationStack {
+                SelfUpdateGuide(pageURL: updatePage, open: actions.openInstallPage)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("닫기") { showsGuide = false }
+                        }
+                    }
+            }
         }
     }
 }
@@ -130,19 +147,32 @@ struct BuildRow: View {
     var build: BuildDescriptor
     var install: InstallState?
     var actions: PhoneActions
+    /// 같은 앱의 이전 빌드. 타일과 이름을 빼고 게시 시각으로 구분한다.
+    var isOlder = false
+
+    private var published: String { build.publishedAt.formatted(date: .abbreviated, time: .shortened) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 12) {
-                PhoneAppTile(name: build.displayName, seed: build.bundleId)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(build.displayName).font(.headline)
-                    Text("버전 \(build.version) (\(build.buildNumber)) · \(Self.size(build.ipa.size))")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                    Text(build.bundleId)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                if isOlder {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(published) 게시").font(.subheadline.weight(.medium))
+                        Text("버전 \(build.version) (\(build.buildNumber)) · \(Self.size(build.ipa.size))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    PhoneBuildIcon(build: build)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(build.displayName).font(.headline)
+                        Text("버전 \(build.version) (\(build.buildNumber)) · \(Self.size(build.ipa.size))")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text(build.bundleId)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Spacer()
                 if install == nil {
@@ -152,7 +182,7 @@ struct BuildRow: View {
                     }
                         .buttonStyle(.borderedProminent)
                         .buttonBorderShape(.capsule)
-                        .accessibilityLabel("\(build.displayName) 설치")
+                        .accessibilityLabel(isOlder ? "\(build.displayName) \(published) 빌드 설치" : "\(build.displayName) 설치")
                 }
             }
             if build.signing.profileExpires < .now {

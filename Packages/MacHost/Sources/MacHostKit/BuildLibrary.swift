@@ -279,7 +279,7 @@ public actor BuildLibrary {
         var kept: [LibraryBuild] = []
         var removeFiles: [URL] = []
         var expiredBuilds: [LibraryBuild] = []
-        for build in builds {
+        for var build in builds {
             guard live() else { return interrupt() }
             let url = paths.ipaURL(forBuildID: build.id)
             switch FileKind.of(url) {
@@ -315,6 +315,10 @@ public actor BuildLibrary {
                 expiredBuilds.append(build)
                 report.expired.append(build.id)
                 continue
+            }
+            // 아이콘을 담기 전에 가져온 빌드: 원본 `.app`이 남아 있으면 지금 채운다.
+            if build.descriptor.icon == nil {
+                build.descriptor.icon = AppIconFile.publishedPNG(appPath: build.sourcePath)
             }
             kept.append(build)
             do {
@@ -395,6 +399,8 @@ public actor BuildLibrary {
             throw BuildLibraryError.changedSinceConfirmation(source.lastPathComponent)
         }
         descriptor.publishedAt = now()
+        // 아이콘은 `.app` 원본에서만 읽는다. 없으면 iPhone이 색 타일을 보여 준다.
+        descriptor.icon = kind == "app" ? AppIconFile.publishedPNG(appPath: source.path) : nil
 
         // 게시 직전: 옮길 파일이 검사한 그 바이트인지 한 번 더 확인한다.
         guard FileKind.of(temp) == .regular else { throw BuildLibraryError.changedDuringImport(source.lastPathComponent) }

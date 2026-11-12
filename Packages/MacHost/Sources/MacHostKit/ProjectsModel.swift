@@ -42,11 +42,94 @@ public final class ProjectsModel {
     public struct HostStatus: Sendable {
         public var sharing: Bool
         public var installPage: String?
+        /// 공식 Tailscale로 여는 iPhone 앱 업데이트 페이지.
+        public var updatePage: String?
 
-        public init(sharing: Bool, installPage: String?) {
+        public init(sharing: Bool, installPage: String?, updatePage: String? = nil) {
             self.sharing = sharing
             self.installPage = installPage
+            self.updatePage = updatePage
         }
+    }
+
+    /// 에이전트가 연 페어링 코드(`pair` 명령).
+    public struct PairingInfo: Codable, Sendable, Hashable {
+        /// 화면 표시용 `K7M2-9QXD`.
+        public var code: String
+        /// iPhone RemoteDebug 앱을 여는 `remotedebug://pair?host=…&code=…`.
+        public var link: String?
+        /// 앱 없이 Safari로 페어링하는 설치 페이지(`https://<fqdn>/#code=…`).
+        public var installPage: String?
+        public var expiresAt: Date
+
+        public init(code: String, link: String?, installPage: String?, expiresAt: Date) {
+            self.code = code
+            self.link = link
+            self.installPage = installPage
+            self.expiresAt = expiresAt
+        }
+    }
+
+    public struct PairingFailure: Error, Sendable {
+        public var message: String
+        public init(_ message: String) { self.message = message }
+    }
+
+    public typealias PairingOpener = @MainActor () async -> Result<PairingInfo, PairingFailure>
+
+    /// 허용을 기다리는 페어링 요청(에이전트 `requests` 명령).
+    public struct PairRequestInfo: Codable, Sendable, Hashable {
+        public var requestId: String
+        /// iPhone이 보낸 이름.
+        public var deviceName: String
+        /// tailnet이 알려 준 노드 이름(RemoteDebug 앱이면 `rd-phone-…`).
+        public var nodeName: String
+        public var loginName: String
+        public var expiresAt: Date
+
+        public init(requestId: String, deviceName: String, nodeName: String, loginName: String, expiresAt: Date) {
+            self.requestId = requestId
+            self.deviceName = deviceName
+            self.nodeName = nodeName
+            self.loginName = loginName
+            self.expiresAt = expiresAt
+        }
+    }
+
+    /// 에이전트가 페어링 요청을 보고 답하는 통로.
+    public struct PairingRequests: Sendable {
+        public var list: @MainActor () -> [PairRequestInfo]
+        /// 답한 뒤 실패 안내. 성공하면 nil.
+        public var decide: @MainActor (_ requestId: String, _ allow: Bool) async -> String?
+
+        public init(list: @escaping @MainActor () -> [PairRequestInfo],
+                    decide: @escaping @MainActor (_ requestId: String, _ allow: Bool) async -> String?) {
+            self.list = list
+            self.decide = decide
+        }
+
+        public static let unavailable = PairingRequests(list: { [] }, decide: { _, _ in "페어링 요청에 답할 수 없습니다." })
+    }
+
+    /// 에이전트가 iPhone에 파일을 보내는 통로.
+    public struct FileSharing: Sendable {
+        public var list: @MainActor () -> [ResourceDescriptor]
+        /// 실패하면 안내 문구.
+        public var share: @MainActor (URL) async -> Result<ResourceDescriptor, ShareFileFailure>
+        public var remove: @MainActor (String) async -> Void
+        public var shareLink: @MainActor (URL, String?) async -> Result<ResourceDescriptor, ShareFileFailure>
+
+        public init(list: @escaping @MainActor () -> [ResourceDescriptor],
+                    share: @escaping @MainActor (URL) async -> Result<ResourceDescriptor, ShareFileFailure>,
+                    remove: @escaping @MainActor (String) async -> Void,
+                    shareLink: @escaping @MainActor (URL, String?) async -> Result<ResourceDescriptor, ShareFileFailure> = { _, _ in .failure(ShareFileFailure("링크를 보낼 수 없습니다.")) }) {
+            self.list = list
+            self.share = share
+            self.remove = remove
+            self.shareLink = shareLink
+        }
+
+        public static let unavailable = FileSharing(list: { [] }, share: { _ in .failure(ShareFileFailure("파일을 보낼 수 없습니다.")) }, remove: { _ in })
     }
 
     public typealias Importer = @MainActor (URL) async -> ImportOutcome?
@@ -78,6 +161,9 @@ public final class ProjectsModel {
     @ObservationIgnored private let scanner: DerivedDataScanner
     @ObservationIgnored private let importer: Importer
     @ObservationIgnored private let hostStatus: @MainActor () -> HostStatus
+    @ObservationIgnored private let openPairing: PairingOpener
+    @ObservationIgnored private let pairingRequests: PairingRequests
+    @ObservationIgnored private let fileSharing: FileSharing
     @ObservationIgnored private let now: @Sendable () -> Date
     @ObservationIgnored private var stored = Stored()
     @ObservationIgnored private var isLoaded = false
@@ -94,6 +180,9 @@ public final class ProjectsModel {
         builder: any ProjectBuilding = XcodeBuildTool(),
         scanner: DerivedDataScanner = .fromXcodeSettings(),
         hostStatus: @escaping @MainActor () -> HostStatus = { HostStatus(sharing: false, installPage: nil) },
+        openPairing: @escaping PairingOpener = { .failure(PairingFailure("페어링을 열 수 없습니다.")) },
+        pairingRequests: PairingRequests = .unavailable,
+        fileSharing: FileSharing = .unavailable,
         now: @escaping @Sendable () -> Date = { Date() },
         importer: @escaping Importer
     ) {
@@ -102,6 +191,9 @@ public final class ProjectsModel {
         self.builder = builder
         self.scanner = scanner
         self.hostStatus = hostStatus
+        self.openPairing = openPairing
+        self.pairingRequests = pairingRequests
+        self.fileSharing = fileSharing
         self.now = now
         self.importer = importer
     }
@@ -397,9 +489,14 @@ public final class ProjectsModel {
         var error: String?
         var sharing: Bool?
         var installPage: String?
+        var updatePage: String?
         var projects: [AgentProject]?
         var schemes: [String]?
         var report: Report?
+        var pairing: PairingInfo?
+        var requests: [PairRequestInfo]?
+        var file: ResourceDescriptor?
+        var files: [ResourceDescriptor]?
     }
 
     struct AgentProject: Codable {
@@ -442,6 +539,7 @@ public final class ProjectsModel {
                 let response = await self.handleAgentRequest(text)
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+                encoder.dateEncodingStrategy = .iso8601
                 if let data = try? encoder.encode(response) {
                     try? data.write(to: self.responsesDir.appendingPathComponent("\(id).json"), options: [.atomic])
                 }
@@ -460,8 +558,59 @@ public final class ProjectsModel {
         switch command {
         case "status", "projects":
             let host = hostStatus()
-            return AgentResponse(ok: true, sharing: host.sharing, installPage: host.installPage,
+            return AgentResponse(ok: true, sharing: host.sharing, installPage: host.installPage, updatePage: host.updatePage,
                                  projects: projects.map { AgentProject(container: $0.container, name: $0.name, scheme: $0.scheme) })
+        case "pair":
+            // 코드만 연다. 허용은 지금처럼 Mac 화면에서만 한다.
+            switch await openPairing() {
+            case .success(let info):
+                let host = hostStatus()
+                return AgentResponse(ok: true, sharing: host.sharing, installPage: host.installPage, pairing: info)
+            case .failure(let failure):
+                return AgentResponse(ok: false, error: failure.message)
+            }
+        case "requests":
+            return AgentResponse(ok: true, requests: pairingRequests.list())
+        case "approve", "deny":
+            // 요청 id는 둘째 줄로 받는다.
+            guard !path.isEmpty else { return AgentResponse(ok: false, error: "요청 id가 필요합니다.") }
+            guard pairingRequests.list().contains(where: { $0.requestId == path }) else {
+                return AgentResponse(ok: false, error: "기다리는 요청이 아닙니다: \(path). 만료됐거나 이미 답했습니다.", requests: pairingRequests.list())
+            }
+            if let failure = await pairingRequests.decide(path, command == "approve") {
+                return AgentResponse(ok: false, error: failure, requests: pairingRequests.list())
+            }
+            return AgentResponse(ok: true, requests: pairingRequests.list())
+        case "push":
+            // 둘째 줄이 보낼 파일 경로다.
+            guard !path.isEmpty else { return AgentResponse(ok: false, error: "보낼 파일 경로가 필요합니다.") }
+            switch await fileSharing.share(URL(fileURLWithPath: path)) {
+            case .success(let file):
+                let host = hostStatus()
+                return AgentResponse(ok: true, sharing: host.sharing, file: file)
+            case .failure(let failure):
+                return AgentResponse(ok: false, error: failure.message)
+            }
+        case "link":
+            // 둘째 줄이 주소, 셋째 줄이 이름(선택)이다.
+            guard let url = URL(string: path.trimmingCharacters(in: .whitespaces)), url.scheme?.isEmpty == false else {
+                return AgentResponse(ok: false, error: "스킴이 있는 주소가 필요합니다(https://…, 앱스킴://…).")
+            }
+            switch await fileSharing.shareLink(url, scheme.isEmpty ? nil : scheme) {
+            case .success(let file):
+                return AgentResponse(ok: true, sharing: hostStatus().sharing, file: file)
+            case .failure(let failure):
+                return AgentResponse(ok: false, error: failure.message)
+            }
+        case "files":
+            return AgentResponse(ok: true, sharing: hostStatus().sharing, files: fileSharing.list())
+        case "unpush":
+            guard !path.isEmpty else { return AgentResponse(ok: false, error: "파일 id가 필요합니다.") }
+            guard fileSharing.list().contains(where: { $0.id == path }) else {
+                return AgentResponse(ok: false, error: "보낸 파일 목록에 없는 id입니다: \(path)", files: fileSharing.list())
+            }
+            await fileSharing.remove(path)
+            return AgentResponse(ok: true, files: fileSharing.list())
         case "connect", "schemes", "build":
             guard !path.isEmpty else { return AgentResponse(ok: false, error: "프로젝트 경로가 필요합니다.") }
             lastError = nil
@@ -481,7 +630,7 @@ public final class ProjectsModel {
             return AgentResponse(ok: report.ok, error: report.ok ? nil : report.message, sharing: host.sharing,
                                  installPage: host.installPage, report: report)
         default:
-            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, connect, schemes, build 중 하나를 쓰세요.")
+            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, approve, deny, push, link, files, unpush, connect, schemes, build 중 하나를 쓰세요.")
         }
     }
 
@@ -524,14 +673,17 @@ enum AgentScript {
         """
         #!/bin/sh
         # RemoteDebug Mac 앱에 명령을 보낸다. 앱이 이 파일을 실행할 때마다 새로 쓴다.
-        # 사용법: rd status | connect <경로> | schemes <경로> | build <경로> [스킴]
+        # 사용법: rd status | pair | requests | approve <요청 id> | deny <요청 id> | push <파일> | link <주소> [이름] | files | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]
         dir=\(quoted(agentDir))
         bundle=\(quoted(bundleID))
-        [ $# -ge 1 ] || { echo "사용법: rd status | connect <경로> | schemes <경로> | build <경로> [스킴]" >&2; exit 2; }
+        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | approve <요청 id> | deny <요청 id> | push <파일> | link <주소> [이름] | files | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]" >&2; exit 2; }
         cmd=$1
         path=${2:-}
         scheme=${3:-}
-        case "$path" in ""|/*) ;; *) path="$PWD/$path" ;; esac
+        # 경로를 받는 명령만 상대 경로를 절대 경로로 바꾼다(id·주소는 그대로).
+        case "$cmd" in
+          push|connect|schemes|build) case "$path" in ""|/*) ;; *) path="$PWD/$path" ;; esac ;;
+        esac
         alive() { [ -f "$dir/pid" ] && kill -0 "$(cat "$dir/pid")" 2>/dev/null; }
         if ! alive; then
           open -gb "$bundle" 2>/dev/null
@@ -565,12 +717,16 @@ enum AgentScript {
         \(rd) build \(project) <스킴>     # 스킴을 정해서 빌드
         \(rd) schemes \(project)          # 스킴 목록
         \(rd) status                      # 공유 중인지, 설치 페이지 주소, 연결한 프로젝트
+        \(rd) push <파일>                 # 파일을 페어링한 iPhone의 RemoteDebug 앱으로 보낸다
+        \(rd) link <주소> [이름]           # 링크(https://…, 앱스킴://…)를 iPhone으로 보낸다
+        \(rd) files                       # 보낸 파일·링크 목록
         ```
 
         - `build`는 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 실패하면 `error`와 `report.logTail`에 컴파일 오류가, `report.logPath`에 전체 로그 경로가 있다.
         - `report.published`가 게시된 빌드다. 비어 있고 `ok`가 true면 결과가 전과 같아 다시 게시하지 않은 것이다.
         - Mac은 게시까지만 한다. 설치는 페어링한 iPhone의 RemoteDebug 앱이나 설치 페이지(`installPage`)에서 사용자가 누른다.
         - `sharing`이 false면 iPhone이 빌드를 받을 수 없다. 사용자에게 RemoteDebug 앱에서 공유를 시작하라고 알린다.
+        - `push`는 같은 이름의 이전 파일을 바꾼다. 사용자는 iPhone RemoteDebug 앱의 "Mac에서 받은 파일"에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다.
         - 서명 오류(프로비저닝 프로필, 기기 미등록)는 이 명령으로 고칠 수 없다. Xcode에서 한 번 기기용으로 빌드하라고 사용자에게 알린다.
         """
     }

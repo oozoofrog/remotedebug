@@ -16,11 +16,19 @@ struct BuildsView: View {
     /// 카드 두 장이 나란히 들어가는 너비부터 2열로 놓는다.
     private var columns: Int { listWidth >= 1080 ? 2 : 1 }
 
-    private var buildRows: [[LibraryBuild]] {
-        stride(from: 0, to: model.builds.count, by: columns).map {
-            Array(model.builds[$0..<min($0 + columns, model.builds.count)])
+    /// 같은 앱의 빌드는 한 카드로 묶는다.
+    private var groups: [AppBuildGroup<LibraryBuild>] {
+        AppBuildGrouping.groups(model.builds) { $0.descriptor }
+    }
+
+    private var buildRows: [[AppBuildGroup<LibraryBuild>]] {
+        let groups = groups
+        return stride(from: 0, to: groups.count, by: columns).map {
+            Array(groups[$0..<min($0 + columns, groups.count)])
         }
     }
+
+    @State private var expandedApps: Set<String> = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -28,6 +36,7 @@ struct BuildsView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
                 .padding(.bottom, 6)
+            SetupChecklistCard(showImporter: showImporter)
             if Self.showsEmptyState(model: model, pendingCount: importQueue.pending.count) {
                 emptyState
                     .frame(maxHeight: .infinity)
@@ -129,8 +138,14 @@ struct BuildsView: View {
                 }
                 ForEach(buildRows, id: \.first?.id) { row in
                     HStack(alignment: .top, spacing: 10) {
-                        ForEach(row) { build in
-                            PublishedBuildRow(build: build, fillsHeight: columns > 1) { buildToUnpublish = build }
+                        ForEach(row) { group in
+                            PublishedBuildRow(
+                                build: group.latest,
+                                older: group.older,
+                                expanded: expandedApps.contains(group.bundleId),
+                                toggle: { expandedApps.formSymmetricDifference([group.bundleId]) },
+                                fillsHeight: columns > 1
+                            ) { buildToUnpublish = $0 }
                         }
                         if row.count < columns {
                             Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
@@ -139,7 +154,7 @@ struct BuildsView: View {
                     .rdListRow()
                 }
             } header: {
-                Text("게시된 빌드 \(model.builds.count)개")
+                Text(groups.count == model.builds.count ? "게시된 빌드 \(model.builds.count)개" : "게시된 앱 \(groups.count)개 · 빌드 \(model.builds.count)개")
             }
             if !model.rejected.isEmpty {
                 Section {
@@ -163,6 +178,7 @@ struct BuildsView: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { listWidth = $0 }
         .animation(reduceMotion ? nil : .snappy, value: model.builds.map(\.id))
         .animation(reduceMotion ? nil : .snappy, value: columns)
+        .animation(reduceMotion ? nil : .snappy, value: expandedApps)
     }
 }
 
@@ -179,14 +195,52 @@ private struct NotSharingRow: View {
 
 struct PublishedBuildRow: View {
     let build: LibraryBuild
+    /// 같은 앱의 이전 빌드(늦게 게시된 순서).
+    var older: [LibraryBuild] = []
+    var expanded = false
+    var toggle: () -> Void = {}
     var fillsHeight = false
-    let unpublish: () -> Void
+    let unpublish: (LibraryBuild) -> Void
 
     private var d: BuildDescriptor { build.descriptor }
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            latest
+            if !older.isEmpty {
+                Divider()
+                Button(action: toggle) {
+                    Label("이전 빌드 \(older.count)개", systemImage: expanded ? "chevron.down" : "chevron.right")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(d.displayName) 이전 빌드 \(older.count)개")
+                .accessibilityValue(expanded ? "펼침" : "접힘")
+                if expanded {
+                    ForEach(older) { old in
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text("\(old.descriptor.version) (\(old.descriptor.buildNumber))")
+                            Text("게시 " + old.descriptor.publishedAt.formatted(date: .abbreviated, time: .shortened))
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Button("게시 취소") { unpublish(old) }
+                                .controlSize(.small)
+                                .accessibilityLabel("\(old.descriptor.displayName) \(old.descriptor.publishedAt.formatted(date: .abbreviated, time: .shortened)) 빌드 게시 취소")
+                        }
+                        .font(.callout)
+                    }
+                }
+            }
+        }
+        .rdCardSurface(fillHeight: fillsHeight)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var latest: some View {
         HStack(alignment: .top, spacing: 14) {
-            BuildIcon(name: d.displayName, seed: d.bundleId, sourcePath: build.sourcePath)
+            BuildIcon(name: d.displayName, seed: d.bundleId, icon: d.icon, sourcePath: build.sourcePath)
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
                     Text(d.displayName).font(.title3.weight(.semibold))
@@ -209,11 +263,9 @@ struct PublishedBuildRow: View {
                 .font(.callout)
             }
             Spacer()
-            Button("게시 취소", action: unpublish)
+            Button("게시 취소") { unpublish(build) }
                 .accessibilityLabel("\(d.displayName) 게시 취소")
         }
-        .rdCardSurface(fillHeight: fillsHeight)
-        .accessibilityElement(children: .contain)
     }
 
     static func evidence(_ d: BuildDescriptor) -> String {

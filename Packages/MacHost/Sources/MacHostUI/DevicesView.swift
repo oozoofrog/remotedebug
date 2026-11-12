@@ -6,6 +6,7 @@ import SwiftUI
 struct DevicesView: View {
     @Environment(HostModel.self) private var model
     @Environment(\.showPairing) private var showPairing
+    @Environment(\.showPhoneInstall) private var showPhoneInstall
     @State private var deviceToRemove: DeviceEntry?
     @State private var confirmingForget = false
 
@@ -87,6 +88,12 @@ struct DevicesView: View {
         }
         .navigationTitle("기기")
         .toolbar {
+            if let showPhoneInstall {
+                Button { showPhoneInstall() } label: {
+                    Label("iPhone 앱 설치…", systemImage: "iphone.and.arrow.forward")
+                }
+                .help("케이블로 연결한 iPhone에 RemoteDebug 앱을 빌드해 설치합니다")
+            }
             Button { showPairing() } label: {
                 Label("iPhone 페어링…", systemImage: "qrcode")
             }

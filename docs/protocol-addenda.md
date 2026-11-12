@@ -276,3 +276,129 @@ X-RD-Protocol: 1
 - iPhone에서 Tailscale VPN이 켜져 있어야 페이지와 설치가 동작한다. tailnet의 HTTPS 인증서가 켜져 있어야 한다(iOS 설치기는 `https` 매니페스트만 받는다).
 - 승인되는 것은 브라우저가 아니라 iPhone의 tailnet **노드**다. 승인한 뒤에는 그 iPhone에서 Mac에 닿는 모든 앱과 브라우저가 같은 허용을 쓴다.
 - 페이지를 새로고침하면 진행 중이던 설치의 확인은 이어 가지 않는다. Mac의 세션은 제한 시간이 지나면 만료되고, 다시 설치하면 새 세션을 연다.
+
+## F. 빌드 아이콘 (§4.1)
+
+`BuildDescriptor`에 선택 필드 `icon`을 더한다. 값은 앱 아이콘 PNG의 base64(표준 알파벳, 패딩 포함) 문자열이다.
+
+- Mac 앱은 `.app` 원본에서 가져온 빌드에만 넣는다. `Info.plist`의 `CFBundleIcons > CFBundlePrimaryIcon > CFBundleIconFiles`가 가리키는 PNG 가운데 가장 큰 것을 120×120 표준 PNG로 다시 쓴다. `.ipa` 원본이나 아이콘이 없는 빌드에는 키를 넣지 않는다.
+- 아이콘을 담기 전에 가져온 빌드는 Mac 앱이 다시 시작해 게시를 되살릴 때 원본 `.app`이 남아 있으면 채운다.
+- `rd_host_publish`는 `icon`이 64KiB(65536바이트)를 넘거나 PNG 서명(`89 50 4E 47 0D 0A 1A 0A`)으로 시작하지 않으면 `bad_request`로 거부한다. 받은 값은 `GET /v1/builds`에 그대로 싣는다. `id` 계산에는 쓰지 않는다.
+- iPhone 앱은 `icon`이 없거나, base64가 아니거나, 64KiB를 넘거나, PNG가 아니면 아이콘만 버리고 빌드는 받는다. 아이콘이 없으면 이름 첫 글자 타일을 보여 준다.
+- 설치 웹 페이지는 `icon`을 쓰지 않는다.
+
+## G. iPhone 진단 로그
+
+페어링한 기기는 진단 로그를 Mac에 보낼 수 있다. 코어는 로그를 저장하지 않고 Mac 앱에 이벤트로 넘긴다.
+
+### G.1 `POST /v1/logs`
+
+인증은 다른 `/v1/*`와 같다(허용 목록, §3). 본문:
+
+```
+{"entries":[{"at":"2026-11-12T00:00:01.250Z","level":"info","source":"install","message":"설치 요청: …"}]}
+```
+
+- `entries`는 1~200개, 본문은 128KiB 이하. 어기면 400 `bad_request`.
+- `at`은 ISO-8601(소수 초 허용). 읽지 못하면 코어가 받은 시각으로 바꾼다.
+- `level`은 `debug`, `info`, `warning`, `error` 가운데 하나. 그 밖의 값은 `info`로 바꾼다.
+- `source`는 40바이트, `message`는 4096바이트에서 UTF-8 글자 경계로 자른다. 잘못된 UTF-8은 `?`로 바꾼다.
+- 성공하면 202와 `{"accepted":<줄 수>}`.
+
+### G.2 `device-log` 이벤트
+
+```
+{"type":"device-log","deviceId":"…","deviceName":"…","nodeName":"…","entries":[…]}
+```
+
+`deviceId`, `deviceName`, `nodeName`은 보낸 기기의 허용 목록 항목에서 채운다(본문 값이 아니다). 큐에서는 `denied`·`log`·`state`와 같이 낮은 우선순위라 큐가 차면 먼저 버린다(D.2).
+
+### G.3 앱 동작
+
+- iPhone 앱은 로그를 앱 데이터 폴더의 파일(`device-log.json`, 최근 2000줄)에 쌓고 보내면 지운다. 앱이 업데이트되거나 강제로 꺼져도 남아서 다음 실행에서 보낸다.
+- 빌드 목록을 받은 뒤 자동으로 보내고, 설정 > 진단 로그 > **Mac에 지금 보내기**로도 보낸다. 실패하면 남겨 두고 다음에 다시 보낸다.
+- Mac 앱은 기기마다 `DeviceLogs/<기기 id>.jsonl`(4MiB에서 앞 절반을 버림)에 덧붙이고 **iPhone 로그** 화면에 보여 준다. MCP 도구 `remotedebug_device_logs`는 이 파일을 직접 읽는다.
+
+## H. Mac에서 iPhone으로 파일 보내기
+
+Mac 앱이 고른 파일을 페어링한 기기가 받는다. 빌드와 달리 설치 세션 없이 허용 목록 인증(§3)만으로 받는다.
+
+### H.1 C API
+
+| 함수 | 입력 | 결과 |
+| --- | --- | --- |
+| `rd_host_publish_resource(handle, resource_json)` | `{"name","size","sha256","path"}`. `id`·`publishedAt`은 생략 가능 | `{"ok":true,"id":"r_…"}` |
+| `rd_host_unpublish_resource(handle, resource_id)` | | `{"ok":true}`. 없는 id는 `resource_not_found` |
+
+- `path`는 `publishDir` 안의 일반 파일이어야 한다(`path_outside_publish_dir`). 코어는 빌드처럼 `.rd-snapshots`에 사본을 만들고 사본의 크기·SHA-256을 확인한다(`hash_mismatch`). 이후 원본이 바뀌어도 사본만 내준다.
+- `name`은 1~255바이트의 UTF-8 파일 이름. `/`, `\`, `:`, 제어 문자, `.`, `..`는 400 `bad_request`. 크기는 4GiB, 개수는 500개까지.
+- `id`는 `"r_"` + `sha256("rd-resource\n" + name + "\n" + sha256)`의 앞 8자리 16진수다. 같은 이름·같은 내용을 다시 게시하면 같은 id로 설명만 바뀐다.
+- `rd_stop`은 사본을 모두 지운다. Mac 앱은 공유를 시작할 때 저장한 목록을 다시 게시한다.
+
+### H.2 `GET /v1/resources`
+
+```
+{"resources":[{"id":"r_1a2b3c4d","name":"config.json","size":7,"sha256":"…","publishedAt":"2026-11-12T01:00:00Z"}]}
+```
+
+최근에 게시한 것부터. 허용 목록 밖이면 403 `not_paired`.
+
+### H.3 `GET /v1/resources/{id}`
+
+파일 내용. `Content-Type: application/octet-stream`, `Content-Disposition: attachment; filename*=…`, `ETag: "<sha256>"`, `Cache-Control: no-store`. `Range`와 `HEAD`를 받는다. 없는 id는 404 `resource_not_found`. 내려받는 중에 게시를 취소해도 이미 연 전송은 끝까지 간다.
+
+### H.4 앱 동작
+
+- Mac 앱: 사이드바 **보낸 파일**에 파일을 끌어 놓거나 **파일 보내기…**로 고른다. 사본을 `Published/Files/<id>`, 목록을 `resources.json`에 둔다. 이름이 같은 파일을 다시 넣으면 이전 것을 바꾼다. 폴더는 받지 않는다(압축해서 보낸다).
+- 에이전트: `rd push <파일>`, `rd files`, `rd unpush <파일 id>`와 MCP 도구 `remotedebug_push_file`(`file_path`), `remotedebug_files`.
+- iPhone 앱: 빌드 목록을 받은 뒤 파일 목록을 받는다. 이 경로가 404 `not_found`면(이전 Mac 앱) 빈 목록으로 본다. **받기**는 크기와 SHA-256을 확인한 뒤 앱의 Documents에 같은 이름으로 저장한다(같은 이름은 바꾼다). Documents는 파일 앱의 "나의 iPhone > RemoteDebug"에 보인다. 다른 앱의 샌드박스에 직접 넣지는 않는다.
+- 받기는 시스템 백그라운드 세션(식별자는 앱 번들 id 뒤에 `.files`)으로 한다. 앱이 백그라운드로 가거나 멈춰도 iOS가 이어 받고, 끝나면 앱을 깨운다. 끊기거나 취소하면 이어받기 데이터를 남겨 다음 받기에서 `Range`로 이어 받는다. 앱이 종료된 뒤 iOS가 앱을 다시 띄워 넘겨주는 전송은 시작할 때 넘긴 파일 정보로 크기·SHA-256을 확인해 저장하고, 진행 중인 전송은 이어서 보여 준다. 다시 띄운 앱은 전에 띄운 라이브 액티비티를 이어받고, 이어받을 전송이 없으면 "끊겼습니다"로 끝낸다.
+- 받는 동안 라이브 액티비티(잠금 화면, Dynamic Island)에 진행을 보인다. 앱이 멈춘 동안에는 iOS가 진행을 알려 주지 않아 마지막 값에 머물고, 끝나면 완료·실패로 바뀐다.
+- 화면: **파일** 탭(받는 중, Mac에서 보낸 파일, 이 iPhone에만 있는 파일)과 파일마다 상세 화면(진행률·속도·남은 시간, 종류별 미리보기: 이미지·동영상·소리·PDF·텍스트·JSON, 종류·크기·보낸 시각·저장 위치·SHA-256 비교, 열기·다른 앱으로 보내기·파일 앱에서 보기, 이름·SHA-256·경로 복사).
+
+### H.5 링크
+
+`link`가 있는 항목은 링크다. 파일 없이 주소만 보낸다.
+
+- `rd_host_publish_resource`에 `{"name","link"}`를 넘긴다(`path`는 무시). `link`는 스킴이 있는 8KiB 이하의 주소다(`https://…`, `앱스킴://…`, `maps://?q=…`, `app-settings:`). 제어 문자는 400.
+- 코어가 `size`를 0으로, `sha256`을 주소 글자의 SHA-256으로 채운다. `id` 규칙은 H.1과 같다.
+- `GET /v1/resources`에 `"link":"…"`로 나온다. `GET /v1/resources/{id}`는 링크에 404 `resource_not_found`.
+- Mac 앱: **보낸 파일**의 **링크 보내기…**, 웹 주소를 끌어 놓기, `rd link <주소> [이름]`, MCP `remotedebug_push_link`(`url`, `title`). 이름이 없으면 주소에서 만든다(`호스트 – 경로 끝`). 같은 주소를 다시 보내면 이전 항목을 바꾼다.
+- iPhone 앱: **파일** 탭의 "링크" 칸. 상세 화면에서 Safari나 그 스킴의 앱으로 열고(열 앱이 없으면 안내), 공유·주소 복사, 주소 구성(스킴·호스트·경로·프래그먼트·쿼리 항목)을 보인다. 받기는 없다.
+
+## I. iPhone 앱 자신의 업데이트 페이지
+
+iOS는 앱을 바꾸는 동안 그 앱의 패킷 터널을 멈춘다. 그래서 RemoteDebug iPhone 앱은 자기 VPN으로 Mac의 설치 페이지(E)를 열어 자기 자신을 설치할 수 없다(2026-11-12 실기기에서 0.2.0 (6)·(7) 설치 실패). 이 업데이트만 Mac의 공식 Tailscale로 내준다.
+
+### I.1 C API `rd_update_page_set(config_json)`
+
+노드 핸들과 무관하게 프로세스에 하나다.
+
+```
+{"listen":"127.0.0.1:0","publicURL":"https://<Mac>.<tailnet>.ts.net/remotedebug-update-<32자>/","page":{"bundleId","title","version","buildNumber","minOS","size","sha256","publishedAt","ipaPath","icon"}}
+```
+
+- `listen`은 루프백 주소만 받는다. 빈 문자열이면 서버를 멈춘다. 결과는 `{"ok":true,"addr":"127.0.0.1:P"}`.
+- `publicURL`은 `/`로 끝나는 https 주소이거나 빈 문자열(경로가 아직 없음)이다. `page`가 없으면 "게시된 빌드 없음" 페이지를 낸다.
+- 경로의 마지막 부분만 본다: `/`(안내와 `itms-services` 링크), `manifest.plist`, `RemoteDebug.ipa`, `icon.png`. 프록시가 앞 경로를 떼든 안 떼든 같다. IPA는 요청마다 `ipaPath`를 열고 크기가 `size`와 다르면 410.
+
+### I.2 `/v1/info`의 `updatePage`
+
+서버가 돌고 `page`와 `publicURL`이 모두 있으면 `/v1/info`에 `"updatePage":"<publicURL>"`을 더한다. iPhone 앱은 https 주소만 받아 페어링 정보에 저장하고, 앱 VPN이 꺼져 있을 때도 이 주소를 연다.
+
+### I.3 앱 동작
+
+- Mac 앱: 시작할 때 서버를 연다. 경로(`/remotedebug-update-<32자>`)와 포트는 `update-page.json`에 저장해 다시 쓴다. 게시된 빌드 중 번들 id가 `<앞부분>.RemoteDebugPhone`(기본 앞부분은 `Config/Signing.xcconfig`의 `RD_BUNDLE_PREFIX`, 다른 팀으로 서명한 앞부분도 포함)인 가장 최근 빌드를 자동으로 올린다. **네트워크 > iPhone 앱 업데이트**의 **공식 Tailscale로 열기**가 `tailscale serve --bg --yes --set-path <경로> http://127.0.0.1:<포트>`를, **닫기**가 `tailscale serve --https=443 --set-path <경로> off`를 실행한다. 공식 Tailscale 상태는 60초마다 다시 읽는다. 공식 Tailscale 명령은 `/Applications/Tailscale.app/Contents/MacOS/Tailscale`, `/opt/homebrew/bin/tailscale`, `/usr/local/bin/tailscale` 순서로 찾는다.
+- iPhone 앱: "앱 업데이트" 칸의 **업데이트**와 설정 > "이 앱" > **이 앱 업데이트하기**가 순서 안내 화면을 연다(공식 Tailscale 켜기 → 업데이트 페이지 열기 → 설치 → RemoteDebug VPN 다시 켜기). 앱 안에서 바로 설치하는 버튼은 뺐다.
+- 에이전트 `status` 응답에 `updatePage`가 있다.
+
+## J. 페어링 링크의 1회용 Tailscale 키
+
+페어링 링크(§2)에 선택 쿼리 `key`를 더한다: `remotedebug://pair?host=<fqdn>&code=<코드>&key=<tskey-auth-…>`.
+
+- Mac 앱은 사용자가 넣은 Tailscale OAuth 클라이언트(클라이언트 ID, 비밀값 `tskey-client-…`, 태그; 키체인 보관)로 `POST https://api.tailscale.com/api/v2/oauth/token`(`grant_type=client_credentials`, `client_id`, `client_secret`)에서 1시간짜리 API 토큰을 받아 메모리에 둔다. 페어링 코드를 열 때마다 그 토큰으로 `POST …/tailnet/-/keys`를 부른다. 본문은 `{"capabilities":{"devices":{"create":{"reusable":false,"ephemeral":false,"preauthorized":true,"tags":[<태그>]}}},"expirySeconds":900,"description":"RemoteDebug iPhone pairing"}`이고 응답의 `key`를 링크에 넣는다. OAuth 클라이언트로 만드는 키에는 태그가 꼭 있어야 하므로 기본값은 `tag:rd-phone`이다.
+- 클라이언트에 필요한 권한은 `auth_keys`(쓰기)와 그 태그다. 기기 읽기 권한이 있으면 저장할 때 `GET …/tailnet/-/devices`로 이 Mac의 MagicDNS 이름이 그 tailnet에 있는지 확인하고, 없으면 저장하지 않는다(다른 tailnet의 키로는 iPhone이 Mac에 닿지 못한다). 권한이 없으면(403) 확인을 건너뛴다.
+- iPhone 노드는 그 태그를 단 노드가 된다. 정책 파일이 그 태그에서 이 Mac의 443 포트로 가는 연결을 허용해야 한다.
+- 키를 만들지 못하면 `key` 없이 지금처럼 쓴다. 에이전트 명령(`rd pair`, `remotedebug_pairing_code`) 응답에는 키를 넣지 않는다(대화 기록에 남기 때문).
+- iPhone 앱은 `key`가 `tskey-auth-`로 시작하고 영문·숫자·하이픈 200자 이하일 때만 받는다. 아니면 `invalidAuthKey`. `key`가 둘 이상이면 페어링 링크가 아니다. VPN이 연결돼 있지 않으면 그 키로 VPN을 켜고(키는 저장하지 않음) 페어링은 연결된 뒤 이어 간다. 이미 연결돼 있으면 키를 쓰지 않는다.
+- 요청 본문 형식과 응답 필드는 실제 Tailscale API로 확인하지 않았다. 공식 문서에서 확인한 것은 엔드포인트, OAuth 토큰 엔드포인트와 응답의 `access_token`·`expires_in`, `auth_keys` 범위, OAuth로 만든 키에 태그가 필요하다는 점, Bearer 인증, `-` tailnet 이름이다.

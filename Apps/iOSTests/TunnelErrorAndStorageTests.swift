@@ -147,6 +147,14 @@ struct TunnelStorageTests {
         #expect(again.standardizedFileURL == dir.standardizedFileURL)
         #expect(try isExcluded(again))
         #expect(FileManager.default.fileExists(atPath: again.appendingPathComponent("tailscaled.state").path))
+
+        // 로그인을 지우면 상태 파일이 사라지고, 다시 준비하면 빈 폴더가 생긴다.
+        try TunnelStorage.resetStateDirectory(in: base)
+        #expect(!FileManager.default.fileExists(atPath: dir.appendingPathComponent("tailscaled.state").path))
+        let fresh = try TunnelStorage.prepareStateDirectory(in: base)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: fresh.path).isEmpty)
+        #expect(try isExcluded(fresh))
+        try TunnelStorage.resetStateDirectory(in: base.appendingPathComponent("nowhere"))
     }
 
     @Test("상태 폴더의 백업 제외가 풀려 있으면 다시 켠다")

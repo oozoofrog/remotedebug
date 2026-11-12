@@ -69,6 +69,11 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
     public var signing: Signing
     public var ipa: IPAInfo
     public var publishedAt: Date
+    /// 앱 아이콘 PNG(선택, docs/protocol-addenda.md F). JSON에는 base64 문자열로 담긴다.
+    public var icon: Data?
+
+    /// `icon`의 최대 크기(바이트). 코어도 같은 값으로 거부한다.
+    public static let maxIconBytes = 64 * 1024
 
     public init(
         id: String,
@@ -82,7 +87,8 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
         configurationEvidence: ConfigurationEvidence,
         signing: Signing,
         ipa: IPAInfo,
-        publishedAt: Date
+        publishedAt: Date,
+        icon: Data? = nil
     ) {
         self.id = id
         self.bundleId = bundleId
@@ -96,11 +102,12 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
         self.signing = signing
         self.ipa = ipa
         self.publishedAt = publishedAt
+        self.icon = icon
     }
 
     enum CodingKeys: String, CodingKey {
         case id, bundleId, displayName, version, buildNumber, minOS, debug
-        case configuration, configurationEvidence, signing, ipa, publishedAt
+        case configuration, configurationEvidence, signing, ipa, publishedAt, icon
     }
 
     public init(from decoder: any Decoder) throws {
@@ -117,6 +124,17 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
         signing = try c.decode(Signing.self, forKey: .signing)
         ipa = try c.decode(IPAInfo.self, forKey: .ipa)
         publishedAt = try c.decodeRDDate(forKey: .publishedAt)
+        // 아이콘은 꾸밈이다. 형식이 틀리거나 너무 크면 빌드는 받고 아이콘만 버린다.
+        if let data = try? c.decodeIfPresent(Data.self, forKey: .icon), data.count <= Self.maxIconBytes, Self.isPNG(data) {
+            icon = data
+        } else {
+            icon = nil
+        }
+    }
+
+    /// PNG 파일 서명으로 시작하는지.
+    public static func isPNG(_ data: Data) -> Bool {
+        data.starts(with: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A])
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -133,6 +151,7 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
         try c.encode(signing, forKey: .signing)
         try c.encode(ipa, forKey: .ipa)
         try c.encodeRDDate(publishedAt, forKey: .publishedAt)
+        try c.encodeIfPresent(icon, forKey: .icon)
     }
 
     /// protocol §4.1: `"b_"` + `sha256(bundleId + "\n" + ipaSHA256)`의 앞 8자리 16진수.

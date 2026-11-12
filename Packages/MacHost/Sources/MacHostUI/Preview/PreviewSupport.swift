@@ -35,6 +35,8 @@ final class PreviewCore: HostCore {
     func status() async throws -> CoreStatus { setup.withLock { $0.status } }
     func publish(_ request: PublishRequest) async throws {}
     func unpublish(buildID: String) async throws {}
+    func publishResource(_ request: ResourcePublishRequest) async throws {}
+    func unpublishResource(id: String) async throws {}
     func setDevices(_ devices: [DeviceEntry]) async throws {}
     func openPairing(ttlSeconds: Int) async throws -> PairingCode { setup.withLock { $0.pairing } }
 

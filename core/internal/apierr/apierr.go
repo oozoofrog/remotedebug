@@ -37,6 +37,9 @@ func TokenInvalid() *Error {
 func BuildNotFound() *Error {
 	return New(http.StatusNotFound, "build_not_found", "빌드가 없습니다.")
 }
+func ResourceNotFound() *Error {
+	return New(http.StatusNotFound, "resource_not_found", "파일이 없습니다.")
+}
 func BuildChanged() *Error {
 	return New(http.StatusConflict, "build_changed", "게시 후 빌드 파일이 바뀌었습니다.")
 }

@@ -37,6 +37,21 @@ func rd_host_unpublish(handle C.int64_t, buildID *C.char) *C.char {
 	return out(api.HostUnpublish(int64(handle), C.GoString(buildID)))
 }
 
+//export rd_host_publish_resource
+func rd_host_publish_resource(handle C.int64_t, resourceJSON *C.char) *C.char {
+	return out(api.HostPublishResource(int64(handle), C.GoString(resourceJSON)))
+}
+
+//export rd_host_unpublish_resource
+func rd_host_unpublish_resource(handle C.int64_t, resourceID *C.char) *C.char {
+	return out(api.HostUnpublishResource(int64(handle), C.GoString(resourceID)))
+}
+
+//export rd_update_page_set
+func rd_update_page_set(configJSON *C.char) *C.char {
+	return out(api.UpdatePageSet(C.GoString(configJSON)))
+}
+
 //export rd_host_set_devices
 func rd_host_set_devices(handle C.int64_t, devicesJSON *C.char) *C.char {
 	return out(api.HostSetDevices(int64(handle), C.GoString(devicesJSON)))

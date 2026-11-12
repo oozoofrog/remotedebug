@@ -129,6 +129,8 @@ public enum CoreEvent: Codable, Sendable, Hashable {
     case log(LogEvent)
     /// docs/tunnel.md
     case networkSettings(NetworkSettingsEvent)
+    /// docs/protocol-addenda.md G.
+    case deviceLog(DeviceLogEvent)
     case unknown(type: String)
 
     enum CodingKeys: String, CodingKey {
@@ -145,6 +147,7 @@ public enum CoreEvent: Codable, Sendable, Hashable {
         case .session: "session"
         case .log: "log"
         case .networkSettings: "network-settings"
+        case .deviceLog: "device-log"
         case .unknown(let type): type
         }
     }
@@ -161,6 +164,7 @@ public enum CoreEvent: Codable, Sendable, Hashable {
         case "session": self = .session(try SessionEvent(from: decoder))
         case "log": self = .log(try LogEvent(from: decoder))
         case "network-settings": self = .networkSettings(try NetworkSettingsEvent(from: decoder))
+        case "device-log": self = .deviceLog(try DeviceLogEvent(from: decoder))
         default: self = .unknown(type: type)
         }
     }
@@ -177,6 +181,7 @@ public enum CoreEvent: Codable, Sendable, Hashable {
         case .session(let e): try e.encode(to: encoder)
         case .log(let e): try e.encode(to: encoder)
         case .networkSettings(let e): try e.encode(to: encoder)
+        case .deviceLog(let e): try e.encode(to: encoder)
         case .unknown: break
         }
     }

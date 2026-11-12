@@ -27,6 +27,17 @@ public struct HostPaths: Sendable, Hashable {
     public var watchStateFile: URL { root.appendingPathComponent("watched.json") }
     public var identityFile: URL { root.appendingPathComponent("identity.json") }
     public var coreLogFile: URL { root.appendingPathComponent("core.log") }
+    /// iPhone이 보낸 진단 로그(기기마다 한 파일).
+    public var deviceLogsDir: URL { root.appendingPathComponent("DeviceLogs", isDirectory: true) }
+
+    /// iPhone에 보내는 파일 목록.
+    public var resourcesFile: URL { root.appendingPathComponent("resources.json") }
+    /// iPhone에 보내는 파일의 사본(`<resourceId>`). 코어가 읽을 수 있게 게시 폴더 안에 둔다.
+    public var filesDir: URL { publishedDir.appendingPathComponent("Files", isDirectory: true) }
+
+    public func resourceURL(forID id: String) -> URL {
+        filesDir.appendingPathComponent(id)
+    }
 
     public func ipaURL(forBuildID id: String) -> URL {
         publishedDir.appendingPathComponent("\(id).ipa")

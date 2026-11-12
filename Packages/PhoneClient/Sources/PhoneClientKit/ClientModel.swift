@@ -86,6 +86,70 @@ public enum InstallState: Equatable, Sendable {
 /// - 설치: `installs[buildID]`(`InstallState`). 전송 진행은 `installProgress(for:)`, 끝난 상태 지우기는 `clearInstall(_:)`.
 ///   설치기를 기다리는 동안 설치 창 다시 열기는 `reopenInstaller(_:)`, 그만두기는 `cancelInstall(_:)`.
 /// - 마지막 실패 안내: `lastError`(지우기는 `clearError()`).
+/// Mac이 보낸 파일 하나를 받는 상태.
+public enum FileDownloadState: Equatable, Sendable {
+    case downloading
+    case failed(String)
+}
+
+/// 받는 중인 파일의 진행.
+public struct FileTransferProgress: Equatable, Sendable {
+    public var received: Int64
+    public var total: Int64
+    /// 받기 시작한 시각(속도·남은 시간 계산).
+    public var startedAt: Date?
+
+    public init(received: Int64, total: Int64, startedAt: Date? = nil) {
+        self.received = received
+        self.total = total
+        self.startedAt = startedAt
+    }
+
+    /// 초당 바이트. 시작한 지 1초가 안 됐으면 nil.
+    public func bytesPerSecond(now: Date) -> Double? {
+        guard let startedAt, now.timeIntervalSince(startedAt) >= 1, received > 0 else { return nil }
+        return Double(received) / now.timeIntervalSince(startedAt)
+    }
+
+    /// 남은 시간(초).
+    public func remainingSeconds(now: Date) -> Double? {
+        guard let speed = bytesPerSecond(now: now), speed > 0 else { return nil }
+        return Double(max(0, total - received)) / speed
+    }
+
+    public var fraction: Double { total > 0 ? min(1, Double(received) / Double(total)) : 0 }
+}
+
+/// 파일 받기의 시작·진행·끝. 앱은 이것으로 라이브 액티비티(Dynamic Island)를 갱신한다.
+public struct FileTransferUpdate: Equatable, Sendable {
+    public enum Phase: Equatable, Sendable {
+        case receiving
+        case received
+        case failed(String)
+        case cancelled
+    }
+
+    public var resourceID: String
+    public var name: String
+    public var progress: FileTransferProgress
+    public var phase: Phase
+}
+
+/// 진행 알림을 1% 단위로 줄인다(전송 중에는 수천 번 불린다).
+final class ProgressThrottle: @unchecked Sendable {
+    private let lock = NSLock()
+    private var lastStep = -1
+
+    func shouldReport(_ received: Int64, _ total: Int64) -> Bool {
+        let step = total > 0 ? Int(Double(received) / Double(total) * 100) : 0
+        return lock.withLock {
+            guard step != lastStep else { return false }
+            lastStep = step
+            return true
+        }
+    }
+}
+
 @MainActor
 @Observable
 public final class ClientModel {
@@ -143,8 +207,28 @@ public final class ClientModel {
     /// 마지막 실패 안내(한국어).
     public private(set) var lastError: String?
     public private(set) var isRefreshing = false
+    /// Mac이 보낸 파일 목록(docs/protocol-addenda.md H). Mac 앱이 이 기능을 모르면 빈 목록.
+    public private(set) var resources: [ResourceDescriptor] = []
+    /// 이 iPhone에 받아 둔 파일.
+    public private(set) var receivedFiles: [ReceivedFile] = []
+    /// 받는 중이거나 받지 못한 파일(`ResourceDescriptor.id` 기준).
+    public private(set) var fileDownloads: [String: FileDownloadState] = [:]
+    /// 받는 중인 파일의 진행(1% 단위로 갱신).
+    public private(set) var fileProgress: [String: FileTransferProgress] = [:]
+    /// 파일 받기의 시작·진행·끝을 알린다. 앱이 라이브 액티비티를 갱신한다.
+    @ObservationIgnored public var onFileTransfer: (@MainActor (FileTransferUpdate) -> Void)?
     /// 마지막 동작이 VPN이 연결되지 않아 멈췄다. VPN이 연결되면 멈춘 페어링·새로고침을 이어 간다.
     public private(set) var needsTunnel = false
+    /// 진단 로그. 화면과 앱(시작·VPN)도 여기에 남긴다.
+    public let logBook: DeviceLogBook
+    /// 로그를 보내는 중.
+    public private(set) var isSendingLogs = false
+    /// 마지막으로 로그를 모두 보낸 시각.
+    public private(set) var logsSentAt: Date?
+    /// 마지막 로그 보내기의 실패 안내. 성공하면 `nil`.
+    public private(set) var logSendError: String?
+    /// 페어링 링크에 Tailscale 키가 있을 때 그 키로 VPN을 켜는 동작. 앱이 연결한다(키를 저장하지 않는다).
+    @ObservationIgnored public var connectWithAuthKey: (@MainActor (String) async -> Void)?
 
     // MARK: 의존성
 
@@ -157,6 +241,7 @@ public final class ClientModel {
     private let clock: any PollingClock
     private let policy: HostPolicy
     private let timing: Timing
+    private let receivedStore: ReceivedFileStore
 
     // MARK: 내부 상태
 
@@ -171,6 +256,7 @@ public final class ClientModel {
     /// 마지막으로 승인된 링크. 같은 링크가 다시 들어오면(1회용 코드라 다시 보내면 실패한다) 무시한다.
     @ObservationIgnored private var lastApprovedLink: PairingLink?
     @ObservationIgnored private var installTasks: [String: Running] = [:]
+    @ObservationIgnored private var downloadTasks: [String: Task<Void, Never>] = [:]
     @ObservationIgnored private var activeSessions: [String: ActiveSession] = [:]
     @ObservationIgnored private var resumeTask: Task<Void, Never>?
     @ObservationIgnored private var tunnelObserver: Task<Void, Never>?
@@ -187,7 +273,9 @@ public final class ClientModel {
         tunnel: any TunnelControlling,
         clock: any PollingClock = SystemPollingClock(),
         hostPolicy: HostPolicy = .tailnetOnly,
-        timing: Timing = .standard
+        timing: Timing = .standard,
+        logBook: DeviceLogBook? = nil,
+        receivedFiles: ReceivedFileStore? = nil
     ) {
         self.deviceName = deviceName
         self.client = client
@@ -198,6 +286,14 @@ public final class ClientModel {
         self.clock = clock
         self.policy = hostPolicy
         self.timing = timing
+        self.logBook = logBook ?? DeviceLogBook()
+        #if os(iOS)
+        self.receivedStore = receivedFiles ?? .standard()
+        #else
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent("rd-received-\(UUID().uuidString)", isDirectory: true)
+        self.receivedStore = receivedFiles ?? ReceivedFileStore(directory: temp, indexURL: temp.appendingPathComponent(".index.json"))
+        #endif
+        self.receivedFiles = self.receivedStore.list()
         self.tunnel = tunnel.currentState()
 
         let updates = tunnel.stateUpdates()
@@ -214,6 +310,7 @@ public final class ClientModel {
         resumeTask?.cancel()
         pairing?.task.cancel()
         for running in installTasks.values { running.task.cancel() }
+        for task in downloadTasks.values { task.cancel() }
     }
 
     public func clearError() {
@@ -234,6 +331,7 @@ public final class ClientModel {
         hostGeneration &+= 1
         let generation = hostGeneration
         host = saved
+        log(.info, "pairing", "저장된 Mac 불러옴: \(saved.hostName) (\(saved.fqdn))")
         if phase == .unpaired { phase = .paired }
         guard generation == hostGeneration else { return }
         await refresh()
@@ -316,6 +414,9 @@ public final class ClientModel {
         return false
     }
 
+    /// 진행 중이거나 VPN을 기다리는 페어링의 Mac 주소.
+    public var pairingHost: String? { inFlightPairingLink?.host }
+
     /// 진행 중(요청·승인 대기)이거나 VPN을 기다리는 페어링의 링크.
     private var inFlightPairingLink: PairingLink? {
         pairingPoll?.link ?? pairing?.link ?? queuedPairing
@@ -324,7 +425,17 @@ public final class ClientModel {
     private func startPairing(_ link: PairingLink) {
         cancelPairing()
         lastError = nil
-        guard ensureTunnel(queue: .pair(link)) else { return }
+        log(.info, "pairing", "페어링 시작: \(link.host)")
+        // 링크에 Tailscale 키가 있으면 로그인 없이 VPN을 켠다. 페어링은 VPN이 연결되면 이어 간다.
+        let startsWithKey = link.authKey != nil && tunnelController.currentState() != .connected && connectWithAuthKey != nil
+        guard ensureTunnel(queue: .pair(link)) else {
+            if startsWithKey, let key = link.authKey, let connect = connectWithAuthKey {
+                log(.info, "vpn", "링크의 Tailscale 키로 VPN 켜는 중")
+                lastError = nil
+                Task { await connect(key) }
+            }
+            return
+        }
         let token = UUID()
         pairing = PairingRun(token: token, link: link, task: Task { [weak self] in
             await self?.runPairing(link, token: token)
@@ -444,6 +555,7 @@ public final class ClientModel {
             }
             host = paired
             phase = .paired
+            log(.info, "pairing", "페어링 승인: \(paired.hostName) (\(paired.fqdn))")
             lastApprovedLink = poll.link
             do {
                 try store.save(paired)
@@ -456,6 +568,7 @@ public final class ClientModel {
     }
 
     private func failPairing(_ message: String) {
+        log(.warning, "pairing", "페어링 실패: \(message)")
         pairingPoll = nil
         pairingExpiresAt = nil
         phase = settledPhase
@@ -487,22 +600,213 @@ public final class ClientModel {
             }
             let list = try await api.builds()
             guard generation == hostGeneration else { return }
+            if builds.map(\.id) != list.map(\.id) {
+                log(.info, "builds", "빌드 목록 \(list.count)개: " + list.map { "\($0.displayName) \($0.id) 게시 \(RDTimestamp.string($0.publishedAt))" }.joined(separator: ", "))
+            }
             builds = list
             buildsLoadedAt = clock.now
             if let previous = refreshError, lastError == previous { lastError = nil }
             refreshError = nil
-            if var renamed = host, info.hostName != renamed.hostName {
-                renamed.hostName = info.hostName
-                host = renamed
-                try? store.save(renamed)
+            let updatePage = PairedHost.validUpdatePage(info.updatePage)
+            if var updated = host, info.hostName != updated.hostName || updatePage != updated.updatePage {
+                if updatePage != updated.updatePage { log(.info, "update", "업데이트 페이지: \(updatePage?.absoluteString ?? "없음")") }
+                updated.hostName = info.hostName
+                updated.updatePage = updatePage
+                host = updated
+                try? store.save(updated)
             }
         } catch {
             guard !(error is CancellationError), generation == hostGeneration else { return }
             failRefresh(Self.message(for: error))
+            return
+        }
+        await refreshResources(api: api, generation: generation)
+        await sendLogs()
+    }
+
+    // MARK: 파일
+
+    /// 파일 목록은 빌드 목록과 따로 받는다. 받지 못해도 빌드 목록은 그대로 쓴다.
+    private func refreshResources(api: HostAPI, generation: Int) async {
+        do {
+            let list = try await api.resources()
+            guard generation == hostGeneration else { return }
+            if resources.map(\.id) != list.map(\.id) {
+                log(.info, "files", "파일 목록 \(list.count)개: " + list.map { "\($0.name) \($0.id)" }.joined(separator: ", "))
+            }
+            resources = list
+        } catch let error as HostAPIError where error.code == "not_found" {
+            // 파일 보내기를 모르는 이전 Mac 앱.
+            if generation == hostGeneration { resources = [] }
+        } catch {
+            guard !(error is CancellationError) else { return }
+            log(.warning, "files", "파일 목록 받기 실패: \(Self.message(for: error))")
+        }
+        reloadReceivedFiles()
+    }
+
+    /// 받아 둔 파일 중 Mac 목록의 같은 내용이 있는지.
+    public func isReceived(_ resource: ResourceDescriptor) -> Bool {
+        receivedFiles.contains { $0.name == resource.name && $0.size == resource.size && $0.sha256 == resource.sha256.lowercased() }
+    }
+
+    /// 파일을 받아 Documents에 저장한다(같은 이름은 바꾼다). 이미 받는 중이면 아무것도 하지 않는다.
+    public func download(_ resource: ResourceDescriptor) {
+        guard !resource.isLink, downloadTasks[resource.id] == nil, let current = host, let api = makeAPI(current.fqdn) else { return }
+        guard ensureTunnel(queue: nil) else { return }
+        let generation = hostGeneration
+        fileDownloads[resource.id] = .downloading
+        fileProgress[resource.id] = FileTransferProgress(received: 0, total: resource.size, startedAt: clock.now)
+        log(.info, "files", "파일 받기 시작: \(resource.name) \(resource.size)바이트")
+        notifyTransfer(resource, .receiving)
+        let throttle = ProgressThrottle()
+        let report: FileDownloader.Progress = { [weak self] received, expected in
+            guard throttle.shouldReport(received, expected) else { return }
+            Task { @MainActor in self?.noteProgress(resource, received: received, generation: generation) }
+        }
+        downloadTasks[resource.id] = Task { [weak self] in
+            let result: Result<URL, any Error>
+            do {
+                result = .success(try await api.download(resource, progress: report))
+            } catch {
+                result = .failure(error)
+            }
+            guard let self else { return }
+            self.downloadTasks[resource.id] = nil
+            defer { self.fileProgress[resource.id] = nil }
+            guard generation == self.hostGeneration else {
+                if case .success(let temp) = result { try? FileManager.default.removeItem(at: temp) }
+                return
+            }
+            switch result {
+            case .success(let temp):
+                do {
+                    try self.receivedStore.save(temp, as: resource)
+                    self.fileDownloads[resource.id] = nil
+                    self.log(.info, "files", "파일 받음: \(resource.name)")
+                    self.notifyTransfer(resource, .received, received: resource.size)
+                } catch {
+                    try? FileManager.default.removeItem(at: temp)
+                    let message = "iPhone에 저장하지 못했습니다. 저장 공간을 확인하세요."
+                    self.fileDownloads[resource.id] = .failed(message)
+                    self.log(.error, "files", "파일 저장 실패: \(resource.name) \(error)")
+                    self.notifyTransfer(resource, .failed(message))
+                }
+                self.reloadReceivedFiles()
+            case .failure(let error) where error is CancellationError:
+                self.fileDownloads[resource.id] = nil
+                self.notifyTransfer(resource, .cancelled)
+            case .failure(let error):
+                let message = Self.message(for: error)
+                self.fileDownloads[resource.id] = .failed(message)
+                self.log(.warning, "files", "파일 받기 실패: \(resource.name) \(message) [\((error as? HostAPIError)?.message ?? String(describing: error))]")
+                self.notifyTransfer(resource, .failed(message))
+            }
         }
     }
 
+    /// 앱을 다시 띄운 뒤 iOS가 이어 가던 전송을 넘겨받는다. 진행 중인 파일 id를 돌려준다.
+    /// 앱이 시작할 때 한 번 부른다(시험은 부르지 않는다: 실제 백그라운드 세션을 만든다).
+    @discardableResult
+    public func attachBackgroundTransfers(_ downloader: FileDownloader = .shared) async -> [String] {
+        let transfers = await downloader.attach { [weak self] event in
+            Task { @MainActor in self?.handleOrphan(event) }
+        }
+        var active: [String] = []
+        for t in transfers {
+            guard let resource = Self.resource(from: t.context), downloadTasks[resource.id] == nil else { continue }
+            active.append(resource.id)
+            fileDownloads[resource.id] = .downloading
+            fileProgress[resource.id] = FileTransferProgress(received: t.received, total: resource.size, startedAt: clock.now)
+            log(.info, "files", "백그라운드 전송 이어받음: \(resource.name) \(t.received)/\(resource.size)바이트")
+            notifyTransfer(resource, .receiving, received: t.received)
+        }
+        return active
+    }
+
+    @ObservationIgnored private var orphanThrottles: [String: ProgressThrottle] = [:]
+
+    private func handleOrphan(_ event: FileDownloader.OrphanEvent) {
+        switch event {
+        case .progress(_, let context, let received, let expected):
+            guard let resource = Self.resource(from: context), downloadTasks[resource.id] == nil else { return }
+            let throttle = orphanThrottles[resource.id] ?? ProgressThrottle()
+            orphanThrottles[resource.id] = throttle
+            guard throttle.shouldReport(received, expected) else { return }
+            fileDownloads[resource.id] = .downloading
+            fileProgress[resource.id] = FileTransferProgress(received: received, total: resource.size,
+                                                             startedAt: fileProgress[resource.id]?.startedAt ?? clock.now)
+            notifyTransfer(resource, .receiving, received: received)
+        case .finished(_, let context, let result):
+            guard let resource = Self.resource(from: context) else {
+                if case .success(let (file, _)) = result { try? FileManager.default.removeItem(at: file) }
+                return
+            }
+            orphanThrottles[resource.id] = nil
+            fileProgress[resource.id] = nil
+            switch result {
+            case .success(let (file, response)):
+                do {
+                    try HostAPI.checkDownloaded(file: file, response: response, resource: resource)
+                    try receivedStore.save(file, as: resource)
+                    fileDownloads[resource.id] = nil
+                    log(.info, "files", "파일 받음(백그라운드): \(resource.name)")
+                    notifyTransfer(resource, .received, received: resource.size)
+                } catch {
+                    try? FileManager.default.removeItem(at: file)
+                    let message = Self.message(for: error)
+                    fileDownloads[resource.id] = .failed(message)
+                    log(.warning, "files", "백그라운드 파일 확인·저장 실패: \(resource.name) \(message)")
+                    notifyTransfer(resource, .failed(message))
+                }
+                reloadReceivedFiles()
+            case .failure(let error) where error is CancellationError:
+                fileDownloads[resource.id] = nil
+                notifyTransfer(resource, .cancelled)
+            case .failure(let error):
+                let message = HostAPIError.connectionFailed("\(error)").userMessage
+                fileDownloads[resource.id] = .failed(message)
+                log(.warning, "files", "백그라운드 파일 받기 실패: \(resource.name) \(error)")
+                notifyTransfer(resource, .failed(message))
+            }
+        }
+    }
+
+    nonisolated static func resource(from context: Data?) -> ResourceDescriptor? {
+        context.flatMap { try? RDJSON.decoder().decode(ResourceDescriptor.self, from: $0) }
+    }
+
+    private func noteProgress(_ resource: ResourceDescriptor, received: Int64, generation: Int) {
+        guard generation == hostGeneration, fileDownloads[resource.id] == .downloading else { return }
+        fileProgress[resource.id] = FileTransferProgress(received: received, total: resource.size, startedAt: fileProgress[resource.id]?.startedAt)
+        notifyTransfer(resource, .receiving, received: received)
+    }
+
+    private func notifyTransfer(_ resource: ResourceDescriptor, _ phase: FileTransferUpdate.Phase, received: Int64? = nil) {
+        let progress = FileTransferProgress(received: received ?? fileProgress[resource.id]?.received ?? 0, total: resource.size)
+        onFileTransfer?(FileTransferUpdate(resourceID: resource.id, name: resource.name, progress: progress, phase: phase))
+    }
+
+    public func cancelDownload(_ resourceID: String) {
+        downloadTasks[resourceID]?.cancel()
+    }
+
+    public func deleteReceivedFile(_ name: String) {
+        do {
+            try receivedStore.delete(name)
+        } catch {
+            lastError = "파일을 지우지 못했습니다."
+        }
+        reloadReceivedFiles()
+    }
+
+    /// 파일 앱에서 바꾼 내용을 다시 읽는다.
+    public func reloadReceivedFiles() {
+        receivedFiles = receivedStore.list()
+    }
+
     private func failRefresh(_ message: String) {
+        log(.warning, "builds", "목록 받기 실패: \(message)")
         refreshError = message
         lastError = message
     }
@@ -520,6 +824,7 @@ public final class ClientModel {
             return
         }
         guard ensureTunnel(queue: nil) else { return }
+        log(.info, "install", "설치 요청: \(build.displayName) \(build.version) (\(build.buildNumber)) \(id)")
         installs[id] = .preparing
         let token = UUID()
         let generation = hostGeneration
@@ -584,6 +889,7 @@ public final class ClientModel {
             installs[id] = .failed(message: Self.untrustedInstallURLMessage)
             return
         }
+        log(.info, "install", "세션 \(session.sessionId) 만듦, 설치 창 여는 중: \(id)")
         let opened = await opener.open(session.installUrl)
         // 설치 창을 여는 동안 호스트를 잊었거나 바꿨으면 아무것도 쓰지 않는다.
         guard generation == hostGeneration else { return }
@@ -631,10 +937,15 @@ public final class ClientModel {
             }
             guard current() else { return }
             if let terminal = Self.terminalState(status.state) {
+                log(.info, "install", "세션 \(active.sessionID) \(status.state.rawValue): \(status.bytesServed)/\(status.size)바이트")
                 conclude(id, terminal)
                 return
             }
-            installs[id] = Self.progressState(status)
+            let next = Self.progressState(status)
+            if case .transferring = next, installs[id]?.progress == nil {
+                log(.info, "install", "전송 시작: 세션 \(active.sessionID) \(status.state.rawValue)")
+            }
+            installs[id] = next
         }
     }
 
@@ -680,6 +991,12 @@ public final class ClientModel {
     }
 
     private func conclude(_ id: String, _ state: InstallState) {
+        switch state {
+        case .completed: log(.info, "install", "전송 완료: \(id)")
+        case .expired: log(.warning, "install", "세션 만료: \(id)")
+        case .failed(let message): log(.error, "install", "설치 실패: \(id): \(message)")
+        default: break
+        }
         installs[id] = state
         activeSessions[id] = nil
     }
@@ -790,6 +1107,11 @@ public final class ClientModel {
         installTasks = [:]
         activeSessions = [:]
         installs = [:]
+        for task in downloadTasks.values { task.cancel() }
+        downloadTasks = [:]
+        fileDownloads = [:]
+        fileProgress = [:]
+        resources = []
         builds = []
         buildsLoadedAt = nil
         refreshError = nil
@@ -826,6 +1148,7 @@ public final class ClientModel {
     }
 
     private func tunnelDidChange(_ state: TunnelState) {
+        if state != tunnel { log(state.isFailure ? .warning : .info, "vpn", "VPN 상태: \(state.logText)") }
         tunnel = state
         guard state == .connected else { return }
         guard needsTunnel || queuedPairing != nil || refreshQueued else { return }
@@ -865,6 +1188,40 @@ public final class ClientModel {
         return false
     }
 
+    // MARK: 로그
+
+    /// 쌓인 로그를 페어링한 Mac에 보낸다. 목록을 받은 뒤에도 자동으로 부른다.
+    /// VPN이 꺼져 있거나 보내지 못하면 로그를 남겨 두고 다음에 다시 보낸다.
+    public func sendLogs() async {
+        guard !isSendingLogs, let current = host, let api = makeAPI(current.fqdn),
+              tunnelController.currentState() == .connected
+        else { return }
+        isSendingLogs = true
+        defer { isSendingLogs = false }
+        let generation = hostGeneration
+        while generation == hostGeneration {
+            let batch = logBook.nextBatch()
+            if batch.isEmpty {
+                logsSentAt = clock.now
+                logSendError = nil
+                return
+            }
+            do {
+                try await api.sendLogs(batch)
+            } catch {
+                guard !(error is CancellationError) else { return }
+                logSendError = Self.message(for: error)
+                return
+            }
+            logBook.markSent(batch)
+        }
+    }
+
+    /// 로그 한 줄을 남긴다. 앱 수준 일(시작, 화면 전환)도 이것으로 남긴다.
+    public func log(_ level: DeviceLogEntry.Level, _ source: String, _ message: String) {
+        logBook.log(level, source, message)
+    }
+
     // MARK: 도움
 
     private func makeAPI(_ host: String) -> HostAPI? {
@@ -878,7 +1235,7 @@ public final class ClientModel {
     /// 테스트용: 모델이 띄운 작업이 모두 끝날 때까지 기다린다.
     func waitForBackgroundWork() async {
         while true {
-            var tasks: [Task<Void, Never>] = installTasks.values.map(\.task)
+            var tasks: [Task<Void, Never>] = installTasks.values.map(\.task) + Array(downloadTasks.values)
             if let pairing { tasks.append(pairing.task) }
             if let resumeTask { tasks.append(resumeTask) }
             if tasks.isEmpty { return }

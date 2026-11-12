@@ -70,6 +70,10 @@ struct NetworkView: View {
                 }
             }
 
+            TailscaleTokenSection()
+
+            UpdatePageSection()
+
             Section("이 Mac") {
                 LabeledContent("노드 이름") { Text(model.nodeName).textSelection(.enabled) }
                 if let status = model.status {

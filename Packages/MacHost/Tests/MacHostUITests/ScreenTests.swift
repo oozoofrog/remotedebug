@@ -59,6 +59,8 @@ final class RecordingCore: HostCore {
     func status() async throws -> CoreStatus { CoreStatus(backendState: .needsLogin) }
     func publish(_ request: PublishRequest) async throws {}
     func unpublish(buildID: String) async throws {}
+    func publishResource(_ request: ResourcePublishRequest) async throws {}
+    func unpublishResource(id: String) async throws {}
     func setDevices(_ devices: [DeviceEntry]) async throws {}
     func openPairing(ttlSeconds: Int) async throws -> PairingCode {
         if failPairing.withLock({ $0 }) { throw APIErrorBody(code: "internal", message: "코어 오류") }

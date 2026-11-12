@@ -238,6 +238,41 @@ private let otherInfo = Examples.info
         #expect(h.transport.requests.isEmpty)
     }
 
+    @Test func linkWithAuthKeyTurnsOnVPNThenPairs() async throws {
+        let h = Harness(tunnel: .off)
+        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
+        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pairApproved))
+        h.serveHostInfoAndBuilds()
+        var usedKeys: [String] = []
+        let tunnel = h.tunnel
+        h.model.connectWithAuthKey = { key in
+            usedKeys.append(key)
+            tunnel.set(.connected)
+        }
+        let url = URL(string: pairURL.absoluteString + "&key=tskey-auth-kTest1CNTRL-abc")!
+        #expect(h.model.handle(url: url))
+        await h.waitUntil { !usedKeys.isEmpty }
+        #expect(usedKeys == ["tskey-auth-kTest1CNTRL-abc"])
+        await h.waitUntil { h.model.phase == .paired }
+        await h.model.waitForBackgroundWork()
+        #expect(h.model.phase == .paired)
+        #expect(h.transport.count("POST", "/v1/pair/request") == 1)
+        #expect(h.model.lastError == nil)
+        // 키는 로그에 남지 않는다.
+        #expect(!h.model.logBook.recent.contains { $0.message.contains("tskey") })
+    }
+
+    @Test func linkWithAuthKeyDoesNotReconnectWhenVPNIsUp() async throws {
+        let h = Harness(tunnel: .connected)
+        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
+        var used = 0
+        h.model.connectWithAuthKey = { _ in used += 1 }
+        h.model.handle(url: URL(string: pairURL.absoluteString + "&key=tskey-auth-kTest1CNTRL-abc")!)
+        await h.waitUntil { h.transport.count("POST", "/v1/pair/request") == 1 }
+        #expect(used == 0)
+        h.model.cancelPairing()
+    }
+
     @Test func refreshDoesNotReplaceQueuedPairing() async throws {
         let h = Harness(tunnel: .off, storedHost: Harness.pairedHost)
         h.serveHostInfoAndBuilds()
@@ -485,6 +520,10 @@ private let otherInfo = Examples.info
         #expect(h.tunnel.prepareCount == 0)
         #expect(h.transport.requests.map { $0.url?.absoluteString } == [
             "https://\(hostFQDN)/v1/info", "https://\(hostFQDN)/v1/builds",
+            // 파일 목록은 빌드 목록 뒤에 따로 받는다.
+            "https://\(hostFQDN)/v1/resources",
+            // 목록을 받은 뒤 쌓인 진단 로그를 보낸다.
+            "https://\(hostFQDN)/v1/logs",
         ])
     }
 

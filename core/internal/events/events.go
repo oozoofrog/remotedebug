@@ -72,7 +72,7 @@ func (q *Queue) Replace(e Event) {
 // lowPriority reports whether e may be dropped before other events.
 func lowPriority(e Event) bool {
 	switch e["type"] {
-	case "denied", "log", "state":
+	case "denied", "log", "state", "device-log":
 		return true
 	}
 	return false

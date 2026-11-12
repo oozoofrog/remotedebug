@@ -4,6 +4,20 @@ import Foundation
 /// 구현은 `URLRequest.timeoutInterval`을 요청 하나의 전체 제한 시간으로 지켜야 한다.
 public protocol HTTPTransport: Sendable {
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse)
+    /// 본문을 임시 파일로 받는다. 돌려준 파일은 부른 쪽이 옮기거나 지운다.
+    /// `key`가 같은 이전 전송이 끊겼으면 이어 받는다. `progress`는 받은 바이트와 전체 바이트를 알린다.
+    func download(_ request: URLRequest, key: String, context: Data?, progress: @escaping FileDownloader.Progress) async throws -> (URL, HTTPURLResponse)
+}
+
+extension HTTPTransport {
+    /// 기본 구현은 `send`로 받은 본문을 임시 파일에 쓴다(시험용 가짜 전송).
+    public func download(_ request: URLRequest, key: String, context: Data?, progress: @escaping FileDownloader.Progress) async throws -> (URL, HTTPURLResponse) {
+        let (data, response) = try await send(request)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("rd-download-\(UUID().uuidString)")
+        try data.write(to: url)
+        progress(Int64(data.count), Int64(data.count))
+        return (url, response)
+    }
 }
 
 /// 실제 전송. 임시(ephemeral) 세션, 쿠키·캐시 없음, 리다이렉트를 따르지 않는다.
@@ -27,6 +41,11 @@ public final class URLSessionTransport: HTTPTransport {
     }
 
     deinit { session.invalidateAndCancel() }
+
+    /// 시스템 백그라운드 세션(`FileDownloader.shared`)으로 받는다. 앱이 백그라운드로 가도 이어 간다.
+    public func download(_ request: URLRequest, key: String, context: Data?, progress: @escaping FileDownloader.Progress) async throws -> (URL, HTTPURLResponse) {
+        try await FileDownloader.shared.download(request, key: key, context: context, progress: progress)
+    }
 
     public func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let limit = min(max(request.timeoutInterval, 1), maximumTimeout)

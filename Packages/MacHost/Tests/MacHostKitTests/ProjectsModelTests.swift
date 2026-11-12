@@ -223,6 +223,23 @@ struct ProjectsModelTests {
         #expect(!unknown.ok)
         let missing = await w.model.handleAgentRequest("build\n\(w.tmp.path("nowhere").path)\n\n")
         #expect(!missing.ok && w.model.lastError == nil)
+        #expect(await !w.model.handleAgentRequest("pair\n\n\n").ok)
+
+        let expires = Date(timeIntervalSince1970: 1_800_000_000)
+        let pairing = ProjectsModel(root: w.tmp.path("state-pair"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived),
+                                    openPairing: { .success(.init(code: "K7M2-9QXD", link: "remotedebug://pair?host=h&code=K7M29QXD", installPage: nil, expiresAt: expires)) }) { _ in nil }
+        let paired = await pairing.handleAgentRequest("pair\n\n\n")
+        #expect(paired.ok && paired.pairing?.link == "remotedebug://pair?host=h&code=K7M29QXD" && paired.pairing?.code == "K7M2-9QXD")
+
+        let decided = Names()
+        let waiting = ProjectsModel.PairRequestInfo(requestId: "pr_1", deviceName: "iPhone", nodeName: "rd-phone-1", loginName: "me@", expiresAt: expires)
+        let answering = ProjectsModel(root: w.tmp.path("state-answer"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived),
+                                      pairingRequests: .init(list: { decided.withLock { $0.isEmpty } ? [waiting] : [] },
+                                                             decide: { id, allow in decided.withLock { $0.append("\(id):\(allow)") }; return nil })) { _ in nil }
+        #expect(await answering.handleAgentRequest("requests\n\n\n").requests == [waiting])
+        #expect(await !answering.handleAgentRequest("approve\npr_other\n\n").ok)
+        #expect(await answering.handleAgentRequest("approve\npr_1\n\n").ok)
+        #expect(decided.withLock { $0 } == ["pr_1:true"])
 
         // 프로젝트 폴더에 스킬과 AGENTS.md 단락을 쓴다. 두 번 써도 단락은 하나다.
         let folder = project.deletingLastPathComponent()
@@ -257,7 +274,7 @@ struct AgentIntegrationTests {
 
         let listed = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#.utf8)))
         let tools = try #require((listed["result"] as? [String: Any])?["tools"] as? [[String: Any]])
-        #expect(tools.compactMap { $0["name"] as? String } == ["remotedebug_status", "remotedebug_schemes", "remotedebug_build"])
+        #expect(tools.compactMap { $0["name"] as? String } == ["remotedebug_status", "remotedebug_pairing_code", "remotedebug_pair_requests", "remotedebug_pair_decide", "remotedebug_push_file", "remotedebug_push_link", "remotedebug_files", "remotedebug_schemes", "remotedebug_build", "remotedebug_device_logs"])
 
         let built = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":"a","method":"tools/call","params":{"name":"remotedebug_build","arguments":{"project_path":"/p","scheme":"App"}}}"#.utf8)))
         #expect((built["result"] as? [String: Any])?["isError"] as? Bool == false)

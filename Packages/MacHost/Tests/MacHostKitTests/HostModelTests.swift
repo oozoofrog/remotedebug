@@ -23,6 +23,8 @@ struct HostModelTests {
     }
 
     func makeHarness(_ label: String, clock: @escaping @Sendable () -> Date = { Date() }, port: Int = 443,
+                     api: TailscaleAPI = TailscaleAPI { _ in throw URLError(.notConnectedToInternet) },
+                     tokens: any TailscaleClientStoring = MemoryTailscaleClientStore(),
                      prepare: (HostPaths) throws -> Void = { _ in }) throws -> Harness {
         let tmp = try TempDir(label)
         let paths = HostPaths(root: tmp.path("host"))
@@ -36,7 +38,8 @@ struct HostModelTests {
         let model = HostModel(
             core: core, paths: paths, inspector: inspector, packager: packager, bookmarks: bookmarks,
             watcherOptions: .init(useFileEvents: false), id8: "ab12cd34", hostDisplayName: "작업용 Mac", appVersion: "0.1.0",
-            port: port, openURL: { url in opened.urls.withLock { $0.append(url) } }, now: clock
+            port: port, openURL: { url in opened.urls.withLock { $0.append(url) } },
+            tailscaleAPI: api, tailscaleClients: tokens, now: clock
         )
         return Harness(tmp: tmp, core: core, model: model, paths: paths, opened: opened, bookmarks: bookmarks,
                        inspector: inspector, packager: packager)
@@ -127,6 +130,130 @@ struct HostModelTests {
     }
 
     // MARK: 페어링
+
+    @Test func agentPairingReturnsCodeAndLinks() async throws {
+        let h = try makeHarness("agent-pair")
+        if case .failure(let failure) = await h.model.openPairingForAgent() {
+            #expect(failure.message.contains("공유"))
+        } else {
+            Issue.record("공유 전에는 코드를 열지 않아야 한다")
+        }
+        await h.model.start()
+        h.core.emit(.state(CoreStatus(backendState: .running, fqdn: "rd-mac-ab12cd34.example.ts.net",
+                                      certDomains: ["rd-mac-ab12cd34.example.ts.net"], tlsReady: true, listening: true)))
+        #expect(await eventually { h.model.status?.fqdn == "rd-mac-ab12cd34.example.ts.net" })
+        let opened = await h.model.openPairingForAgent()
+        guard case .success(let info) = opened else {
+            if case .failure(let f) = opened { Issue.record("코드를 열지 못했다: \(f.message)") }
+            return
+        }
+        #expect(info.code == "K7M2-9QXD")
+        #expect(info.link == "remotedebug://pair?host=rd-mac-ab12cd34.example.ts.net&code=K7M29QXD")
+        #expect(h.core.calls.contains(.openPairing(300)))
+
+        h.core.emit(.pairRequest(pairRequest("pr_agent")))
+        #expect(await eventually { h.model.pairRequestsForAgent.map(\.requestId) == ["pr_agent"] })
+        #expect(await h.model.decideForAgent("pr_agent", allow: true) == nil)
+        #expect(h.core.calls.contains(.decide("pr_agent", true)))
+        #expect(h.model.pairRequestsForAgent.isEmpty)
+    }
+
+    /// 가짜 Tailscale API: OAuth 토큰·기기 목록·키 만들기에 답하고 받은 요청을 남긴다.
+    final class FakeTailscale: @unchecked Sendable {
+        let lock = NSLock()
+        var devices = ["rd-mac-ab12cd34.example.ts.net."]
+        var devicesStatus = 200
+        var tokenStatus = 200
+        var keyStatus = 200
+        var requests: [URLRequest] = []
+
+        func paths() -> [String] { lock.withLock { requests.compactMap { $0.url?.path } } }
+
+        var api: TailscaleAPI {
+            TailscaleAPI { [self] request in
+                lock.withLock { requests.append(request) }
+                let path = request.url?.path ?? ""
+                func reply(_ status: Int, _ body: String) -> (Data, URLResponse) {
+                    (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!)
+                }
+                if path.hasSuffix("/oauth/token") {
+                    let status = lock.withLock { tokenStatus }
+                    return reply(status, status == 200 ? #"{"access_token":"tskey-api-oauthAccess","token_type":"Bearer","expires_in":3600,"scope":"auth_keys"}"# : "{}")
+                }
+                if path.hasSuffix("/devices") {
+                    let (names, status) = lock.withLock { (devices, devicesStatus) }
+                    return reply(status, #"{"devices":[\#(names.map { #"{"name":"\#($0)"}"# }.joined(separator: ","))]}"#)
+                }
+                let status = lock.withLock { keyStatus }
+                return reply(status, status == 200 ? #"{"id":"k1","key":"tskey-auth-kFake1CNTRL-secret","expires":"2026-11-12T10:15:00Z"}"# : "{}")
+            }
+        }
+    }
+
+    @Test func oauthClientSavedOnlyForThisMacsTailnetAndKeyGoesIntoPairingLink() async throws {
+        let fake = FakeTailscale()
+        let clients = MemoryTailscaleClientStore()
+        let h = try makeHarness("ts-oauth", api: fake.api, tokens: clients)
+        await h.model.start()
+        h.core.emit(.state(CoreStatus(backendState: .running, fqdn: "rd-mac-ab12cd34.example.ts.net",
+                                      certDomains: ["rd-mac-ab12cd34.example.ts.net"], tlsReady: true, listening: true)))
+        #expect(await eventually { h.model.status?.fqdn == "rd-mac-ab12cd34.example.ts.net" })
+
+        // 형식이 틀리면 Tailscale에 묻지 않는다.
+        await h.model.saveTailscaleClient(id: "kClient", secret: "not-a-secret", tags: "tag:rd-phone")
+        await h.model.saveTailscaleClient(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: "rd-phone")
+        #expect(!h.model.hasTailscaleClient && fake.paths().isEmpty)
+
+        // 다른 tailnet의 클라이언트는 저장하지 않는다.
+        fake.lock.withLock { fake.devices = ["someone-else.other.ts.net"] }
+        await h.model.saveTailscaleClient(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: "tag:rd-phone")
+        #expect(!h.model.hasTailscaleClient && clients.load() == nil)
+        #expect(h.model.tokenCheck?.message.contains("rd-mac-ab12cd34.example.ts.net") == true)
+        let tokenBody = String(decoding: try #require(fake.lock.withLock { fake.requests.first?.httpBody }), as: UTF8.self)
+        #expect(tokenBody.contains("grant_type=client_credentials") && tokenBody.contains("client_id=kClient"))
+
+        // 기기 읽기 권한이 없으면 확인을 건너뛰고 저장한다.
+        fake.lock.withLock { fake.devicesStatus = 403 }
+        await h.model.saveTailscaleClient(id: " kClient ", secret: "tskey-client-kClient-SECRET\n", tags: "tag:rd-phone, tag:dev")
+        #expect(h.model.hasTailscaleClient && h.model.tailscaleTags == ["tag:rd-phone", "tag:dev"])
+        #expect(clients.load() == .init(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: ["tag:rd-phone", "tag:dev"]))
+        #expect(h.model.tokenCheck?.ok == true && h.model.tokenCheck?.message.contains("확인하지 못했습니다") == true)
+
+        await h.model.beginPairing()
+        #expect(h.model.pairingKeyState == .ready(key: "tskey-auth-kFake1CNTRL-secret", expires: Date(timeIntervalSince1970: 1_794_478_500)))
+        #expect(h.model.pairingLink?.absoluteString == "remotedebug://pair?host=rd-mac-ab12cd34.example.ts.net&code=K7M29QXD&key=tskey-auth-kFake1CNTRL-secret")
+        let keyRequest = try #require(fake.lock.withLock { fake.requests.last })
+        #expect(keyRequest.value(forHTTPHeaderField: "Authorization") == "Bearer tskey-api-oauthAccess")
+        let body = try #require(keyRequest.httpBody.flatMap { try JSONSerialization.jsonObject(with: $0) as? [String: Any] })
+        let create = ((body["capabilities"] as? [String: Any])?["devices"] as? [String: Any])?["create"] as? [String: Any]
+        #expect(create?["reusable"] as? Bool == false && create?["preauthorized"] as? Bool == true)
+        #expect(create?["tags"] as? [String] == ["tag:rd-phone", "tag:dev"])
+        #expect(body["expirySeconds"] as? Int == 900)
+        // 저장할 때 받은 토큰을 다시 쓴다(새 토큰을 받지 않는다).
+        #expect(fake.paths().filter { $0.hasSuffix("/oauth/token") }.count == 2)
+
+        // 에이전트 응답에는 키를 넣지 않는다.
+        guard case .success(let info) = await h.model.openPairingForAgent() else { Issue.record("코드를 열지 못했다"); return }
+        #expect(info.link?.contains("key=") == false)
+
+        // 키를 만들지 못해도 코드와 키 없는 링크는 쓴다.
+        fake.lock.withLock { fake.keyStatus = 403 }
+        await h.model.beginPairing()
+        #expect(h.model.pairingLink?.absoluteString.contains("key=") == false)
+        #expect(h.model.pairingKeyState == .failed(TailscaleAPI.Failure.forbidden.message))
+        #expect(h.model.tokenCheck?.ok == false)
+
+        h.model.clearTailscaleClient()
+        #expect(!h.model.hasTailscaleClient && clients.load() == nil && h.model.pairingKeyState == .off)
+    }
+
+    @Test func tagParsing() {
+        #expect(TailscaleAPI.parseTags("tag:rd-phone") == ["tag:rd-phone"])
+        #expect(TailscaleAPI.parseTags(" tag:A, tag:b  tag:a ") == ["tag:a", "tag:b"])
+        #expect(TailscaleAPI.parseTags("") == nil)
+        #expect(TailscaleAPI.parseTags("tag:") == nil)
+        #expect(TailscaleAPI.parseTags("tag:rd_phone") == nil)
+    }
 
     @Test func pairingApproveSavesDeviceAndPushesAllowList() async throws {
         let h = try makeHarness("pair")

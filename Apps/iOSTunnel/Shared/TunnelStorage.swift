@@ -12,6 +12,14 @@ enum TunnelStorage {
 
     /// `base/RemoteDebug/tailscale`을 만들고(있으면 그대로) 보호 등급과 백업 제외를 적용해 돌려준다.
     /// - Parameter base: 확장 컨테이너의 `Library/Application Support`.
+    /// 저장된 Tailscale 상태(로그인)를 지운다. 다음 시작은 새 노드로 로그인한다.
+    static func resetStateDirectory(in base: URL) throws {
+        let dir = base.appendingPathComponent("RemoteDebug", isDirectory: true).appendingPathComponent("tailscale", isDirectory: true)
+        if FileManager.default.fileExists(atPath: dir.path) {
+            try FileManager.default.removeItem(at: dir)
+        }
+    }
+
     static func prepareStateDirectory(in base: URL) throws -> URL {
         let parent = base.appendingPathComponent("RemoteDebug", isDirectory: true)
         let dir = parent.appendingPathComponent("tailscale", isDirectory: true)

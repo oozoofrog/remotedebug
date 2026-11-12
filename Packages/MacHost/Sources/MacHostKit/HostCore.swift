@@ -40,12 +40,14 @@ public struct PairingCode: Codable, Sendable, Hashable {
     }
 
     /// `remotedebug://pair?host=<fqdn>&code=<code>`. fqdn이 비면 nil.
-    public func link(fqdn: String) -> URL? {
+    /// `authKey`가 있으면 `&key=<1회용 Tailscale 키>`를 붙인다. iPhone은 그 키로 로그인 없이 VPN을 켠다.
+    public func link(fqdn: String, authKey: String? = nil) -> URL? {
         guard !fqdn.isEmpty else { return nil }
         var c = URLComponents()
         c.scheme = "remotedebug"
         c.host = "pair"
         c.queryItems = [URLQueryItem(name: "host", value: fqdn), URLQueryItem(name: "code", value: code)]
+        if let authKey { c.queryItems?.append(URLQueryItem(name: "key", value: authKey)) }
         return c.url
     }
 }
@@ -59,6 +61,10 @@ public protocol HostCore: Sendable {
     func publish(_ request: PublishRequest) async throws
     /// 코어에 없는 id면 `APIErrorBody(code: "build_not_found")`를 던진다(라이브러리는 성공으로 본다).
     func unpublish(buildID: String) async throws
+    /// 파일 하나를 페어링한 기기에 공유한다(addenda H).
+    func publishResource(_ request: ResourcePublishRequest) async throws
+    /// 코어에 없는 id면 `APIErrorBody(code: "resource_not_found")`를 던진다.
+    func unpublishResource(id: String) async throws
     /// 허용 목록 전체를 바꾼다. 모델은 이 호출을 한 번에 하나씩 순서대로 보낸다(앞 호출이 끝난 뒤 다음 호출).
     func setDevices(_ devices: [DeviceEntry]) async throws
     func openPairing(ttlSeconds: Int) async throws -> PairingCode

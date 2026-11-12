@@ -90,12 +90,16 @@ struct PairingSheet: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Label("RemoteDebug 앱으로 페어링", systemImage: "iphone").font(.headline)
                     CodePanel(code: code, link: model.pairingLink)
+                    PairingKeyNote(dismiss: { dismiss() })
                     Divider().padding(.vertical, 4)
                     Label(BrowserInstallPanel.heading, systemImage: "safari").font(.headline)
                     BrowserInstallPanel(link: page)
                 }
             } else {
-                CodePanel(code: code, link: model.pairingLink)
+                VStack(alignment: .leading, spacing: 12) {
+                    CodePanel(code: code, link: model.pairingLink)
+                    PairingKeyNote(dismiss: { dismiss() })
+                }
             }
         } else if case .requestReceived(let id) = model.pairingState {
             VStack(alignment: .leading, spacing: 8) {

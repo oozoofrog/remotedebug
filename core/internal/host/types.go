@@ -35,7 +35,14 @@ type BuildDescriptor struct {
 	Signing               Signing `json:"signing"`
 	IPA                   IPAInfo `json:"ipa"`
 	PublishedAt           string  `json:"publishedAt"`
+	// Icon is an optional app icon PNG (protocol-addenda F). JSON carries it as base64.
+	Icon []byte `json:"icon,omitempty"`
 }
+
+// MaxIconBytes bounds BuildDescriptor.Icon.
+const MaxIconBytes = 64 << 10
+
+var pngSignature = []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}
 
 // PublishRequest is the rd_host_publish input: a BuildDescriptor plus ipaPath.
 type PublishRequest struct {

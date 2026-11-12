@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# README.md와 docs/*.md가 저장소와 맞는지 검사한다. 어긋난 곳마다 '실패:' 한 줄을 출력하고 종료 코드 1로 끝난다.
+# README.md, README.ko.md와 docs/*.md가 저장소와 맞는지 검사한다. 어긋난 곳마다 '실패:' 한 줄을 출력하고 종료 코드 1로 끝난다.
 #
 # 검사: (a) 문서의 경로가 있는가. 코드 조각과 모든 코드 블록(json 제외, 들여쓴 블록 포함)에서
 #           scripts/ docs/ Packages/ Apps/ core/ Config/ .agent-loop/ 아래 경로, 루트 파일 이름(project.yml 등),
@@ -69,7 +69,7 @@ def read(path):
         return handle.read()
 
 
-REQUIRED = ["README.md", "project.yml", "docs/setup.md", "docs/device-test.md", "docs/device-test-results.md",
+REQUIRED = ["README.md", "README.ko.md", "project.yml", "docs/setup.md", "docs/device-test.md", "docs/device-test-results.md",
             "docs/protocol.md", "docs/protocol-addenda.md", "docs/tunnel.md", "docs/architecture.md",
             "docs/appstore-review.md"]
 text = {}
@@ -391,7 +391,7 @@ else:
 # (g) 금지 표현. 경고만 한다.
 FORBIDDEN = ["Claude", "ChatGPT", "GPT-", "AI가", "AI로", "인공지능", "에이전트가 작성", "자동 생성된 문서",
              "혁신", "강력한", "완벽", "손쉽", "놀라운", "최고의", "매끄러운", "차세대"]
-for path in ["README.md", "docs/setup.md", "docs/device-test.md", "docs/device-test-results.md"]:
+for path in ["README.md", "README.ko.md", "docs/setup.md", "docs/device-test.md", "docs/device-test-results.md"]:
     for number, line in enumerate(text.get(path, "").splitlines(), 1):
         for phrase in FORBIDDEN:
             if phrase in line:

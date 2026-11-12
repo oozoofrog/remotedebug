@@ -93,6 +93,69 @@ public struct HostAPI: Sendable {
         try await call("GET", ["v1", "sessions", Self.checkedID(sessionID)], expect: SessionStatus.self)
     }
 
+    /// Mac이 보낸 파일 목록(docs/protocol-addenda.md H).
+    public func resources() async throws -> [ResourceDescriptor] {
+        try await call("GET", ["v1", "resources"], expect: ResourcesResponse.self).resources
+    }
+
+    /// 파일 하나를 임시 파일로 받고 크기와 SHA-256을 목록과 대조한다. 돌려준 파일은 부른 쪽이 옮기거나 지운다.
+    public func download(_ resource: ResourceDescriptor, progress: @escaping FileDownloader.Progress = { _, _ in }) async throws -> URL {
+        var url = baseURL
+        for component in ["v1", "resources", try Self.checkedID(resource.id)] { url.append(path: component, directoryHint: .notDirectory) }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(client.headerValue, forHTTPHeaderField: "X-RD-Client")
+        let file: URL
+        let response: HTTPURLResponse
+        do {
+            let context = try? RDJSON.encoder().encode(resource)
+            (file, response) = try await transport.download(request, key: resource.id, context: context, progress: progress)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .timedOut {
+            throw HostAPIError.timedOut("URLError \(error.code.rawValue)")
+        } catch let error as URLError {
+            throw HostAPIError.connectionFailed("URLError \(error.code.rawValue)")
+        } catch {
+            throw HostAPIError.connectionFailed(String(describing: type(of: error)))
+        }
+        try Task.checkCancellation()
+        try Self.checkDownloaded(file: file, response: response, resource: resource)
+        return file
+    }
+
+    /// 받은 파일을 확인한다: 프로토콜 헤더, 상태, 크기와 SHA-256. 틀리면 파일을 지우고 던진다.
+    /// 앱을 다시 띄운 뒤 넘겨받은 전송(`FileDownloader.attach`)도 이것으로 확인한다.
+    public static func checkDownloaded(file: URL, response: HTTPURLResponse, resource: ResourceDescriptor) throws {
+        var keep = false
+        defer { if !keep { try? FileManager.default.removeItem(at: file) } }
+        guard response.value(forHTTPHeaderField: "X-RD-Protocol")?.trimmingCharacters(in: .whitespaces) == "1" else {
+            if response.statusCode >= 400 { throw HostAPIError.connectionFailed("HTTP \(response.statusCode) without X-RD-Protocol") }
+            throw HostAPIError.protocolMismatch("X-RD-Protocol")
+        }
+        guard (200..<300).contains(response.statusCode) else {
+            if let data = try? Data(contentsOf: file), let body = try? RDJSON.decoder().decode(APIErrorBody.self, from: data) {
+                throw HostAPIError(status: response.statusCode, code: body.error.code, message: body.error.message)
+            }
+            throw HostAPIError.invalidResponse(status: response.statusCode, "undecodable error body")
+        }
+        let (size, sha) = try FileDigest.sha256(of: file)
+        guard size == resource.size, sha.caseInsensitiveCompare(resource.sha256) == .orderedSame else {
+            FileDownloader.shared.discardResumeData(key: resource.id)
+            throw HostAPIError(status: response.statusCode, code: HostAPIError.fileMismatchCode, message: "size or sha256 differs")
+        }
+        keep = true
+    }
+
+    /// 진단 로그 묶음을 보낸다(docs/protocol-addenda.md G). 호스트가 받은 줄 수를 돌려준다.
+    @discardableResult
+    public func sendLogs(_ entries: [DeviceLogEntry]) async throws -> Int {
+        struct Accepted: Decodable { var accepted: Int }
+        return try await call("POST", ["v1", "logs"], body: DeviceLogBatch(entries: entries), expect: Accepted.self).accepted
+    }
+
     // MARK: -
 
     /// 앞뒤 공백을 지우고 UTF-8 `maxBytes` 바이트 안에 들어가게 글자(Character) 경계에서 자른다.

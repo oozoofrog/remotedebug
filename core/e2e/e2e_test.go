@@ -3,6 +3,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net"
@@ -245,6 +246,10 @@ func TestE2EPublishValidation(t *testing.T) {
 		}, "path_outside_publish_dir"},
 		{"directory", func(d map[string]any) { d["ipaPath"] = h.publishDir }, "path_outside_publish_dir"},
 		{"wrong id", func(d map[string]any) { d["id"] = "b_00000000" }, "bad_request"},
+		{"icon not png", func(d map[string]any) { d["icon"] = base64.StdEncoding.EncodeToString([]byte("GIF89a")) }, "bad_request"},
+		{"icon too big", func(d map[string]any) {
+			d["icon"] = base64.StdEncoding.EncodeToString(append([]byte("\x89PNG\r\n\x1a\n"), make([]byte, host.MaxIconBytes)...))
+		}, "bad_request"},
 	}
 	outsideDir := t.TempDir()
 	outside, outsideSum := writeIPA(t, outsideDir, "Out.ipa", 4096)
@@ -277,9 +282,16 @@ func TestE2EPublishValidation(t *testing.T) {
 			t.Errorf("%s: got %q, want %q", c.name, code, c.code)
 		}
 	}
-	out := api.HostPublish(h.handle, mustJSON(descriptor(path, sum, 4096)))
+	valid := descriptor(path, sum, 4096)
+	icon := base64.StdEncoding.EncodeToString([]byte("\x89PNG\r\n\x1a\nicon"))
+	valid["icon"] = icon
+	out := api.HostPublish(h.handle, mustJSON(valid))
 	if apiError(out) != "" || !strings.Contains(out, `"id":"b_`) {
 		t.Fatalf("valid publish: %s", out)
+	}
+	h.setDevices(peerA)
+	if r := h.get(peerA, "/v1/builds"); !strings.Contains(string(r.body), `"icon":"`+icon+`"`) {
+		t.Fatalf("icon not listed: %s", r.body)
 	}
 	var st node.Status
 	mustDecode(t, api.Status(h.handle), &st)
@@ -787,4 +799,43 @@ func TestE2EStateEvents(t *testing.T) {
 	if st := ev["status"].(map[string]any); st["fqdn"] != h.fqdn {
 		t.Fatalf("state event: %v", ev)
 	}
+}
+
+func TestE2EDeviceLogs(t *testing.T) {
+	h := startHost(t)
+	entry := map[string]any{"at": "2026-11-12T00:00:01.5Z", "level": "warning", "source": "install", "message": "설치 시작"}
+
+	// Only paired devices may send logs.
+	expectStatus(t, h.post(peerA, "/v1/logs", map[string]any{"entries": []any{entry}}), http.StatusForbidden, "not_paired")
+
+	h.setDevices(peerA)
+	r := h.post(peerA, "/v1/logs", map[string]any{"entries": []any{
+		entry,
+		map[string]any{"at": "yesterday", "level": "loud", "source": strings.Repeat("s", 100), "message": strings.Repeat("가", 3000)},
+	}})
+	expectStatus(t, r, http.StatusAccepted, "")
+	if r.json(t)["accepted"] != float64(2) {
+		t.Fatalf("accepted: %s", r.body)
+	}
+	ev := h.waitEvent("device-log", nil)
+	if ev["nodeName"] != "rd-phone-aaaa0001" || ev["deviceId"] == "" {
+		t.Fatalf("event identity: %v", ev)
+	}
+	got := ev["entries"].([]any)
+	first, second := got[0].(map[string]any), got[1].(map[string]any)
+	if first["at"] != "2026-11-12T00:00:01.5Z" || first["level"] != "warning" || first["message"] != "설치 시작" {
+		t.Fatalf("first entry: %v", first)
+	}
+	if second["level"] != "info" || len(second["source"].(string)) != 40 || len(second["message"].(string)) > host.MaxDeviceLogMessage {
+		t.Fatalf("second entry not cleaned: level=%v source=%d message=%d", second["level"], len(second["source"].(string)), len(second["message"].(string)))
+	}
+
+	many := make([]any, host.MaxDeviceLogEntries+1)
+	for i := range many {
+		many[i] = entry
+	}
+	expectStatus(t, h.post(peerA, "/v1/logs", map[string]any{"entries": many}), http.StatusBadRequest, "bad_request")
+	expectStatus(t, h.post(peerA, "/v1/logs", map[string]any{"entries": []any{}}), http.StatusBadRequest, "bad_request")
+	big := map[string]any{"entries": []any{map[string]any{"message": strings.Repeat("x", host.MaxDeviceLogBodyBytes)}}}
+	expectStatus(t, h.post(peerA, "/v1/logs", big), http.StatusBadRequest, "bad_request")
 }

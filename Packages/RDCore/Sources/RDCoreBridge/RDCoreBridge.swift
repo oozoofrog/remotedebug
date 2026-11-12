@@ -59,6 +59,15 @@ public struct RDNode: Sendable, Hashable {
         _ = try RDCall.consume(rd_host_unpublish(handle, buildID))
     }
 
+    /// `rd_host_publish_resource`. `resource`는 ResourceDescriptor 필드 + `path` JSON이다. `{"ok":true,"id":"r_…"}`.
+    public func publishResource(_ resource: Data) throws -> Data {
+        try RDCall.consume(rd_host_publish_resource(handle, RDCall.string(resource)))
+    }
+
+    public func unpublishResource(id: String) throws {
+        _ = try RDCall.consume(rd_host_unpublish_resource(handle, id))
+    }
+
     /// `rd_host_set_devices`. `devices`는 `{"devices":[DeviceEntry]}` JSON이다. 허용 목록 전체를 교체한다.
     public func setDevices(_ devices: Data) throws {
         _ = try RDCall.consume(rd_host_set_devices(handle, RDCall.string(devices)))
@@ -153,6 +162,14 @@ private final class EventWorker: @unchecked Sendable {
         cancelled = true
         lock.unlock()
         thread?.cancel()
+    }
+}
+
+/// iPhone 앱 자체 업데이트 페이지(`rd_update_page_set`, addenda I). 노드 핸들과 무관하다.
+public enum RDUpdatePage {
+    /// `config`는 `{"listen","publicURL","page"}` JSON. `{"ok":true,"addr":"127.0.0.1:P"}`를 돌려준다.
+    public static func set(_ config: Data) throws -> Data {
+        try RDCall.consume(rd_update_page_set(RDCall.string(config)))
     }
 }
 

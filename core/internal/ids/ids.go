@@ -85,6 +85,13 @@ func BuildID(bundleID, ipaSHA256 string) string {
 	return "b_" + hex.EncodeToString(sum[:])[:8]
 }
 
+// ResourceID derives a resource id from its file name and content hash
+// (protocol-addenda H).
+func ResourceID(name, sha256Hex string) string {
+	sum := sha256.Sum256([]byte("rd-resource\n" + name + "\n" + sha256Hex))
+	return "r_" + hex.EncodeToString(sum[:])[:8]
+}
+
 // HostID derives a stable host id from the node's StableID.
 func HostID(stableID string) string {
 	sum := sha256.Sum256([]byte("rd-host\n" + stableID))

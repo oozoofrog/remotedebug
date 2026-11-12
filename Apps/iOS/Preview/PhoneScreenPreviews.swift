@@ -70,7 +70,9 @@ enum PreviewFixtures {
             physFootprintMiB: 33.2
         ),
         disconnectMessage: nil,
-        controlURL: ""
+        controlURL: "",
+        appVersion: "0.1.0 (1)",
+        installedAt: Date(timeIntervalSince1970: 1_790_000_600)
     )
 
     static let settingsActions = SettingsActions(forgetHost: {}, saveControlURL: { _ in true })
@@ -176,6 +178,12 @@ private func screen(_ state: PhoneViewState) -> some View {
 #Preview("⑪ 다른 Mac 교체 확인") {
     var state = PreviewFixtures.paired(builds: [PreviewFixtures.buildA])
     state.pendingReplacementHost = "other-mac.example.ts.net"
+    return screen(state)
+}
+
+#Preview("⑪-1 다른 tailnet에 로그인") {
+    var state = PreviewFixtures.paired(builds: [PreviewFixtures.buildA])
+    state.nodeFQDN = "rd-phone-0a1b2c3d.other-tailnet.ts.net"
     return screen(state)
 }
 

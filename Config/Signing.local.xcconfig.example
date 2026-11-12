@@ -2,3 +2,5 @@
 // 팀 ID는 developer.apple.com > Account > Membership details의 Team ID(10자)다.
 // iPhone 앱과 터널 확장이 같은 팀으로 서명돼야 한다.
 DEVELOPMENT_TEAM = XXXXXXXXXX
+// 번들 ID 앞부분(선택). 다른 팀이면 그 팀이 쓸 수 있는 값으로 바꾼다. 예: dev.<팀 ID 소문자>
+// RD_BUNDLE_PREFIX = dev.xxxxxxxxxx

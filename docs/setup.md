@@ -47,14 +47,14 @@ ACL 태그는 선택 사항이다. `tag:rd-mac`, `tag:rd-phone`을 쓰면 iPhone
 | 대상 | 번들 ID | 서명 |
 | --- | --- | --- |
 | `RemoteDebugMac` | `com.oozoofrog.app.RemoteDebugMac` | 로컬 서명(`CODE_SIGN_IDENTITY = -`). 팀 ID가 필요 없다 |
-| `RemoteDebugPhone` | `com.oozoofrog.app.RemoteDebugPhone` | 자동 서명. Network Extension(Packet Tunnel) 권한 필요 |
-| `RemoteDebugTunnel` | `com.oozoofrog.app.RemoteDebugPhone.Tunnel` | 자동 서명. Network Extension(Packet Tunnel) 권한 필요 |
+| `RemoteDebugPhone` | `<앞부분>.RemoteDebugPhone` | 자동 서명. Network Extension(Packet Tunnel) 권한 필요 |
+| `RemoteDebugTunnel` | `<앞부분>.RemoteDebugPhone.Tunnel` | 자동 서명. Network Extension(Packet Tunnel) 권한 필요 |
+| `RemoteDebugWidgets` | `<앞부분>.RemoteDebugPhone.Widgets` | 자동 서명 |
 
-1. `Config/Signing.local.xcconfig.example`을 `Config/Signing.local.xcconfig`로 복사하고 `DEVELOPMENT_TEAM`에 10자 팀 ID를 넣는다. 팀 ID는 developer.apple.com의 Account > Membership details에 있다. 두 iPhone 대상이 같은 팀으로 서명돼야 한다.
-2. `com.oozoofrog.app.`로 시작하는 iPhone 번들 ID는 그 ID를 등록한 팀에서만 쓸 수 있다. 다른 팀으로 서명하면 아래 세 곳을 그 팀이 쓸 수 있는 ID로 함께 바꾼다.
-   - `Apps/iOS/project-ios.yml`에서 `RemoteDebugPhone` 대상의 `PRODUCT_BUNDLE_IDENTIFIER`
-   - 같은 파일에서 `RemoteDebugTunnel` 대상의 `PRODUCT_BUNDLE_IDENTIFIER`. 앱 ID 뒤에 `.Tunnel`을 붙인 형태로 둔다
-   - `Apps/iOS/Adapters/TunnelController.swift:20`의 `providerBundleIdentifier`. 터널 확장의 번들 ID와 같아야 한다
+앞부분은 `Config/Signing.xcconfig`의 `RD_BUNDLE_PREFIX`이고 기본값은 `com.oozoofrog`에 `.app`을 붙인 값이다. 터널 확장의 번들 ID는 앱이 실행 중에 자기 번들 ID에 `.Tunnel`을 붙여 찾으므로 코드는 고치지 않는다.
+
+1. `Config/Signing.local.xcconfig.example`을 `Config/Signing.local.xcconfig`로 복사하고 `DEVELOPMENT_TEAM`에 10자 팀 ID를 넣는다. 팀 ID는 developer.apple.com의 Account > Membership details에 있다. iPhone 대상들이 같은 팀으로 서명돼야 한다.
+2. 기본 앞부분의 번들 ID는 그 ID를 등록한 팀에서만 쓸 수 있다. 다른 팀으로 서명하면 같은 파일에 `RD_BUNDLE_PREFIX = dev.<팀 ID 소문자>`처럼 그 팀이 쓸 수 있는 앞부분을 넣는다. Mac 앱의 **iPhone 앱 설치…**는 이 값을 자동으로 정한다([Mac 앱으로 iPhone 앱 설치](#mac-앱으로-iphone-앱-설치)).
 3. `xcodegen generate --spec project.yml`로 프로젝트를 만든다.
 4. Xcode에서 `RemoteDebugPhone`과 `RemoteDebugTunnel`의 Signing & Capabilities를 차례로 연다. Network Extensions 항목에 Packet Tunnel이 있고 프로필 오류가 없으면 그 계정에서 쓸 수 있다. 번들 ID를 쓸 수 없다는 오류가 나오면 2단계를 다시 본다. 권한을 지원하지 않는다는 오류가 나오면 그 계정으로는 iPhone 앱을 만들 수 없다.
 
@@ -137,6 +137,8 @@ xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugPhone -destination 
 
 ## 첫 실행: Mac
 
+빌드 화면 위의 **시작하기** 목록이 남은 일을 순서대로 보여 준다: 이 Mac을 Tailscale에 연결 → 설치 주소 열기 → iPhone 연결 → 첫 빌드 게시. 지금 할 단계에는 그 단계의 버튼(공유 시작, 로그인 페이지, DNS 설정 페이지, iPhone 페어링, 빌드 가져오기)이 붙는다. 네 단계를 마치면 사라지고, **나중에**를 누르면 숨긴다. 실제 처음 실행 화면으로는 확인하지 않음.
+
 이 절차는 실행 중인 앱에서 손으로 해 보지 않았다. 화면 문구는 소스와 미리보기 스크린샷으로만 확인했다. 실제 tailnet 로그인(2단계)은 실제 tailnet에서 확인하지 않음. 인증서 발급(3단계)은 가짜 tailnet에서도 TLS를 끄고 시험해서 한 번도 실행되지 않았다. [실기기 확인 절차](device-test.md)의 D9, D2, D1, D12에서 확인한다.
 
 1. 앱을 열면 공유가 자동으로 시작된다. 멈췄다면 앱 왼쪽 아래의 **공유 시작**을 누른다.
@@ -165,7 +167,7 @@ xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugPhone -destination 
 **프로젝트** 화면 도구 막대의 **에이전트에 설치…**에서 Claude Code와 Codex를 각각 **설치**한다. 사용자 전체 설정에 두 가지가 들어가고, 어느 프로젝트에서든 에이전트가 RemoteDebug로 빌드·게시할 수 있다.
 
 - 스킬 `remotedebug`: `~/.claude/skills/remotedebug/SKILL.md`, `~/.codex/skills/remotedebug/SKILL.md`
-- MCP 서버 `remotedebug`: `claude mcp add --scope user`, `codex mcp add`로 등록한다. 서버는 앱 실행 파일을 `--mcp` 인자로 띄운 것이고, 도구는 `remotedebug_status`, `remotedebug_schemes`, `remotedebug_build`다.
+- MCP 서버 `remotedebug`: `claude mcp add --scope user`, `codex mcp add`로 등록한다. 서버는 앱 실행 파일을 `--mcp` 인자로 띄운 것이고, 도구는 `remotedebug_status`, `remotedebug_schemes`, `remotedebug_build`, `remotedebug_pairing_code`, `remotedebug_pair_requests`, `remotedebug_pair_decide`, `remotedebug_push_file`, `remotedebug_files`, `remotedebug_device_logs`다.
 
 `claude`나 `codex` 명령을 찾지 못하면 스킬만 설치하고 그렇게 알린다. 새로 여는 세션부터 적용된다. 같은 화면의 **제거**로 되돌린다. 앱을 다른 위치로 옮기면 **다시 설치**를 눌러 서버 경로를 고친다.
 
@@ -185,11 +187,39 @@ RD="$HOME/Library/Application Support/RemoteDebug/agent/rd"
 "$RD" build <프로젝트 폴더> [스킴]   # 연결하고 Debug 기기용으로 빌드해 게시
 "$RD" schemes <프로젝트 폴더>         # 스킴 목록
 "$RD" status                          # 공유 여부, 설치 페이지 주소, 연결한 프로젝트
+"$RD" push <파일>                     # 파일을 iPhone RemoteDebug 앱으로 보낸다
+"$RD" files                           # 보낸 파일 목록
 ```
 
 두 파일은 저장소에 새 변경으로 남는다. 커밋할지는 그 프로젝트에서 정한다.
 
 ## 첫 실행: iPhone
+
+### Mac 앱으로 iPhone 앱 설치
+
+Xcode에서 직접 실행하지 않아도 Mac 앱이 iPhone 앱을 빌드해 설치한다. **기기** 화면 도구 막대나 **시작하기** 목록의 **iPhone 앱 설치…**를 누른다. 실기기로는 확인하지 않음.
+
+1. iPhone을 케이블로 연결하고 잠금을 푼 뒤 '이 컴퓨터를 신뢰'를 허용한다. 처음 연결한 iPhone은 설정 > 개인정보 보호 및 보안 > 개발자 모드를 켠다.
+2. **소스**는 이 Mac 앱을 빌드한 저장소가 기본값이다(Mac 앱 Info.plist의 RDSourceRoot 값). 다른 위치면 **선택…**으로 `RemoteDebug.xcodeproj`가 있는 폴더를 고른다.
+3. **서명 팀**은 키체인의 Apple Development 인증서에서 찾는다. 없으면 Xcode > Settings > Accounts에서 계정을 추가한다. VPN 권한(Network Extension) 때문에 유료 Apple Developer Program 팀이어야 한다.
+4. **번들 ID 앞부분**은 저장소 설정(`Config/Signing.xcconfig`의 `RD_BUNDLE_PREFIX`, 로컬 서명 설정 파일이 덮어씀)의 팀과 같으면 그 값, 다른 팀이면 `dev.<팀 ID 소문자>`가 기본값이다. 앱·터널·위젯은 각각 `<앞부분>.RemoteDebugPhone`, `.Tunnel`, `.Widgets`가 된다.
+5. **설치**를 누르면 `xcodebuild -allowProvisioningUpdates -allowProvisioningDeviceRegistration`으로 그 iPhone을 팀에 등록하고 서명해 빌드한 뒤 `devicectl`로 설치하고 실행한다. 기록은 `~/Library/Application Support/RemoteDebug/ProjectLogs/PhoneApp.log`에 남는다. 빌드 결과는 Xcode의 빌드 위치 설정을 따른다.
+
+
+### Mac과 다른 계정으로 로그인했을 때
+
+iPhone 앱이 VPN에 연결된 뒤 이 iPhone 노드의 tailnet(MagicDNS 이름의 첫 라벨을 뺀 부분)이 페어링한(또는 페어링하려는) Mac의 tailnet과 다르면 "Mac과 다른 Tailscale 계정에 로그인됨"이 나온다. **다른 계정으로 로그인**을 누르면 이 iPhone에 저장된 Tailscale 로그인을 지우고 VPN을 다시 켠다. 로그인 페이지가 나오면 Mac과 같은 계정을 고른다. 이전 계정의 tailnet에는 이 iPhone 노드가 남으므로 필요하면 그 관리 콘솔에서 지운다. 실기기로는 확인하지 않음.
+
+### QR 한 번으로 연결(Tailscale OAuth 클라이언트)
+
+Mac 앱 **네트워크** 화면의 "iPhone 자동 연결"에 Tailscale OAuth 클라이언트를 넣으면 iPhone에서 Tailscale 로그인을 하지 않아도 된다. 실제 Tailscale API와 실기기로는 확인하지 않음.
+
+1. Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만든다([만드는 법](https://tailscale.com/kb/1215/oauth-clients)). 권한은 Auth Keys 쓰기(`auth_keys`)를 고르고 태그는 `tag:rd-phone`을 고른다. 태그가 목록에 없으면 정책 파일의 `tagOwners`에 `"tag:rd-phone": ["autogroup:admin"]`을 먼저 더한다. 기기 읽기 권한을 함께 주면 다음 단계에서 이 Mac이 같은 tailnet인지 확인한다.
+2. 클라이언트 ID와 비밀값(`tskey-client-…`, 만들 때 한 번만 보여 준다)을 Mac 앱 **네트워크** > "iPhone 자동 연결"에 넣고 **확인하고 저장**을 누른다.
+3. **기기** > **iPhone 페어링…**을 열면 QR 아래에 "이 QR에는 … Tailscale 키가 들어 있어"가 나온다. iPhone 카메라나 RemoteDebug 앱으로 QR을 찍으면 앱이 그 키로 VPN을 켜고 페어링을 요청한다. Mac에서 **허용**을 누르면 끝난다.
+
+키는 15분 동안 한 번만 쓸 수 있고 미리 승인된, `tag:rd-phone`이 붙은 키다. QR을 찍은 기기는 이 tailnet에 들어오므로 QR을 다른 사람에게 보여 주지 않는다. 그 iPhone 노드는 태그가 붙은 노드라서, 정책 파일이 `tag:rd-phone`에서 이 Mac의 443 포트로 가는 연결을 허용해야 한다([tailnet 정책(ACL)](#tailnet-정책acl)).
+
 
 이 절차는 실기기에서 확인하지 않음. 화면 문구는 시뮬레이터와 미리보기로만 봤다. iOS의 VPN 구성 추가 알림, 실제 로그인, iOS 설치 창, 설치된 앱 실행은 [실기기 확인 절차](device-test.md)의 U9, D9, D1에서 확인한다.
 
@@ -202,14 +232,35 @@ RD="$HOME/Library/Application Support/RemoteDebug/agent/rd"
 
 ### iPhone 앱 업데이트
 
-iPhone 앱은 Mac에 게시된 자기 자신의 새 빌드를 받아 스스로 업데이트한다. 실기기에서 확인하지 않음.
+RemoteDebug iPhone 앱은 설치하는 동안 자기 VPN이 꺼지므로, 자기 업데이트는 Mac의 공식 Tailscale로 받는다. 규칙은 [`protocol-addenda.md`](protocol-addenda.md)의 I.
 
-1. Mac 앱 **프로젝트** 화면에 이 저장소의 `RemoteDebug.xcodeproj`를 연결하고 스킴 `RemoteDebugPhone`으로 **빌드해서 게시**를 누른다. 에이전트는 `remotedebug_build` 도구로 같은 일을 한다.
-2. iPhone 앱을 열거나 빌드 목록을 새로고침한다. 앱이 iPhone에 설치된 시각보다 늦게 게시된 RemoteDebug 빌드가 있으면 "앱 업데이트" 칸에 "새 RemoteDebug 빌드"가 나온다.
-3. **업데이트**를 누르고 iOS 설치 창에서 **설치**를 누른다. 설치가 시작되면 앱이 닫히고 VPN이 꺼진다. 설치가 끝나면 앱을 다시 열고 VPN을 켠다.
+처음 한 번(Mac):
 
-- 새 빌드인지는 게시 시각과 설치 시각으로 가린다. Debug 빌드는 버전과 빌드 번호가 같기 때문이다. Mac과 iPhone의 시계가 어긋나 있으면 칸이 나오지 않거나 이미 설치한 빌드에 나올 수 있다.
-- 이 기능이 없는 예전 iPhone 앱에는 "앱 업데이트" 칸이 없다. 그때는 "빌드" 목록의 RemoteDebug에서 **설치**를 누른다.
+1. Mac에 공식 Tailscale 앱을 설치하고 로그인한다. iPhone의 공식 Tailscale도 같은 tailnet에 로그인한다.
+2. RemoteDebug Mac 앱 **네트워크** 화면의 "iPhone 앱 업데이트"에서 **공식 Tailscale로 열기**를 누른다. "열림"과 주소가 나온다.
+
+업데이트할 때마다:
+
+1. Mac에서 이 저장소의 `RemoteDebug.xcodeproj`를 스킴 `RemoteDebugPhone`으로 빌드해 게시한다(프로젝트 화면이나 `rd build`). 업데이트 페이지는 가장 최근 빌드를 자동으로 내준다.
+2. iPhone RemoteDebug 앱에서 빌드 목록을 새로고침한다. "앱 업데이트" 칸의 **업데이트**를 누르면 순서 안내가 열린다.
+3. 공식 Tailscale 앱을 연결하고(RemoteDebug VPN은 꺼진다) 안내 화면으로 돌아와 **업데이트 페이지 열기**를 누른다. Safari에서 **설치**, iOS 창에서 **설치**를 누른다.
+4. 설치가 끝나면 RemoteDebug를 열고 VPN을 다시 켠다. 설정 > "이 앱"의 버전으로 확인한다.
+
+- 새 빌드인지는 게시 시각과 지금 빌드를 처음 실행한 시각으로 가린다. Mac과 iPhone의 시계가 어긋나 있으면 칸이 나오지 않거나 이미 설치한 빌드에 나올 수 있다. 칸이 없어도 설정 > "이 앱" > **이 앱 업데이트하기**로 같은 안내를 연다.
+- 업데이트 페이지 주소는 Mac의 공식 Tailscale tailnet 안에서만 열린다. Mac 앱이 꺼져 있으면 페이지가 응답하지 않는다.
+- 이 기능이 없는 예전 iPhone 앱은 Mac 네트워크 화면의 주소를 직접 Safari로 열어(공식 Tailscale 연결 상태에서) 한 번 설치한다.
+
+### Mac에서 iPhone으로 파일 보내기
+
+이미지, JSON, DB, 설정 파일처럼 디버그 중인 앱에 넣을 파일을 Mac에서 iPhone으로 보낸다. 실기기에서 확인하지 않음.
+
+1. Mac 앱 사이드바의 **보낸 파일**에 파일을 끌어 놓거나 **파일 보내기…**로 고른다. 에이전트는 `remotedebug_push_file` 도구나 `rd push <파일>`을 쓴다. 이름이 같은 파일을 다시 보내면 바뀐다. 폴더는 압축해서 보낸다.
+2. iPhone 앱의 **파일** 탭을 당겨 새로고침하면 Mac이 보낸 파일이 나온다. 파일을 눌러 상세 화면에서 **받기**를 누른다. 앱을 닫아도 계속 받고, 진행은 잠금 화면과 Dynamic Island에 보인다.
+3. 상세 화면의 **다른 앱으로 보내기**로 디버그 중인 앱에 넘기거나, **파일 앱에서 보기**로 "나의 iPhone > RemoteDebug"를 연다.
+
+- 링크도 보낸다: **링크 보내기…**나 웹 주소 끌어 놓기, `rd link <주소> [이름]`. 웹 주소는 Safari로, `앱스킴://…` 딥 링크는 그 앱으로 열려 디버그 중인 앱의 특정 화면을 바로 열 때 쓴다.
+- Mac 앱이 공유 중이어야 iPhone이 받는다. 공유를 멈춘 동안 넣은 파일은 공유를 시작할 때 보낸다.
+- RemoteDebug 앱은 다른 앱의 샌드박스에 직접 파일을 넣을 수 없다. 받는 앱이 파일 열기(공유 시트, 문서 선택기)를 지원해야 한다.
 
 ## iPhone에서 앱 없이 설치(웹 페이지)
 

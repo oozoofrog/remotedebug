@@ -61,19 +61,59 @@ public struct AgentMCPServer: Sendable {
     public static let serverName = "remotedebug"
 
     let send: Send
+    /// iPhone 진단 로그 폴더(`DeviceLogs`). 앱을 거치지 않고 직접 읽는다.
+    let deviceLogsDir: URL?
 
-    public init(send: @escaping Send) {
+    public init(deviceLogsDir: URL? = nil, send: @escaping Send) {
         self.send = send
+        self.deviceLogsDir = deviceLogsDir
     }
 
+    /// `channel.agentDir`의 상위 폴더(앱 상태 폴더)의 `DeviceLogs`를 읽는다.
     public init(channel: AgentChannel) {
-        self.init { await channel.send(command: $0, path: $1, scheme: $2) }
+        self.init(deviceLogsDir: channel.agentDir.deletingLastPathComponent().appendingPathComponent("DeviceLogs", isDirectory: true)) {
+            await channel.send(command: $0, path: $1, scheme: $2)
+        }
     }
 
     static var tools: [[String: Any]] { [
         tool("remotedebug_status", "RemoteDebug Mac 앱의 상태: 공유 중인지, iPhone용 설치 페이지 주소, 연결한 프로젝트 목록.", path: false, scheme: false),
+        tool("remotedebug_pairing_code", "iPhone 페어링 코드를 새로 연다(5분). iPhone RemoteDebug 앱을 바로 여는 remotedebug:// 링크와 Safari용 설치 페이지 링크를 돌려준다. iPhone이 요청하면 허용은 Mac 화면에서 사용자가 누른다.", path: false, scheme: false),
+        tool("remotedebug_pair_requests", "Mac의 허용을 기다리는 iPhone 페어링 요청 목록(요청 id, iPhone이 보낸 이름, tailnet 노드 이름, 로그인, 만료 시각). 요청은 2분 뒤 만료된다.", path: false, scheme: false),
+        [
+            "name": "remotedebug_pair_decide",
+            "description": "페어링 요청을 허용하거나 거부한다. 허용한 기기는 이 Mac이 게시한 빌드를 설치할 수 있다. 사용자가 방금 그 iPhone에서 요청했다고 확인했고 노드 이름이 맞을 때만 허용한다.",
+            "inputSchema": ["type": "object", "properties": [
+                "request_id": ["type": "string", "description": "remotedebug_pair_requests가 돌려준 요청 id"],
+                "approve": ["type": "boolean", "description": "true면 허용, false면 거부"],
+            ] as [String: Any], "required": ["request_id", "approve"]] as [String: Any],
+        ],
+        [
+            "name": "remotedebug_push_file",
+            "description": "Mac의 파일을 페어링한 iPhone의 RemoteDebug 앱으로 보낸다(이미지, JSON, DB, 설정 파일 등). 같은 이름의 이전 파일은 바뀐다. 사용자가 iPhone 앱의 \"Mac에서 받은 파일\"에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다. sharing이 false면 공유를 시작해야 iPhone이 받을 수 있다.",
+            "inputSchema": ["type": "object", "properties": [
+                "file_path": ["type": "string", "description": "보낼 파일의 절대 경로(폴더는 압축해서 보낸다, 최대 4GB)"],
+            ] as [String: Any], "required": ["file_path"]] as [String: Any],
+        ],
+        [
+            "name": "remotedebug_push_link",
+            "description": "링크를 페어링한 iPhone의 RemoteDebug 앱으로 보낸다. 웹 주소(https://…)나 디버그 중인 앱의 딥 링크(앱스킴://…)를 보내면 사용자가 iPhone에서 눌러 연다. 같은 주소를 다시 보내면 이름이 바뀐다.",
+            "inputSchema": ["type": "object", "properties": [
+                "url": ["type": "string", "description": "스킴이 있는 절대 주소(8KB 이하)"],
+                "title": ["type": "string", "description": "iPhone 목록에 보일 이름(선택). 비우면 주소에서 만든다"],
+            ] as [String: Any], "required": ["url"]] as [String: Any],
+        ],
+        tool("remotedebug_files", "iPhone으로 보낸 파일·링크 목록(id, 이름, 크기, SHA-256, 보낸 시각, 링크면 link).", path: false, scheme: false),
         tool("remotedebug_schemes", "Xcode 프로젝트를 RemoteDebug에 연결하고 스킴 목록을 돌려준다.", path: true, scheme: false),
         tool("remotedebug_build", "Xcode 프로젝트를 Debug 기기용으로 빌드해 iPhone이 설치할 수 있게 게시한다. 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 설치는 사용자가 iPhone에서 누른다.", path: true, scheme: true),
+        [
+            "name": "remotedebug_device_logs",
+            "description": "페어링한 iPhone의 RemoteDebug 앱이 Mac에 보낸 진단 로그(앱 시작, VPN, 페어링, 빌드 목록, 설치·업데이트 진행). 기기마다 최근 줄을 돌려준다.",
+            "inputSchema": ["type": "object", "properties": [
+                "lines": ["type": "integer", "description": "기기마다 돌려줄 최근 줄 수(기본 200, 최대 2000)"],
+                "contains": ["type": "string", "description": "이 글자가 들어간 줄만(대소문자 무시)"],
+            ] as [String: Any], "required": [String]()] as [String: Any],
+        ],
     ] }
 
     static func tool(_ name: String, _ description: String, path: Bool, scheme: Bool) -> [String: Any] {
@@ -111,7 +151,39 @@ public struct AgentMCPServer: Sendable {
         case "tools/call":
             let name = params["name"] as? String ?? ""
             let arguments = params["arguments"] as? [String: Any] ?? [:]
-            let commands = ["remotedebug_status": "status", "remotedebug_schemes": "schemes", "remotedebug_build": "build"]
+            if name == "remotedebug_device_logs" {
+                guard let deviceLogsDir else {
+                    return result(["content": [["type": "text", "text": "로그 폴더를 알 수 없습니다."]], "isError": true])
+                }
+                let lines = min(2000, max(1, arguments["lines"] as? Int ?? 200))
+                let text = DeviceLogStore.recentText(directory: deviceLogsDir, limit: lines, contains: arguments["contains"] as? String ?? "")
+                return result(["content": [["type": "text", "text": text]], "isError": false])
+            }
+            if name == "remotedebug_pair_decide" {
+                guard let request = arguments["request_id"] as? String, !request.isEmpty, let approve = arguments["approve"] as? Bool else {
+                    return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "request_id와 approve가 필요합니다."]])
+                }
+                let data = await send(approve ? "approve" : "deny", request, "")
+                let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
+                return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
+            }
+            if name == "remotedebug_push_file" {
+                guard let file = arguments["file_path"] as? String, file.hasPrefix("/") else {
+                    return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "file_path에 절대 경로가 필요합니다."]])
+                }
+                let data = await send("push", file, "")
+                let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
+                return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
+            }
+            if name == "remotedebug_push_link" {
+                guard let url = arguments["url"] as? String, !url.isEmpty else {
+                    return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "url이 필요합니다."]])
+                }
+                let data = await send("link", url, (arguments["title"] as? String ?? "").replacingOccurrences(of: "\n", with: " "))
+                let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
+                return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
+            }
+            let commands = ["remotedebug_files": "files", "remotedebug_status": "status", "remotedebug_pairing_code": "pair", "remotedebug_pair_requests": "requests", "remotedebug_schemes": "schemes", "remotedebug_build": "build"]
             guard let command = commands[name] else {
                 return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "Unknown tool: \(name)"]])
             }
@@ -251,12 +323,12 @@ extension AgentScript {
         return """
         ---
         name: remotedebug
-        description: 지금 작업 중인 Xcode 프로젝트의 Debug 빌드를 실제 iPhone에 설치할 수 있게 RemoteDebug Mac 앱으로 빌드·게시한다. "아이폰에 설치", "기기에서 확인", "실기기 빌드", "RemoteDebug로 올려줘" 같은 요청에 사용한다.
+        description: 지금 작업 중인 Xcode 프로젝트의 Debug 빌드를 실제 iPhone에 설치할 수 있게 RemoteDebug Mac 앱으로 빌드·게시한다. "아이폰에 설치", "기기에서 확인", "실기기 빌드", "RemoteDebug로 올려줘" 같은 요청에 사용한다. Mac의 파일(이미지, JSON, DB, 설정 파일)을 iPhone으로 보낼 때("아이폰으로 파일 보내줘")도 쓴다.
         ---
 
         # RemoteDebug
 
-        RemoteDebug Mac 앱이 Xcode 프로젝트를 Debug 기기용으로 빌드해 tailnet 너머의 iPhone에 게시한다.
+        RemoteDebug Mac 앱이 Xcode 프로젝트를 Debug 기기용으로 빌드해 tailnet 너머의 iPhone에 게시한다. 파일도 iPhone RemoteDebug 앱으로 보낸다.
 
         ## 쓰는 법
 
@@ -264,6 +336,12 @@ extension AgentScript {
 
         - `remotedebug_build`: `project_path`(프로젝트 폴더의 절대 경로), `scheme`(선택)
         - `remotedebug_schemes`: `project_path`
+        - `remotedebug_pairing_code`: iPhone 페어링 코드와 링크.
+        - `remotedebug_pair_requests`, `remotedebug_pair_decide`: 허용을 기다리는 요청을 보고 답한다. 사용자가 방금 요청했다고 말했고 노드 이름이 `rd-phone-…`처럼 맞을 때만 허용한다.
+        - `remotedebug_device_logs`: iPhone 앱이 보낸 진단 로그. iPhone에서 설치·업데이트·연결이 안 될 때 먼저 본다.
+        - `remotedebug_push_file`: `file_path`(절대 경로)의 파일을 iPhone RemoteDebug 앱으로 보낸다. 같은 이름의 이전 파일은 바뀐다. 사용자는 iPhone 앱의 "Mac에서 받은 파일"에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다.
+        - `remotedebug_push_link`: `url`(https://… 또는 앱스킴://… 딥 링크), `title`(선택)을 iPhone으로 보낸다. 사용자가 iPhone 파일 탭의 링크를 눌러 Safari나 디버그 중인 앱으로 연다.
+        - `remotedebug_files`: 보낸 파일·링크 목록.
         - `remotedebug_status`
 
         도구가 보이지 않으면 같은 일을 하는 명령을 쓴다. JSON 한 줄을 출력하고 성공하면 종료 코드 0이다.
@@ -272,6 +350,10 @@ extension AgentScript {
         \(rd) build <프로젝트 폴더> [스킴]
         \(rd) schemes <프로젝트 폴더>
         \(rd) status
+        \(rd) push <파일>
+        \(rd) link <주소> [이름]
+        \(rd) files
+        \(rd) unpush <파일 id>
         ```
 
         ## 결과 읽기

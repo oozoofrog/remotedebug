@@ -11,6 +11,23 @@ import Testing
         #expect(link.code.display == "K7M2-9QXD")
     }
 
+    @Test func readsOptionalAuthKey() throws {
+        let link = try #require(PairingLink(url: URL(string: "remotedebug://pair?host=\(hostFQDN)&code=K7M29QXD&key=tskey-auth-kAbc123CNTRL-xyz789")!))
+        #expect(link.authKey == "tskey-auth-kAbc123CNTRL-xyz789")
+        #expect(link.url.absoluteString.hasSuffix("&key=tskey-auth-kAbc123CNTRL-xyz789"))
+        #expect(!link.description.contains("tskey"))
+        #expect(PairingLink(url: URL(string: "remotedebug://pair?host=\(hostFQDN)&code=K7M29QXD")!)?.authKey == nil)
+        #expect(throws: PairingLinkError.invalidAuthKey) {
+            try PairingLink.parse(text: "remotedebug://pair?host=\(hostFQDN)&code=K7M29QXD&key=tskey-api-secret")
+        }
+        #expect(throws: PairingLinkError.invalidAuthKey) {
+            try PairingLink.parse(text: "remotedebug://pair?host=\(hostFQDN)&code=K7M29QXD&key=tskey-auth-a%20b")
+        }
+        #expect(throws: PairingLinkError.notPairingLink) {
+            try PairingLink.parse(text: "remotedebug://pair?host=\(hostFQDN)&code=K7M29QXD&key=tskey-auth-a&key=tskey-auth-b")
+        }
+    }
+
     @Test func ignoresHyphensCaseAndWhitespace() throws {
         let link = try #require(PairingLink(text: "  remotedebug://pair?host=RD-MAC-AB12CD34.Example-Tailnet.TS.NET.&code=k7m2-9qxd\n"))
         #expect(link.host == hostFQDN)

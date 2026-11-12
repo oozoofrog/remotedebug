@@ -9,20 +9,23 @@ public struct InfoResponse: Codable, Sendable, Hashable {
     public var protocolVersion: Int
     public var appVersion: String
     public var buildCount: Int
+    /// 공식 Tailscale로 여는 iPhone 앱 업데이트 페이지(addenda I). Mac이 열지 않았으면 없다.
+    public var updatePage: String?
 
-    public init(hostId: String, hostName: String, fqdn: String, protocolVersion: Int, appVersion: String, buildCount: Int) {
+    public init(hostId: String, hostName: String, fqdn: String, protocolVersion: Int, appVersion: String, buildCount: Int, updatePage: String? = nil) {
         self.hostId = hostId
         self.hostName = hostName
         self.fqdn = fqdn
         self.protocolVersion = protocolVersion
         self.appVersion = appVersion
         self.buildCount = buildCount
+        self.updatePage = updatePage
     }
 
     enum CodingKeys: String, CodingKey {
         case hostId, hostName, fqdn
         case protocolVersion = "protocol"
-        case appVersion, buildCount
+        case appVersion, buildCount, updatePage
     }
 }
 

@@ -44,6 +44,15 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         }
         // 인증 키는 이 시작에만 쓰고 보관하지 않는다.
         let authKey = TunnelStartOptions.authKey(from: options) ?? ""
+        if TunnelStartOptions.resetsLogin(options) {
+            do {
+                let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+                try TunnelStorage.resetStateDirectory(in: support)
+                logger.log("저장된 Tailscale 로그인을 지웠습니다")
+            } catch {
+                logger.error("Tailscale 로그인을 지우지 못했습니다: \(error.localizedDescription, privacy: .public)")
+            }
+        }
         Task {
             do {
                 try await start(config: config, authKey: authKey, generation: generation)

@@ -1,4 +1,3 @@
-import ImageIO
 import MacHostKit
 import SwiftUI
 
@@ -42,16 +41,19 @@ extension View {
 struct BuildIcon: View {
     let name: String
     let seed: String
+    /// 빌드 정보에 담긴 아이콘. 없으면 원본 `.app`에서 읽는다(아이콘을 담기 전에 게시한 빌드).
+    var icon: Data?
     let sourcePath: String
     var size: CGFloat = 46
 
-    @State private var icon: CGImage?
+    @State private var image: CGImage?
+    private var embedded: Data? { icon }
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: size * 0.24, style: .continuous)
         Group {
-            if let icon {
-                Image(decorative: icon, scale: 1)
+            if let image {
+                Image(decorative: image, scale: 1)
                     .resizable()
                     .interpolation(.high)
                     .frame(width: size, height: size)
@@ -63,37 +65,11 @@ struct BuildIcon: View {
             }
         }
         .task(id: sourcePath) {
-            let path = sourcePath
-            icon = await Task.detached(priority: .utility) { AppIconFile.load(appPath: path) }.value
+            let path = sourcePath, data = embedded
+            image = await Task.detached(priority: .utility) {
+                data.flatMap(AppIconFile.decode) ?? AppIconFile.load(appPath: path)
+            }.value
         }
-    }
-}
-
-/// iOS 앱 번들 안의 기본 아이콘 PNG.
-enum AppIconFile {
-    /// `Info.plist`의 `CFBundleIcons > CFBundlePrimaryIcon > CFBundleIconFiles`가 가리키는 PNG 가운데 가장 큰 것.
-    static func load(appPath: String) -> CGImage? {
-        let app = URL(fileURLWithPath: appPath)
-        guard app.pathExtension.lowercased() == "app",
-              let data = try? Data(contentsOf: app.appendingPathComponent("Info.plist")),
-              let plist = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
-              let icons = plist["CFBundleIcons"] as? [String: Any],
-              let primary = icons["CFBundlePrimaryIcon"] as? [String: Any],
-              let names = primary["CFBundleIconFiles"] as? [String],
-              let files = try? FileManager.default.contentsOfDirectory(atPath: appPath)
-        else { return nil }
-        // 번들 폴더에 실제로 있는 파일 이름만 쓴다(plist의 이름을 경로로 쓰지 않는다).
-        let candidates = files.filter { file in
-            file.lowercased().hasSuffix(".png") && names.contains { !$0.isEmpty && file.hasPrefix($0) }
-        }
-        var best: CGImage?
-        for file in candidates {
-            guard let source = CGImageSourceCreateWithURL(app.appendingPathComponent(file) as CFURL, nil),
-                  let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
-            else { continue }
-            if image.width > (best?.width ?? 0) { best = image }
-        }
-        return best
     }
 }
 

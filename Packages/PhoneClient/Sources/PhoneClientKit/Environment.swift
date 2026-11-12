@@ -16,6 +16,23 @@ public enum TunnelState: Equatable, Sendable {
     /// tailnet 로그인이 필요하다. `authURL`을 열어 로그인한다.
     case needsLogin(authURL: URL?)
     case failed(message: String)
+
+    var isFailure: Bool {
+        if case .failed = self { return true }
+        return false
+    }
+
+    /// 로그에 남기는 짧은 설명.
+    var logText: String {
+        switch self {
+        case .off: "꺼짐"
+        case .connecting: "연결 중"
+        case .disconnecting: "끄는 중"
+        case .connected: "연결됨"
+        case .needsLogin: "로그인 필요"
+        case .failed(let message): "실패(\(message))"
+        }
+    }
 }
 
 /// VPN 관리. 앱은 `NETunnelProviderManager`로 구현한다.

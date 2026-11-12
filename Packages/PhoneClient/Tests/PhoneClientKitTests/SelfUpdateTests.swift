@@ -35,6 +35,20 @@ import Testing
         #expect(SelfUpdate.candidate(in: builds, bundleID: "app.self", installedAt: installedAt)?.id == "b_3")
     }
 
+    @Test func installDateIsFirstLaunchOfThisBuild() throws {
+        let suite = "selfupdate-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let first = Date(timeIntervalSince1970: 1_800_000_000)
+        #expect(SelfUpdate.installDate(of: .main, defaults: defaults, now: first) == first)
+        // 같은 빌드를 다시 실행하면 처음 시각을 그대로 쓴다.
+        #expect(SelfUpdate.installDate(of: .main, defaults: defaults, now: first.addingTimeInterval(600)) == first)
+        // 다른 빌드가 설치되면(지문이 다르면) 새로 저장한다.
+        defaults.set("other", forKey: SelfUpdate.fingerprintKey)
+        let later = first.addingTimeInterval(3600)
+        #expect(SelfUpdate.installDate(of: .main, defaults: defaults, now: later) == later)
+    }
+
     @Test func nothingWithoutIdentityOrInstallDate() throws {
         let newer = try build("b_new", bundleID: "app.self", publishedAfterInstall: 60)
         #expect(SelfUpdate.candidate(in: [newer], bundleID: nil, installedAt: installedAt) == nil)

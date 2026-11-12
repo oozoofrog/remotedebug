@@ -1,6 +1,7 @@
 package host
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -149,6 +150,9 @@ func (h *Host) Publish(req PublishRequest) (string, error) {
 	}
 	if d.BundleID == "" {
 		return "", apierr.BadRequest("bundleId가 필요합니다.")
+	}
+	if len(d.Icon) > 0 && (len(d.Icon) > MaxIconBytes || !bytes.HasPrefix(d.Icon, pngSignature)) {
+		return "", apierr.BadRequest("icon은 64KiB 이하의 PNG여야 합니다.")
 	}
 	src, err := h.resolveIPA(req.IPAPath)
 	if err != nil {

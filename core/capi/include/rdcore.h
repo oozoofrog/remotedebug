@@ -23,6 +23,15 @@ char *rd_stop(int64_t handle);
 char *rd_host_publish(int64_t handle, const char *build_json);
 /* Returns {"ok":true}. */
 char *rd_host_unpublish(int64_t handle, const char *build_id);
+/* Shares a file with paired devices (protocol-addenda H): {"name","size","sha256","path"}.
+ * Returns {"ok":true,"id":"r_…"}. */
+char *rd_host_publish_resource(int64_t handle, const char *resource_json);
+/* Returns {"ok":true}. */
+char *rd_host_unpublish_resource(int64_t handle, const char *resource_id);
+/* Starts, updates or stops (empty "listen") the loopback update page for the
+ * iPhone app itself (protocol-addenda I). Not tied to a handle.
+ * Returns {"ok":true,"addr":"127.0.0.1:P"}. */
+char *rd_update_page_set(const char *config_json);
 /* Replaces the allow-list with {"devices":[DeviceEntry]}. Returns {"ok":true}. */
 char *rd_host_set_devices(int64_t handle, const char *devices_json);
 /* Opens a pairing code; ttl_seconds <= 0 means 300. Returns {"code":"…","expiresAt":"…"}. */

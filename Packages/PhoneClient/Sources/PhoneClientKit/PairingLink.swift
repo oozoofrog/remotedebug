@@ -139,6 +139,8 @@ public enum PairingLinkError: Error, Equatable, Sendable {
     case invalidCodeCharacters
     /// 호스트가 정책(`.ts.net` 이름)을 통과하지 못했다.
     case hostNotAllowed
+    /// 함께 온 Tailscale 키의 모양이 틀렸다.
+    case invalidAuthKey
 
     public var userMessage: String {
         switch self {
@@ -147,6 +149,7 @@ public enum PairingLinkError: Error, Equatable, Sendable {
         case .invalidCodeLength: "페어링 코드는 8자입니다. Mac에 표시된 코드를 다시 확인하세요."
         case .invalidCodeCharacters: "페어링 코드에 쓰지 않는 글자가 들어 있습니다. Mac에 표시된 코드를 다시 확인하세요."
         case .hostNotAllowed: "Mac 주소는 .ts.net으로 끝나는 이름이어야 합니다. Mac에 표시된 링크나 주소를 사용하세요."
+        case .invalidAuthKey: "링크의 Tailscale 키가 올바르지 않습니다. Mac에서 새 QR 코드를 여세요."
         }
     }
 }
@@ -155,12 +158,26 @@ public enum PairingLinkError: Error, Equatable, Sendable {
 public struct PairingLink: Hashable, Sendable {
     public let host: String
     public let code: PairingCode
+    /// Mac이 함께 넣은 1회용 Tailscale 인증 키(`tskey-auth-…`). 있으면 로그인 없이 VPN을 켠다. 로그에 남기지 않는다.
+    public let authKey: String?
 
-    public init(host: String, code: String, policy: HostPolicy = .tailnetOnly) throws(PairingLinkError) {
+    public init(host: String, code: String, authKey: String? = nil, policy: HostPolicy = .tailnetOnly) throws(PairingLinkError) {
         guard !host.trimmingCharacters(in: .whitespaces).isEmpty else { throw .missingHost }
         guard let validHost = policy.validatedHost(host) else { throw .hostNotAllowed }
         self.code = try PairingCode.parse(code)
         self.host = validHost
+        if let authKey {
+            guard Self.isAuthKey(authKey) else { throw .invalidAuthKey }
+            self.authKey = authKey
+        } else {
+            self.authKey = nil
+        }
+    }
+
+    /// Tailscale 인증 키 모양: `tskey-auth-`로 시작하고 영문·숫자·하이픈만, 200자 이하.
+    public static func isAuthKey(_ text: String) -> Bool {
+        text.hasPrefix("tskey-auth-") && text.count <= 200
+            && text.unicodeScalars.allSatisfy { ("a"..."z").contains($0) || ("A"..."Z").contains($0) || ("0"..."9").contains($0) || $0 == "-" }
     }
 
     public static func parse(url: URL, policy: HostPolicy = .tailnetOnly) throws(PairingLinkError) -> PairingLink {
@@ -173,10 +190,11 @@ public struct PairingLink: Hashable, Sendable {
         let items = comps.queryItems ?? []
         let hosts = items.filter { $0.name == "host" }
         let codes = items.filter { $0.name == "code" }
-        guard hosts.count <= 1, codes.count <= 1 else { throw .notPairingLink }
+        let keys = items.filter { $0.name == "key" }
+        guard hosts.count <= 1, codes.count <= 1, keys.count <= 1 else { throw .notPairingLink }
         guard let host = hosts.first?.value, !host.isEmpty else { throw .missingHost }
         guard let code = codes.first?.value else { throw .invalidCodeLength }
-        return try PairingLink(host: host, code: code, policy: policy)
+        return try PairingLink(host: host, code: code, authKey: keys.first?.value, policy: policy)
     }
 
     public static func parse(text: String, policy: HostPolicy = .tailnetOnly) throws(PairingLinkError) -> PairingLink {
@@ -201,12 +219,13 @@ public struct PairingLink: Hashable, Sendable {
         comps.scheme = "remotedebug"
         comps.host = "pair"
         comps.queryItems = [URLQueryItem(name: "host", value: host), URLQueryItem(name: "code", value: code.normalized)]
+        if let authKey { comps.queryItems?.append(URLQueryItem(name: "key", value: authKey)) }
         return comps.url!
     }
 }
 
 extension PairingLink: CustomStringConvertible, CustomDebugStringConvertible {
     /// 코드를 가린 표현.
-    public var description: String { "remotedebug://pair?host=\(host)&code=••••" }
+    public var description: String { "remotedebug://pair?host=\(host)&code=••••" + (authKey == nil ? "" : "&key=••••") }
     public var debugDescription: String { description }
 }

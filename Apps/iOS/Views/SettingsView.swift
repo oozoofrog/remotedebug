@@ -24,7 +24,9 @@ struct SettingsView: View {
             Form {
                 macSection
                 diagnosticsSection
+                logSection
                 advancedSection
+                appSection
             }
             .navigationTitle("설정")
             .navigationBarTitleDisplayMode(.inline)
@@ -66,6 +68,60 @@ struct SettingsView: View {
             } else {
                 Text("페어링한 Mac이 없습니다.")
                     .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: 진단 로그
+
+    private var logSection: some View {
+        Section {
+            LabeledContent("보내지 않은 줄", value: "\(state.unsentLogCount)")
+            if let sent = state.logsSentAt {
+                LabeledContent("마지막으로 보냄", value: sent.formatted(date: .omitted, time: .standard))
+            }
+            if let error = state.logSendError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+            Button {
+                Task { await actions.sendLogs() }
+            } label: {
+                HStack {
+                    Text("Mac에 지금 보내기")
+                    if state.isSendingLogs {
+                        Spacer()
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(!state.canSendLogs || state.isSendingLogs)
+            NavigationLink("최근 로그 \(state.recentLogs.count)줄") {
+                LogListView(entries: state.recentLogs)
+            }
+            .disabled(state.recentLogs.isEmpty)
+        } header: {
+            Text("진단 로그")
+        } footer: {
+            Text(state.canSendLogs
+                 ? "빌드 목록을 받을 때마다 자동으로 보냅니다. Mac 앱의 로그 화면에서 볼 수 있습니다."
+                 : "VPN이 연결되고 Mac과 페어링되어 있어야 보낼 수 있습니다. 그 전까지는 이 iPhone에 남겨 둡니다.")
+        }
+    }
+
+    // MARK: 이 앱
+
+    private var appSection: some View {
+        Section("이 앱") {
+            LabeledContent("버전", value: state.appVersion)
+            LabeledContent("처음 실행", value: state.installedAt?.formatted(date: .abbreviated, time: .standard) ?? "알 수 없음")
+            if let host = state.host {
+                NavigationLink {
+                    SelfUpdateGuide(pageURL: host.updatePage, open: actions.openInstallPage)
+                } label: {
+                    Label("이 앱 업데이트하기", systemImage: "arrow.down.app")
+                }
             }
         }
     }
@@ -166,5 +222,35 @@ struct SettingsView: View {
         case .stopping: "멈추는 중"
         case .failed: "실패"
         }
+    }
+}
+
+/// 이 iPhone에 남은 최근 로그(새 것부터).
+struct LogListView: View {
+    let entries: [DeviceLogEntry]
+
+    var body: some View {
+        List(entries.reversed()) { entry in
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(entry.at.formatted(date: .omitted, time: .standard))
+                        .monospacedDigit()
+                    Text(entry.source)
+                        .fontWeight(.semibold)
+                    if entry.level == .warning || entry.level == .error {
+                        Image(systemName: entry.level == .error ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(entry.level == .error ? .red : .orange)
+                            .accessibilityLabel(entry.level == .error ? "오류" : "경고")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                Text(entry.message)
+                    .font(.footnote)
+                    .textSelection(.enabled)
+            }
+        }
+        .navigationTitle("최근 로그")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

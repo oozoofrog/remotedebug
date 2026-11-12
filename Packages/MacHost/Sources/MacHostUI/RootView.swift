@@ -5,7 +5,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case builds, projects, devices, network, activity
+    case builds, projects, files, devices, network, activity, logs
 
     public var id: String { rawValue }
 
@@ -13,9 +13,11 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable 
         switch self {
         case .builds: "빌드"
         case .projects: "프로젝트"
+        case .files: "보낸 파일"
         case .devices: "기기"
         case .network: "네트워크"
         case .activity: "활동"
+        case .logs: "iPhone 로그"
         }
     }
 
@@ -23,9 +25,11 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable 
         switch self {
         case .builds: "shippingbox"
         case .projects: "hammer"
+        case .files: "doc.on.doc"
         case .devices: "iphone"
         case .network: "network"
         case .activity: "list.bullet.rectangle"
+        case .logs: "doc.text.magnifyingglass"
         }
     }
 }
@@ -51,6 +55,8 @@ public struct RootView: View {
     @State private var selection: SidebarItem
     @State private var showingImporter = false
     @State private var showingPairing = false
+    @State private var showingPhoneInstall = false
+    @Environment(PhoneAppInstaller.self) private var phoneInstaller: PhoneAppInstaller?
     @State private var importQueue: ImportQueue
     @State private var authKey = AuthKeyDraft()
     @State private var seenRequests: [PairRequestEvent] = []
@@ -123,6 +129,11 @@ public struct RootView: View {
         .sheet(isPresented: $showingPairing) {
             PairingSheet()
         }
+        .sheet(isPresented: $showingPhoneInstall) {
+            if let phoneInstaller {
+                PhoneAppInstallSheet().environment(phoneInstaller)
+            }
+        }
         .task(id: model.pairRequests.map(\.requestId)) {
             noteNewRequests()
             // 120초 대기 시간이 지나면 요청과 알림을 내린다.
@@ -135,6 +146,7 @@ public struct RootView: View {
         .environment(importQueue)
         .environment(authKey)
         .environment(\.showPairing, PairingPresenter { showingPairing = true })
+        .environment(\.showPhoneInstall, phoneInstaller.map { _ in PhoneAppInstallPresenter { showingPhoneInstall = true } })
         .environment(\.showNetwork, NetworkPresenter { selection = .network })
         .environment(\.connectProjects, ProjectConnector { urls in
             guard let projects else { return }
@@ -160,9 +172,11 @@ public struct RootView: View {
             } else {
                 ContentUnavailableView("프로젝트를 쓸 수 없습니다", systemImage: "hammer")
             }
+        case .files: FilesView()
         case .devices: DevicesView()
         case .network: NetworkView()
         case .activity: ActivityView()
+        case .logs: DeviceLogsView()
         }
     }
 
@@ -220,6 +234,8 @@ struct ProjectConnector {
 extension EnvironmentValues {
     @Entry var connectProjects = ProjectConnector { _ in }
     @Entry var showPairing = PairingPresenter {}
+    /// iPhone 앱 설치 창. 설치기가 없으면(테스트 호스트·미리보기) nil.
+    @Entry var showPhoneInstall: PhoneAppInstallPresenter? = nil
     @Entry var showNetwork = NetworkPresenter {}
 }
 

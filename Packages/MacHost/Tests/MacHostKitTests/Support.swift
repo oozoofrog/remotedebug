@@ -157,6 +157,8 @@ final class FakeHostCore: HostCore {
         var appliedDevices: [[DeviceEntry]] = []
         /// 코어가 들고 있는 게시본 id.
         var publishedIDs: Set<String> = []
+        /// 코어가 들고 있는 공유 파일.
+        var resources: [String: ResourcePublishRequest] = [:]
         /// 코어가 아는 페어링 요청(pending).
         var pendingRequests: Set<String> = []
         /// `stop` 때 스트림을 끝내기 전에 보낼 이벤트(rd_stop의 세션 failed 등).
@@ -197,7 +199,10 @@ final class FakeHostCore: HostCore {
     func stop() async {
         record(.stop)
         let (continuation, events) = state.withLock { s in
-            defer { s.publishedIDs = [] }
+            defer {
+                s.publishedIDs = []
+                s.resources = [:]
+            }
             return (s.continuation, s.stopEvents)
         }
         for e in events { continuation?.yield(e) }
@@ -221,6 +226,17 @@ final class FakeHostCore: HostCore {
         let held = state.withLock { $0.publishedIDs.remove(buildID) != nil }
         if !held { throw APIErrorBody(code: "build_not_found", message: "빌드가 없습니다.") }
     }
+
+    func publishResource(_ request: ResourcePublishRequest) async throws {
+        state.withLock { $0.resources[request.resource.id] = request }
+    }
+
+    func unpublishResource(id: String) async throws {
+        let held = state.withLock { $0.resources.removeValue(forKey: id) != nil }
+        if !held { throw APIErrorBody(code: "resource_not_found", message: "파일이 없습니다.") }
+    }
+
+    var coreResources: [String: ResourcePublishRequest] { state.withLock { $0.resources } }
 
     func setDevices(_ devices: [DeviceEntry]) async throws {
         record(.setDevices(devices))

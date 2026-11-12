@@ -60,11 +60,21 @@ struct TunnelProviderConfig: Codable, Equatable, Sendable {
 /// `startVPNTunnel(options:)`의 키. 확장은 처음 로그인에만 쓰고 보관하지 않는다.
 enum TunnelStartOptions {
     static let authKey = "authKey"
+    /// 저장된 Tailscale 로그인을 지우고 새로 로그인한다(다른 계정·tailnet으로 바꿀 때).
+    static let resetLogin = "resetLogin"
 
-    /// 인증 키가 있으면 옵션 사전을, 없으면 `nil`.
-    static func options(authKey: String?) -> [String: NSObject]? {
-        guard let key = authKey?.trimmingCharacters(in: .whitespacesAndNewlines), !key.isEmpty else { return nil }
-        return [Self.authKey: key as NSString]
+    /// 인증 키나 로그인 초기화가 있으면 옵션 사전을, 없으면 `nil`.
+    static func options(authKey: String?, resetLogin: Bool = false) -> [String: NSObject]? {
+        var options: [String: NSObject] = [:]
+        if let key = authKey?.trimmingCharacters(in: .whitespacesAndNewlines), !key.isEmpty {
+            options[Self.authKey] = key as NSString
+        }
+        if resetLogin { options[Self.resetLogin] = NSNumber(value: true) }
+        return options.isEmpty ? nil : options
+    }
+
+    static func resetsLogin(_ options: [String: NSObject]?) -> Bool {
+        (options?[Self.resetLogin] as? NSNumber)?.boolValue ?? false
     }
 
     static func authKey(from options: [String: NSObject]?) -> String? {

@@ -24,7 +24,11 @@ struct PhoneScreen: View {
                 }
 
                 if let update = state.selfUpdate {
-                    SelfUpdateSection(build: update, install: state.installs[update.id], actions: actions)
+                    SelfUpdateSection(build: update, install: state.installs[update.id], actions: actions, updatePage: state.host?.updatePage)
+                }
+
+                if let mismatch = state.tailnetMismatch {
+                    TailnetMismatchSection(phone: mismatch.phone, mac: mismatch.mac, relogin: actions.reloginTunnel)
                 }
 
                 VPNCard(state: state, actions: actions)
@@ -154,6 +158,46 @@ struct ErrorBanner: View {
                 .accessibilityLabel("안내 닫기")
             }
             .accessibilityElement(children: .contain)
+        }
+    }
+}
+
+// MARK: - 다른 tailnet
+
+/// iPhone이 Mac과 다른 Tailscale 계정(tailnet)에 로그인했다. 이대로는 Mac에 닿지 못한다.
+struct TailnetMismatchSection: View {
+    var phone: String
+    var mac: String
+    var relogin: @MainActor @Sendable () async -> Void
+    @State private var working = false
+
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Mac과 다른 Tailscale 계정에 로그인됨", systemImage: "person.2.slash")
+                    .font(.headline)
+                    .foregroundStyle(.orange)
+                Text("이 iPhone은 \(phone)에, Mac은 \(mac)에 있어 서로 닿지 않습니다. Mac과 같은 계정으로 다시 로그인하세요.")
+                    .font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    working = true
+                    Task {
+                        await relogin()
+                        working = false
+                    }
+                } label: {
+                    HStack {
+                        Text("다른 계정으로 로그인")
+                        if working { ProgressView().controlSize(.small) }
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(working)
+            }
+            .padding(.vertical, 4)
+        } footer: {
+            Text("이 iPhone에 저장된 Tailscale 로그인을 지우고 VPN을 다시 켭니다. 로그인 페이지가 나오면 Mac과 같은 계정을 고르세요.")
         }
     }
 }

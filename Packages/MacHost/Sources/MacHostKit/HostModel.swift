@@ -36,6 +36,10 @@ public final class HostModel {
     public private(set) var builds: [LibraryBuild] = []
     public private(set) var rejected: [RejectedBuild] = []
     public private(set) var devices: [DeviceEntry] = []
+    /// iPhone에 보내는 파일(최근 것부터).
+    public private(set) var sharedFiles: [ResourceDescriptor] = []
+    /// 보내려고 복사·게시 중인 파일 수.
+    public private(set) var filesInProgress = 0
     /// 승인 대기 중인 페어링 요청(만료된 것 포함 가능, `pendingPairRequests`가 거른다).
     public private(set) var pairRequests: [PairRequestEvent] = []
     public private(set) var pairingState: PairingState = .idle
@@ -45,10 +49,36 @@ public final class HostModel {
     public private(set) var lastPairingOutcome: PairingOutcome?
     /// 코드를 만들거나 요청에 답하다 실패한 이유. 페어링 시트 안에 보여 준다(창의 오류 표시는 시트에 가린다).
     public private(set) var pairingError: String?
+    /// 페어링 QR에 넣는 1회용 Tailscale 키.
+    public enum PairingKeyState: Sendable, Hashable {
+        /// Tailscale OAuth 클라이언트가 없다.
+        case off
+        case creating
+        case ready(key: String, expires: Date?)
+        case failed(String)
+    }
+
+    /// Tailscale OAuth 클라이언트를 확인한 결과.
+    public struct TokenCheck: Sendable, Hashable {
+        public var ok: Bool
+        public var message: String
+    }
+
+    public private(set) var pairingKeyState: PairingKeyState = .off
+    /// 키체인에 Tailscale OAuth 클라이언트가 있다.
+    public private(set) var hasTailscaleClient = false
+    /// 저장된 클라이언트가 키에 붙이는 태그.
+    public private(set) var tailscaleTags: [String] = []
+    /// 마지막 토큰 저장·사용 결과.
+    public private(set) var tokenCheck: TokenCheck?
+    public private(set) var isCheckingToken = false
+
     /// 최신이 앞. 최대 `activityLimit`.
     public private(set) var activity: [ActivityItem] = []
     /// 최신이 뒤. 최대 `logLimit`.
     public private(set) var logs: [LogEvent] = []
+    /// iPhone이 보낸 진단 로그.
+    public let deviceLogs: DeviceLogStore
     public private(set) var watchedFolder: URL?
     /// 감시 폴더가 사라졌거나 읽을 수 없거나, 저장한 폴더를 다시 열 수 없다. 폴더를 다시 골라야 한다.
     public private(set) var watchProblem: WatchProblem?
@@ -70,6 +100,7 @@ public final class HostModel {
     @ObservationIgnored private let core: any HostCore
     @ObservationIgnored private let paths: HostPaths
     @ObservationIgnored let library: BuildLibrary
+    @ObservationIgnored let fileLibrary: ResourceLibrary
     @ObservationIgnored private let bookmarks: any FolderBookmarking
     @ObservationIgnored private let watcherOptions: FolderWatcher.Options
     @ObservationIgnored private let appVersion: String
@@ -77,6 +108,10 @@ public final class HostModel {
     @ObservationIgnored private let openURL: @MainActor (URL) -> Void
     @ObservationIgnored private let now: @Sendable () -> Date
     @ObservationIgnored private let deviceStore: JSONFile<StoredDeviceList>
+    @ObservationIgnored private let tailscaleAPI: TailscaleAPI
+    @ObservationIgnored private let tailscaleClients: any TailscaleClientStoring
+    /// OAuth 클라이언트로 받은 API 토큰(1시간). 메모리에만 둔다.
+    @ObservationIgnored private var tailscaleAccess: TailscaleAPI.AccessToken?
 
     /// 저장된 빌드 목록을 읽었다. 한 번 읽으면 다시 읽지 않는다(가져오는 중인 작업 폴더를 건드리지 않는다).
     @ObservationIgnored private var libraryLoaded = false
@@ -129,11 +164,14 @@ public final class HostModel {
         port: Int = 443,
         keepPerBundle: Int = 3,
         openURL: @escaping @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) },
+        tailscaleAPI: TailscaleAPI = TailscaleAPI(),
+        tailscaleClients: any TailscaleClientStoring = KeychainTailscaleClientStore(),
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.core = core
         self.paths = paths
         self.library = BuildLibrary(paths: paths, host: core, inspector: inspector, packager: packager, keepPerBundle: keepPerBundle, now: now)
+        self.fileLibrary = ResourceLibrary(paths: paths, host: core, now: now)
         self.bookmarks = bookmarks
         self.watcherOptions = watcherOptions
         let id = id8 ?? (try? HostIdentity.loadOrCreate(at: paths.identityFile)) ?? HostIdentity.random()
@@ -144,6 +182,12 @@ public final class HostModel {
         self.openURL = openURL
         self.now = now
         self.deviceStore = JSONFile(url: paths.devicesFile)
+        self.tailscaleAPI = tailscaleAPI
+        self.tailscaleClients = tailscaleClients
+        let client = tailscaleClients.load()
+        self.hasTailscaleClient = client != nil
+        self.tailscaleTags = client?.tags ?? []
+        self.deviceLogs = DeviceLogStore(directory: paths.deviceLogsDir, now: now)
     }
 
     // MARK: 파생 상태
@@ -199,7 +243,9 @@ public final class HostModel {
 
     /// iPhone에 보여 줄 페어링 링크(QR·복사). 코드가 없거나 만료·사용·폐기됐거나 fqdn을 모르면 nil.
     public var pairingLink: URL? {
-        pairingCode?.link(fqdn: status?.fqdn ?? "")
+        guard let code = pairingCode else { return nil }
+        if case .ready(let key, _) = pairingKeyState { return code.link(fqdn: status?.fqdn ?? "", authKey: key) }
+        return code.link(fqdn: status?.fqdn ?? "")
     }
 
     /// 설치 웹 페이지 주소(코드 없음). 코어의 `BaseURL`과 같은 규칙: TLS면 `https://<fqdn>/`(포트 443이 아니면 포트를 붙인다),
@@ -281,6 +327,11 @@ public final class HostModel {
         } catch {
             noteLibraryLoadFailure("저장 폴더를 준비하지 못했습니다: \(Self.message(for: error)) 게시한 빌드는 그대로 두었습니다. 폴더 권한을 확인한 뒤 공유를 시작하거나 빌드를 다시 가져오세요.")
             return
+        }
+        do {
+            try await fileLibrary.load()
+        } catch {
+            lastError = "보낼 파일 목록(\(paths.resourcesFile.path))을 읽지 못했습니다: \(Self.message(for: error))"
         }
         do {
             try await library.load()
@@ -402,6 +453,10 @@ public final class HostModel {
         if !report.failed.isEmpty {
             lastError = "빌드 \(report.failed.count)개를 다시 게시하지 못했습니다(다음 시작 때 다시 시도합니다): \(report.failed[0].message)"
         }
+        let failedFiles = await fileLibrary.activate()
+        if !failedFiles.isEmpty {
+            lastError = "파일 \(failedFiles.count)개를 iPhone에 다시 보내지 못했습니다(다음 시작 때 다시 시도합니다): \(failedFiles.joined(separator: ", "))"
+        }
         await refreshLibrary()
         await refreshStatus()
     }
@@ -409,6 +464,7 @@ public final class HostModel {
     /// 시작 도중 중지됐다: 코어·라이브러리를 멈춘 상태로 되돌린다.
     private func rollBackStart() async {
         await library.deactivate()
+        await fileLibrary.deactivate()
         await stopCoreIfStarted()
         isRunning = false
         status = nil
@@ -417,6 +473,7 @@ public final class HostModel {
 
     private func performStop() async {
         await library.deactivate()
+        await fileLibrary.deactivate()
         await stopCoreIfStarted()
         eventTask?.cancel()
         eventTask = nil
@@ -592,6 +649,8 @@ public final class HostModel {
         case .log(let e):
             logs.append(e)
             if logs.count > Self.logLimit { logs.removeFirst(logs.count - Self.logLimit) }
+        case .deviceLog(let e):
+            deviceLogs.receive(e)
         case .networkSettings, .unknown:
             break
         }
@@ -670,9 +729,119 @@ public final class HostModel {
             let code = try await core.openPairing(ttlSeconds: Self.pairingTTLSeconds)
             pairingFailures = 0
             pairingState = .open(code)
+            await createPairingKey(for: code)
         } catch {
             notePairingFailure("페어링 코드를 만들지 못했습니다: \(Self.message(for: error))")
         }
+    }
+
+    /// OAuth 클라이언트가 있으면 이 코드의 QR에 넣을 1회용 Tailscale 키를 만든다. 실패해도 코드는 그대로 쓴다.
+    private func createPairingKey(for code: PairingCode) async {
+        guard let client = tailscaleClients.load() else {
+            pairingKeyState = .off
+            return
+        }
+        pairingKeyState = .creating
+        do {
+            let token = try await tailscaleToken(for: client)
+            let key = try await tailscaleAPI.createAuthKey(token: token, tags: client.tags)
+            guard pairingState == .open(code) else { return }
+            pairingKeyState = .ready(key: key.key, expires: key.expires)
+        } catch {
+            tailscaleAccess = nil
+            guard pairingState == .open(code) else { return }
+            pairingKeyState = .failed(error.message)
+            if error != .network { tokenCheck = TokenCheck(ok: false, message: error.message) }
+        }
+    }
+
+    /// 아직 쓸 수 있는 API 토큰이 있으면 그것을, 아니면 새로 받는다.
+    private func tailscaleToken(for client: TailscaleAPI.OAuthClient) async throws(TailscaleAPI.Failure) -> String {
+        if let access = tailscaleAccess, access.expires > now() { return access.token }
+        let access = try await tailscaleAPI.accessToken(for: client, now: now())
+        tailscaleAccess = access
+        return access.token
+    }
+
+    /// OAuth 클라이언트를 확인하고 키체인에 저장한다. 클라이언트에 기기 읽기 권한이 있고 공유 중이면
+    /// 이 Mac이 그 tailnet에 있는지도 본다(다른 tailnet의 키로는 iPhone이 이 Mac에 닿지 못한다).
+    public func saveTailscaleClient(id: String, secret: String, tags tagText: String) async {
+        guard let tags = TailscaleAPI.parseTags(tagText) else {
+            tokenCheck = TokenCheck(ok: false, message: TailscaleAPI.Failure.badTags.message)
+            return
+        }
+        let client = TailscaleAPI.OAuthClient(id: id.trimmingCharacters(in: .whitespacesAndNewlines),
+                                              secret: secret.trimmingCharacters(in: .whitespacesAndNewlines), tags: tags)
+        isCheckingToken = true
+        defer { isCheckingToken = false }
+        let access: TailscaleAPI.AccessToken
+        do {
+            access = try await tailscaleAPI.accessToken(for: client, now: now())
+        } catch {
+            tokenCheck = TokenCheck(ok: false, message: error.message)
+            return
+        }
+        var note = ""
+        if let fqdn = status?.fqdn, !fqdn.isEmpty {
+            let mine = TailscaleAPI.normalized(fqdn)
+            do {
+                let devices = try await tailscaleAPI.devices(token: access.token)
+                guard devices.contains(where: { $0.name == mine }) else {
+                    tokenCheck = TokenCheck(ok: false, message: "이 OAuth 클라이언트의 tailnet에 이 Mac(\(mine))이 없습니다. Mac이 로그인한 tailnet에서 만든 클라이언트를 넣으세요. 저장하지 않았습니다.")
+                    return
+                }
+            } catch .forbidden {
+                note = " 기기 읽기 권한이 없어 이 Mac이 같은 tailnet인지는 확인하지 못했습니다."
+            } catch {
+                tokenCheck = TokenCheck(ok: false, message: error.message)
+                return
+            }
+        }
+        do {
+            try tailscaleClients.save(client)
+        } catch {
+            tokenCheck = TokenCheck(ok: false, message: "OAuth 클라이언트를 키체인에 저장하지 못했습니다: \(Self.message(for: error))")
+            return
+        }
+        tailscaleAccess = access
+        hasTailscaleClient = true
+        tailscaleTags = tags
+        tokenCheck = TokenCheck(ok: true, message: "저장했습니다. 이제 페어링 QR에 1회용 Tailscale 키(\(tags.joined(separator: ", ")))가 들어가 iPhone은 로그인 없이 연결됩니다." + note)
+    }
+
+    public func clearTailscaleClient() {
+        tailscaleClients.clear()
+        tailscaleAccess = nil
+        hasTailscaleClient = false
+        tailscaleTags = []
+        tokenCheck = nil
+        pairingKeyState = .off
+    }
+
+    /// 에이전트용: 코드를 열고 iPhone에 넘길 링크를 돌려준다. 허용은 Mac 화면에서 한다.
+    public func openPairingForAgent() async -> Result<ProjectsModel.PairingInfo, ProjectsModel.PairingFailure> {
+        await beginPairing()
+        guard let code = pairingCode else {
+            return .failure(.init(pairingError ?? lastError ?? "페어링 코드를 만들지 못했습니다."))
+        }
+        // 에이전트 응답은 대화 기록에 남으므로 Tailscale 키는 넣지 않는다.
+        return .success(.init(code: code.displayCode, link: code.link(fqdn: status?.fqdn ?? "")?.absoluteString,
+                              installPage: installPageLink?.absoluteString, expiresAt: code.expiresAt))
+    }
+
+    /// 에이전트용: 허용을 기다리는 요청.
+    public var pairRequestsForAgent: [ProjectsModel.PairRequestInfo] {
+        pendingPairRequests.map {
+            .init(requestId: $0.requestId, deviceName: $0.deviceName, nodeName: $0.nodeName, loginName: $0.loginName, expiresAt: $0.expiresAt)
+        }
+    }
+
+    /// 에이전트용: 요청에 답한다. 실패하면 안내를 돌려준다.
+    public func decideForAgent(_ requestId: String, allow: Bool) async -> String? {
+        if allow { await approve(requestId) } else { await deny(requestId) }
+        if let error = pairingError { return error }
+        if pendingPairRequests.contains(where: { $0.requestId == requestId }) { return "요청에 답하지 못했습니다." }
+        return nil
     }
 
     /// 페어링 시트를 새로 열 때 지난 실패를 지운다.
@@ -873,9 +1042,68 @@ public final class HostModel {
         await refreshLibrary()
     }
 
+    /// 빌드 목록을 새로 읽을 때마다 부른다(iPhone 앱 업데이트 페이지).
+    @ObservationIgnored public var onBuildsChanged: (@MainActor ([LibraryBuild]) async -> Void)?
+
+    /// 게시한 빌드의 IPA 위치.
+    public func publishedIPA(forBuildID id: String) -> URL { paths.ipaURL(forBuildID: id) }
+
     private func refreshLibrary() async {
+        let before = builds
+        defer { if builds != before, let onBuildsChanged { Task { await onBuildsChanged(builds) } } }
         builds = await library.builds
         rejected = await library.rejected
+        sharedFiles = await fileLibrary.resources
+    }
+
+    // MARK: 보내는 파일
+
+    /// 파일을 iPhone에 보낼 목록에 넣는다. 실패한 파일은 `lastError`에 남긴다.
+    public func shareFiles(_ urls: [URL]) async {
+        var failures: [String] = []
+        for url in urls {
+            if case .failure(let failure) = await shareFile(url) { failures.append(failure.message) }
+        }
+        if !failures.isEmpty { lastError = failures.joined(separator: "\n") }
+    }
+
+    /// 파일 하나를 보낸다. 에이전트 명령도 이것을 쓴다.
+    public func shareFile(_ url: URL) async -> Result<ResourceDescriptor, ShareFileFailure> {
+        guard !isShutDown else { return .failure(ShareFileFailure("RemoteDebug가 종료 중입니다.")) }
+        await load()
+        filesInProgress += 1
+        defer { filesInProgress -= 1 }
+        do {
+            let descriptor = try await fileLibrary.add(url)
+            await refreshLibrary()
+            return .success(descriptor)
+        } catch {
+            await refreshLibrary()
+            return .failure(ShareFileFailure("\(url.lastPathComponent)을(를) 보내지 못했습니다: \(Self.message(for: error))"))
+        }
+    }
+
+    /// 링크를 보낸다. 에이전트 명령도 이것을 쓴다.
+    public func shareLink(_ url: URL, title: String? = nil) async -> Result<ResourceDescriptor, ShareFileFailure> {
+        guard !isShutDown else { return .failure(ShareFileFailure("RemoteDebug가 종료 중입니다.")) }
+        await load()
+        do {
+            let descriptor = try await fileLibrary.addLink(url, title: title)
+            await refreshLibrary()
+            return .success(descriptor)
+        } catch {
+            await refreshLibrary()
+            return .failure(ShareFileFailure("링크를 보내지 못했습니다: \(Self.message(for: error))"))
+        }
+    }
+
+    public func unshareFile(_ id: String) async {
+        do {
+            try await fileLibrary.remove(id: id)
+        } catch {
+            lastError = "파일을 지우지 못했습니다: \(Self.message(for: error))"
+        }
+        await refreshLibrary()
     }
 
     // MARK: 감시 폴더
@@ -1023,4 +1251,9 @@ public struct WatchProblem: Sendable, Hashable {
     static let missingMessage = "감시 폴더를 찾을 수 없습니다. 폴더를 지웠거나 옮겼다면 폴더를 다시 고르세요."
     static let unreadableMessage = "감시 폴더를 읽을 수 없습니다. 폴더를 다시 골라 접근 권한을 주세요."
     static let unresolvableMessage = "저장한 감시 폴더를 열 수 없습니다. 폴더를 다시 고르세요."
+}
+
+public struct ShareFileFailure: Error, Sendable, Hashable {
+    public var message: String
+    public init(_ message: String) { self.message = message }
 }

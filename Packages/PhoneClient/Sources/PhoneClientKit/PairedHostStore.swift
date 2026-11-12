@@ -7,15 +7,24 @@ public struct PairedHost: Codable, Hashable, Sendable {
     public var hostName: String
     public var fqdn: String
     public var pairedAt: Date
+    /// 이 앱 자신의 업데이트 페이지(공식 Tailscale 주소). Mac이 마지막으로 알려 준 값.
+    public var updatePage: URL?
 
-    public init(hostId: String, hostName: String, fqdn: String, pairedAt: Date) {
+    public init(hostId: String, hostName: String, fqdn: String, pairedAt: Date, updatePage: URL? = nil) {
         self.hostId = hostId
         self.hostName = hostName
         self.fqdn = fqdn
         self.pairedAt = pairedAt
+        self.updatePage = updatePage
     }
 
-    enum CodingKeys: String, CodingKey { case hostId, hostName, fqdn, pairedAt }
+    enum CodingKeys: String, CodingKey { case hostId, hostName, fqdn, pairedAt, updatePage }
+
+    /// https 주소만 받는다.
+    public static func validUpdatePage(_ text: String?) -> URL? {
+        guard let text, let url = URL(string: text), url.scheme == "https", url.host?.isEmpty == false else { return nil }
+        return url
+    }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -27,6 +36,7 @@ public struct PairedHost: Codable, Hashable, Sendable {
             throw DecodingError.dataCorruptedError(forKey: .pairedAt, in: c, debugDescription: "ISO-8601 시각이 아닙니다")
         }
         pairedAt = date
+        updatePage = Self.validUpdatePage(try c.decodeIfPresent(String.self, forKey: .updatePage))
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -35,6 +45,7 @@ public struct PairedHost: Codable, Hashable, Sendable {
         try c.encode(hostName, forKey: .hostName)
         try c.encode(fqdn, forKey: .fqdn)
         try c.encode(RDTimestamp.string(pairedAt), forKey: .pairedAt)
+        try c.encodeIfPresent(updatePage?.absoluteString, forKey: .updatePage)
     }
 }
 

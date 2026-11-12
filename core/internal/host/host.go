@@ -46,6 +46,7 @@ type Host struct {
 	code     *pairCode
 	requests map[string]*pairRequest
 	builds   map[string]*build
+	files    map[string]*resource // by resource id
 	sessions map[string]*session // by session id
 	tokens   map[string]*session // by token
 	denials  map[string]*denial  // denied-event rate limit, by node + path
@@ -91,6 +92,7 @@ func New(opts Options) (*Host, error) {
 		devices:    map[string]DeviceEntry{},
 		requests:   map[string]*pairRequest{},
 		builds:     map[string]*build{},
+		files:      map[string]*resource{},
 		sessions:   map[string]*session{},
 		tokens:     map[string]*session{},
 		denials:    map[string]*denial{},
@@ -106,6 +108,9 @@ func (h *Host) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/pair/request/{id}", h.handlePairStatus)
 	mux.HandleFunc("POST /v1/builds/{id}/sessions", h.handleCreateSession)
 	mux.HandleFunc("GET /v1/sessions/{id}", h.handleSessionStatus)
+	mux.HandleFunc("POST /v1/logs", h.handleDeviceLogs)
+	mux.HandleFunc("GET /v1/resources", h.handleResources)
+	mux.HandleFunc("GET /v1/resources/{id}", h.handleResourceFile)
 	mux.HandleFunc("GET /i/{token}/manifest.plist", h.handleManifest)
 	mux.HandleFunc("GET /i/{token}/app.ipa", h.handleIPA)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +140,7 @@ func routeError(mux *http.ServeMux, r *http.Request) *apierr.Error {
 }
 
 // Close fails every open session (aborting transfers in flight) and removes
-// the build snapshots. The host serves nothing afterwards.
+// the build and resource snapshots. The host serves nothing afterwards.
 func (h *Host) Close() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -146,6 +151,12 @@ func (h *Host) Close() {
 	for id, b := range h.builds {
 		os.Remove(b.path)
 		delete(h.builds, id)
+	}
+	for id, f := range h.files {
+		if f.path != "" {
+			os.Remove(f.path)
+		}
+		delete(h.files, id)
 	}
 }
 
@@ -272,18 +283,26 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	json.NewEncoder(w).Encode(v)
 }
 
+// UpdatePageURL reports the official-Tailscale address of the iPhone app's
+// update page (protocol-addenda I), or "". The api package wires it.
+var UpdatePageURL = func() string { return "" }
+
 func (h *Host) handleInfo(w http.ResponseWriter, r *http.Request) {
 	if _, ok := h.requirePaired(w, r); !ok {
 		return
 	}
 	info := h.info()
 	n, _ := h.Counts()
-	writeJSON(w, http.StatusOK, map[string]any{
+	body := map[string]any{
 		"hostId":     info.HostID,
 		"hostName":   info.HostName,
 		"fqdn":       info.FQDN,
 		"protocol":   1,
 		"appVersion": info.AppVersion,
 		"buildCount": n,
-	})
+	}
+	if u := UpdatePageURL(); u != "" {
+		body["updatePage"] = u
+	}
+	writeJSON(w, http.StatusOK, body)
 }

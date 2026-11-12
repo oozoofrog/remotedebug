@@ -12,6 +12,7 @@ import (
 
 	"remotedebug/core/internal/apierr"
 	"remotedebug/core/internal/host"
+	"remotedebug/core/internal/updatepage"
 	"remotedebug/core/internal/node"
 )
 
@@ -156,6 +157,50 @@ func HostUnpublish(h int64, buildID string) string {
 		return errJSON(err)
 	}
 	return okJSON(map[string]bool{"ok": true})
+}
+
+// HostPublishResource implements rd_host_publish_resource.
+func HostPublishResource(h int64, resourceJSON string) string {
+	hs, err := lookupHost(h)
+	if err != nil {
+		return errJSON(err)
+	}
+	var req host.ResourcePublishRequest
+	if err := json.Unmarshal([]byte(resourceJSON), &req); err != nil {
+		return errJSON(apierr.BadRequest("파일 JSON을 읽지 못했습니다."))
+	}
+	id, err := hs.PublishResource(req)
+	if err != nil {
+		return errJSON(err)
+	}
+	return okJSON(map[string]any{"ok": true, "id": id})
+}
+
+// HostUnpublishResource implements rd_host_unpublish_resource.
+func HostUnpublishResource(h int64, resourceID string) string {
+	hs, err := lookupHost(h)
+	if err != nil {
+		return errJSON(err)
+	}
+	if err := hs.UnpublishResource(resourceID); err != nil {
+		return errJSON(err)
+	}
+	return okJSON(map[string]bool{"ok": true})
+}
+
+func init() { host.UpdatePageURL = updatepage.PublicURL }
+
+// UpdatePageSet implements rd_update_page_set (protocol-addenda I).
+func UpdatePageSet(configJSON string) string {
+	var c updatepage.Config
+	if err := json.Unmarshal([]byte(configJSON), &c); err != nil {
+		return errJSON(apierr.BadRequest("업데이트 페이지 JSON을 읽지 못했습니다."))
+	}
+	addr, err := updatepage.Set(c)
+	if err != nil {
+		return errJSON(apierr.BadRequest(err.Error()))
+	}
+	return okJSON(map[string]any{"ok": true, "addr": addr})
 }
 
 // HostSetDevices implements rd_host_set_devices.

@@ -48,6 +48,15 @@ struct TunnelProviderConfigTests {
         #expect(TunnelStartOptions.authKey(from: options) == "tskey-auth-x")
         #expect(TunnelStartOptions.authKey(from: nil) == nil)
     }
+
+    @Test("로그인 초기화는 시작 옵션으로만 전달된다")
+    func resetLoginOptions() {
+        #expect(!TunnelStartOptions.resetsLogin(nil))
+        #expect(!TunnelStartOptions.resetsLogin(TunnelStartOptions.options(authKey: "tskey-auth-x")))
+        let reset = TunnelStartOptions.options(authKey: nil, resetLogin: true)
+        #expect(TunnelStartOptions.resetsLogin(reset))
+        #expect(TunnelStartOptions.authKey(from: reset) == nil)
+    }
 }
 
 @Suite("앱 ↔ 확장 메시지")

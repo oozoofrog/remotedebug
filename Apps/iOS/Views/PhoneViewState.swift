@@ -23,11 +23,21 @@ struct PhoneViewState {
     var lastError: String?
     var isRefreshing = false
     var needsTunnel = false
+    /// Mac이 보낸 파일.
+    var resources: [ResourceDescriptor] = []
+    /// 이 iPhone에 받아 둔 파일.
+    var receivedFiles: [ReceivedFile] = []
+    var fileDownloads: [String: FileDownloadState] = [:]
+    var fileProgress: [String: FileTransferProgress] = [:]
+    /// 이 iPhone 노드의 MagicDNS 이름(VPN이 연결됐을 때).
+    var nodeFQDN: String?
+    /// 진행 중이거나 VPN을 기다리는 페어링의 Mac 주소.
+    var pairingHost: String?
 }
 
 extension PhoneViewState {
     @MainActor
-    init(model: ClientModel, tunnelAvailable: Bool, tunnelActive: Bool, installedAt: Date? = nil) {
+    init(model: ClientModel, tunnelAvailable: Bool, tunnelActive: Bool, installedAt: Date? = nil, nodeFQDN: String? = nil) {
         self.init(
             phase: model.phase,
             host: model.host,
@@ -44,8 +54,28 @@ extension PhoneViewState {
             tunnelActive: tunnelActive,
             lastError: model.lastError,
             isRefreshing: model.isRefreshing,
-            needsTunnel: model.needsTunnel
+            needsTunnel: model.needsTunnel,
+            resources: model.resources,
+            receivedFiles: model.receivedFiles,
+            fileDownloads: model.fileDownloads,
+            fileProgress: model.fileProgress
         )
+        self.nodeFQDN = nodeFQDN
+        self.pairingHost = model.pairingHost
+    }
+
+    /// iPhone이 Mac과 다른 tailnet에 로그인했으면 두 tailnet 이름. 같거나 모르면 `nil`.
+    var tailnetMismatch: (phone: String, mac: String)? {
+        let mac = host?.fqdn ?? pairingHost ?? queuedPairingHost
+        guard TailnetMatch.isDifferent(phone: nodeFQDN, host: mac),
+              let phoneNet = TailnetMatch.tailnet(of: nodeFQDN), let macNet = TailnetMatch.tailnet(of: mac)
+        else { return nil }
+        return (phoneNet, macNet)
+    }
+
+    /// Mac 목록의 이 파일과 같은 내용으로 받아 둔 파일.
+    func receivedFile(for resource: ResourceDescriptor) -> ReceivedFile? {
+        receivedFiles.first { $0.name == resource.name && $0.size == resource.size && $0.sha256 == resource.sha256.lowercased() }
     }
 
     var isPairingInFlight: Bool {
@@ -77,8 +107,16 @@ struct PhoneActions {
     /// 켜져 있는 VPN을 끄고, 꺼질 때까지 기다린 뒤 다시 켠다.
     var restartTunnel: @MainActor @Sendable () async -> Void
     var openLogin: (URL) -> Void
+    /// Mac이 알려 준 이 앱의 업데이트 페이지(공식 Tailscale 주소)를 Safari로 연다.
+    var openInstallPage: () -> Void = {}
+    /// 저장된 Tailscale 로그인을 지우고 VPN을 다시 켠다(다른 계정으로 로그인).
+    var reloginTunnel: @MainActor @Sendable () async -> Void = {}
     var connectWithAuthKey: @MainActor @Sendable (_ key: String) async -> Void
     var clearError: () -> Void
+    /// Mac이 보낸 파일을 받아 Documents에 저장한다.
+    var downloadFile: (ResourceDescriptor) -> Void = { _ in }
+    var cancelDownload: (_ resourceID: String) -> Void = { _ in }
+    var deleteReceivedFile: (_ name: String) -> Void = { _ in }
 }
 
 /// 설정 화면이 그리는 값.
@@ -89,6 +127,18 @@ struct SettingsViewState {
     var reply: TunnelStatusReply?
     var disconnectMessage: String?
     var controlURL: String
+    /// 이 앱의 버전 `0.1.0 (1)`.
+    var appVersion: String = ""
+    /// 이 빌드를 처음 실행한 시각(설치 직후).
+    var installedAt: Date?
+    /// 진단 로그.
+    var recentLogs: [DeviceLogEntry] = []
+    var unsentLogCount = 0
+    var logsSentAt: Date?
+    var logSendError: String?
+    var isSendingLogs = false
+    /// Mac에 보낼 수 있는지(페어링했고 VPN이 연결됨).
+    var canSendLogs = false
 }
 
 @MainActor
@@ -96,4 +146,6 @@ struct SettingsActions {
     var forgetHost: @MainActor @Sendable () async -> Void
     /// 저장하면 `true`. 형식이 틀리면 `false`.
     var saveControlURL: (String) -> Bool
+    var sendLogs: @MainActor @Sendable () async -> Void = {}
+    var openInstallPage: () -> Void = {}
 }
