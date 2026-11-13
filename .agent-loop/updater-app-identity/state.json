@@ -1,0 +1,790 @@
+{
+  "decisions": {},
+  "history": [
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-13T10:36:34.863044+00:00",
+      "todo": {
+        "id": "updater-ui",
+        "requirement_id": "updater",
+        "status": "pending",
+        "task_id": "implement",
+        "title": "업데이트 앱: RemoteDebug 새 빌드만 보여 주고 설치"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-13T10:36:34.900757+00:00",
+      "todo": {
+        "id": "shared-host",
+        "requirement_id": "updater",
+        "status": "pending",
+        "task_id": "implement",
+        "title": "페어링한 Mac 정보를 두 앱이 함께 읽기"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-13T10:36:34.938806+00:00",
+      "todo": {
+        "id": "rename",
+        "requirement_id": "updater",
+        "status": "pending",
+        "task_id": "implement",
+        "title": "화면 이름을 RemoteDebug 업데이트로"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-13T10:36:34.976770+00:00",
+      "todo": {
+        "id": "hide-self",
+        "requirement_id": "hide-self",
+        "status": "pending",
+        "task_id": "implement",
+        "title": "RemoteDebug에서 자기 빌드와 업데이트 칸 숨기기"
+      }
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-13T10:36:35.015927+00:00",
+      "todo": {
+        "id": "delegate",
+        "requirement_id": "delegate",
+        "status": "pending",
+        "task_id": "implement",
+        "title": "T3 하위 작업으로 구현 맡기기"
+      }
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "implement": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "implement",
+      "timestamp": "2026-11-13T10:36:35.063750+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "p2p-design": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "p2p-design",
+      "timestamp": "2026-11-13T10:37:28.509553+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "delegate",
+        "requirement_id": "delegate",
+        "status": "pending",
+        "task_id": "implement",
+        "title": "T3 하위 작업으로 구현 맡기기"
+      },
+      "timestamp": "2026-11-13T10:38:39.829257+00:00",
+      "todo": {
+        "id": "delegate",
+        "requirement_id": "delegate",
+        "status": "completed",
+        "task_id": "implement",
+        "title": "T3 하위 작업으로 구현 맡기기"
+      }
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "p2p-design": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "8dbb98e",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "8dbb98e",
+        "check_id": "design",
+        "path": "evidence/p2p-design-attempt-1.md",
+        "result": "passed",
+        "sha256": "897a9ce2861d00028132ad5102ab830d194eb6d77d851d8361e0ce2f646ef7d9"
+      },
+      "task": "p2p-design",
+      "timestamp": "2026-11-13T10:42:22.615434+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "p2p-design": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "8dbb98e",
+              "check_id": "design",
+              "path": "evidence/p2p-design-attempt-1.md",
+              "result": "passed",
+              "sha256": "897a9ce2861d00028132ad5102ab830d194eb6d77d851d8361e0ce2f646ef7d9"
+            }
+          ],
+          "running_revision": "8dbb98e",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "설계 보고를 받아 근거 파일로 남겼다. 코드 읽기만 했고 빌드·실기기 확인은 없다.",
+      "task": "p2p-design",
+      "timestamp": "2026-11-13T10:42:26.609701+00:00"
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "implement": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "8dbb98e",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "하위 작업의 변경을 커밋한 뒤의 리비전",
+      "revision": "d1f306d",
+      "task": "implement",
+      "timestamp": "2026-11-13T10:48:38.841408+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "implement": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "d1f306d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "d1f306d",
+        "check_id": "ios-tests",
+        "path": "evidence/implement-attempt-1-ios-tests.log",
+        "result": "passed",
+        "sha256": "5258d6c54a7b5ccb5bbd7b26eb4a8ad2c6efde8439d1c82c4f96e6536f244d0c"
+      },
+      "task": "implement",
+      "timestamp": "2026-11-13T10:48:38.886706+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "implement": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "d1f306d",
+              "check_id": "ios-tests",
+              "path": "evidence/implement-attempt-1-ios-tests.log",
+              "result": "passed",
+              "sha256": "5258d6c54a7b5ccb5bbd7b26eb4a8ad2c6efde8439d1c82c4f96e6536f244d0c"
+            }
+          ],
+          "running_revision": "d1f306d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "d1f306d",
+        "check_id": "phoneclient-tests",
+        "path": "evidence/implement-attempt-1-phoneclient-test.log",
+        "result": "passed",
+        "sha256": "2fd6dadb2b0b743648a91516e7f6a4af38353d696d3606eebe9dc1ec501c0427"
+      },
+      "task": "implement",
+      "timestamp": "2026-11-13T10:48:38.931735+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "implement": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "d1f306d",
+              "check_id": "ios-tests",
+              "path": "evidence/implement-attempt-1-ios-tests.log",
+              "result": "passed",
+              "sha256": "5258d6c54a7b5ccb5bbd7b26eb4a8ad2c6efde8439d1c82c4f96e6536f244d0c"
+            },
+            {
+              "artifact_version": "d1f306d",
+              "check_id": "phoneclient-tests",
+              "path": "evidence/implement-attempt-1-phoneclient-test.log",
+              "result": "passed",
+              "sha256": "2fd6dadb2b0b743648a91516e7f6a4af38353d696d3606eebe9dc1ec501c0427"
+            }
+          ],
+          "running_revision": "d1f306d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "d1f306d",
+        "check_id": "docs",
+        "path": "evidence/implement-attempt-1-check-docs.log",
+        "result": "passed",
+        "sha256": "9e9311d5146067d3148e81f069094bef384947f853936cb5583d87cd252d13f6"
+      },
+      "task": "implement",
+      "timestamp": "2026-11-13T10:48:38.988617+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "implement": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "d1f306d",
+              "check_id": "ios-tests",
+              "path": "evidence/implement-attempt-1-ios-tests.log",
+              "result": "passed",
+              "sha256": "5258d6c54a7b5ccb5bbd7b26eb4a8ad2c6efde8439d1c82c4f96e6536f244d0c"
+            },
+            {
+              "artifact_version": "d1f306d",
+              "check_id": "phoneclient-tests",
+              "path": "evidence/implement-attempt-1-phoneclient-test.log",
+              "result": "passed",
+              "sha256": "2fd6dadb2b0b743648a91516e7f6a4af38353d696d3606eebe9dc1ec501c0427"
+            },
+            {
+              "artifact_version": "d1f306d",
+              "check_id": "docs",
+              "path": "evidence/implement-attempt-1-check-docs.log",
+              "result": "passed",
+              "sha256": "9e9311d5146067d3148e81f069094bef384947f853936cb5583d87cd252d13f6"
+            }
+          ],
+          "running_revision": "d1f306d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "하위 작업 보고와 로그 끝부분 확인. 실기기 미확인.",
+      "task": "implement",
+      "timestamp": "2026-11-13T10:48:39.089383+00:00"
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "publish": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "publish",
+      "timestamp": "2026-11-13T10:48:39.198135+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "publish": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "d1f306d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "d1f306d",
+        "check_id": "device-builds",
+        "path": "evidence/publish-attempt-1-builds.log",
+        "result": "passed",
+        "sha256": "ad382f7a2ab28e550e9a27c6addd096868cf15e81dda1a4ab68d02829bd0b6a8"
+      },
+      "task": "publish",
+      "timestamp": "2026-11-13T10:48:39.275582+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "publish": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "d1f306d",
+              "check_id": "device-builds",
+              "path": "evidence/publish-attempt-1-builds.log",
+              "result": "passed",
+              "sha256": "ad382f7a2ab28e550e9a27c6addd096868cf15e81dda1a4ab68d02829bd0b6a8"
+            }
+          ],
+          "running_revision": "d1f306d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "d1f306d",
+        "check_id": "privacy",
+        "path": "evidence/publish-attempt-1-privacy.log",
+        "result": "passed",
+        "sha256": "4ce334dd00d34997edb71813502142b8482e06b84833a7146703765b4afb74db"
+      },
+      "task": "publish",
+      "timestamp": "2026-11-13T10:48:39.351226+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "publish": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "d1f306d",
+              "check_id": "device-builds",
+              "path": "evidence/publish-attempt-1-builds.log",
+              "result": "passed",
+              "sha256": "ad382f7a2ab28e550e9a27c6addd096868cf15e81dda1a4ab68d02829bd0b6a8"
+            },
+            {
+              "artifact_version": "d1f306d",
+              "check_id": "privacy",
+              "path": "evidence/publish-attempt-1-privacy.log",
+              "result": "passed",
+              "sha256": "4ce334dd00d34997edb71813502142b8482e06b84833a7146703765b4afb74db"
+            }
+          ],
+          "running_revision": "d1f306d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "두 앱 게시, 커밋·태그·릴리스 완료",
+      "task": "publish",
+      "timestamp": "2026-11-13T10:48:39.423161+00:00"
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "updater-ui",
+        "requirement_id": "updater",
+        "status": "pending",
+        "task_id": "implement",
+        "title": "업데이트 앱: RemoteDebug 새 빌드만 보여 주고 설치"
+      },
+      "timestamp": "2026-11-13T10:48:39.477187+00:00",
+      "todo": {
+        "id": "updater-ui",
+        "requirement_id": "updater",
+        "status": "completed",
+        "task_id": "implement",
+        "title": "업데이트 앱: RemoteDebug 새 빌드만 보여 주고 설치"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "shared-host",
+        "requirement_id": "updater",
+        "status": "pending",
+        "task_id": "implement",
+        "title": "페어링한 Mac 정보를 두 앱이 함께 읽기"
+      },
+      "timestamp": "2026-11-13T10:48:39.518110+00:00",
+      "todo": {
+        "id": "shared-host",
+        "requirement_id": "updater",
+        "status": "completed",
+        "task_id": "implement",
+        "title": "페어링한 Mac 정보를 두 앱이 함께 읽기"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "rename",
+        "requirement_id": "updater",
+        "status": "pending",
+        "task_id": "implement",
+        "title": "화면 이름을 RemoteDebug 업데이트로"
+      },
+      "timestamp": "2026-11-13T10:48:39.558038+00:00",
+      "todo": {
+        "id": "rename",
+        "requirement_id": "updater",
+        "status": "completed",
+        "task_id": "implement",
+        "title": "화면 이름을 RemoteDebug 업데이트로"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "hide-self",
+        "requirement_id": "hide-self",
+        "status": "pending",
+        "task_id": "implement",
+        "title": "RemoteDebug에서 자기 빌드와 업데이트 칸 숨기기"
+      },
+      "timestamp": "2026-11-13T10:48:39.597283+00:00",
+      "todo": {
+        "id": "hide-self",
+        "requirement_id": "hide-self",
+        "status": "completed",
+        "task_id": "implement",
+        "title": "RemoteDebug에서 자기 빌드와 업데이트 칸 숨기기"
+      }
+    },
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "p2p-implement": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "p2p-implement",
+      "timestamp": "2026-11-13T10:49:26.892999+00:00"
+    },
+    {
+      "action": "todo-add",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "timestamp": "2026-11-13T11:01:29.557347+00:00",
+      "todo": {
+        "id": "updater-section",
+        "requirement_id": "hide-self",
+        "status": "pending",
+        "task_id": "p2p-implement",
+        "title": "RemoteDebug에서 RD 업데이트 빌드를 별도 칸으로 분리"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "updater-section",
+        "requirement_id": "hide-self",
+        "status": "pending",
+        "task_id": "p2p-implement",
+        "title": "RemoteDebug에서 RD 업데이트 빌드를 별도 칸으로 분리"
+      },
+      "timestamp": "2026-11-13T11:02:00.546854+00:00",
+      "todo": {
+        "id": "updater-section",
+        "requirement_id": "hide-self",
+        "status": "in_progress",
+        "task_id": "p2p-implement",
+        "title": "RemoteDebug에서 RD 업데이트 빌드를 별도 칸으로 분리"
+      }
+    },
+    {
+      "action": "todo-set",
+      "previous_decisions": {},
+      "previous_tasks": {},
+      "previous_todo": {
+        "id": "updater-section",
+        "requirement_id": "hide-self",
+        "status": "in_progress",
+        "task_id": "p2p-implement",
+        "title": "RemoteDebug에서 RD 업데이트 빌드를 별도 칸으로 분리"
+      },
+      "timestamp": "2026-11-13T11:12:47.176327+00:00",
+      "todo": {
+        "id": "updater-section",
+        "requirement_id": "hide-self",
+        "status": "completed",
+        "task_id": "p2p-implement",
+        "title": "RemoteDebug에서 RD 업데이트 빌드를 별도 칸으로 분리"
+      }
+    },
+    {
+      "action": "set-revision",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "p2p-implement": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "d1f306d",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "1·2단계와 그 사이 작업을 커밋한 뒤의 리비전",
+      "revision": "6e009b1",
+      "task": "p2p-implement",
+      "timestamp": "2026-11-13T11:58:24.499267+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "p2p-implement": {
+          "attempts": 1,
+          "evidence": [],
+          "running_revision": "6e009b1",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "6e009b1",
+        "check_id": "tests",
+        "path": "evidence/p2p-implement-attempt-1-tests.log",
+        "result": "passed",
+        "sha256": "95acf1a01b84564cecca1adfc71a37d1bb6f06dc7fcce4a09d606258981145b2"
+      },
+      "task": "p2p-implement",
+      "timestamp": "2026-11-13T11:58:24.555123+00:00"
+    },
+    {
+      "action": "record-check",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "p2p-implement": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "6e009b1",
+              "check_id": "tests",
+              "path": "evidence/p2p-implement-attempt-1-tests.log",
+              "result": "passed",
+              "sha256": "95acf1a01b84564cecca1adfc71a37d1bb6f06dc7fcce4a09d606258981145b2"
+            }
+          ],
+          "running_revision": "6e009b1",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "record": {
+        "artifact_version": "6e009b1",
+        "check_id": "docs",
+        "path": "evidence/p2p-implement-attempt-1-docs.log",
+        "result": "passed",
+        "sha256": "ece99c5a21083804c4f48245efbc22b3ef05d5c24e4b5cfd7bf40c197a05daef"
+      },
+      "task": "p2p-implement",
+      "timestamp": "2026-11-13T11:58:24.609899+00:00"
+    },
+    {
+      "action": "finish",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "p2p-implement": {
+          "attempts": 1,
+          "evidence": [
+            {
+              "artifact_version": "6e009b1",
+              "check_id": "tests",
+              "path": "evidence/p2p-implement-attempt-1-tests.log",
+              "result": "passed",
+              "sha256": "95acf1a01b84564cecca1adfc71a37d1bb6f06dc7fcce4a09d606258981145b2"
+            },
+            {
+              "artifact_version": "6e009b1",
+              "check_id": "docs",
+              "path": "evidence/p2p-implement-attempt-1-docs.log",
+              "result": "passed",
+              "sha256": "ece99c5a21083804c4f48245efbc22b3ef05d5c24e4b5cfd7bf40c197a05daef"
+            }
+          ],
+          "running_revision": "6e009b1",
+          "status": "running",
+          "verified_revision": null
+        }
+      },
+      "reason": "조정자가 시험을 다시 돌려 통과 확인. 실기기 미확인.",
+      "task": "p2p-implement",
+      "timestamp": "2026-11-13T11:58:24.665117+00:00"
+    }
+  ],
+  "plan_sha256": "e9083bd2392d7eb0e7df08e2ecab50e8c38e911480e3ba99531e90adb69f6245",
+  "project_root": "/Volumes/eyedisk/develop/oozoofrog/remotedebug",
+  "question_usage": {
+    "questions": 0,
+    "rounds": 0
+  },
+  "run_id": "updater-app-identity",
+  "schema_version": 1,
+  "tasks": {
+    "implement": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "d1f306d",
+          "check_id": "ios-tests",
+          "path": "evidence/implement-attempt-1-ios-tests.log",
+          "result": "passed",
+          "sha256": "5258d6c54a7b5ccb5bbd7b26eb4a8ad2c6efde8439d1c82c4f96e6536f244d0c"
+        },
+        {
+          "artifact_version": "d1f306d",
+          "check_id": "phoneclient-tests",
+          "path": "evidence/implement-attempt-1-phoneclient-test.log",
+          "result": "passed",
+          "sha256": "2fd6dadb2b0b743648a91516e7f6a4af38353d696d3606eebe9dc1ec501c0427"
+        },
+        {
+          "artifact_version": "d1f306d",
+          "check_id": "docs",
+          "path": "evidence/implement-attempt-1-check-docs.log",
+          "result": "passed",
+          "sha256": "9e9311d5146067d3148e81f069094bef384947f853936cb5583d87cd252d13f6"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "d1f306d"
+    },
+    "p2p-design": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "8dbb98e",
+          "check_id": "design",
+          "path": "evidence/p2p-design-attempt-1.md",
+          "result": "passed",
+          "sha256": "897a9ce2861d00028132ad5102ab830d194eb6d77d851d8361e0ce2f646ef7d9"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "8dbb98e"
+    },
+    "p2p-implement": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "6e009b1",
+          "check_id": "tests",
+          "path": "evidence/p2p-implement-attempt-1-tests.log",
+          "result": "passed",
+          "sha256": "95acf1a01b84564cecca1adfc71a37d1bb6f06dc7fcce4a09d606258981145b2"
+        },
+        {
+          "artifact_version": "6e009b1",
+          "check_id": "docs",
+          "path": "evidence/p2p-implement-attempt-1-docs.log",
+          "result": "passed",
+          "sha256": "ece99c5a21083804c4f48245efbc22b3ef05d5c24e4b5cfd7bf40c197a05daef"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "6e009b1"
+    },
+    "publish": {
+      "attempts": 1,
+      "evidence": [
+        {
+          "artifact_version": "d1f306d",
+          "check_id": "device-builds",
+          "path": "evidence/publish-attempt-1-builds.log",
+          "result": "passed",
+          "sha256": "ad382f7a2ab28e550e9a27c6addd096868cf15e81dda1a4ab68d02829bd0b6a8"
+        },
+        {
+          "artifact_version": "d1f306d",
+          "check_id": "privacy",
+          "path": "evidence/publish-attempt-1-privacy.log",
+          "result": "passed",
+          "sha256": "4ce334dd00d34997edb71813502142b8482e06b84833a7146703765b4afb74db"
+        }
+      ],
+      "status": "passed",
+      "verified_revision": "d1f306d"
+    }
+  },
+  "todos": [
+    {
+      "id": "updater-ui",
+      "requirement_id": "updater",
+      "status": "completed",
+      "task_id": "implement",
+      "title": "업데이트 앱: RemoteDebug 새 빌드만 보여 주고 설치"
+    },
+    {
+      "id": "shared-host",
+      "requirement_id": "updater",
+      "status": "completed",
+      "task_id": "implement",
+      "title": "페어링한 Mac 정보를 두 앱이 함께 읽기"
+    },
+    {
+      "id": "rename",
+      "requirement_id": "updater",
+      "status": "completed",
+      "task_id": "implement",
+      "title": "화면 이름을 RemoteDebug 업데이트로"
+    },
+    {
+      "id": "hide-self",
+      "requirement_id": "hide-self",
+      "status": "completed",
+      "task_id": "implement",
+      "title": "RemoteDebug에서 자기 빌드와 업데이트 칸 숨기기"
+    },
+    {
+      "id": "delegate",
+      "requirement_id": "delegate",
+      "status": "completed",
+      "task_id": "implement",
+      "title": "T3 하위 작업으로 구현 맡기기"
+    },
+    {
+      "id": "updater-section",
+      "requirement_id": "hide-self",
+      "status": "completed",
+      "task_id": "p2p-implement",
+      "title": "RemoteDebug에서 RD 업데이트 빌드를 별도 칸으로 분리"
+    }
+  ]
+}
