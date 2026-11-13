@@ -22,6 +22,7 @@ final class AppServices {
     let opener: UIKitURLOpener
     let model: ClientModel
     let transfers = FileTransferActivities()
+    private var crashDiagnostics: CrashDiagnostics?
     /// 이 빌드를 처음 실행한 시각. 그 뒤에 게시된 같은 앱의 빌드를 업데이트로 보여 준다.
     let installedAt = SelfUpdate.installDate(of: .main)
     let appVersion: String = {
@@ -44,11 +45,15 @@ final class AppServices {
             store: UserDefaultsPairedHostStore(),
             opener: opener,
             tunnel: tunnel,
-            logBook: DeviceLogBook(fileURL: DeviceLogBook.defaultFileURL())
+            logBook: DeviceLogBook(fileURL: DeviceLogBook.defaultFileURL()),
+            crashBook: CrashBook(directory: CrashBook.defaultDirectory())
         )
         let transfers = self.transfers
         let model = self.model
         model.onFileTransfer = { transfers.handle($0) }
+        let diagnostics = CrashDiagnostics { [weak model] report in await model?.addCrash(report) }
+        diagnostics.start()
+        crashDiagnostics = diagnostics
         // 페어링 링크(QR)에 Mac이 넣은 1회용 Tailscale 키가 있으면 로그인 없이 VPN을 켠다.
         // 앱이 링크로 처음 열릴 때도 쓰이도록 화면보다 먼저 연결한다.
         model.connectWithAuthKey = { [weak model] key in
@@ -73,13 +78,45 @@ final class AppServices {
 struct RootView: View {
     let services: AppServices
     @Environment(\.scenePhase) private var scenePhase
+    @State private var installedApps: [String: InstalledApp] = [:]
+    @State private var loggedInstalledApps = false
+    @State private var crashNotice: String?
 
     private var model: ClientModel { services.model }
     private var tunnel: TunnelController { services.tunnel }
 
     private var state: PhoneViewState {
-        PhoneViewState(model: model, tunnelAvailable: tunnel.isAvailable, tunnelActive: tunnel.isTunnelActive,
-                       installedAt: services.installedAt, nodeFQDN: tunnel.lastReply?.status?.fqdn)
+        var state = PhoneViewState(model: model, tunnelAvailable: tunnel.isAvailable, tunnelActive: tunnel.isTunnelActive,
+                                   installedAt: services.installedAt, nodeFQDN: tunnel.lastReply?.status?.fqdn)
+        state.installedApps = installedApps
+        return state
+    }
+
+    /// 크래시 파일(.ips)을 읽어 기록에 더하고 Mac에 보낸다. 실패하면 안내 문구를 돌려준다.
+    private func importCrash(_ url: URL) async -> String? {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? Data(contentsOf: url) else { return "\(url.lastPathComponent) 파일을 읽을 수 없습니다." }
+        guard data.count <= CrashReport.maxTextBytes else { return "\(url.lastPathComponent)은 너무 큽니다(1.5MB까지)." }
+        guard let text = String(data: data, encoding: .utf8), !text.isEmpty else { return "\(url.lastPathComponent)은 글자로 된 크래시 파일이 아닙니다." }
+        let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date()
+        await model.addCrash(CrashReport.ips(name: url.lastPathComponent, text: text, fallbackDate: modified))
+        return nil
+    }
+
+    /// 게시된 빌드의 앱이 이 iPhone에 어떤 버전으로 설치돼 있는지 다시 읽는다. 결과가 바뀌면 진단 로그에 남긴다.
+    private func reloadInstalledApps() {
+        var found: [String: InstalledApp] = [:]
+        var traces: [String] = []
+        for bundleID in Set(model.builds.map(\.bundleId)).sorted() {
+            let lookup = InstalledApps.lookup(bundleID)
+            found[bundleID] = lookup.app
+            traces.append("\(bundleID) [\(lookup.trace)]")
+        }
+        guard found != installedApps || (installedApps.isEmpty && !traces.isEmpty && !loggedInstalledApps) else { return }
+        loggedInstalledApps = true
+        installedApps = found
+        model.log(.info, "installed", "설치된 앱 조회: \(traces.joined(separator: "; "))")
     }
 
     var body: some View {
@@ -92,6 +129,12 @@ struct RootView: View {
                 FilesScreen(state: state, actions: actions)
             }
             .badge(state.fileDownloads.values.filter { $0 == .downloading }.count)
+            if AgentFeature.isEnabled {
+                Tab("에이전트", systemImage: "terminal") {
+                    AgentScreen(state: state, actions: actions)
+                }
+                .badge(state.agentBoard?.requests.count { !$0.state.isFinished } ?? 0)
+            }
         }
         .tint(PhoneTheme.tint)
         .task {
@@ -103,7 +146,25 @@ struct RootView: View {
             if let message { model.log(.warning, "vpn", "터널 종료: \(message)") }
         }
         .onOpenURL { url in
-            model.handle(url: url)
+            // 공유 시트나 파일 앱에서 넘긴 크래시 파일.
+            if url.isFileURL {
+                Task {
+                    let error = await importCrash(url)
+                    crashNotice = error ?? (model.crashBook.unsent.isEmpty
+                        ? "크래시 기록을 Mac에 보냈습니다."
+                        : "크래시 기록을 받았습니다. Mac과 연결되면 보냅니다.")
+                }
+            } else {
+                model.handle(url: url)
+            }
+        }
+        .alert("크래시 기록", isPresented: Binding(get: { crashNotice != nil }, set: { if !$0 { crashNotice = nil } })) {
+            Button("확인") { crashNotice = nil }
+        } message: {
+            Text(crashNotice ?? "")
+        }
+        .onChange(of: model.builds.map(\.bundleId), initial: true) { _, _ in
+            reloadInstalledApps()
         }
         .onChange(of: scenePhase) { _, phase in
             handleScenePhase(phase)
@@ -128,7 +189,9 @@ struct RootView: View {
                 logsSentAt: model.logsSentAt,
                 logSendError: model.logSendError,
                 isSendingLogs: model.isSendingLogs,
-                canSendLogs: model.host != nil && model.tunnel == .connected
+                canSendLogs: model.host != nil && model.tunnel == .connected,
+                crashes: model.crashBook.items,
+                crashSendError: model.crashSendError
             ),
             settingsActions: SettingsActions(
                 forgetHost: { await model.forgetHost() },
@@ -138,7 +201,11 @@ struct RootView: View {
                     return true
                 },
                 sendLogs: { await model.sendLogs() },
-                openInstallPage: openInstallPage
+                openInstallPage: openInstallPage,
+                crashText: { model.crashBook.text($0) },
+                crashFile: { model.crashBook.fileURL($0) },
+                deleteCrash: { model.crashBook.remove($0) },
+                importCrash: { await importCrash($0) }
             )
         )
     }
@@ -150,6 +217,8 @@ struct RootView: View {
             model.resumePolling()
             // 파일 앱에서 지우거나 바꾼 받은 파일을 다시 읽는다.
             model.reloadReceivedFiles()
+            // 설치가 끝났거나 홈 화면에서 앱을 지웠을 수 있다.
+            reloadInstalledApps()
             Task {
                 await tunnel.reload()
                 // 앱으로 돌아올 때 새 빌드(이 앱의 업데이트 포함)를 바로 보여 준다. VPN이 꺼져 있으면 안내를 다시 띄우지 않는다.
@@ -231,7 +300,10 @@ struct RootView: View {
             clearError: { model.clearError() },
             downloadFile: { model.download($0) },
             cancelDownload: { model.cancelDownload($0) },
-            deleteReceivedFile: { model.deleteReceivedFile($0) }
+            deleteReceivedFile: { model.deleteReceivedFile($0) },
+            refreshAgent: { await model.refreshAgent() },
+            sendAgentRequest: { await model.sendAgentRequest($0) },
+            cancelAgentRequest: { await model.cancelAgentRequest($0) }
         )
     }
 }

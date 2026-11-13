@@ -2,6 +2,7 @@ import AppKit
 import MacHostCore
 import MacHostKit
 import MacHostUI
+import RDModels
 import ServiceManagement
 import SwiftUI
 import UserNotifications
@@ -38,6 +39,7 @@ struct RemoteDebugMacApp: App {
                     RootView()
                         .environment(model)
                         .environment(appDelegate.projects)
+                        .environment(appDelegate.agentDesk)
                         .environment(appDelegate.updatePage)
                         .environment(appDelegate.phoneInstaller)
                 case .failed(let failure):
@@ -108,6 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let launch: Launch
     /// 연결한 프로젝트와 Xcode 감시. 테스트 호스트와 실행 실패 때는 없다.
     private(set) var projects: ProjectsModel?
+    private(set) var agentDesk: AgentDesk?
     /// iPhone 앱 자신의 업데이트를 공식 Tailscale로 내주는 페이지. 테스트 호스트와 실행 실패 때는 없다.
     private(set) var updatePage: UpdatePageModel?
     /// 연결한 iPhone에 RemoteDebug iPhone 앱을 빌드해 설치한다. 테스트 호스트와 실행 실패 때는 없다.
@@ -201,6 +204,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         return await model.shareLink(url, title: title)
                     }),
                 importer: { [weak model] url in await model?.importBuild(url) })
+            if AgentFeature.isEnabled {
+                let desk = AgentDesk(
+                    root: paths.root,
+                    projects: { [weak projects] in (projects?.projects ?? []).map { AgentDesk.Project(name: $0.name, folder: $0.folder) } },
+                    publish: { [weak model] board in await model?.setAgentBoard(board) })
+                agentDesk = desk
+                model.onAgentRequest = { [weak desk] in desk?.receive($0) }
+                model.onAgentCancel = { [weak desk] in desk?.cancel($0.requestId) }
+            }
         }
     }
 
@@ -242,10 +254,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard !Task.isCancelled else { return }
             projects?.startMonitoring()
         }
+        Task {
+            await agentDesk?.load()
+            watchAgentProjects()
+        }
         installSuggestionNotifications()
     }
 
     /// 끌어 놓거나 `open -a RemoteDebug <폴더>`로 넘긴 프로젝트를 연결하고 빌드한다. `.app`·`.ipa`는 빌드로 가져온다.
+    /// 연결한 프로젝트가 바뀌면 iPhone이 고를 수 있는 프로젝트 목록을 다시 보낸다.
+    private func watchAgentProjects() {
+        withObservationTracking {
+            _ = projects?.projects
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.agentDesk?.projectsChanged()
+                self?.watchAgentProjects()
+            }
+        }
+    }
+
     func application(_ application: NSApplication, open urls: [URL]) {
         guard let model, let projects else { return }
         Task {
@@ -337,6 +365,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         termination.request(shutdown: { [self] in
             launchTask?.cancel()
             projects?.stopMonitoring()
+            agentDesk?.shutdown()
             if let model { await stopModel(model) }
             releaseState()
         }, finish: finish)

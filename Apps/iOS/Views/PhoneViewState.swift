@@ -29,6 +29,11 @@ struct PhoneViewState {
     var receivedFiles: [ReceivedFile] = []
     var fileDownloads: [String: FileDownloadState] = [:]
     var fileProgress: [String: FileTransferProgress] = [:]
+    /// 게시된 빌드의 번들 ID별로 이 iPhone에 설치된 버전. 읽지 못한 앱은 없다.
+    var installedApps: [String: InstalledApp] = [:]
+    /// Mac의 에이전트 요청 상태. 아직 받지 못했으면 `nil`.
+    var agentBoard: AgentBoard?
+    var agentError: String?
     /// 이 iPhone 노드의 MagicDNS 이름(VPN이 연결됐을 때).
     var nodeFQDN: String?
     /// 진행 중이거나 VPN을 기다리는 페어링의 Mac 주소.
@@ -62,6 +67,8 @@ extension PhoneViewState {
         )
         self.nodeFQDN = nodeFQDN
         self.pairingHost = model.pairingHost
+        self.agentBoard = model.agentBoard
+        self.agentError = model.agentError
     }
 
     /// iPhone이 Mac과 다른 tailnet에 로그인했으면 두 tailnet 이름. 같거나 모르면 `nil`.
@@ -117,6 +124,10 @@ struct PhoneActions {
     var downloadFile: (ResourceDescriptor) -> Void = { _ in }
     var cancelDownload: (_ resourceID: String) -> Void = { _ in }
     var deleteReceivedFile: (_ name: String) -> Void = { _ in }
+    var refreshAgent: @MainActor @Sendable () async -> Void = {}
+    /// 요청을 Mac의 에이전트에 보낸다. 실패하면 안내 문구를 돌려준다.
+    var sendAgentRequest: @MainActor @Sendable (AgentSubmission) async -> String? = { _ in nil }
+    var cancelAgentRequest: @MainActor @Sendable (_ id: String) async -> Void = { _ in }
 }
 
 /// 설정 화면이 그리는 값.
@@ -139,6 +150,9 @@ struct SettingsViewState {
     var isSendingLogs = false
     /// Mac에 보낼 수 있는지(페어링했고 VPN이 연결됨).
     var canSendLogs = false
+    /// 모은 크래시 기록(최근 것이 앞).
+    var crashes: [CrashBook.Item] = []
+    var crashSendError: String?
 }
 
 @MainActor
@@ -148,4 +162,9 @@ struct SettingsActions {
     var saveControlURL: (String) -> Bool
     var sendLogs: @MainActor @Sendable () async -> Void = {}
     var openInstallPage: () -> Void = {}
+    var crashText: (CrashBook.Item) -> String? = { _ in nil }
+    var crashFile: (CrashBook.Item) -> URL? = { _ in nil }
+    var deleteCrash: (_ id: String) -> Void = { _ in }
+    /// 크래시 파일을 읽어 기록에 더한다. 실패하면 안내 문구를 돌려준다.
+    var importCrash: @MainActor @Sendable (URL) async -> String? = { _ in nil }
 }

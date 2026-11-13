@@ -25,6 +25,7 @@ struct SettingsView: View {
                 macSection
                 diagnosticsSection
                 logSection
+                CrashSection(state: state, actions: actions)
                 advancedSection
                 appSection
             }

@@ -68,6 +68,11 @@ public struct RDNode: Sendable, Hashable {
         _ = try RDCall.consume(rd_host_unpublish_resource(handle, id))
     }
 
+    /// `rd_host_set_agent_board`. `board`는 `GET /v1/agent`가 그대로 내는 JSON이다.
+    public func setAgentBoard(_ board: Data) throws {
+        _ = try RDCall.consume(rd_host_set_agent_board(handle, RDCall.string(board)))
+    }
+
     /// `rd_host_set_devices`. `devices`는 `{"devices":[DeviceEntry]}` JSON이다. 허용 목록 전체를 교체한다.
     public func setDevices(_ devices: Data) throws {
         _ = try RDCall.consume(rd_host_set_devices(handle, RDCall.string(devices)))

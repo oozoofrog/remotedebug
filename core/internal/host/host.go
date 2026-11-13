@@ -50,6 +50,9 @@ type Host struct {
 	sessions map[string]*session // by session id
 	tokens   map[string]*session // by token
 	denials  map[string]*denial  // denied-event rate limit, by node + path
+
+	agentBoard   []byte // GET /v1/agent body, set by the host app
+	agentEnabled bool
 }
 
 // denial is the rate-limit state of "denied" events for one node and path.
@@ -109,6 +112,10 @@ func (h *Host) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/builds/{id}/sessions", h.handleCreateSession)
 	mux.HandleFunc("GET /v1/sessions/{id}", h.handleSessionStatus)
 	mux.HandleFunc("POST /v1/logs", h.handleDeviceLogs)
+	mux.HandleFunc("POST /v1/crashes", h.handleDeviceCrash)
+	mux.HandleFunc("GET /v1/agent", h.handleAgentBoard)
+	mux.HandleFunc("POST /v1/agent/requests", h.handleAgentRequest)
+	mux.HandleFunc("POST /v1/agent/requests/{id}/cancel", h.handleAgentCancel)
 	mux.HandleFunc("GET /v1/resources", h.handleResources)
 	mux.HandleFunc("GET /v1/resources/{id}", h.handleResourceFile)
 	mux.HandleFunc("GET /i/{token}/manifest.plist", h.handleManifest)

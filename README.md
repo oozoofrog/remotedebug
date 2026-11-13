@@ -21,6 +21,7 @@ The Mac app's **에이전트에 설치…** (Install for agents) adds an MCP ser
 | `remotedebug_pair_requests` | Pairing requests waiting for approval (device name, tailnet node name, login, expiry) |
 | `remotedebug_pair_decide` | Approve or deny a request (`request_id`, `approve`) |
 | `remotedebug_device_logs` | Diagnostic logs the iPhone app sent (app start, VPN, pairing, build list, install, update) |
+| `remotedebug_crash_logs` | Crash reports the iPhone sent: the list, or one report's text |
 | `remotedebug_push_file`, `remotedebug_push_link`, `remotedebug_files` | Send a file or link to the paired iPhone, list what was sent |
 
 Without MCP, the same commands go through `~/Library/Application Support/RemoteDebug/agent/rd` (`rd status`, `rd build <project> [scheme]`, `rd pair`, `rd requests`, `rd approve <id>`, `rd deny <id>`, `rd push <file>`, `rd link <url>`).
@@ -49,6 +50,8 @@ Rules for agents:
 - **Pairing**: scan the QR code in the Mac app and approve the request on the Mac. With an optional Tailscale OAuth client, the QR code also carries a one-time Tailscale key so the iPhone joins without logging in ([setup](docs/setup.md#qr-한-번으로-연결tailscale-oauth-클라이언트)). If the iPhone is logged in to a different tailnet than the Mac, the app says so and offers **다른 계정으로 로그인** (log in with another account) ([setup](docs/setup.md#mac과-다른-계정으로-로그인했을-때)).
 - **Files and links**: drop a file on the Mac's **보낸 파일** (Sent files) screen or push one from an agent; the iPhone receives it in the background and hands it to the Files app or the share sheet ([setup](docs/setup.md#mac에서-iphone으로-파일-보내기)).
 - **Diagnostic logs**: the iPhone app keeps a log, sends it to the Mac, and the Mac shows it on **iPhone 로그** (iPhone logs).
+- **Crash reports**: when the iPhone app crashes, it sends the report to the Mac the next time it runs. For other apps, open the report under iPhone Settings > Privacy & Security > Analytics & Improvements > Analytics Data and share it to RemoteDebug. Both the iPhone app's settings and the Mac's **크래시** (Crashes) screen show and share them.
+- **Installed version**: the iPhone build list shows which version of each app is installed now. This uses a private iOS API, so nothing is shown on devices where it returns no value.
 - **Without the iPhone app**: the Mac also serves an install web page at `https://<Mac FQDN>/`. An iPhone running the official Tailscale app opens it in Safari, enters a pairing code, and installs after you approve on the Mac. Not yet tried on a real iPhone ([setup](docs/setup.md#iphone에서-앱-없이-설치웹-페이지)).
 - **Getting started**: the Mac's build screen shows a **시작하기** (Get started) checklist: connect to Tailscale, open the install address, connect an iPhone, publish the first build.
 

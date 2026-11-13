@@ -131,6 +131,11 @@ public enum CoreEvent: Codable, Sendable, Hashable {
     case networkSettings(NetworkSettingsEvent)
     /// docs/protocol-addenda.md G.
     case deviceLog(DeviceLogEvent)
+    /// docs/protocol-addenda.md L.
+    case deviceCrash(DeviceCrashEvent)
+    /// 허용 목록의 기기가 에이전트에 보낸 요청(addenda K).
+    case agentRequest(AgentRequestEvent)
+    case agentCancel(AgentCancelEvent)
     case unknown(type: String)
 
     enum CodingKeys: String, CodingKey {
@@ -148,6 +153,9 @@ public enum CoreEvent: Codable, Sendable, Hashable {
         case .log: "log"
         case .networkSettings: "network-settings"
         case .deviceLog: "device-log"
+        case .deviceCrash: "device-crash"
+        case .agentRequest: "agent-request"
+        case .agentCancel: "agent-cancel"
         case .unknown(let type): type
         }
     }
@@ -165,6 +173,9 @@ public enum CoreEvent: Codable, Sendable, Hashable {
         case "log": self = .log(try LogEvent(from: decoder))
         case "network-settings": self = .networkSettings(try NetworkSettingsEvent(from: decoder))
         case "device-log": self = .deviceLog(try DeviceLogEvent(from: decoder))
+        case "device-crash": self = .deviceCrash(try DeviceCrashEvent(from: decoder))
+        case "agent-request": self = .agentRequest(try AgentRequestEvent(from: decoder))
+        case "agent-cancel": self = .agentCancel(try AgentCancelEvent(from: decoder))
         default: self = .unknown(type: type)
         }
     }
@@ -182,6 +193,9 @@ public enum CoreEvent: Codable, Sendable, Hashable {
         case .log(let e): try e.encode(to: encoder)
         case .networkSettings(let e): try e.encode(to: encoder)
         case .deviceLog(let e): try e.encode(to: encoder)
+        case .deviceCrash(let e): try e.encode(to: encoder)
+        case .agentRequest(let e): try e.encode(to: encoder)
+        case .agentCancel(let e): try e.encode(to: encoder)
         case .unknown: break
         }
     }

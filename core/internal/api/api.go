@@ -188,6 +188,18 @@ func HostUnpublishResource(h int64, resourceID string) string {
 	return okJSON(map[string]bool{"ok": true})
 }
 
+// HostSetAgentBoard implements rd_host_set_agent_board (protocol-addenda K).
+func HostSetAgentBoard(h int64, boardJSON string) string {
+	hs, err := lookupHost(h)
+	if err != nil {
+		return errJSON(err)
+	}
+	if err := hs.SetAgentBoard(boardJSON); err != nil {
+		return errJSON(err)
+	}
+	return okJSON(map[string]bool{"ok": true})
+}
+
 func init() { host.UpdatePageURL = updatepage.PublicURL }
 
 // UpdatePageSet implements rd_update_page_set (protocol-addenda I).

@@ -21,6 +21,7 @@ Mac 앱의 **에이전트에 설치…**는 Claude Code와 Codex에 MCP 서버 `
 | `remotedebug_pair_requests` | 허용을 기다리는 페어링 요청(기기 이름, tailnet 노드 이름, 로그인, 만료 시각) |
 | `remotedebug_pair_decide` | 요청을 허용하거나 거부한다(`request_id`, `approve`) |
 | `remotedebug_device_logs` | iPhone 앱이 보낸 진단 로그(앱 시작, VPN, 페어링, 빌드 목록, 설치, 업데이트) |
+| `remotedebug_crash_logs` | iPhone이 보낸 크래시 기록 목록과 원문 |
 | `remotedebug_push_file`, `remotedebug_push_link`, `remotedebug_files` | 페어링한 iPhone에 파일·링크를 보내고, 보낸 목록을 본다 |
 
 MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 명령을 쓴다(`rd status`, `rd build <프로젝트> [스킴]`, `rd pair`, `rd requests`, `rd approve <id>`, `rd deny <id>`, `rd push <파일>`, `rd link <주소>`).
@@ -49,6 +50,8 @@ MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 
 - **페어링**: Mac 앱의 QR을 찍고 Mac에서 허용한다. 선택 기능으로 Tailscale OAuth 클라이언트를 넣으면 QR에 1회용 Tailscale 키가 들어가 iPhone이 로그인 없이 연결된다([설정 문서](docs/setup.md#qr-한-번으로-연결tailscale-oauth-클라이언트)). iPhone이 Mac과 다른 tailnet에 로그인했으면 앱이 알려 주고 **다른 계정으로 로그인**을 제안한다([설정 문서](docs/setup.md#mac과-다른-계정으로-로그인했을-때)).
 - **파일과 링크**: Mac의 **보낸 파일** 화면에 파일을 끌어 놓거나 에이전트가 보내면, iPhone이 백그라운드에서 받아 파일 앱이나 공유 시트로 넘긴다([설정 문서](docs/setup.md#mac에서-iphone으로-파일-보내기)).
 - **진단 로그**: iPhone 앱이 로그를 쌓아 Mac에 보내고, Mac의 **iPhone 로그** 화면에서 본다.
+- **크래시 기록**: iPhone 앱이 비정상 종료되면 다음 실행 때 기록을 Mac에 보낸다. 다른 앱의 기록은 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 열어 공유로 RemoteDebug에 넘긴다. iPhone 앱의 설정과 Mac의 **크래시** 화면에서 보고 공유한다.
+- **설치된 버전**: iPhone 빌드 목록에 그 앱이 지금 어떤 버전으로 설치돼 있는지 보인다(iOS 비공개 API를 써서 읽지 못하는 기기에서는 보이지 않는다).
 - **iPhone 앱 없이 설치**: Mac은 `https://<Mac의 FQDN>/`에서 설치 웹 페이지도 내준다. 공식 Tailscale 앱을 켠 iPhone이 Safari로 열어 페어링 코드를 넣고, Mac에서 허용받은 뒤 설치한다. 실제 iPhone에서는 아직 열어 보지 않았다([설정 문서](docs/setup.md#iphone에서-앱-없이-설치웹-페이지)).
 - **시작하기**: Mac 빌드 화면의 **시작하기** 목록이 순서를 보여 준다. Tailscale 연결, 설치 주소 열기, iPhone 연결, 첫 빌드 게시.
 

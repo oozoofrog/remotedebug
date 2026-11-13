@@ -209,6 +209,10 @@ public final class ClientModel {
     public private(set) var isRefreshing = false
     /// Mac이 보낸 파일 목록(docs/protocol-addenda.md H). Mac 앱이 이 기능을 모르면 빈 목록.
     public private(set) var resources: [ResourceDescriptor] = []
+    /// Mac의 에이전트 요청 상태(docs/protocol-addenda.md K). 아직 받지 못했으면 `nil`.
+    public private(set) var agentBoard: AgentBoard?
+    /// 에이전트 상태를 받지 못했거나 요청을 보내지 못한 이유.
+    public private(set) var agentError: String?
     /// 이 iPhone에 받아 둔 파일.
     public private(set) var receivedFiles: [ReceivedFile] = []
     /// 받는 중이거나 받지 못한 파일(`ResourceDescriptor.id` 기준).
@@ -221,6 +225,9 @@ public final class ClientModel {
     public private(set) var needsTunnel = false
     /// 진단 로그. 화면과 앱(시작·VPN)도 여기에 남긴다.
     public let logBook: DeviceLogBook
+    public let crashBook: CrashBook
+    public private(set) var isSendingCrashes = false
+    public private(set) var crashSendError: String?
     /// 로그를 보내는 중.
     public private(set) var isSendingLogs = false
     /// 마지막으로 로그를 모두 보낸 시각.
@@ -275,6 +282,7 @@ public final class ClientModel {
         hostPolicy: HostPolicy = .tailnetOnly,
         timing: Timing = .standard,
         logBook: DeviceLogBook? = nil,
+        crashBook: CrashBook? = nil,
         receivedFiles: ReceivedFileStore? = nil
     ) {
         self.deviceName = deviceName
@@ -287,6 +295,7 @@ public final class ClientModel {
         self.policy = hostPolicy
         self.timing = timing
         self.logBook = logBook ?? DeviceLogBook()
+        self.crashBook = crashBook ?? CrashBook()
         #if os(iOS)
         self.receivedStore = receivedFiles ?? .standard()
         #else
@@ -622,6 +631,7 @@ public final class ClientModel {
         }
         await refreshResources(api: api, generation: generation)
         await sendLogs()
+        await sendCrashes()
     }
 
     // MARK: 파일
@@ -1112,6 +1122,8 @@ public final class ClientModel {
         fileDownloads = [:]
         fileProgress = [:]
         resources = []
+        agentBoard = nil
+        agentError = nil
         builds = []
         buildsLoadedAt = nil
         refreshError = nil
@@ -1217,9 +1229,95 @@ public final class ClientModel {
         }
     }
 
+    /// 크래시 기록을 모으고 Mac에 보낸다. 이미 있는 기록이면 아무것도 하지 않는다.
+    public func addCrash(_ report: CrashReport) async {
+        guard report.text.utf8.count <= CrashReport.maxTextBytes else {
+            log(.warning, "crash", "크래시 기록이 너무 커서 받지 않음: \(report.name) \(report.text.utf8.count)바이트")
+            return
+        }
+        guard let item = crashBook.add(report) else { return }
+        log(.error, "crash", "크래시 기록 \(item.id): \(report.name), \(report.bundleId) \(report.appVersion), \(report.crashedAt.formatted(Date.ISO8601FormatStyle()))")
+        await sendCrashes()
+    }
+
+    /// 아직 보내지 않은 크래시 기록을 페어링한 Mac에 보낸다. 보내지 못하면 남겨 두고 다음에 다시 보낸다.
+    public func sendCrashes() async {
+        guard !isSendingCrashes, !crashBook.unsent.isEmpty, let current = host, let api = makeAPI(current.fqdn),
+              tunnelController.currentState() == .connected
+        else { return }
+        isSendingCrashes = true
+        defer { isSendingCrashes = false }
+        let generation = hostGeneration
+        for item in crashBook.unsent where generation == hostGeneration {
+            guard let report = crashBook.report(item) else { continue }
+            do {
+                try await api.sendCrash(report)
+            } catch {
+                guard !(error is CancellationError) else { return }
+                crashSendError = Self.message(for: error)
+                return
+            }
+            crashBook.markSent(item.id)
+        }
+        crashSendError = nil
+    }
+
     /// 로그 한 줄을 남긴다. 앱 수준 일(시작, 화면 전환)도 이것으로 남긴다.
     public func log(_ level: DeviceLogEntry.Level, _ source: String, _ message: String) {
         logBook.log(level, source, message)
+    }
+
+    // MARK: 에이전트 요청
+
+    public static let agentUnsupportedMessage = "Mac의 RemoteDebug 앱이 에이전트 요청을 지원하지 않습니다. Mac 앱을 업데이트하세요."
+
+    /// Mac의 에이전트 상태(받는지, 프로젝트, 최근 요청)를 다시 받는다. VPN이 연결돼 있을 때만 한다.
+    public func refreshAgent() async {
+        guard let current = host, tunnel == .connected, let api = makeAPI(current.fqdn) else { return }
+        let generation = hostGeneration
+        do {
+            let board = try await api.agentBoard()
+            guard generation == hostGeneration else { return }
+            agentBoard = board
+            agentError = nil
+        } catch let error as HostAPIError where error.code == "not_found" {
+            guard generation == hostGeneration else { return }
+            agentBoard = nil
+            agentError = Self.agentUnsupportedMessage
+        } catch {
+            guard !(error is CancellationError), generation == hostGeneration else { return }
+            agentError = Self.message(for: error)
+        }
+    }
+
+    /// 요청을 Mac의 에이전트에 보낸다. 실패하면 안내 문구를 돌려준다.
+    public func sendAgentRequest(_ submission: AgentSubmission) async -> String? {
+        guard let current = host, let api = makeAPI(current.fqdn) else { return "페어링한 Mac이 없습니다." }
+        guard tunnel == .connected else { return "VPN을 켠 뒤 다시 보내세요." }
+        do {
+            let id = try await api.submitAgentRequest(submission)
+            log(.info, "agent", "에이전트 요청 \(id) 보냄")
+        } catch let error as HostAPIError where error.code == "agent_disabled" {
+            return "Mac이 iPhone의 요청을 받지 않습니다. Mac 앱의 에이전트 화면에서 켜세요."
+        } catch let error as HostAPIError where error.code == "not_found" {
+            return Self.agentUnsupportedMessage
+        } catch {
+            log(.warning, "agent", "에이전트 요청 실패: \(Self.message(for: error))")
+            return Self.message(for: error)
+        }
+        await refreshAgent()
+        return nil
+    }
+
+    public func cancelAgentRequest(_ id: String) async {
+        guard let current = host, tunnel == .connected, let api = makeAPI(current.fqdn) else { return }
+        do {
+            try await api.cancelAgentRequest(id: id)
+        } catch {
+            guard !(error is CancellationError) else { return }
+            agentError = Self.message(for: error)
+        }
+        await refreshAgent()
     }
 
     // MARK: 도움

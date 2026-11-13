@@ -115,6 +115,10 @@ public final class RDCoreHost: HostCore, @unchecked Sendable {
         _ = try await call { try $0.unpublishResource(id: id); return Data() }
     }
 
+    public func setAgentBoard(_ board: Data) async throws {
+        _ = try await call { try $0.setAgentBoard(board); return Data() }
+    }
+
     public func setDevices(_ devices: [DeviceEntry]) async throws {
         let body = try encode(DeviceList(devices: devices))
         _ = try await call { try $0.setDevices(body); return Data() }

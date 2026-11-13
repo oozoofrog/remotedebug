@@ -63,15 +63,20 @@ public struct AgentMCPServer: Sendable {
     let send: Send
     /// iPhone 진단 로그 폴더(`DeviceLogs`). 앱을 거치지 않고 직접 읽는다.
     let deviceLogsDir: URL?
+    /// iPhone 크래시 기록 폴더(`CrashLogs`). 앱을 거치지 않고 직접 읽는다.
+    let crashLogsDir: URL?
 
-    public init(deviceLogsDir: URL? = nil, send: @escaping Send) {
+    public init(deviceLogsDir: URL? = nil, crashLogsDir: URL? = nil, send: @escaping Send) {
         self.send = send
         self.deviceLogsDir = deviceLogsDir
+        self.crashLogsDir = crashLogsDir
     }
 
     /// `channel.agentDir`의 상위 폴더(앱 상태 폴더)의 `DeviceLogs`를 읽는다.
     public init(channel: AgentChannel) {
-        self.init(deviceLogsDir: channel.agentDir.deletingLastPathComponent().appendingPathComponent("DeviceLogs", isDirectory: true)) {
+        let root = channel.agentDir.deletingLastPathComponent()
+        self.init(deviceLogsDir: root.appendingPathComponent("DeviceLogs", isDirectory: true),
+                  crashLogsDir: root.appendingPathComponent("CrashLogs", isDirectory: true)) {
             await channel.send(command: $0, path: $1, scheme: $2)
         }
     }
@@ -112,6 +117,14 @@ public struct AgentMCPServer: Sendable {
             "inputSchema": ["type": "object", "properties": [
                 "lines": ["type": "integer", "description": "기기마다 돌려줄 최근 줄 수(기본 200, 최대 2000)"],
                 "contains": ["type": "string", "description": "이 글자가 들어간 줄만(대소문자 무시)"],
+            ] as [String: Any], "required": [String]()] as [String: Any],
+        ],
+        [
+            "name": "remotedebug_crash_logs",
+            "description": "페어링한 iPhone이 Mac에 보낸 크래시 기록. id 없이 부르면 목록(id, 시각, 앱, 종류, 기기, 원문 파일 경로)을, id를 주면 그 기록의 원문을 돌려준다. 종류 ips는 iOS 크래시 파일(사용자가 iPhone에서 넘긴 것), MetricKit은 RemoteDebug iPhone 앱 자신의 크래시 JSON이다. 원문은 심볼이 풀리지 않은 주소일 수 있다.",
+            "inputSchema": ["type": "object", "properties": [
+                "id": ["type": "string", "description": "목록의 기록 id(c_…). 비우면 목록"],
+                "contains": ["type": "string", "description": "목록에서 앱·기기·파일 이름에 이 글자가 든 기록만(대소문자 무시)"],
             ] as [String: Any], "required": [String]()] as [String: Any],
         ],
     ] }
@@ -157,6 +170,19 @@ public struct AgentMCPServer: Sendable {
                 }
                 let lines = min(2000, max(1, arguments["lines"] as? Int ?? 200))
                 let text = DeviceLogStore.recentText(directory: deviceLogsDir, limit: lines, contains: arguments["contains"] as? String ?? "")
+                return result(["content": [["type": "text", "text": text]], "isError": false])
+            }
+            if name == "remotedebug_crash_logs" {
+                guard let crashLogsDir else {
+                    return result(["content": [["type": "text", "text": "크래시 기록 폴더를 알 수 없습니다."]], "isError": true])
+                }
+                if let report = arguments["id"] as? String, !report.isEmpty {
+                    guard let text = CrashLogStore.reportText(directory: crashLogsDir, id: report) else {
+                        return result(["content": [["type": "text", "text": "\(report) 기록이 없습니다. id 없이 불러 목록을 확인하세요."]], "isError": true])
+                    }
+                    return result(["content": [["type": "text", "text": text]], "isError": false])
+                }
+                let text = CrashLogStore.listText(directory: crashLogsDir, contains: arguments["contains"] as? String ?? "")
                 return result(["content": [["type": "text", "text": text]], "isError": false])
             }
             if name == "remotedebug_pair_decide" {
@@ -339,6 +365,7 @@ extension AgentScript {
         - `remotedebug_pairing_code`: iPhone 페어링 코드와 링크.
         - `remotedebug_pair_requests`, `remotedebug_pair_decide`: 허용을 기다리는 요청을 보고 답한다. 사용자가 방금 요청했다고 말했고 노드 이름이 `rd-phone-…`처럼 맞을 때만 허용한다.
         - `remotedebug_device_logs`: iPhone 앱이 보낸 진단 로그. iPhone에서 설치·업데이트·연결이 안 될 때 먼저 본다.
+        - `remotedebug_crash_logs`: iPhone이 보낸 크래시 기록. `id` 없이 부르면 목록, `id`를 주면 원문. 설치한 앱이 iPhone에서 죽는다고 하면 먼저 본다. 기록이 없으면 사용자에게 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 그 앱의 기록을 열고 공유 버튼으로 RemoteDebug에 넘겨 달라고 한다. RemoteDebug iPhone 앱 자신의 크래시는 앱을 다시 열면 자동으로 들어온다. 원문 파일은 `~/Library/Application Support/RemoteDebug/CrashLogs`에 있다.
         - `remotedebug_push_file`: `file_path`(절대 경로)의 파일을 iPhone RemoteDebug 앱으로 보낸다. 같은 이름의 이전 파일은 바뀐다. 사용자는 iPhone 앱의 "Mac에서 받은 파일"에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다.
         - `remotedebug_push_link`: `url`(https://… 또는 앱스킴://… 딥 링크), `title`(선택)을 iPhone으로 보낸다. 사용자가 iPhone 파일 탭의 링크를 눌러 Safari나 디버그 중인 앱으로 연다.
         - `remotedebug_files`: 보낸 파일·링크 목록.

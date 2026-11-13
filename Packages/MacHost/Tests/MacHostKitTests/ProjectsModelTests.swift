@@ -274,7 +274,7 @@ struct AgentIntegrationTests {
 
         let listed = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":2,"method":"tools/list"}"#.utf8)))
         let tools = try #require((listed["result"] as? [String: Any])?["tools"] as? [[String: Any]])
-        #expect(tools.compactMap { $0["name"] as? String } == ["remotedebug_status", "remotedebug_pairing_code", "remotedebug_pair_requests", "remotedebug_pair_decide", "remotedebug_push_file", "remotedebug_push_link", "remotedebug_files", "remotedebug_schemes", "remotedebug_build", "remotedebug_device_logs"])
+        #expect(tools.compactMap { $0["name"] as? String } == ["remotedebug_status", "remotedebug_pairing_code", "remotedebug_pair_requests", "remotedebug_pair_decide", "remotedebug_push_file", "remotedebug_push_link", "remotedebug_files", "remotedebug_schemes", "remotedebug_build", "remotedebug_device_logs", "remotedebug_crash_logs"])
 
         let built = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":"a","method":"tools/call","params":{"name":"remotedebug_build","arguments":{"project_path":"/p","scheme":"App"}}}"#.utf8)))
         #expect((built["result"] as? [String: Any])?["isError"] as? Bool == false)

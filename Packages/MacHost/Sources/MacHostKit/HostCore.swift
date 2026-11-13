@@ -65,6 +65,8 @@ public protocol HostCore: Sendable {
     func publishResource(_ request: ResourcePublishRequest) async throws
     /// 코어에 없는 id면 `APIErrorBody(code: "resource_not_found")`를 던진다.
     func unpublishResource(id: String) async throws
+    /// `GET /v1/agent`가 내는 JSON을 바꾼다(addenda K).
+    func setAgentBoard(_ board: Data) async throws
     /// 허용 목록 전체를 바꾼다. 모델은 이 호출을 한 번에 하나씩 순서대로 보낸다(앞 호출이 끝난 뒤 다음 호출).
     func setDevices(_ devices: [DeviceEntry]) async throws
     func openPairing(ttlSeconds: Int) async throws -> PairingCode
@@ -72,4 +74,8 @@ public protocol HostCore: Sendable {
     func decidePairing(requestID: String, allow: Bool) async throws -> DeviceEntry?
     /// `start` 이후의 코어 이벤트. `stop`하면 끝난다.
     func events() -> AsyncStream<CoreEvent>
+}
+
+extension HostCore {
+    public func setAgentBoard(_ board: Data) async throws {}
 }

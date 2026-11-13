@@ -29,6 +29,8 @@ public struct HostPaths: Sendable, Hashable {
     public var coreLogFile: URL { root.appendingPathComponent("core.log") }
     /// iPhone이 보낸 진단 로그(기기마다 한 파일).
     public var deviceLogsDir: URL { root.appendingPathComponent("DeviceLogs", isDirectory: true) }
+    /// iPhone이 보낸 크래시 기록(기록마다 한 파일과 `index.json`).
+    public var crashLogsDir: URL { root.appendingPathComponent("CrashLogs", isDirectory: true) }
 
     /// iPhone에 보내는 파일 목록.
     public var resourcesFile: URL { root.appendingPathComponent("resources.json") }

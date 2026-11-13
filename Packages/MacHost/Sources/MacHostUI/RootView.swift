@@ -5,7 +5,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case builds, projects, files, devices, network, activity, logs
+    case builds, projects, agent, files, devices, network, activity, logs, crashes
 
     public var id: String { rawValue }
 
@@ -13,9 +13,11 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable 
         switch self {
         case .builds: "빌드"
         case .projects: "프로젝트"
+        case .agent: "에이전트"
         case .files: "보낸 파일"
         case .devices: "기기"
         case .network: "네트워크"
+        case .crashes: "크래시"
         case .activity: "활동"
         case .logs: "iPhone 로그"
         }
@@ -25,9 +27,11 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable 
         switch self {
         case .builds: "shippingbox"
         case .projects: "hammer"
+        case .agent: "terminal"
         case .files: "doc.on.doc"
         case .devices: "iphone"
         case .network: "network"
+        case .crashes: "exclamationmark.triangle"
         case .activity: "list.bullet.rectangle"
         case .logs: "doc.text.magnifyingglass"
         }
@@ -52,6 +56,7 @@ final class AuthKeyDraft {
 public struct RootView: View {
     @Environment(HostModel.self) private var model
     @Environment(ProjectsModel.self) private var projects: ProjectsModel?
+    @Environment(AgentDesk.self) private var agentDesk: AgentDesk?
     @State private var selection: SidebarItem
     @State private var showingImporter = false
     @State private var showingPairing = false
@@ -72,7 +77,7 @@ public struct RootView: View {
 
     public var body: some View {
         NavigationSplitView {
-            List(SidebarItem.allCases, selection: $selection) { item in
+            List(SidebarItem.allCases.filter { $0 != .agent || AgentFeature.isEnabled }, selection: $selection) { item in
                 Label(item.title, systemImage: item.symbol)
                     .badge(badge(for: item))
                     .tag(item)
@@ -172,11 +177,13 @@ public struct RootView: View {
             } else {
                 ContentUnavailableView("프로젝트를 쓸 수 없습니다", systemImage: "hammer")
             }
+        case .agent: AgentView()
         case .files: FilesView()
         case .devices: DevicesView()
         case .network: NetworkView()
         case .activity: ActivityView()
         case .logs: DeviceLogsView()
+        case .crashes: CrashLogsView()
         }
     }
 
@@ -203,6 +210,7 @@ public struct RootView: View {
         case .devices: model.pendingPairRequests.count
         case .builds: importQueue.pending.count
         case .projects: projects?.suggestions.count ?? 0
+        case .agent: agentDesk?.jobs.count { !$0.state.isFinished } ?? 0
         default: 0
         }
     }

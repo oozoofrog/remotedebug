@@ -1173,3 +1173,39 @@ private final class Recorder {
         if seen.count == stopAtSleep { model.stopPolling() }
     }
 }
+
+@MainActor
+@Suite struct ClientModelAgentTests {
+    static let board = #"{"enabled":true,"projects":[{"id":"p1","name":"MyApp"}],"agents":["claude","새 에이전트"],"requests":[{"id":"a_1","text":"고쳐줘","project":"p1","projectName":"MyApp","agent":"claude","origin":"내 iPhone","state":"running","createdAt":"2026-11-13T03:00:00Z","activity":"▸ Bash: swift test","output":"","session":"","continues":""}]}"#
+
+    @Test func loadsBoardAndSendsRequest() async {
+        let h = Harness(storedHost: Harness.pairedHost)
+        await h.model.restore()
+        await h.model.waitForBackgroundWork()
+        h.transport.on("GET", "/v1/agent", .json(Self.board))
+        h.transport.on("POST", "/v1/agent/requests", .json(#"{"id":"a_2"}"#, status: 202))
+
+        await h.model.refreshAgent()
+        #expect(h.model.agentBoard?.enabled == true)
+        #expect(h.model.agentBoard?.agents == [.claude])
+        #expect(h.model.agentBoard?.requests.first?.state == .running)
+
+        let problem = await h.model.sendAgentRequest(AgentSubmission(text: "커밋해줘", project: "p1", agent: .claude))
+        #expect(problem == nil)
+        #expect(h.transport.count("POST", "/v1/agent/requests") == 1)
+    }
+
+    @Test func olderMacAndDisabledSwitchAreExplained() async {
+        let h = Harness(storedHost: Harness.pairedHost)
+        await h.model.restore()
+        await h.model.waitForBackgroundWork()
+        h.transport.on("GET", "/v1/agent", .error("not_found", status: 404))
+        h.transport.on("POST", "/v1/agent/requests", .error("agent_disabled", status: 403))
+
+        await h.model.refreshAgent()
+        #expect(h.model.agentBoard == nil)
+        #expect(h.model.agentError == ClientModel.agentUnsupportedMessage)
+        let problem = await h.model.sendAgentRequest(AgentSubmission(text: "hi", project: "p1"))
+        #expect(problem?.contains("받지 않습니다") == true)
+    }
+}

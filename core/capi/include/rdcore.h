@@ -28,6 +28,10 @@ char *rd_host_unpublish(int64_t handle, const char *build_id);
 char *rd_host_publish_resource(int64_t handle, const char *resource_json);
 /* Returns {"ok":true}. */
 char *rd_host_unpublish_resource(int64_t handle, const char *resource_id);
+/* Replaces the document served by GET /v1/agent (protocol-addenda K):
+ * {"enabled","projects","agents","requests"}. "enabled" gates POST /v1/agent/requests.
+ * Returns {"ok":true}. */
+char *rd_host_set_agent_board(int64_t handle, const char *board_json);
 /* Starts, updates or stops (empty "listen") the loopback update page for the
  * iPhone app itself (protocol-addenda I). Not tied to a handle.
  * Returns {"ok":true,"addr":"127.0.0.1:P"}. */

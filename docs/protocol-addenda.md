@@ -402,3 +402,78 @@ iOS는 앱을 바꾸는 동안 그 앱의 패킷 터널을 멈춘다. 그래서 
 - 키를 만들지 못하면 `key` 없이 지금처럼 쓴다. 에이전트 명령(`rd pair`, `remotedebug_pairing_code`) 응답에는 키를 넣지 않는다(대화 기록에 남기 때문).
 - iPhone 앱은 `key`가 `tskey-auth-`로 시작하고 영문·숫자·하이픈 200자 이하일 때만 받는다. 아니면 `invalidAuthKey`. `key`가 둘 이상이면 페어링 링크가 아니다. VPN이 연결돼 있지 않으면 그 키로 VPN을 켜고(키는 저장하지 않음) 페어링은 연결된 뒤 이어 간다. 이미 연결돼 있으면 키를 쓰지 않는다.
 - 요청 본문 형식과 응답 필드는 실제 Tailscale API로 확인하지 않았다. 공식 문서에서 확인한 것은 엔드포인트, OAuth 토큰 엔드포인트와 응답의 `access_token`·`expires_in`, `auth_keys` 범위, OAuth로 만든 키에 태그가 필요하다는 점, Bearer 인증, `-` tailnet 이름이다.
+
+## K. 에이전트 요청
+
+현재 앱에서는 꺼져 있다(`AgentFeature.isEnabled`가 `false`). Mac 사이드바와 iPhone 탭에 나오지 않고 Mac 앱은 상태 문서를 넘기지 않는다.
+
+Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전트(Claude Code, Codex)에 넘기고 진행과 답을 돌려준다. 코어는 요청을 이벤트로 넘기고 Mac 앱이 준 상태 문서를 그대로 내줄 뿐, 에이전트를 실행하지 않는다.
+
+### K.1 C API `rd_host_set_agent_board(handle, board_json)`
+
+`GET /v1/agent`가 낼 문서 전체를 바꾼다(최대 2MiB). 코어는 `enabled`만 읽는다. 노드를 다시 시작하면 비므로 Mac 앱이 시작할 때마다 다시 넘긴다.
+
+```
+{"enabled":true,"projects":[{"id":"3f9a1c2e7b10","name":"MyApp"}],"agents":["claude","codex"],"requests":[AgentJob]}
+```
+
+`AgentJob`: `id`, `text`, `project`, `projectName`, `agent`(`claude`|`codex`), `origin`(`Mac` 또는 기기 이름), `state`(`queued`|`running`|`done`|`failed`|`cancelled`), `createdAt`, `finishedAt`(끝났을 때), `activity`(실행 중 진행 내용의 끝 3000자), `output`(마지막 답이나 실패 이유, 8000자까지), `session`(이어 갈 수 있으면 에이전트 세션 id), `continues`(이어 간 앞 요청 id). `requests`는 새 것부터 최대 20개다. 프로젝트 `id`는 폴더 경로의 SHA-256 앞 12자라 경로가 iPhone에 가지 않는다.
+
+### K.2 `GET /v1/agent`
+
+허용 목록의 기기만. Mac 앱이 넘긴 문서를 그대로 낸다. 아직 없으면 `{"enabled":false,"projects":[],"agents":[],"requests":[]}`.
+
+### K.3 `POST /v1/agent/requests`
+
+```
+{"text":"실패하는 테스트를 고쳐줘","project":"3f9a1c2e7b10","agent":"claude","continues":""}
+```
+
+- 허용 목록의 기기만. `enabled`가 false면 403 `agent_disabled`.
+- `text`는 앞뒤 공백을 뗀 뒤 1바이트 이상 16KiB 이하의 UTF-8, 나머지는 128바이트 이하. 본문은 32KiB까지. 어기면 400.
+- `continues`에 앞 요청 id를 넣으면 그 요청의 프로젝트·에이전트·세션으로 이어 간다(`project`, `agent`는 무시).
+- 202 `{"id":"a_52d9a07e"}`. 코어는 `agent-request` 이벤트를 넘긴다: `{"type":"agent-request","requestId","deviceId","deviceName","nodeName","text","project","agent","continues"}`.
+- 진행과 결과는 `GET /v1/agent`의 `requests`에서 같은 `id`로 본다. Mac 앱이 받지 못하는 요청(없는 프로젝트, 설치되지 않은 에이전트)도 `failed`와 이유로 목록에 나온다.
+
+### K.4 `POST /v1/agent/requests/{id}/cancel`
+
+허용 목록의 기기만, `enabled`일 때만. 202 `{"ok":true}`와 `agent-cancel` 이벤트(`requestId`, `deviceId`, `deviceName`). 어느 기기든 목록의 요청을 멈출 수 있다.
+
+### K.5 앱 동작
+
+- Mac 앱: 사이드바 **에이전트**. 연결한 프로젝트와 에이전트를 골라 요청을 보낸다. 요청마다 로그인 셸(`zsh -lic`)로 프로젝트 폴더에서 `claude -p --output-format stream-json --verbose --permission-mode <모드> [--resume <세션>] -- <요청>`이나 `codex exec [resume <세션>] --json --skip-git-repo-check <샌드박스> -- <요청>`을 띄우고, 한 줄에 하나씩 나오는 JSON에서 글·도구 사용·마지막 답·세션 id를 읽는다. 같은 프로젝트의 요청은 한 번에 하나씩 순서대로 실행한다. 목록과 설정은 `agent-requests.json`에 둔다. 앱을 끄면 실행 중인 에이전트를 끝내고, 다시 열면 그 요청을 실패로 표시한다.
+- 권한은 Mac에서만 고른다(기본 **프로젝트 파일 수정**): **읽기만**은 `--permission-mode plan` / `--sandbox read-only`, **프로젝트 파일 수정**은 `acceptEdits` / `workspace-write`, **모든 권한**은 `bypassPermissions` / `--dangerously-bypass-approvals-and-sandbox`. iPhone은 권한을 바꿀 수 없다.
+- **페어링한 iPhone의 요청 받기**는 기본으로 꺼져 있다. 꺼져 있어도 iPhone은 `GET /v1/agent`로 목록을 본다.
+- iPhone 앱: **에이전트** 탭. 탭이 보이는 동안 `GET /v1/agent`를 6초마다(끝나지 않은 요청이 있으면 2초마다) 받는다. 이 경로가 404 `not_found`면(이전 Mac 앱) Mac 앱을 업데이트하라고 안내한다. 요청을 누르면 진행·답을 보고, 멈추거나 이어서 요청한다.
+- 확인한 것: 코어 경로(Go 시험), Mac 실행기(가짜 실행기 시험), `claude` 2.1.322의 실제 `stream-json` 출력과 `codex` 0.167.2의 실제 `--json` 실패 출력. `codex`의 성공 출력(`agent_message`)과 실제 iPhone에서 보낸 요청은 확인하지 않았다.
+
+## L. iPhone 크래시 기록
+
+페어링한 기기는 크래시 기록을 Mac에 보낼 수 있다. 코어는 기록을 저장하지 않고 Mac 앱에 이벤트로 넘긴다.
+
+### L.1 `POST /v1/crashes`
+
+인증은 다른 `/v1/*`와 같다(허용 목록, §3). 본문은 기록 하나다.
+
+```
+{"kind":"ips","name":"Sample-2026-11-13-140501.ips","bundleId":"com.example.sample","appVersion":"1.2 (7)","crashedAt":"2026-11-13T05:05:01.000Z","text":"…"}
+```
+
+- `kind`: `ips`(iOS가 만든 크래시 파일, 사용자가 iPhone 앱으로 넘긴 것) 또는 `metrickit`(iPhone 앱 자신의 크래시를 MetricKit이 알려 준 JSON). 다른 값은 `400 bad_request`.
+- `text`: 원문. 비어 있거나 1536KB를 넘으면 `400 bad_request`. 본문 전체는 2MB까지 읽는다.
+- `name`, `bundleId`, `appVersion`: 200바이트에서 자른다. `crashedAt`이 ISO-8601 시각이 아니면 받은 시각으로 바꾼다.
+- 응답: `202`와 `{"accepted":1}`.
+
+### L.2 `device-crash` 이벤트
+
+```
+{"type":"device-crash","deviceId":"d_…","deviceName":"…","nodeName":"rd-phone-…","report":{…}}
+```
+
+`report`는 L.1의 본문을 정리한 것이다.
+
+### L.3 앱 동작
+
+- iPhone 앱은 자신의 크래시를 MetricKit에서 받아 다음 실행 때 기록으로 만든다. 다른 앱의 기록은 iOS가 앱에 내주지 않으므로, 사용자가 설정 앱의 분석 데이터에서 `.ips` 파일을 공유로 넘기거나 파일에서 가져온다.
+- 기록은 iPhone에 50개까지 남기고, 페어링한 Mac과 VPN이 연결되면 보내지 않은 것을 보낸다.
+- Mac 앱은 `CrashLogs/`에 원문 파일과 `index.json`을 두고(200개까지) **크래시** 화면과 MCP 도구 `remotedebug_crash_logs`로 보여 준다. 같은 내용의 기록은 한 번만 남긴다.

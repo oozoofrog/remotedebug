@@ -47,6 +47,11 @@ func rd_host_unpublish_resource(handle C.int64_t, resourceID *C.char) *C.char {
 	return out(api.HostUnpublishResource(int64(handle), C.GoString(resourceID)))
 }
 
+//export rd_host_set_agent_board
+func rd_host_set_agent_board(handle C.int64_t, boardJSON *C.char) *C.char {
+	return out(api.HostSetAgentBoard(int64(handle), C.GoString(boardJSON)))
+}
+
 //export rd_update_page_set
 func rd_update_page_set(configJSON *C.char) *C.char {
 	return out(api.UpdatePageSet(C.GoString(configJSON)))

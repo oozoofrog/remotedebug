@@ -32,11 +32,11 @@ struct BuildListSection: View {
                 } else {
                     // 같은 앱의 빌드는 최신 것만 보여 주고 나머지는 접어 둔다.
                     ForEach(AppBuildGrouping.groups(builds)) { group in
-                        BuildRow(build: group.latest, install: state.installs[group.latest.id], actions: actions)
+                        BuildRow(build: group.latest, install: state.installs[group.latest.id], actions: actions, installed: state.installedApps[group.latest.bundleId])
                         if !group.older.isEmpty {
                             DisclosureGroup("\(group.latest.displayName) 이전 빌드 \(group.older.count)개") {
                                 ForEach(group.older) { build in
-                                    BuildRow(build: build, install: state.installs[build.id], actions: actions, isOlder: true)
+                                    BuildRow(build: build, install: state.installs[build.id], actions: actions, isOlder: true, installed: state.installedApps[build.bundleId])
                                 }
                             }
                             .font(.subheadline)
@@ -149,6 +149,17 @@ struct BuildRow: View {
     var actions: PhoneActions
     /// 같은 앱의 이전 빌드. 타일과 이름을 빼고 게시 시각으로 구분한다.
     var isOlder = false
+    /// 이 iPhone에 설치된 같은 앱의 버전. 읽지 못했으면 `nil`.
+    var installed: InstalledApp?
+
+    private var isInstalledBuild: Bool {
+        installed?.version == build.version && installed?.buildNumber == build.buildNumber
+    }
+
+    private var installTitle: String {
+        guard installed != nil else { return "설치" }
+        return isInstalledBuild ? "다시 설치" : (isOlder ? "설치" : "업데이트")
+    }
 
     private var published: String { build.publishedAt.formatted(date: .abbreviated, time: .shortened) }
 
@@ -177,12 +188,23 @@ struct BuildRow: View {
                 Spacer()
                 if install == nil {
                     Button { actions.install(build) } label: {
-                        Label("설치", systemImage: "arrow.down.circle.fill")
+                        Label(installTitle, systemImage: "arrow.down.circle.fill")
                             .font(.subheadline.weight(.semibold))
                     }
                         .buttonStyle(.borderedProminent)
                         .buttonBorderShape(.capsule)
-                        .accessibilityLabel(isOlder ? "\(build.displayName) \(published) 빌드 설치" : "\(build.displayName) 설치")
+                        .accessibilityLabel(isOlder ? "\(build.displayName) \(published) 빌드 \(installTitle)" : "\(build.displayName) \(installTitle)")
+                }
+            }
+            if let installed {
+                if isInstalledBuild {
+                    Label("이 빌드가 설치되어 있습니다", systemImage: "checkmark.circle.fill")
+                        .font(.footnote)
+                        .foregroundStyle(.green)
+                } else if !isOlder {
+                    Label("설치된 버전 \(installed.version) (\(installed.buildNumber))", systemImage: "iphone")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
             }
             if build.signing.profileExpires < .now {

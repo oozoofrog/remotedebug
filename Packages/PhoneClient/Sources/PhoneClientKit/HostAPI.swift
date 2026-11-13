@@ -156,6 +156,30 @@ public struct HostAPI: Sendable {
         return try await call("POST", ["v1", "logs"], body: DeviceLogBatch(entries: entries), expect: Accepted.self).accepted
     }
 
+    /// 크래시 기록 하나를 보낸다(docs/protocol-addenda.md L).
+    public func sendCrash(_ report: CrashReport) async throws {
+        struct Accepted: Decodable { var accepted: Int }
+        _ = try await call("POST", ["v1", "crashes"], body: report, expect: Accepted.self)
+    }
+
+    // MARK: 에이전트 요청(addenda K)
+
+    public func agentBoard() async throws -> AgentBoard {
+        try await call("GET", ["v1", "agent"], expect: AgentBoard.self)
+    }
+
+    /// 요청 id를 돌려준다. 진행과 결과는 `agentBoard()`의 `requests`에 나온다.
+    public func submitAgentRequest(_ submission: AgentSubmission) async throws -> String {
+        struct Accepted: Decodable { var id: String }
+        return try await call("POST", ["v1", "agent", "requests"], body: submission, expect: Accepted.self).id
+    }
+
+    public func cancelAgentRequest(id: String) async throws {
+        struct Accepted: Decodable {}
+        _ = try await call("POST", ["v1", "agent", "requests", Self.checkedID(id), "cancel"], bodyData: nil,
+                           timeout: timeouts.request, expect: Accepted.self)
+    }
+
     // MARK: -
 
     /// 앞뒤 공백을 지우고 UTF-8 `maxBytes` 바이트 안에 들어가게 글자(Character) 경계에서 자른다.

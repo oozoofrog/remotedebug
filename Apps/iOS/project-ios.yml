@@ -39,6 +39,14 @@ targets:
         LSSupportsOpeningDocumentsInPlace: true
         # 파일 받기 진행을 잠금 화면과 Dynamic Island에 보인다.
         NSSupportsLiveActivities: true
+        # 설정 앱의 분석 데이터에서 크래시 파일(.ips)을 공유로 넘겨받는다.
+        CFBundleDocumentTypes:
+          - CFBundleTypeName: 크래시 기록
+            CFBundleTypeRole: Viewer
+            LSHandlerRank: Alternate
+            LSItemContentTypes:
+              - com.apple.ips
+              - com.apple.crashreport
         CFBundleURLTypes:
           - CFBundleURLName: com.oozoofrog.app.RemoteDebugPhone.pair
             CFBundleURLSchemes:

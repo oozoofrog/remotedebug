@@ -79,6 +79,7 @@ public final class HostModel {
     public private(set) var logs: [LogEvent] = []
     /// iPhone이 보낸 진단 로그.
     public let deviceLogs: DeviceLogStore
+    public let crashLogs: CrashLogStore
     public private(set) var watchedFolder: URL?
     /// 감시 폴더가 사라졌거나 읽을 수 없거나, 저장한 폴더를 다시 열 수 없다. 폴더를 다시 골라야 한다.
     public private(set) var watchProblem: WatchProblem?
@@ -143,6 +144,13 @@ public final class HostModel {
     private var coreListensTLS: Bool?
     private var startingGeneration: Int?
 
+    // 에이전트 요청(addenda K)
+    /// 코어에 넘길 `GET /v1/agent` 본문. 코어가 뜰 때마다 다시 넘긴다.
+    @ObservationIgnored private var agentBoard: Data?
+    /// 페어링한 기기가 에이전트 요청을 보냈다.
+    @ObservationIgnored public var onAgentRequest: (@MainActor (AgentRequestEvent) -> Void)?
+    @ObservationIgnored public var onAgentCancel: (@MainActor (AgentCancelEvent) -> Void)?
+
     // 기기 목록(코어 호출은 순서대로 하나씩)
     @ObservationIgnored private var deviceTail: Task<Void, Never>?
 
@@ -188,6 +196,7 @@ public final class HostModel {
         self.hasTailscaleClient = client != nil
         self.tailscaleTags = client?.tags ?? []
         self.deviceLogs = DeviceLogStore(directory: paths.deviceLogsDir, now: now)
+        self.crashLogs = CrashLogStore(directory: paths.crashLogsDir, now: now)
     }
 
     // MARK: 파생 상태
@@ -443,6 +452,7 @@ public final class HostModel {
         } catch {
             if isCurrent(generation) { lastError = "기기 목록을 적용하지 못했습니다: \(Self.message(for: error))" }
         }
+        if let agentBoard { try? await core.setAgentBoard(agentBoard) }
         guard isCurrent(generation) else { return await rollBackStart() }
         // 코어가 떴다. 저장된 빌드 재게시는 감시 폴더 가져오기 뒤에 줄을 설 수 있으므로 시작 중 표시를 붙잡지 않는다.
         startingGeneration = nil
@@ -605,6 +615,15 @@ public final class HostModel {
         return octets
     }
 
+    // MARK: 에이전트 요청
+
+    /// 페어링한 기기가 읽는 에이전트 상태를 바꾼다. 공유가 꺼져 있으면 다음에 켤 때 넘긴다.
+    public func setAgentBoard(_ board: Data) async {
+        agentBoard = board
+        guard coreStarted else { return }
+        try? await core.setAgentBoard(board)
+    }
+
     // MARK: 이벤트
 
     private func startEventLoop() {
@@ -651,6 +670,12 @@ public final class HostModel {
             if logs.count > Self.logLimit { logs.removeFirst(logs.count - Self.logLimit) }
         case .deviceLog(let e):
             deviceLogs.receive(e)
+        case .deviceCrash(let e):
+            crashLogs.receive(e)
+        case .agentRequest(let e):
+            onAgentRequest?(e)
+        case .agentCancel(let e):
+            onAgentCancel?(e)
         case .networkSettings, .unknown:
             break
         }
