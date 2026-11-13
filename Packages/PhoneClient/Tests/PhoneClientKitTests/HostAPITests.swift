@@ -151,6 +151,60 @@ import Testing
         #expect(e2?.status == 500)
     }
 
+    @Test func registerPushTokenSendsPut() async throws {
+        transport.on("PUT", "/v1/devices/self/push-token", .json(#"{"registered":true}"#))
+        try await api.registerPushToken(token: fakePushToken, bundleId: phoneBundleID)
+        let request = try #require(transport.requests.first)
+        #expect(request.httpMethod == "PUT")
+        #expect(request.url?.absoluteString == "https://\(hostFQDN)/v1/devices/self/push-token")
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+        let body = try #require(request.jsonBody)
+        #expect(body.count == 3)
+        #expect(body["token"] as? String == fakePushToken)
+        #expect(body["bundleId"] as? String == phoneBundleID)
+        #expect(body["environment"] as? String == "development")
+    }
+
+    @Test func registerPushTokenNeedsRegisteredTrue() async {
+        transport.on("PUT", "/v1/devices/self/push-token", .json(#"{"registered":false}"#))
+        let error = await #expect(throws: HostAPIError.self) { try await api.registerPushToken(token: fakePushToken, bundleId: phoneBundleID) }
+        #expect(error?.code == HostAPIError.invalidResponseCode)
+    }
+
+    @Test func removePushTokenSendsDeleteWithoutBody() async throws {
+        transport.on("DELETE", "/v1/devices/self/push-token", .json(#"{"registered":false}"#))
+        try await api.removePushToken()
+        let request = try #require(transport.requests.first)
+        #expect(request.httpMethod == "DELETE")
+        #expect(request.httpBody == nil)
+        #expect(request.value(forHTTPHeaderField: "Content-Type") == nil)
+    }
+
+    @Test func pushTokenOnDirectRouteCarriesAuthorization() async throws {
+        let direct = try #require(HostAPI(direct: DirectEndpoint(host: "192.168.0.10", port: 49152), authorization: "RD-Device test-device-token",
+                                          transport: transport, client: ClientInfo(osVersion: "26.1", appVersion: "0.1.0")))
+        transport.on("PUT", "/v1/devices/self/push-token", .json(#"{"registered":true}"#))
+        transport.on("DELETE", "/v1/devices/self/push-token", .json(#"{"registered":false}"#))
+        try await direct.registerPushToken(token: fakePushToken, bundleId: phoneBundleID)
+        try await direct.removePushToken()
+        #expect(transport.requests.count == 2)
+        for request in transport.requests {
+            #expect(request.url?.absoluteString == "https://192.168.0.10:49152/v1/devices/self/push-token")
+            #expect(request.value(forHTTPHeaderField: "Authorization") == "RD-Device test-device-token")
+        }
+    }
+
+    @Test(arguments: [("not_paired", 403), ("not_found", 404), ("bad_request", 400)])
+    func pushTokenErrors(_ code: String, _ status: Int) async {
+        transport.on("PUT", "/v1/devices/self/push-token", .error(code, status: status))
+        transport.on("DELETE", "/v1/devices/self/push-token", .error(code, status: status))
+        let e1 = await #expect(throws: HostAPIError.self) { try await api.registerPushToken(token: fakePushToken, bundleId: phoneBundleID) }
+        #expect(e1?.code == code)
+        #expect(e1?.status == status)
+        let e2 = await #expect(throws: HostAPIError.self) { try await api.removePushToken() }
+        #expect(e2?.code == code)
+    }
+
     @Test func pairedHostCodableRoundTrip() throws {
         let data = try RDJSON.encoder().encode(Harness.pairedHostValue)
         #expect(String(decoding: data, as: UTF8.self).contains("2026-11-11T09:00:00Z"))

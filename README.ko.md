@@ -92,6 +92,8 @@ Mac과 iPhone이 같은 Wi-Fi에 있으면 iPhone 앱이 VPN 없이 Mac과 직�
 - **보안에서 달라지는 점**: 이전에는 tailnet 안에 있어야 닿았지만, 이제 같은 LAN의 누구나 직접 연결 포트의 TLS까지는 닿는다. API를 쓰려면 페어링한 기기의 토큰이 필요하고, 그 밖의 요청은 모두 `403`이다. 직접 연결 포트에는 페어링, 등록, 설치, 웹 페이지가 없다. Tailscale ACL은 직접 경로에 적용되지 않는다. 받아들일 수 없으면 Mac에서 스위치를 끈다.
 - **한계**: 직접 경로로 받는 파일은 앱이 떠 있는 동안만 받는다(끊기면 이어 받는다). VPN 경로는 이전처럼 시스템 백그라운드 세션을 쓴다.
 
+새 빌드가 게시되거나 Mac에서 보낸 파일·링크가 추가되면 iPhone 앱에 알림이 온다(APNs 개발 환경). Mac의 **네트워크** 화면 **iPhone 알림**에 APNs 인증 키를 저장하고 iPhone 설정에서 **새 빌드·파일 알림**을 켠다. 알림 내용은 Apple 서버를 거친다. [설정 절차](docs/setup.md#iphone-알림새-빌드파일), [P절](docs/protocol-addenda.md#p-새-빌드파일-알림apns).
+
 실기기에서 확인하지 않은 것: 로컬 네트워크 권한 창, ATS 아래에서 공개 키를 고정한 자체 서명 인증서에 연결되는지, 두 iPhone 앱이 Keychain으로 토큰을 함께 쓰는지, macOS 방화벽의 허용 창. 단위 시험과 Mac의 루프백 TLS 시험은 통과했다.
 
 모두 실기기에서 확인하지 않았다. 단위 시험과 시뮬레이터 빌드만 통과했다. 규칙과 상태 필드는 [프로토콜 보충 N](docs/protocol-addenda.md#n-vpn-자동-켜기와-경로-표시)에 있다.
@@ -148,6 +150,8 @@ RemoteDebugFeedback.start(.init(
 | Go 코어 터널 모드: 가짜 tailnet과 메모리 TUN으로 | 확인함 | `scripts/go.sh test -race -count=1 -run TestTunnel -v ./...` |
 | 같은 네트워크 직접 연결: 리스너·토큰·등록·공개 키 고정을 루프백의 실제 TLS 1.3으로, 경로 선택을 가짜 전송으로 | 확인함 | `scripts/go.sh test ./...`, `swift test --package-path Packages/PhoneClient` |
 | 실제 Mac과 iPhone 사이의 같은 네트워크 직접 연결 | 확인하지 않음 | [O.9](docs/protocol-addenda.md#o9-보안-속성과-확인하지-못한-것) |
+| 새 빌드·파일 알림(APNs): 토큰 등록·삭제 경로를 두 리스너에서 단위 시험으로 | 확인함 | `scripts/go.sh test ./internal/host/...` |
+| 실제 iPhone에 알림이 도착하고 눌러서 탭이 바뀌는지 | 확인하지 않음 | [P.9](docs/protocol-addenda.md#p9-확인하지-못한-것) |
 | `RDCore.xcframework` 생성(macOS, iOS, iOS 시뮬레이터 arm64) | 확인함 | `scripts/build-core.sh` |
 | 디버그 빌드 검사와 IPA 묶기: 단위 시험, 픽스처, 작성 환경의 실제 Debug 빌드 | 확인함 | `swift test --package-path Packages/RemoteDebugKit`, `scripts/check-ipa-roundtrip.sh`, `scripts/check-real-builds.sh` |
 | Mac 호스트: 실제 Go 코어와 가짜 tailnet, 앱 실행과 종료 | 확인함 | `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost`, `RD_E2E_APP=1 scripts/e2e-mac.sh` |

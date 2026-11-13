@@ -40,6 +40,7 @@ final class AppServices {
         let tunnel = TunnelController(settings: settings)
         let opener = UIKitURLOpener()
         let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        let bundleID = Bundle.main.bundleIdentifier ?? ""
         self.tunnel = tunnel
         self.opener = opener
         self.installer = GuardedInstaller(tunnel: tunnel, role: .store)
@@ -52,12 +53,25 @@ final class AppServices {
             tunnel: tunnel,
             logBook: DeviceLogBook(fileURL: DeviceLogBook.defaultFileURL()),
             crashBook: CrashBook(directory: CrashBook.defaultDirectory()),
-            direct: directConnection.route
+            direct: directConnection.route,
+            // 알림 스위치와 등록 기록은 이 앱 전용 설정에 둔다(업데이트 앱은 알림을 쓰지 않는다).
+            push: bundleID.isEmpty ? nil : PushSetup(store: UserDefaultsPushSettingsStore(), bundleId: bundleID)
         )
         directConnection.onNetworkChange = { [weak model] in model?.noteNetworkChange() }
         let transfers = self.transfers
         let model = self.model
         model.onFileTransfer = { transfers.handle($0) }
+        let push = PushNotifications.shared
+        push.onLog = { [weak model] line in model?.log(.warning, "push", line) }
+        push.onForeground = { [weak model] in
+            // 앱이 앞에 있을 때 온 알림: 배너와 함께 목록도 새로 받는다. VPN을 켤 수 없으면 받지 않는다.
+            guard let model, model.host != nil, model.canReachHost else { return }
+            Task { await model.refresh() }
+        }
+        push.onToken = { [weak model] token in
+            guard let model else { return }
+            Task { await model.receivePushToken(token) }
+        }
         let diagnostics = CrashDiagnostics { [weak model] report in await model?.addCrash(report) }
         diagnostics.start()
         crashDiagnostics = diagnostics
@@ -81,6 +95,11 @@ final class AppServices {
     }
 }
 
+/// 아래 탭. 알림을 누르면 알림 종류에 맞는 탭으로 간다.
+enum PhoneTab: Hashable {
+    case builds, files, agent
+}
+
 /// `ClientModel`·`TunnelController`를 화면 값과 동작으로 잇는다.
 struct RootView: View {
     let services: AppServices
@@ -93,6 +112,7 @@ struct RootView: View {
     @State private var updaterPresent = false
     @State private var mergingIdentity = false
     @State private var crashNotice: String?
+    @State private var tab: PhoneTab = .builds
 
     private var model: ClientModel { services.model }
     private var tunnel: TunnelController { services.tunnel }
@@ -151,16 +171,16 @@ struct RootView: View {
 
     var body: some View {
         let state = self.state
-        TabView {
-            Tab("빌드", systemImage: "shippingbox") {
+        TabView(selection: $tab) {
+            Tab("빌드", systemImage: "shippingbox", value: PhoneTab.builds) {
                 buildsScreen(state)
             }
-            Tab("파일", systemImage: "doc.on.doc") {
+            Tab("파일", systemImage: "doc.on.doc", value: PhoneTab.files) {
                 FilesScreen(state: state, actions: actions)
             }
             .badge(state.fileDownloads.values.filter { $0 == .downloading }.count)
             if AgentFeature.isEnabled {
-                Tab("에이전트", systemImage: "terminal") {
+                Tab("에이전트", systemImage: "terminal", value: PhoneTab.agent) {
                     AgentScreen(state: state, actions: actions)
                 }
                 .badge(state.agentBoard?.requests.count { !$0.state.isFinished } ?? 0)
@@ -170,7 +190,22 @@ struct RootView: View {
         .task {
             model.log(.info, "app", "앱 시작: 버전 \(services.appVersion), 처음 실행 \(Self.stamp(services.installedAt)), iOS \(UIDevice.current.systemVersion)")
             await tunnel.reload()
+            // 알림을 켜 두었고 권한이 있으면 토큰을 다시 받는다(바뀔 수 있다). 여기서 권한을 묻지 않는다.
+            if model.pushEnabled, await PushNotifications.shared.isAuthorized() {
+                PushNotifications.shared.registerForRemoteNotifications()
+            }
             await model.restore()
+        }
+        .onChange(of: PushNotifications.shared.pendingTarget, initial: true) { _, target in
+            // 알림을 눌렀다. 앱이 꺼져 있다 시작한 경우에도 화면이 뜬 뒤 여기서 처리한다.
+            guard let target else { return }
+            PushNotifications.shared.pendingTarget = nil
+            switch target {
+            case .builds: tab = .builds
+            case .files: tab = .files
+            case .unchanged: break
+            }
+            Task { await model.openNotification(target) }
         }
         .onChange(of: model.host?.fqdn, initial: true) { _, fqdn in
             // 터널이 이 Mac까지의 경로(직접·중계)를 알아보게 한다.
@@ -226,7 +261,9 @@ struct RootView: View {
                 onDemand: tunnel.settings.onDemand,
                 canSetOnDemand: tunnel.autoStartConfiguration != .missing,
                 crashes: model.crashBook.items,
-                crashSendError: model.crashSendError
+                crashSendError: model.crashSendError,
+                pushEnabled: model.pushEnabled,
+                pushStatus: model.isPushAvailable ? model.pushStatus : nil
             )
         let settingsActions = SettingsActions(
                 forgetHost: { await model.forgetHost() },
@@ -255,7 +292,27 @@ struct RootView: View {
                 crashText: { model.crashBook.text($0) },
                 crashFile: { model.crashBook.fileURL($0) },
                 deleteCrash: { model.crashBook.remove($0) },
-                importCrash: { await importCrash($0) }
+                importCrash: { await importCrash($0) },
+                setPushEnabled: { enabled in
+                    let push = PushNotifications.shared
+                    guard enabled else {
+                        await model.setPushEnabled(false)
+                        return true
+                    }
+                    // 스위치를 켤 때만 권한을 묻는다.
+                    guard await push.requestAuthorization() else {
+                        model.log(.info, "push", "알림 권한이 없어 알림을 켜지 않음")
+                        return false
+                    }
+                    await model.setPushEnabled(true)
+                    push.registerForRemoteNotifications()
+                    return true
+                },
+                pushDenied: { await PushNotifications.shared.isDenied() },
+                openNotificationSettings: {
+                    guard let url = URL(string: UIApplication.openNotificationSettingsURLString) else { return }
+                    UIApplication.shared.open(url)
+                }
             )
         return PhoneScreen(state: state, actions: actions, settings: settings, settingsActions: settingsActions)
             .environment(\.crashPanel, CrashPanel(state: settings, actions: settingsActions))

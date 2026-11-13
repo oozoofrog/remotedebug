@@ -121,6 +121,11 @@ struct DevicesView: View {
 
 struct DeviceRow: View {
     let device: DeviceEntry
+
+    /// 알림 등록 상태 문구.
+    static func pushLabel(_ device: DeviceEntry) -> String {
+        device.isPushRegistered ? "알림 등록됨" : "알림 없음"
+    }
     /// 이 기기까지 가는 경로. 최근에 주고받은 것이 없으면 `nil`.
     var path: PeerPath?
     let remove: () -> Void
@@ -147,6 +152,9 @@ struct DeviceRow: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
+                Label(Self.pushLabel(device), systemImage: device.isPushRegistered ? "bell" : "bell.slash")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
                 if let path {
                     Label(path.label, systemImage: path.direct ? "arrow.left.arrow.right" : "arrow.triangle.branch")
                         .font(.callout)

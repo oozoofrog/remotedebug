@@ -22,6 +22,8 @@ targets:
     entitlements:
       path: Apps/iOS/RemoteDebugPhone.entitlements
       properties:
+        # 새 빌드·파일 알림(docs/protocol-addenda.md P). 디버그 빌드만 쓰므로 APNs 개발 환경이다.
+        aps-environment: development
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider
         com.apple.security.application-groups:

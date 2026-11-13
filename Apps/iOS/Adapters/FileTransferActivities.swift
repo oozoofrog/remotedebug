@@ -2,6 +2,7 @@
 import Foundation
 import PhoneClientKit
 import UIKit
+import UserNotifications
 
 /// 파일 받기를 라이브 액티비티(잠금 화면, Dynamic Island)로 보여 준다.
 ///
@@ -88,8 +89,23 @@ final class FileTransferActivities {
     }
 }
 
-/// 백그라운드 다운로드가 끝나 iOS가 앱을 깨울 때 받는 쪽.
+/// 백그라운드 다운로드가 끝나 iOS가 앱을 깨울 때 받는 쪽. 원격 알림 등록 결과도 여기로 온다.
 final class PhoneAppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // 알림을 눌러 앱이 시작된 경우에도 받도록 시작이 끝나기 전에 대리자를 둔다.
+        UNUserNotificationCenter.current().delegate = PushNotifications.shared
+        return true
+    }
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        PushNotifications.shared.receive(deviceToken: deviceToken)
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: any Error) {
+        PushNotifications.shared.registrationFailed(error)
+    }
+
     func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String,
                      completionHandler: @escaping () -> Void) {
         let completion = UncheckedCompletion(run: completionHandler)

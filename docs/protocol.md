@@ -226,6 +226,8 @@ Swift 앱이 허용 목록을 저장한다. 시작할 때 `rd_host_set_devices`�
 
 선택 필드 `directTokenHash`(같은 네트워크 직접 연결에 등록한 기기의 토큰 해시)는 [protocol-addenda.md](protocol-addenda.md)의 O.4에 있다. 등록하지 않은 기기에는 키가 없다.
 
+선택 필드 `push`(기기의 APNs 토큰 등록: `token`, `bundleId`, `environment`)와 등록·삭제 경로 `PUT`·`DELETE /v1/devices/self/push-token`은 [protocol-addenda.md](protocol-addenda.md)의 P절에 있다. 등록하지 않은 기기에는 키가 없다. 두 리스너가 모두 받는다.
+
 ## 6. 클라이언트 동작 (iPhone)
 
 1. 터널 확장이 `mode: "proxy"`로 노드를 시작하고 `rd_proxy_start("127.0.0.1:0")`로 로컬 HTTP CONNECT 프록시를 연다.

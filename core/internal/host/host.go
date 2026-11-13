@@ -127,6 +127,8 @@ func (h *Host) Handler() http.Handler {
 	mux.HandleFunc("GET /v1/resources", h.handleResources)
 	mux.HandleFunc("GET /v1/resources/{id}", h.handleResourceFile)
 	mux.HandleFunc("POST /v1/direct/enroll", h.handleDirectEnroll)
+	mux.HandleFunc("PUT /v1/devices/self/push-token", h.handlePushTokenPut)
+	mux.HandleFunc("DELETE /v1/devices/self/push-token", h.handlePushTokenDelete)
 	mux.HandleFunc("GET /i/{token}/manifest.plist", h.handleManifest)
 	mux.HandleFunc("GET /i/{token}/app.ipa", h.handleIPA)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

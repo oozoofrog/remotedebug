@@ -61,6 +61,17 @@ type DeviceEntry struct {
 	// DirectTokenHash is the hex SHA-256 of the device's direct token
 	// (protocol-addenda O). Empty until the device enrolls.
 	DirectTokenHash string `json:"directTokenHash,omitempty"`
+	// Push is the device's APNs registration (protocol-addenda P). Nil until
+	// the device registers; the key is then absent from the JSON.
+	Push *PushRegistration `json:"push,omitempty"`
+}
+
+// PushRegistration is a device's APNs registration. Only the Mac app sends
+// pushes; the core just stores the registration with the device.
+type PushRegistration struct {
+	Token       string `json:"token"`
+	BundleID    string `json:"bundleId"`
+	Environment string `json:"environment"`
 }
 
 // Peer is the tailnet identity of a request, as reported by WhoIs.

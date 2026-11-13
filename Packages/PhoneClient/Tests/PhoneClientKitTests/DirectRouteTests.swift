@@ -105,7 +105,8 @@ struct DirectHarness {
                                              spki: macSPKI, port: directPort, lastAddress: macAddress)
     static let authorization = "RD-Device d_1a2b3c4d.TOKEN-1"
 
-    init(tunnel state: TunnelState = .off, enrolled: DirectCredential? = DirectHarness.credential, autoStart: Bool = true) {
+    init(tunnel state: TunnelState = .off, enrolled: DirectCredential? = DirectHarness.credential, autoStart: Bool = true,
+         push: PushSetup? = nil) {
         tunnel = FakeTunnel(state)
         if autoStart { tunnel.autoStartConfiguration = .ready }
         credentials = InMemoryDirectCredentialStore(enrolled)
@@ -118,7 +119,8 @@ struct DirectHarness {
             opener: opener,
             tunnel: tunnel,
             clock: clock,
-            direct: route
+            direct: route,
+            push: push
         )
     }
 
@@ -498,6 +500,39 @@ struct DirectRouteTests {
         #expect(h.model.logSendError == nil)
         #expect(h.tunnel.autoStartCount == 0)
         #expect(h.model.canReachHost)
+    }
+
+    // MARK: 알림 등록 지우기
+
+    /// 같은 Wi-Fi에서 등록한 뒤 직접 경로가 끊겼다: 알림 지우기는 이미 연결된 VPN으로 넘어간다.
+    private func registeredDirectly() async -> (DirectHarness, InMemoryPushSettingsStore) {
+        let store = InMemoryPushSettingsStore(enabled: true)
+        let h = DirectHarness(tunnel: .connected, push: PushSetup(store: store, bundleId: phoneBundleID))
+        let mac = h.serveMac()
+        mac.on("PUT", "/v1/devices/self/push-token", .json(#"{"registered":true}"#))
+        h.tailnet.on("DELETE", "/v1/devices/self/push-token", .json(#"{"registered":false}"#))
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        #expect(mac.count("PUT", "/v1/devices/self/push-token") == 1)
+        #expect(store.record != nil)
+        h.lan.remove(macAddress)
+        return (h, store)
+    }
+
+    @Test func pushRemovalFallsBackToTheConnectedVPN() async {
+        let (h, store) = await registeredDirectly()
+        await h.model.setPushEnabled(false)
+        #expect(h.tailnet.count("DELETE", "/v1/devices/self/push-token") == 1)
+        #expect(store.record == nil)
+        #expect(store.pendingRemoval == nil)
+    }
+
+    @Test func forgetHostRemovesPushOverTheConnectedVPN() async {
+        let (h, store) = await registeredDirectly()
+        await h.model.forgetHost()
+        #expect(h.tailnet.count("DELETE", "/v1/devices/self/push-token") == 1)
+        #expect(store.record == nil)
+        #expect(h.model.host == nil)
     }
 
     @Test func statusTextNamesTheDirectPath() {

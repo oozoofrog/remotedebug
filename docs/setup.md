@@ -263,6 +263,18 @@ RemoteDebug iPhone 앱은 설치하는 동안 자기 VPN이 꺼지므로 자기 
 - Mac 앱이 공유 중이어야 iPhone이 받는다. 공유를 멈춘 동안 넣은 파일은 공유를 시작할 때 보낸다.
 - RemoteDebug 앱은 다른 앱의 샌드박스에 직접 파일을 넣을 수 없다. 받는 앱이 파일 열기(공유 시트, 문서 선택기)를 지원해야 한다.
 
+### iPhone 알림(새 빌드·파일)
+
+새 빌드가 게시되거나 Mac에서 보낸 파일·링크가 추가되면 iPhone에 알림을 받는다. APNs 개발(sandbox) 환경만 쓴다. 실기기에서 확인하지 않음.
+
+1. Apple Developer에서 APNs 인증 키(`.p8`)를 만들고 Key ID와 Team ID를 적어 둔다.
+2. Mac 앱 사이드바 **네트워크** 화면의 **iPhone 알림**에서 **키 파일 고르기…**로 `.p8`을 고르고 **Key ID**와 **Team ID**를 넣은 뒤 **저장**한다. 키 파일 내용은 Mac 키체인(`RemoteDebug APNs key`)에, Key ID와 Team ID는 앱 설정에 저장된다. **키 지우기**로 지운다.
+3. iPhone 앱 설정에서 **새 빌드·파일 알림**을 켜고 알림 권한을 허용한다. 거부했다면 **iOS 설정 열기**로 허용한다.
+4. Mac의 **시험 알림 보내기**를 눌러 iPhone에 도착하는지 본다. **마지막 전송**에 결과가 나온다.
+
+- 알림의 제목과 본문은 Apple의 서버를 거친다. **알림에 이름을 넣지 않기**를 켜면 "새 빌드가 있습니다"처럼 이름 없는 문구만 보낸다.
+- 알림 기능을 쓰려면 iPhone 앱이 푸시 알림 권한이 있는 프로비저닝으로 서명되어야 한다. 규칙은 [protocol-addenda.md의 P절](protocol-addenda.md#p-새-빌드파일-알림apns)에 있다.
+
 ## iPhone에서 앱 없이 설치(웹 페이지)
 
 RemoteDebug iPhone 앱 대신 공식 Tailscale 앱과 Safari로 페어링하고 설치한다. 실제 iPhone의 Safari, 실제 TLS 인증서, 공식 Tailscale 앱, Safari에서 여는 iOS 설치 창으로는 확인하지 않음. 화면 문구는 페이지 소스(`core/internal/host/web`)와 Mac 앱 소스에서 옮겼다. 실기기 확인은 [D14](device-test.md#d14-설치-웹-페이지공식-tailscale-앱)다.

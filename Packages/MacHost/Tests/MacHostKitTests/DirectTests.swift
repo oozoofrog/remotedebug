@@ -171,6 +171,41 @@ struct DirectTests {
         #expect(try savedDevices(h.paths).isEmpty)
     }
 
+    // MARK: 알림 기기 토큰(addenda P)
+
+    @Test func pushRegistrationIsSavedAndSurvivesAReload() async throws {
+        let h = try makeHarness("push-store", devices: [sampleDevice(1), sampleDevice(2)])
+        await h.model.start()
+        var registered = sampleDevice(1)
+        registered.push = PushRegistration(token: String(repeating: "0123abcd", count: 8), bundleId: "com.oozoofrog.app.RemoteDebugPhone",
+                                           environment: "development")
+        h.model.handle(.deviceUpdated(registered))
+        #expect(h.model.devices.first?.push == registered.push)
+        #expect(h.model.devices.first?.isPushRegistered == true)
+        #expect(h.model.devices.last?.isPushRegistered == false)
+        #expect(try savedDevices(h.paths).first?.push == registered.push)
+
+        // 해시와 토큰이 함께 오면 둘 다 남는다. 토큰을 지우면(알림 끄기) 해시는 그대로다.
+        registered.directTokenHash = String(repeating: "ab", count: 32)
+        h.model.handle(.deviceUpdated(registered))
+        registered.push = nil
+        h.model.handle(.deviceUpdated(registered))
+        #expect(try savedDevices(h.paths).first?.push == nil)
+        #expect(try savedDevices(h.paths).first?.directTokenHash == registered.directTokenHash)
+    }
+
+    @Test func pushUpdateForARemovedDeviceIsIgnored() async throws {
+        let h = try makeHarness("push-removed", devices: [sampleDevice(1)])
+        await h.model.start()
+        await h.model.removeDevice("d_1")
+        var late = sampleDevice(1)
+        late.push = PushRegistration(token: String(repeating: "0123abcd", count: 8), bundleId: "com.oozoofrog.app.RemoteDebugPhone",
+                                     environment: "development")
+        h.model.handle(.deviceUpdated(late))
+        #expect(h.model.devices.isEmpty)
+        #expect(try savedDevices(h.paths).isEmpty)
+    }
+
     @Test func removingADeviceKeepsOtherDevicesHashes() async throws {
         var one = sampleDevice(1)
         one.directTokenHash = String(repeating: "11", count: 32)

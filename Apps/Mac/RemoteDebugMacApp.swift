@@ -42,6 +42,7 @@ struct RemoteDebugMacApp: App {
                         .environment(appDelegate.agentDesk)
                         .environment(appDelegate.updatePage)
                         .environment(appDelegate.phoneInstaller)
+                        .environment(appDelegate.push)
                 case .failed(let failure):
                     LaunchFailureView(
                         failure: failure,
@@ -115,6 +116,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var updatePage: UpdatePageModel?
     /// 연결한 iPhone에 RemoteDebug iPhone 앱을 빌드해 설치한다. 테스트 호스트와 실행 실패 때는 없다.
     private(set) var phoneInstaller: PhoneAppInstaller?
+    /// 페어링한 iPhone에 새 빌드·파일 알림을 보낸다. 테스트 호스트와 실행 실패 때는 없다.
+    private(set) var push: PushModel?
     let options: LaunchOptions
     /// 저장 폴더. 테스트 호스트면 지울 임시 폴더.
     let paths: HostPaths?
@@ -178,6 +181,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.updatePage = updatePage
             let source = (Bundle.main.object(forInfoDictionaryKey: "RDSourceRoot") as? String).flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
             phoneInstaller = PhoneAppInstaller(root: paths.root, sourceRoot: source)
+            // 첫 목록(앱을 켤 때 있던 항목)은 기준선으로만 삼도록 불러오기 전에 연결한다.
+            let push = PushModel(host: model, defaults: defaults)
+            self.push = push
+            model.onLibraryChanged = { [weak push] builds, files in push?.libraryChanged(builds: builds, resources: files) }
             projects = ProjectsModel(
                 root: paths.root,
                 hostStatus: { [weak model, weak updatePage] in

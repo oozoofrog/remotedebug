@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import Foundation
 @testable import MacHostKit
 import RDModels
@@ -230,4 +231,100 @@ extension ScreenTests {
         #expect(queue.pending.map(\.url) == [second], "다른 항목을 건드렸다")
         await model.shutdown()
     }
+
+    // MARK: iPhone 알림(addenda P)
+
+    func makePush(_ model: HostModel, withKey: Bool) throws -> PushModel {
+        let keys = MemoryAPNsKeyStore()
+        let defaults = UIMemoryDefaults()
+        if withKey {
+            try keys.save(P256.Signing.PrivateKey().pemRepresentation)
+            defaults.set("KEY0000001", forKey: "RDAPNsKeyID")
+            defaults.set("TEAM000001", forKey: "RDAPNsTeamID")
+        }
+        return PushModel(host: model, keys: keys, defaults: defaults, transport: NoAPNsTransport())
+    }
+
+    /// 키가 없으면 안내와 입력만 보이고 시험 알림 단추는 없다.
+    @Test(.timeLimit(.minutes(1)))
+    func pushSectionWithoutAKeyShowsOnlySetup() async throws {
+        let tmp = try UITempDir("push-nokey")
+        let model = makeRecordingModel(RecordingCore(), tmp)
+        let push = try makePush(model, withKey: false)
+        let window = host(Form { PushSection() }.environment(push))
+        defer { window.close() }
+        let view = try root(window)
+        try #require(try await until { !AXTree.buttons(PushSection.chooseKeyTitle, in: view).isEmpty })
+        #expect(PushSection.title == "iPhone 알림")
+        #expect(AXTree.texts(in: view).contains { $0.contains("iPhone 알림") })
+        #expect(!AXTree.buttons("저장", in: view).isEmpty)
+        #expect(AXTree.buttons("시험 알림 보내기", in: view).isEmpty)
+        #expect(AXTree.buttons("키 지우기", in: view).isEmpty)
+    }
+
+    /// 키가 있어도 알림을 켠 iPhone이 없으면 시험 알림 단추를 끄고 이유를 보인다.
+    @Test(.timeLimit(.minutes(1)))
+    func pushSectionDisablesTestWithoutRecipients() async throws {
+        let tmp = try UITempDir("push-key")
+        let model = makeRecordingModel(RecordingCore(), tmp)
+        let push = try makePush(model, withKey: true)
+        let window = host(Form { PushSection() }.environment(push))
+        defer { window.close() }
+        let view = try root(window)
+        try #require(try await until { !AXTree.buttons("시험 알림 보내기", in: view).isEmpty })
+        #expect(AXTree.buttons("시험 알림 보내기", in: view).allSatisfy { !AXTree.isEnabled($0) })
+        #expect(!AXTree.buttons("키 지우기", in: view).isEmpty)
+        let texts = AXTree.texts(in: view)
+        #expect(texts.contains { $0.contains("알림을 켠 iPhone이 없습니다") }, "\(texts)")
+        #expect(texts.contains { $0.contains("마지막 전송") }, "\(texts)")
+        #expect(texts.contains { $0.contains("알림에 이름을 넣지 않기") }, "\(texts)")
+    }
+
+    /// 네트워크 화면에 알림 섹션이 들어 있다.
+    @Test(.timeLimit(.minutes(1)))
+    func networkScreenHasThePushSection() async throws {
+        let tmp = try UITempDir("push-network")
+        let model = makeRecordingModel(RecordingCore(), tmp)
+        let push = try makePush(model, withKey: false)
+        let window = host(RootView(selection: .network).environment(model).environment(push))
+        defer { window.close() }
+        let view = try root(window)
+        let shown = try await until { !AXTree.buttons("키 파일 고르기…", in: view).isEmpty }
+        #expect(shown, "\(AXTree.texts(in: view))")
+    }
+
+    /// 기기 줄에 알림 등록 상태가 보인다.
+    @Test(.timeLimit(.minutes(1)), arguments: [true, false])
+    func deviceRowShowsPushState(registered: Bool) async throws {
+        var device = DeviceEntry(id: "d_1", name: "시험용 iPhone", nodeStableId: "nSTABLE1", nodeName: "rd-phone-1", loginName: "",
+                                 pairedAt: Date(timeIntervalSince1970: 1_800_000_000))
+        if registered {
+            device.push = PushRegistration(token: String(repeating: "0123abcd", count: 8), bundleId: "com.oozoofrog.app.RemoteDebugPhone",
+                                           environment: "development")
+        }
+        let expected = registered ? "알림 등록됨" : "알림 없음"
+        #expect(DeviceRow.pushLabel(device) == expected)
+        let window = host(DeviceRow(device: device, remove: {}))
+        defer { window.close() }
+        let view = try root(window)
+        let shown = try await until { AXTree.texts(in: view).contains { $0.contains(expected) } }
+        #expect(shown, "\(AXTree.texts(in: view))")
+    }
+}
+
+/// 보내지 않는 APNs 전송(화면 시험용).
+struct NoAPNsTransport: APNsTransport {
+    func send(_ request: URLRequest) async throws -> (status: Int, body: Data) { (200, Data()) }
+}
+
+/// 메모리에만 저장하는 UserDefaults(~/Library에 파일을 남기지 않는다).
+final class UIMemoryDefaults: UserDefaults, @unchecked Sendable {
+    private var values: [String: Any] = [:]
+
+    override func object(forKey key: String) -> Any? { values[key] }
+    override func string(forKey key: String) -> String? { values[key] as? String }
+    override func bool(forKey key: String) -> Bool { values[key] as? Bool ?? false }
+    override func set(_ value: Any?, forKey key: String) { values[key] = value }
+    override func set(_ value: Bool, forKey key: String) { values[key] = value }
+    override func removeObject(forKey key: String) { values[key] = nil }
 }

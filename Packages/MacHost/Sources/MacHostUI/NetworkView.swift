@@ -84,6 +84,8 @@ struct NetworkView: View {
 
             UpdatePageSection()
 
+            PushSection()
+
             Section("이 Mac") {
                 LabeledContent("노드 이름") { Text(model.nodeName).textSelection(.enabled) }
                 if let status = model.status {

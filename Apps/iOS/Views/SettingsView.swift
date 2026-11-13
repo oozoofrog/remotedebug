@@ -16,18 +16,25 @@ struct SettingsView: View {
     @State private var onDemand: Bool
     @State private var onDemandError: String?
     @State private var savingOnDemand = false
+    @State private var pushOn: Bool
+    @State private var pushDenied = false
+    @State private var savingPush = false
 
     init(state: SettingsViewState, actions: SettingsActions) {
         self.state = state
         self.actions = actions
         _controlURLDraft = State(initialValue: state.controlURL)
         _onDemand = State(initialValue: state.onDemand)
+        _pushOn = State(initialValue: state.pushEnabled)
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 macSection
+                if let status = state.pushStatus {
+                    pushSection(status)
+                }
                 onDemandSection
                 diagnosticsSection
                 logSection
@@ -76,6 +83,43 @@ struct SettingsView: View {
                 Text("페어링한 Mac이 없습니다.")
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    // MARK: 알림
+
+    private func pushSection(_ status: PushStatus) -> some View {
+        Section {
+            Toggle("새 빌드·파일 알림", isOn: Binding(
+                get: { pushOn },
+                set: { enabled in
+                    pushOn = enabled
+                    savingPush = true
+                    Task {
+                        let applied = await actions.setPushEnabled(enabled)
+                        if !applied { pushOn = false }
+                        pushDenied = !applied
+                        savingPush = false
+                    }
+                }
+            ))
+            .disabled(savingPush)
+            if pushDenied {
+                Label("iOS 설정에서 이 앱의 알림이 꺼져 있습니다.", systemImage: "bell.slash")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                Button("iOS 설정 열기", action: actions.openNotificationSettings)
+            } else if pushOn {
+                LabeledContent("상태", value: status.label)
+            }
+        } header: {
+            Text("알림")
+        } footer: {
+            Text("Mac에 새 빌드가 게시되거나 Mac에서 파일·링크를 보내면 알립니다. 알림 내용은 Apple 푸시 서버를 거칩니다.")
+        }
+        .task {
+            // 켜 둔 뒤 iOS 설정에서 알림을 껐을 수 있다.
+            if pushOn { pushDenied = await actions.pushDenied() }
         }
     }
 

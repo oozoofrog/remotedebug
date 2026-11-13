@@ -691,6 +691,7 @@ char *rd_host_set_direct(int64_t handle, int32_t on);
 | `GET /v1/info`, `GET /v1/builds` | 받는다 |
 | `GET /v1/resources`, `GET /v1/resources/{id}` | 받는다 |
 | `POST /v1/logs`, `POST /v1/crashes` | 받는다 |
+| `PUT /v1/devices/self/push-token`, `DELETE /v1/devices/self/push-token` | 받는다(P절) |
 | `GET /v1/agent`, `POST /v1/agent/requests`, `POST /v1/agent/requests/{id}/cancel` | 받는다(tailnet 리스너와 같은 조건) |
 | `/`, `/assets/*`(웹 페이지) | `404 not_found` |
 | `/v1/pair/*`(페어링) | `404 not_found` |
@@ -814,3 +815,76 @@ tailnet으로만 가는 것과 그 이유:
 - App Group 이름을 Keychain 접근 그룹으로 써서 두 앱이 등록 값을 함께 읽는지.
 - macOS 방화벽이 켜져 있을 때 들어오는 연결 허용을 묻는지, Mac의 Bonjour 광고가 iPhone에 보이는지.
 - 직접 경로의 큰 파일 받기와 이어 받기.
+
+## P. 새 빌드·파일 알림(APNs)
+
+새 빌드가 게시되거나 Mac에서 보낸 파일·링크가 추가되면 Mac 앱이 페어링한 iPhone의 RemoteDebug 앱에 알림을 보낸다. 코어는 기기 토큰을 보관만 하고, 알림은 Mac 앱이 Apple의 개발(sandbox) 서버로 직접 보낸다. RD 업데이트 앱은 알림을 쓰지 않는다.
+
+### P.1 등록 API
+
+`PUT /v1/devices/self/push-token`, `DELETE /v1/devices/self/push-token`. 호출한 기기는 인증으로 정해지므로 경로에 기기 id를 쓰지 않는다.
+
+PUT 본문(4 KiB 이하):
+
+```json
+{"token": "0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd", "bundleId": "com.oozoofrog.app.RemoteDebugPhone", "environment": "development"}
+```
+
+- `token`: 16진수만, 짝수 길이, 64~512자. 코어가 소문자로 바꿔 저장한다.
+- `bundleId`: 1~255자, `A-Z a-z 0-9 . -`만.
+- `environment`: 정확히 `"development"`만 받는다.
+- 어긋나면 `400 bad_request`, 허용 목록에 없는 기기는 `403 not_paired`다.
+
+PUT 성공은 `200 {"registered":true}`, DELETE(본문 없음, 몇 번을 불러도 같다)는 `200 {"registered":false}`다. 코어는 값이 실제로 바뀐 때에만 `device-updated`를 낸다. 같은 값을 다시 PUT하거나 이미 없는 것을 DELETE하면 200만 돌려주고 이벤트는 없다. 이 경로를 모르는 이전 Mac은 `404 not_found`를 주고, iPhone은 이를 "이 Mac은 알림을 지원하지 않음"으로 보며 오류로 띄우지 않는다.
+
+### P.2 기기 항목의 `push`와 `device-updated`
+
+기기 항목(protocol §5)에 선택 필드 `push`가 더해진다. 등록하지 않았으면 키가 없다(`null`이나 빈 객체가 아니다). 페어링을 해제하면 Mac이 `rd_host_set_devices`로 목록을 통째로 바꾸므로 토큰도 항목과 함께 사라진다. `rd_host_set_devices`는 받은 `push`를 그대로 보존한다(Mac을 다시 시작한 뒤 복원).
+
+```json
+{"type": "device-updated", "device": {"id": "d_9c2e41b7", "name": "시험용 iPhone", "nodeStableId": "nSTABLE1", "nodeName": "rd-phone-1", "loginName": "user@example.com", "pairedAt": "2026-11-11T09:05:00Z", "push": {"token": "0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd", "bundleId": "com.oozoofrog.app.RemoteDebugPhone", "environment": "development"}}}
+```
+
+### P.3 직접 연결 리스너
+
+두 경로는 tailnet 리스너와 직접 연결 리스너(O절) 양쪽이 받는다. 직접 연결에서는 `RD-Device` 토큰이 기기를 정하고, 토큰이 없으면 O.3대로 `403 not_paired`다. 등록은 VPN 없이도 되므로 iPhone은 등록만을 위해 VPN을 켜지 않는다.
+
+### P.4 발신
+
+Mac 앱이 `https://api.sandbox.push.apple.com/3/device/<token>`으로 HTTP/2 POST를 보낸다. 개발 환경만 쓴다.
+
+- 머리말: `apns-topic: <push.bundleId>`, `apns-push-type: alert`, `apns-priority: 10`, `authorization: bearer <JWT>`(ES256, 약 50분마다 새로 만든다).
+- Apple이 `410`이나 `BadDeviceToken`을 돌려주면 Mac 앱이 그 토큰을 지운다.
+- 키가 없으면 알림 기능 전체가 꺼져 있다.
+
+### P.5 페이로드
+
+```json
+{"aps": {"alert": {"title": "새 빌드", "body": "예시 앱 1.0 (35)"}, "sound": "default"}, "rd": {"kind": "build", "id": "b_0123abcd"}}
+```
+
+- `rd.kind`: `build`, `resource`, `test`. `rd.id`는 선택이다(빌드 id 또는 리소스 id). 여러 항목을 묶었거나 "알림에 이름을 넣지 않기"가 켜져 있으면 `id`를 넣지 않는다.
+- 빌드: 제목 `새 빌드`, 본문 `<앱 이름> <버전> (<빌드 번호>)`. 파일·링크 1개: 제목 `새 파일`·`새 링크`, 본문은 이름. 여러 개: `파일 N개`(모두 링크면 제목 `새 링크`, 본문 `링크 N개`). 시험: 제목 `RemoteDebug`, 본문 `시험 알림입니다`, kind `test`.
+- "알림에 이름을 넣지 않기"가 켜져 있으면 제목 `RemoteDebug`, 본문 `새 빌드가 있습니다` 또는 `새 파일이 있습니다`.
+
+### P.6 보내는 때와 묶기
+
+- 새 빌드가 게시된 때와 Mac에서 파일·링크를 추가한 때만 보낸다. 앱을 시작하며 기존 목록을 다시 읽은 것만으로는 보내지 않는다.
+- 마지막 변화 뒤 5초 동안 조용하면 보낸다. 빌드는 앱(bundleId)별로 묶어 가장 최근 것 하나만, 파일·링크는 그 사이 더해진 것을 한 알림으로 보낸다.
+
+### P.7 iPhone 앱 동작
+
+- 알림 권한은 앱을 시작할 때 묻지 않고, 설정 화면의 **새 빌드·파일 알림**을 켤 때 묻는다. 거부되어 있으면 **iOS 설정 열기** 버튼으로 안내한다.
+- 토큰을 받으면 페어링한 Mac에 등록한다. 토큰이 바뀌거나 Mac이 바뀌면 다시 등록하고, Mac에 닿지 못하면 다음 목록 새로고침 때 다시 시도한다. 스위치를 끄면 DELETE를 보낸다.
+- 알림을 누르면 앱이 열리고 `build`는 빌드 탭, `resource`는 파일 탭으로 가서 새로고침한다. `rd`가 없거나 `kind`를 모르거나 `id`가 없어도 탭을 바꾸지 않고 새로고침만 한다. 앱이 앞에 있을 때는 배너를 띄우고 목록도 새로고침한다.
+
+### P.8 개인정보
+
+- 알림의 제목과 본문은 Apple의 서버를 거친다. 앱 이름·버전·파일 이름을 거기에 두고 싶지 않으면 Mac 앱 **네트워크** 화면 **iPhone 알림**의 **알림에 이름을 넣지 않기**를 켠다.
+- APNs 인증 키(`.p8`)는 Mac 키체인에만 두고, Key ID와 Team ID는 Mac 앱 설정에 둔다. 저장소에는 두지 않는다.
+- 기기 토큰은 Mac의 `devices.json`에 저장된다. 진단 로그와 화면에는 토큰 앞 8자까지만 남긴다.
+
+### P.9 확인하지 못한 것
+
+- 실제 iPhone에 알림이 도착하는지, 알림을 눌러 탭이 바뀌고 새로고침되는지. 사용자의 APNs 키와 프로비저닝이 필요하다.
+- 코어의 등록·삭제 경로는 두 리스너에서 단위 시험으로 확인했다.

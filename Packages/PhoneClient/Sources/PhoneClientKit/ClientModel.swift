@@ -257,6 +257,14 @@ public final class ClientModel {
     public private(set) var logSendError: String?
     /// 페어링 링크에 Tailscale 키가 있을 때 그 키로 VPN을 켜는 동작. 앱이 연결한다(키를 저장하지 않는다).
     @ObservationIgnored public var connectWithAuthKey: (@MainActor (String) async -> Void)?
+    /// 새 빌드·파일 알림 스위치. 알림을 쓰지 않는 앱(`push` 없이 만든 모델)은 항상 `false`.
+    public private(set) var pushEnabled = false
+    /// 이번 실행에서 iOS에게 받은 기기 토큰(소문자 16진수). 아직 받지 못했으면 `nil`.
+    public private(set) var pushToken: String?
+    /// 마지막으로 Mac에 등록하는 데 성공한 값(저장소와 같다).
+    public private(set) var pushRecord: PushRecord?
+    /// 이번 실행에서 알림 등록을 모른다고 답한 Mac(`404 not_found`). 다음 실행 전까지 다시 시도하지 않는다.
+    private var pushUnsupportedHosts: Set<String> = []
 
     // MARK: 의존성
 
@@ -272,6 +280,8 @@ public final class ClientModel {
     private let receivedStore: ReceivedFileStore
     /// 같은 네트워크 직접 연결. 없으면 모든 요청이 VPN(tailnet) 경로로 간다.
     private let direct: DirectRoute?
+    /// 새 빌드·파일 알림. 없으면 기기 토큰을 등록하지 않는다(업데이트 앱).
+    private let push: PushSetup?
 
     // MARK: 내부 상태
 
@@ -300,6 +310,12 @@ public final class ClientModel {
     @ObservationIgnored private var idleToken: UUID?
     /// 직접 경로로 받는 중인 파일. VPN이 필요한 일로 세지 않는다.
     @ObservationIgnored private var directDownloads: Set<String> = []
+    /// 이번 실행에서 Mac에 등록을 확인한 값.
+    @ObservationIgnored private var pushConfirmed: PushRecord?
+    @ObservationIgnored private var isSyncingPush = false
+    /// Mac을 잊는 중이다. 이 사이에는 등록을 새로 보내지 않는다.
+    @ObservationIgnored private var isForgettingPush = false
+    @ObservationIgnored private var pushSyncWaiters: [CheckedContinuation<Void, Never>] = []
 
     public init(
         deviceName: String,
@@ -314,8 +330,12 @@ public final class ClientModel {
         logBook: DeviceLogBook? = nil,
         crashBook: CrashBook? = nil,
         receivedFiles: ReceivedFileStore? = nil,
-        direct: DirectRoute? = nil
+        direct: DirectRoute? = nil,
+        push: PushSetup? = nil
     ) {
+        self.push = push
+        self.pushEnabled = push?.store.enabled ?? false
+        self.pushRecord = push?.store.record
         self.deviceName = deviceName
         self.client = client
         self.transport = transport
@@ -676,6 +696,8 @@ public final class ClientModel {
             return
         }
         await refreshResources(api: api, generation: generation)
+        // 목록을 받은 경로로 알림 등록을 맞춘다. 실패해도 화면 오류는 띄우지 않고 다음 새로고침 때 다시 한다.
+        await syncPush(host: current, generation: generation)
         await sendLogs()
         await sendCrashes()
     }
@@ -1155,6 +1177,7 @@ public final class ClientModel {
 
     /// 페어링한 Mac을 잊고 VPN을 끈다.
     public func forgetHost() async {
+        await forgetPushRegistration()
         stopPolling()
         cancelPairing()
         pendingReplacement = nil
@@ -1551,6 +1574,171 @@ public final class ClientModel {
     /// 로그 한 줄을 남긴다. 앱 수준 일(시작, 화면 전환)도 이것으로 남긴다.
     public func log(_ level: DeviceLogEntry.Level, _ source: String, _ message: String) {
         logBook.log(level, source, message)
+    }
+
+    // MARK: 새 빌드·파일 알림 (docs/protocol-addenda.md P)
+
+    /// 이 앱이 알림 등록을 쓰는가(업데이트 앱은 `false`).
+    public var isPushAvailable: Bool { push != nil }
+
+    /// 설정 화면에 보이는 등록 상태.
+    public var pushStatus: PushStatus {
+        guard push != nil, pushEnabled else { return .off }
+        guard let host else { return .pending }
+        if pushUnsupportedHosts.contains(host.hostId) { return .unsupported }
+        if let record = pushRecord, record.hostId == host.hostId, pushToken.map(record.matches(token:)) ?? true { return .registered }
+        return .pending
+    }
+
+    /// 알림 스위치를 바꾼다. 권한은 앱이 먼저 받는다. 지금 닿는 경로(직접 연결·연결된 VPN)가 있으면 바로 Mac에 맞추고,
+    /// 없으면 다음 새로고침 때 한다(이것만을 위해 VPN을 켜지 않는다).
+    public func setPushEnabled(_ enabled: Bool) async {
+        guard let push else { return }
+        if enabled != pushEnabled { log(.info, "push", "새 빌드·파일 알림 \(enabled ? "켬" : "끔")") }
+        push.store.enabled = enabled
+        pushEnabled = enabled
+        await syncPushIfReachable()
+    }
+
+    /// iOS가 준 기기 토큰(16진수). 바뀌었으면 지금 닿는 경로로 등록하고, 없으면 다음 새로고침 때 한다.
+    public func receivePushToken(_ token: String) async {
+        guard push != nil else { return }
+        let normalized = token.lowercased()
+        guard normalized != pushToken else { return }
+        pushToken = normalized
+        log(.info, "push", "기기 토큰 받음: \(normalized.pushTokenPrefix)")
+        await syncPushIfReachable()
+    }
+
+    /// 알림을 눌러 앱이 열렸다. 갈 탭은 앱이 정하고, 모델은 목록을 새로 받는다(VPN 자동 켜기 규칙을 그대로 따른다).
+    public func openNotification(_ target: PushTarget) async {
+        log(.info, "push", "알림 열림: \(target)")
+        await refresh()
+    }
+
+    private func pushAction(for current: PairedHost) -> PushRegistrationPolicy.Action {
+        guard let push else { return .none }
+        return PushRegistrationPolicy.action(
+            enabled: pushEnabled, token: pushToken, bundleId: push.bundleId, hostId: current.hostId,
+            record: pushRecord, pendingRemoval: push.store.pendingRemoval,
+            confirmedThisRun: pushConfirmed != nil && pushConfirmed == pushRecord,
+            unsupported: pushUnsupportedHosts.contains(current.hostId))
+    }
+
+    /// 기록을 바꾼다. `nil`이면 지울 Mac 표시도 함께 지운다(Mac이 지웠음을 확인했거나 지울 수 없다).
+    private func setPushRecord(_ record: PushRecord?) {
+        push?.store.record = record
+        pushRecord = record
+        if record == nil {
+            pushConfirmed = nil
+            push?.store.pendingRemoval = nil
+        }
+    }
+
+    /// 요청을 VPN을 켜지 않고 지금 닿는 경로로 보낸다. 다른 요청과 같이 직접 연결이 먼저고, 연결 오류나 토큰 거절이면
+    /// 이미 연결된 VPN으로 넘어간다. 닿지 않으면 `VPNNotConnected`.
+    private func viaReachable<T>(_ current: PairedHost, _ work: (HostAPI) async throws -> T) async throws -> T {
+        try await viaHost(current, tunnel: { [self] in tunnelController.currentState() == .connected }, work)
+    }
+
+    private func syncPushIfReachable() async {
+        guard push != nil, let current = host, pushAction(for: current) != .none else { return }
+        await syncPush(host: current, generation: hostGeneration)
+    }
+
+    /// 판단(`PushRegistrationPolicy`)대로 등록하거나 지운다. 하는 사이 값이 바뀌었으면 한 번 더 맞춘다.
+    /// Mac에 닿지 않으면 네트워크가 필요 없는 일만 하고 나머지는 다음 새로고침으로 미룬다.
+    private func syncPush(host current: PairedHost, generation: Int) async {
+        guard push != nil, !isSyncingPush, !isForgettingPush else { return }
+        isSyncingPush = true
+        defer {
+            isSyncingPush = false
+            let waiters = pushSyncWaiters
+            pushSyncWaiters = []
+            for waiter in waiters { waiter.resume() }
+        }
+        for _ in 0..<3 {
+            guard generation == hostGeneration, !isForgettingPush else { return }
+            switch pushAction(for: current) {
+            case .none:
+                return
+            case .forget:
+                setPushRecord(nil)
+                return
+            case .register(let record):
+                // 판단은 지금 토큰으로 했다(기록에는 해시만 있다).
+                guard let token = pushToken else { return }
+                // 응답을 잃어도 Mac에는 등록됐을 수 있다. 끄면 Mac이 지웠다고 확인할 때까지 지우기를 보낸다.
+                push?.store.pendingRemoval = current.hostId
+                let api: HostAPI
+                do {
+                    api = try await viaReachable(current) { api in
+                        try await api.registerPushToken(token: token, bundleId: record.bundleId)
+                        return api
+                    }
+                } catch is VPNNotConnected {
+                    log(.info, "push", "Mac에 닿지 않아 알림 등록을 다음 연결로 미룸")
+                    return
+                } catch let error as HostAPIError where error.code == "not_found" {
+                    guard generation == hostGeneration else { return }
+                    pushUnsupportedHosts.insert(current.hostId)
+                    log(.info, "push", "이 Mac은 알림 등록을 지원하지 않음")
+                    return
+                } catch {
+                    guard !(error is CancellationError) else { return }
+                    log(.warning, "push", "알림 등록 실패(다음 새로고침 때 다시 시도): \(Self.message(for: error))")
+                    return
+                }
+                guard generation == hostGeneration else { return }
+                setPushRecord(record)
+                pushConfirmed = record
+                log(.info, "push", "알림 등록: 토큰 \(token.pushTokenPrefix) \(api.isDirect ? "직접 연결" : "VPN")")
+            case .remove:
+                // 응답을 잃어도 Mac은 지웠을 수 있다. 다시 켜면 반드시 다시 등록하도록 확인 표시를 먼저 내린다.
+                pushConfirmed = nil
+                do {
+                    try await viaReachable(current) { try await $0.removePushToken() }
+                } catch is VPNNotConnected {
+                    log(.info, "push", "Mac에 닿지 않아 알림 등록 지우기를 다음 연결로 미룸")
+                    return
+                } catch let error as HostAPIError where error.code == "not_found" {
+                    // 알림 등록을 모르는 Mac에는 지울 것이 없다.
+                } catch {
+                    guard !(error is CancellationError) else { return }
+                    log(.warning, "push", "알림 등록 지우기 실패(다음 새로고침 때 다시 시도): \(Self.message(for: error))")
+                    return
+                }
+                guard generation == hostGeneration else { return }
+                setPushRecord(nil)
+                log(.info, "push", "Mac에서 알림 등록을 지움")
+            }
+        }
+    }
+
+    /// Mac을 잊기 전에: 닿는 경로(직접 연결, 실패하면 이미 연결된 VPN)가 있으면 Mac에서 토큰을 지우고, 어느 쪽이든 기록을 비운다.
+    /// 실패해도 잊기는 막지 않는다. 잊은 뒤에는 그 Mac과 인증이 끊겨 다시 시도할 수 없지만,
+    /// Mac에서 페어링을 해제하면 코어가 기기 항목과 함께 토큰을 지운다.
+    private func forgetPushRegistration() async {
+        guard let push else { return }
+        // 가고 있는 등록이 삭제보다 늦게 도착하면 Mac에 토큰이 남는다. 등록이 끝난 뒤에 지운다.
+        isForgettingPush = true
+        defer { isForgettingPush = false }
+        if isSyncingPush {
+            await withCheckedContinuation { pushSyncWaiters.append($0) }
+        }
+        if let current = host,
+           pushRecord?.hostId == current.hostId || push.store.pendingRemoval == current.hostId,
+           !pushUnsupportedHosts.contains(current.hostId) {
+            do {
+                try await viaReachable(current) { try await $0.removePushToken() }
+                log(.info, "push", "Mac을 잊기 전에 알림 등록을 지움")
+            } catch is VPNNotConnected {
+                log(.info, "push", "Mac에 닿지 않아 잊기 전에 알림 등록을 지우지 못함")
+            } catch {
+                log(.info, "push", "Mac을 잊기 전에 알림 등록을 지우지 못함: \(Self.message(for: error))")
+            }
+        }
+        setPushRecord(nil)
     }
 
     // MARK: 에이전트 요청

@@ -194,6 +194,10 @@ struct SettingsViewState {
     /// 모은 크래시 기록(최근 것이 앞).
     var crashes: [CrashBook.Item] = []
     var crashSendError: String?
+    /// 새 빌드·파일 알림 스위치.
+    var pushEnabled = false
+    /// 알림 등록 상태. `nil`이면 알림 칸을 보이지 않는다.
+    var pushStatus: PushStatus?
 }
 
 @MainActor
@@ -215,4 +219,10 @@ struct SettingsActions {
     var deleteCrash: (_ id: String) -> Void = { _ in }
     /// 크래시 파일을 읽어 기록에 더한다. 실패하면 안내 문구를 돌려준다.
     var importCrash: @MainActor @Sendable (URL) async -> String? = { _ in nil }
+    /// 알림 스위치를 바꾼다. 켤 때 권한을 묻고, 권한이 없어 켜지 못하면 `false`.
+    var setPushEnabled: @MainActor @Sendable (Bool) async -> Bool = { _ in true }
+    /// iOS 설정에서 이 앱의 알림이 거부돼 있는가.
+    var pushDenied: @MainActor @Sendable () async -> Bool = { false }
+    /// iOS 설정 앱의 이 앱 알림 화면을 연다.
+    var openNotificationSettings: () -> Void = {}
 }

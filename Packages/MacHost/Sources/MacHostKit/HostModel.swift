@@ -669,7 +669,7 @@ public final class HostModel {
             guard storeApprovedDevice(d, approvedBy: coreControlURL) else { break }
             appendActivity(.deviceAdded(d), "\(d.name) 기기를 허용 목록에 추가했습니다.")
         case .deviceUpdated(let d):
-            storeDirectToken(of: d)
+            storeDeviceUpdate(d)
         case .denied(let e):
             appendActivity(.denied(e), ActivityText.denied(e))
             notePairingDenial(e)
@@ -1027,14 +1027,36 @@ public final class HostModel {
         return true
     }
 
-    /// 기기가 직접 연결에 등록했다(addenda O). 이미 허용한 기기의 토큰 해시만 바꿔 저장한다.
-    /// 그사이 목록에서 지운 기기는 다시 넣지 않는다.
-    private func storeDirectToken(of device: DeviceEntry) {
+    /// 기기가 직접 연결(addenda O)이나 알림(addenda P)에 등록했다. 이미 허용한 기기의 직접 연결 토큰 해시와
+    /// 알림 기기 토큰만 바꿔 저장한다(둘 중 하나라도 바뀌었을 때). 그사이 목록에서 지운 기기는 다시 넣지 않는다.
+    private func storeDeviceUpdate(_ device: DeviceEntry) {
         guard coreControlURL == deviceControlURL,
               let i = devices.firstIndex(where: { $0.id == device.id && $0.nodeStableId == device.nodeStableId }),
-              devices[i].directTokenHash != device.directTokenHash else { return }
+              devices[i].directTokenHash != device.directTokenHash || devices[i].push != device.push else { return }
         devices[i].directTokenHash = device.directTokenHash
+        devices[i].push = device.push
         saveDevices()
+    }
+
+    /// 기기의 알림 등록을 지운다(APNs가 토큰을 더는 받지 않을 때). 그사이 기기가 다른 토큰으로 다시 등록했으면
+    /// 그대로 둔다. 공유 중이면 코어의 허용 목록에도 적용한다.
+    public func removePush(deviceID: String, token: String) async {
+        guard let i = devices.firstIndex(where: { $0.id == deviceID }), devices[i].push?.token == token else { return }
+        devices[i].push = nil
+        saveDevices()
+        do {
+            try await serialDevices { [weak self] in
+                guard let self, self.coreStarted else { return }
+                try await self.core.setDevices(self.activeDevices)
+            }
+        } catch {
+            lastError = "알림 등록을 지운 기기 목록을 적용하지 못했습니다: \(Self.message(for: error))"
+        }
+    }
+
+    /// 알림을 보낼 수 있는 기기: 지금 제어 서버의 기기 중 개발 환경 토큰을 등록한 것.
+    public var pushRecipients: [DeviceEntry] {
+        activeDevices.filter { $0.isPushRegistered && $0.push?.environment == "development" }
     }
 
     // MARK: 같은 네트워크 직접 연결
@@ -1121,6 +1143,8 @@ public final class HostModel {
 
     /// 빌드 목록을 새로 읽을 때마다 부른다(iPhone 앱 업데이트 페이지).
     @ObservationIgnored public var onBuildsChanged: (@MainActor ([LibraryBuild]) async -> Void)?
+    /// 저장된 빌드 목록을 읽은 뒤 빌드·보낸 파일 목록을 새로 읽을 때마다 부른다(iPhone 알림).
+    @ObservationIgnored public var onLibraryChanged: (@MainActor ([LibraryBuild], [ResourceDescriptor]) -> Void)?
 
     /// 게시한 빌드의 IPA 위치.
     public func publishedIPA(forBuildID id: String) -> URL { paths.ipaURL(forBuildID: id) }
@@ -1131,6 +1155,8 @@ public final class HostModel {
         builds = await library.builds
         rejected = await library.rejected
         sharedFiles = await fileLibrary.resources
+        // 저장된 목록을 읽기 전의 빈 목록은 넘기지 않는다(읽은 뒤 기존 항목이 새 항목처럼 보인다).
+        if libraryLoaded { onLibraryChanged?(builds, sharedFiles) }
     }
 
     // MARK: 보내는 파일

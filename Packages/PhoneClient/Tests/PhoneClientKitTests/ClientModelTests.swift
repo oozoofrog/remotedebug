@@ -1209,3 +1209,286 @@ private final class Recorder {
         #expect(problem?.contains("받지 않습니다") == true)
     }
 }
+
+// 새 빌드·파일 알림(docs/protocol-addenda.md P): 기기 토큰 등록·지우기와 알림을 눌렀을 때의 새로고침.
+@MainActor
+@Suite struct ClientModelPushTests {
+    private let pushPath = "/v1/devices/self/push-token"
+
+    private func harness(enabled: Bool = true, tunnel: TunnelState = .connected, record: PushRecord? = nil) -> (Harness, InMemoryPushSettingsStore) {
+        let store = InMemoryPushSettingsStore(enabled: enabled, record: record)
+        let h = Harness(tunnel: tunnel, storedHost: Harness.pairedHost, push: PushSetup(store: store, bundleId: phoneBundleID))
+        h.serveHostInfoAndBuilds()
+        h.transport.on("PUT", pushPath, .json(#"{"registered":true}"#))
+        h.transport.on("DELETE", pushPath, .json(#"{"registered":false}"#))
+        return (h, store)
+    }
+
+    private var registered: PushRecord { PushRecord(hostId: "h_4be0c7a1", token: fakePushToken, bundleId: phoneBundleID) }
+
+    private func pushRequests(_ h: Harness) -> Int {
+        h.transport.count("PUT", pushPath) + h.transport.count("DELETE", pushPath)
+    }
+
+    @Test func withoutPushSetupNothingIsSent() async {
+        let h = Harness(storedHost: Harness.pairedHost)
+        h.serveHostInfoAndBuilds()
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.setPushEnabled(true)
+        await h.model.restore()
+        await h.model.refresh()
+        await h.model.forgetHost()
+        #expect(pushRequests(h) == 0)
+        #expect(!h.model.isPushAvailable)
+        #expect(h.model.pushStatus == .off)
+    }
+
+    @Test func registersOnceAfterRefreshInThisRun() async throws {
+        let (h, store) = harness()
+        await h.model.receivePushToken(fakePushToken.uppercased())  // 아직 페어링한 Mac을 불러오지 않았다.
+        #expect(pushRequests(h) == 0)
+        await h.model.restore()
+        #expect(h.transport.count("PUT", pushPath) == 1)
+        let body = try #require(h.transport.requests.first { $0.httpMethod == "PUT" }?.jsonBody)
+        #expect(body["token"] as? String == fakePushToken)
+        #expect(body["bundleId"] as? String == phoneBundleID)
+        #expect(body["environment"] as? String == "development")
+        #expect(store.record == registered)
+        #expect(h.model.pushStatus == .registered)
+        await h.model.refresh()
+        await h.model.refresh()
+        #expect(h.transport.count("PUT", pushPath) == 1)
+    }
+
+    @Test func recordFromEarlierRunIsConfirmedAgain() async {
+        let (h, _) = harness(record: registered)
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        #expect(h.transport.count("PUT", pushPath) == 1)
+        await h.model.refresh()
+        #expect(h.transport.count("PUT", pushPath) == 1)
+    }
+
+    @Test func changedTokenRegistersAgain() async throws {
+        let (h, store) = harness()
+        await h.model.restore()
+        // VPN이 연결돼 있으면 토큰을 받자마자 등록한다.
+        await h.model.receivePushToken(fakePushToken)
+        #expect(h.transport.count("PUT", pushPath) == 1)
+        await h.model.receivePushToken(otherPushToken)
+        #expect(h.transport.count("PUT", pushPath) == 2)
+        let body = try #require(h.transport.requests.last { $0.httpMethod == "PUT" }?.jsonBody)
+        #expect(body["token"] as? String == otherPushToken)
+        #expect(store.record?.matches(token: otherPushToken) == true)
+        // 같은 토큰을 다시 받으면 보내지 않는다.
+        await h.model.receivePushToken(otherPushToken)
+        #expect(h.transport.count("PUT", pushPath) == 2)
+    }
+
+    @Test func failedRegistrationRetriesOnNextRefreshWithoutScreenError() async {
+        let (h, store) = harness()
+        h.transport.set("PUT", pushPath, .error("internal", status: 500), .fail(.timedOut), .json(#"{"registered":true}"#))
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        #expect(h.transport.count("PUT", pushPath) == 1)
+        #expect(h.model.lastError == nil)
+        #expect(h.model.refreshError == nil)
+        #expect(h.model.pushStatus == .pending)
+        #expect(store.record == nil)
+        await h.model.refresh()
+        #expect(h.transport.count("PUT", pushPath) == 2)
+        #expect(h.model.lastError == nil)
+        await h.model.refresh()
+        #expect(h.transport.count("PUT", pushPath) == 3)
+        #expect(h.model.pushStatus == .registered)
+        #expect(h.model.logBook.recent.allSatisfy { !$0.message.contains(fakePushToken) })
+    }
+
+    @Test func tokenDoesNotTurnOnVPN() async {
+        let (h, _) = harness(tunnel: .off)
+        await h.model.restore()  // VPN 구성이 없어 켜지 못하고 기다린다.
+        h.tunnel.autoStartConfiguration = .ready
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.setPushEnabled(true)
+        #expect(h.tunnel.autoStartCount == 0)
+        #expect(h.tunnel.connectCount == 0)
+        #expect(pushRequests(h) == 0)
+        #expect(h.model.pushStatus == .pending)
+        // VPN이 연결되면 기다리던 새로고침이 이어 가며 등록한다.
+        h.tunnel.set(.connected)
+        await h.waitUntil { h.transport.count("PUT", pushPath) == 1 }
+        await h.model.waitForBackgroundWork()
+        #expect(h.transport.count("PUT", pushPath) == 1)
+        #expect(h.model.pushStatus == .registered)
+    }
+
+    @Test func notFoundIsNotRetriedInThisRun() async {
+        let (h, store) = harness()
+        h.transport.set("PUT", pushPath, .error("not_found", status: 404))
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        #expect(h.transport.count("PUT", pushPath) == 1)
+        #expect(h.model.pushStatus == .unsupported)
+        #expect(h.model.lastError == nil)
+        await h.model.refresh()
+        await h.model.receivePushToken(otherPushToken)
+        #expect(h.transport.count("PUT", pushPath) == 1)
+        #expect(store.record == nil)
+    }
+
+    @Test func switchingOffRemovesFromMac() async {
+        let (h, store) = harness()
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        #expect(store.record == registered)
+        await h.model.setPushEnabled(false)
+        #expect(h.transport.count("DELETE", pushPath) == 1)
+        #expect(h.transport.requests.last { $0.httpMethod == "DELETE" }?.httpBody == nil)
+        #expect(store.enabled == false)
+        #expect(store.record == nil)
+        #expect(h.model.pushStatus == .off)
+        await h.model.refresh()
+        #expect(pushRequests(h) == 2)
+    }
+
+    @Test func switchingOffWhileUnreachableRemovesOnNextRefresh() async {
+        let (h, store) = harness()
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        h.tunnel.set(.off)
+        await h.model.setPushEnabled(false)
+        #expect(h.transport.count("DELETE", pushPath) == 0)
+        #expect(store.record == registered)
+        h.tunnel.set(.connected)
+        await h.model.refresh()
+        #expect(h.transport.count("DELETE", pushPath) == 1)
+        #expect(store.record == nil)
+    }
+
+    @Test func forgetHostClearsRecordAndRePairingRegistersAgain() async {
+        let (h, store) = harness()
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        #expect(h.transport.count("PUT", pushPath) == 1)
+        await h.model.forgetHost()
+        #expect(h.transport.count("DELETE", pushPath) == 1)
+        #expect(store.record == nil)
+        #expect(store.enabled)
+
+        h.tunnel.set(.connected)
+        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
+        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pairApproved))
+        h.model.pair(code: "K7M2-9QXD", host: hostFQDN)
+        await h.model.waitForBackgroundWork()
+        #expect(h.model.phase == .paired)
+        #expect(h.transport.count("PUT", pushPath) == 2)
+        #expect(store.record == registered)
+    }
+
+    @Test func forgetHostWithoutRouteOnlyClearsRecord() async {
+        let (h, store) = harness()
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        h.tunnel.set(.off)
+        await h.model.forgetHost()
+        #expect(h.transport.count("DELETE", pushPath) == 0)
+        #expect(store.record == nil)
+    }
+
+    /// PUT이 Mac에는 닿았는데 응답을 잃었다: 기록은 없지만 끄면 Mac이 지웠다고 확인할 때까지 지우기를 보낸다.
+    @Test func lostRegistrationResponseIsStillRemovedWhenSwitchedOff() async {
+        let (h, store) = harness()
+        h.transport.set("PUT", pushPath, .fail(.timedOut))
+        h.transport.set("DELETE", pushPath, .fail(.timedOut), .json(#"{"registered":false}"#))
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        #expect(store.record == nil)
+        #expect(store.pendingRemoval == "h_4be0c7a1")
+        await h.model.setPushEnabled(false)
+        #expect(h.transport.count("DELETE", pushPath) == 1)
+        #expect(store.pendingRemoval == "h_4be0c7a1", "지우기가 확인되지 않았으면 표시를 남긴다")
+        await h.model.refresh()
+        #expect(h.transport.count("DELETE", pushPath) == 2)
+        #expect(store.pendingRemoval == nil)
+        await h.model.refresh()
+        #expect(h.transport.count("DELETE", pushPath) == 2)
+    }
+
+    /// 지우기가 Mac에는 닿았는데 응답을 잃었다: 다시 켜면 등록을 다시 보낸다.
+    @Test func switchingBackOnAfterALostRemovalResponseRegistersAgain() async {
+        let (h, _) = harness()
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        #expect(h.transport.count("PUT", pushPath) == 1)
+        h.transport.set("DELETE", pushPath, .fail(.timedOut))
+        await h.model.setPushEnabled(false)
+        #expect(h.transport.count("DELETE", pushPath) == 1)
+        await h.model.setPushEnabled(true)
+        #expect(h.transport.count("PUT", pushPath) == 2)
+        #expect(h.model.pushStatus == .registered)
+    }
+
+    /// 등록이 가는 도중 Mac을 잊으면, 등록이 끝난 뒤에 지우기를 보낸다(지우기가 먼저 도착하면 토큰이 남는다).
+    @Test func forgetHostWaitsForARegistrationInFlight() async {
+        let (h, store) = harness()
+        h.transport.hold("PUT", pushPath)
+        await h.model.restore()
+        let registering = Task { await h.model.receivePushToken(fakePushToken) }
+        for _ in 0..<10_000 where h.transport.waiting("PUT", pushPath) == 0 { await Task.yield() }
+        #expect(h.transport.waiting("PUT", pushPath) == 1)
+        let forgetting = Task { await h.model.forgetHost() }
+        for _ in 0..<200 { await Task.yield() }
+        #expect(h.transport.count("DELETE", pushPath) == 0, "등록이 끝나기 전에는 지우기를 보내지 않는다")
+        h.transport.release("PUT", pushPath)
+        await registering.value
+        await forgetting.value
+        let order = h.transport.requests.filter { $0.url?.path == pushPath }.compactMap(\.httpMethod)
+        #expect(order == ["PUT", "DELETE"])
+        #expect(store.record == nil)
+        #expect(store.pendingRemoval == nil)
+        #expect(h.model.host == nil)
+    }
+
+    /// 지우기에 Mac이 404(알림을 모름)로 답해도 지운 것으로 본다.
+    @Test func pendingRemovalClearsOnNotFound() async {
+        let (h, store) = harness(enabled: false)
+        store.pendingRemoval = "h_4be0c7a1"
+        h.transport.set("DELETE", pushPath, .error("not_found", status: 404))
+        await h.model.restore()
+        #expect(h.transport.count("DELETE", pushPath) == 1)
+        #expect(store.pendingRemoval == nil)
+    }
+
+    @Test func forgetHostRemovesAfterALostRegistrationResponse() async {
+        let (h, store) = harness()
+        h.transport.set("PUT", pushPath, .fail(.timedOut))
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        #expect(store.record == nil)
+        await h.model.forgetHost()
+        #expect(h.transport.count("DELETE", pushPath) == 1)
+        #expect(store.pendingRemoval == nil)
+        #expect(h.model.host == nil)
+    }
+
+    @Test func forgetHostIsNotBlockedByAFailedRemoval() async {
+        let (h, store) = harness()
+        await h.model.receivePushToken(fakePushToken)
+        await h.model.restore()
+        h.transport.set("DELETE", pushPath, .error("internal", status: 500))
+        await h.model.forgetHost()
+        #expect(h.transport.count("DELETE", pushPath) == 1)
+        #expect(h.model.host == nil)
+        #expect(store.record == nil)
+        #expect(store.pendingRemoval == nil)
+    }
+
+    @Test(arguments: [PushTarget.builds, .files, .unchanged])
+    func openingNotificationRefreshes(_ target: PushTarget) async {
+        let (h, _) = harness()
+        await h.model.restore()
+        let before = h.transport.count("GET", "/v1/info")
+        await h.model.openNotification(target)
+        #expect(h.transport.count("GET", "/v1/info") == before + 1)
+    }
+}

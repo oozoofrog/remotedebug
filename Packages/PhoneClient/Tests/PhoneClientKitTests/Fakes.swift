@@ -320,7 +320,8 @@ struct Harness {
         storedHost: PairedHost? = nil,
         clock: TestClock = TestClock(),
         policy: HostPolicy = .tailnetOnly,
-        timing: ClientModel.Timing = .standard
+        timing: ClientModel.Timing = .standard,
+        push: PushSetup? = nil
     ) {
         self.tunnel = FakeTunnel(tunnel)
         self.store = InMemoryPairedHostStore(host: storedHost)
@@ -334,7 +335,8 @@ struct Harness {
             tunnel: self.tunnel,
             clock: clock,
             hostPolicy: policy,
-            timing: timing
+            timing: timing,
+            push: push
         )
     }
 

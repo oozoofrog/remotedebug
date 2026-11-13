@@ -89,6 +89,25 @@ public struct HostAPI: Sendable {
         try await call("POST", ["v1", "direct", "enroll"], bodyData: nil, timeout: timeouts.request, expect: DirectEnrollment.self)
     }
 
+    /// APNs 기기 토큰을 이 기기 항목에 등록한다(docs/protocol-addenda.md P). 직접 경로와 tailnet 경로 모두 쓴다.
+    /// 이 경로를 모르는 이전 Mac은 `404 not_found`를 준다.
+    public func registerPushToken(token: String, bundleId: String) async throws {
+        let body = PushTokenBody(token: token, bundleId: bundleId, environment: Self.pushEnvironment)
+        let reply = try await call("PUT", Self.pushTokenPath, body: body, expect: PushTokenReply.self)
+        guard reply.registered else { throw HostAPIError.invalidResponse(status: 200, "registered false") }
+    }
+
+    /// 등록한 기기 토큰을 지운다. 본문이 없고 여러 번 불러도 같다.
+    public func removePushToken() async throws {
+        _ = try await call("DELETE", Self.pushTokenPath, bodyData: nil, timeout: timeouts.request, expect: PushTokenReply.self)
+    }
+
+    /// 디버그 빌드만 쓰므로 APNs 개발(sandbox) 환경만 등록한다.
+    public static let pushEnvironment = "development"
+    private static let pushTokenPath = ["v1", "devices", "self", "push-token"]
+    private struct PushTokenBody: Encodable { var token: String; var bundleId: String; var environment: String }
+    private struct PushTokenReply: Decodable { var registered: Bool }
+
     public func info() async throws -> InfoResponse {
         try await call("GET", ["v1", "info"], expect: InfoResponse.self)
     }

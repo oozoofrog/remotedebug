@@ -118,6 +118,8 @@ func (h *Host) DirectHandler() http.Handler {
 	mux.HandleFunc("POST /v1/agent/requests/{id}/cancel", h.handleAgentCancel)
 	mux.HandleFunc("GET /v1/resources", h.handleResources)
 	mux.HandleFunc("GET /v1/resources/{id}", h.handleResourceFile)
+	mux.HandleFunc("PUT /v1/devices/self/push-token", h.handlePushTokenPut)
+	mux.HandleFunc("DELETE /v1/devices/self/push-token", h.handlePushTokenDelete)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-RD-Protocol", "1")
 		// Authentication comes first, so a stranger learns nothing about
