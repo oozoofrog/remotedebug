@@ -112,5 +112,8 @@ import Testing
         #expect(!InstallVPNGuard.connectsOwnFirst(state: .off, holder: .other, configuration: .missing))
         #expect(!InstallVPNGuard.connectsOwnFirst(state: .connected, holder: .none, configuration: .missing))
         #expect(!InstallVPNGuard.connectsOwnFirst(state: .needsLogin(authURL: nil), holder: .none, configuration: .missing))
+        // 실패로 멈춘 VPN은 구성이 준비돼 있어도 설치 요청으로 다시 켠다.
+        #expect(InstallVPNGuard.connectsOwnFirst(state: .failed(message: "끊김"), holder: .none, configuration: .ready))
+        #expect(!InstallVPNGuard.connectsOwnFirst(state: .failed(message: "끊김"), holder: .other, configuration: .ready))
     }
 }

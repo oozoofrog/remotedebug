@@ -50,12 +50,14 @@ public enum InstallVPNGuard {
         }
     }
 
-    /// 설치를 눌렀을 때 VPN이 꺼져 있고 자동으로 켤 수 없으면(구성이 없거나 다른 VPN이 선택됨) `true`.
+    /// 설치를 눌렀을 때 VPN이 꺼져 있고 자동으로 켤 수 없으면(구성이 없거나 다른 VPN이 선택됨, 또는 실패로 멈춤) `true`.
     /// 이때는 이 앱의 VPN을 켠 뒤 설치한다(iOS 동의가 한 번 뜰 수 있다). 그 VPN은 자동으로 켠 것으로 보고 설치가 끝나면 끈다.
     public static func connectsOwnFirst(state: TunnelState, holder: VPNHolder, configuration: VPNConfigurationState) -> Bool {
-        guard holder == .none, configuration != .ready else { return false }
+        guard holder == .none else { return false }
         switch state {
-        case .off, .disconnecting: return true
+        case .off, .disconnecting: return configuration != .ready
+        // 실패로 멈춘 VPN은 자동으로 다시 켜지 않는다. 설치를 누른 것을 다시 연결 요청으로 본다.
+        case .failed: return true
         default: return false
         }
     }

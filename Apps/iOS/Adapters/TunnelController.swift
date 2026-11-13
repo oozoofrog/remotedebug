@@ -14,6 +14,8 @@ import RDModels
 /// - 앱 밖에서 꺼졌을 때는 `fetchLastDisconnectError()`로 이유를 읽는다. 확장 오류(엔진 사망 등)면 `failed`로 올려
 ///   다시 연결을 제안하고, 오류가 없으면(설정 앱·제어 센터에서 끔) 꺼짐으로 둔다.
 ///   On Demand 규칙이 없으면 iOS는 다시 시작하지 않는다(docs/tunnel.md 4).
+/// - 넘겨받기(`connectOwn()`을 다른 앱의 VPN이 켜진 채 부름): iOS가 상대 터널을 내리면서 이 앱의 연결을 곧바로 끊으면
+///   상대 터널이 내려가기를 기다려 다시 켠다(`VPNTakeover`, docs/protocol-addenda.md M.4). 그동안은 "연결 중"으로 보인다.
 /// - `connectAutomatically()`: Mac이 필요한 동작 때문에 모델이 부른다. 저장된 구성이 있고 선택돼 있을 때만 켠다.
 /// - 주문형 연결(선택, 기본 꺼짐): `syncOnDemand()`가 페어링한 Mac 이름으로 규칙을 저장하거나 지운다.
 @MainActor
@@ -48,6 +50,9 @@ final class TunnelController: TunnelControlling {
     private(set) var lastReply: TunnelStatusReply?
     /// 확장이 오류로 끝난 이유(`fetchLastDisconnectError`).
     private(set) var disconnectMessage: String?
+    /// 마지막 넘겨받기에서 연결되기 전에 끊겨 다시 켠 횟수와 마지막 끊김의 오류(도메인·코드). 설치 기록에 남긴다.
+    @ObservationIgnored private(set) var takeoverRestartsUsed = 0
+    @ObservationIgnored private(set) var lastTakeoverDrop: String?
 
     /// VPN이 켜져 있거나 켜지거나 꺼지는 중이면 `true`. 다시 켜려면 먼저 끄고 `waitUntilStopped()`를 기다린다.
     var isTunnelActive: Bool { TunnelStateMapping.isActive(vpnStatus) || externalVPNActive }
@@ -104,6 +109,8 @@ final class TunnelController: TunnelControlling {
     @ObservationIgnored private var statusObserver: (any NSObjectProtocol)?
     /// 사용자가 끄거나 다시 켜는 중이면 끊김을 오류로 보지 않는다.
     @ObservationIgnored private var userStopped = true
+    /// 넘겨받는 중이면 다시 켠 횟수. 이 앱의 터널이 연결되거나, 그만두거나, 사용자가 끄면 `nil`.
+    @ObservationIgnored private var takeoverRestarts: Int?
     @ObservationIgnored private var externalTask: Task<Void, Never>?
 
     init(settings: TunnelSettingsStore) {
@@ -164,13 +171,31 @@ final class TunnelController: TunnelControlling {
         try await connectOwn()
     }
 
-    /// 이 앱의 터널을 켠다. 다른 앱의 VPN이 켜져 있으면 iOS가 그것을 끄고 이 앱의 것으로 바꾼다.
+    /// 이 앱의 터널을 켠다. 다른 앱의 VPN이 켜져 있으면 iOS가 그것을 끄고 이 앱의 것으로 바꾼다(넘겨받기).
     func connectOwn() async throws {
         guard isAvailable else { throw ControllerError.unavailable }
+        refreshExternal()
+        // 다른 VPN이 켜져 있을 때뿐 아니라, 이 앱의 구성이 선택돼 있지 않아 다시 저장해야 할 때도
+        // iOS가 시작 직후 연결을 끊는 일이 있다(짝 앱이 VPN을 끈 직후). 같은 규칙으로 다시 켠다.
+        takeoverRestarts = externalVPNActive || autoStartConfiguration != .ready ? 0 : nil
+        takeoverRestartsUsed = 0
+        lastTakeoverDrop = nil
+        do {
+            try await startOwn()
+        } catch {
+            takeoverRestarts = nil
+            recompute()
+            throw error
+        }
+    }
+
+    private func startOwn() async throws {
         if manager?.connection.status == .disconnecting {
             // 끄는 중에 켜면 시작이 끄기에 묻힌다. 다 꺼진 뒤에 켠다.
             await waitUntilStopped()
         }
+        // 다른 앱이 자기 구성을 켜면 이 앱의 구성은 선택이 풀린다. 메모리에 있는 값은 그 전의 것일 수 있다.
+        try? await manager?.loadFromPreferences()
         if manager == nil || manager?.isEnabled == false {
             // 켜기 바로 앞에서 구성이 있고 켜져 있게 한다(다른 VPN을 고른 뒤일 수 있다).
             try await prepare()
@@ -221,6 +246,7 @@ final class TunnelController: TunnelControlling {
 
     func disconnect() async {
         userStopped = true
+        takeoverRestarts = nil
         disconnectMessage = nil
         manager?.connection.stopVPNTunnel()
         statusDidChange(connectionID: nil)
@@ -263,19 +289,42 @@ final class TunnelController: TunnelControlling {
     }
 
     /// 이 앱의 터널이 연결되거나 로그인·오류로 멈출 때까지 최대 20초 기다린다. 이 앱의 터널로 연결됐으면 `true`.
+    /// 넘겨받는 중 다시 켜는 동안은 "연결 중"이므로 계속 기다린다.
     @discardableResult
     func waitUntilOwnTunnelSettles() async -> Bool {
         for _ in 0..<40 {
-            if TunnelStateMapping.isActive(vpnStatus) {
-                switch state {
-                case .connected: return true
-                case .needsLogin, .failed: return false
-                default: break
-                }
-            }
+            if let settled = VPNTakeover.settled(state, ownActive: TunnelStateMapping.isActive(vpnStatus)) { return settled }
             try? await Task.sleep(for: .milliseconds(500))
         }
         return false
+    }
+
+    /// 넘겨받는 중: 다른 앱의 터널(tailnet 인터페이스)이 내려갈 때까지 최대 `timeout` 기다린다. 내려가 있어도 잠깐은 쉰다.
+    private func waitUntilOtherTunnelGone(timeout: Duration = .seconds(8)) async {
+        try? await Task.sleep(for: .milliseconds(500))
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: timeout)
+        while clock.now < deadline, TailnetInterface.isUp() {
+            try? await Task.sleep(for: .milliseconds(200))
+        }
+    }
+
+    /// 넘겨받는 중 연결되기 전에 끊긴 이 앱의 터널을 다시 켠다.
+    private func restartTakeover(_ count: Int) async {
+        takeoverRestarts = count
+        takeoverRestartsUsed = count
+        logger.log("넘겨받는 중 VPN이 곧바로 끊겨 다른 터널이 내려가기를 기다려 다시 켭니다(\(count)/\(VPNTakeover.maxRestarts))")
+        await waitUntilOtherTunnelGone()
+        // 그사이 사용자가 끄거나 새로 켰다.
+        guard takeoverRestarts == count, !userStopped, !TunnelStateMapping.isActive(vpnStatus) else { return }
+        do {
+            try await startOwn()
+        } catch {
+            logger.error("넘겨받는 중 VPN 다시 켜기 실패: \(error.localizedDescription, privacy: .public)")
+            takeoverRestarts = nil
+            disconnectMessage = TunnelStateMapping.droppedMessage
+            recompute()
+        }
     }
 
     // MARK: 구성
@@ -406,6 +455,8 @@ final class TunnelController: TunnelControlling {
         let status = manager.connection.status
         vpnStatus = status
         if TunnelStateMapping.isActive(status) { externalVPNActive = false }
+        // 이 앱의 터널이 붙었다. 이 뒤의 끊김은 넘겨받기와 상관없다.
+        if status == .connected { takeoverRestarts = nil }
         if status == .connecting || status == .connected, previous == .disconnected || previous == .invalid {
             // 앱 밖(설정 앱, 다른 실행)에서 켠 VPN도 끊기면 알린다.
             userStopped = false
@@ -414,11 +465,25 @@ final class TunnelController: TunnelControlling {
         if status == .disconnected, previous != .disconnected, previous != .invalid, !userStopped {
             // 이 앱에서 끄지 않았다. 확장이 오류로 끝났을 때만 다시 연결을 제안한다.
             // 설정 앱·제어 센터에서 끈 경우는 오류가 없으므로 꺼짐으로 둔다.
+            // 넘겨받는 중 iOS가 끊었으면(확장 오류가 아님) 실패로 올리지 않고 다시 켠다.
             let connection = manager.connection
             Task { [weak self] in
-                let message = await Self.lastDisconnectMessage(connection)
+                let error = await Self.lastDisconnectError(connection)
                 guard let self, self.vpnStatus == .disconnected else { return }
-                self.disconnectMessage = message
+                if let done = self.takeoverRestarts {
+                    let drop = Self.takeoverDrop(error)
+                    if let error {
+                        let nsError = error as NSError
+                        self.lastTakeoverDrop = "\(nsError.domain) \(nsError.code)"
+                        self.logger.log("넘겨받는 중 VPN이 끊김: \(nsError.domain, privacy: .public) \(nsError.code)")
+                    }
+                    if VPNTakeover.restarts(after: drop, restartsDone: done, userStopped: self.userStopped) {
+                        await self.restartTakeover(done + 1)
+                        return
+                    }
+                    self.takeoverRestarts = nil
+                }
+                self.disconnectMessage = TunnelStateMapping.disconnectMessage(for: error)
                 self.recompute()
             }
         }
@@ -429,22 +494,27 @@ final class TunnelController: TunnelControlling {
         updatePolling(status)
     }
 
-    private static func lastDisconnectMessage(_ connection: NEVPNConnection) async -> String? {
+    /// 마지막으로 끊긴 이유. 오류 없이 꺼졌으면(설정 앱·제어 센터에서 끔) `nil`.
+    private static func lastDisconnectError(_ connection: NEVPNConnection) async -> (any Error)? {
         do {
             try await connection.fetchLastDisconnectError()
-            return TunnelStateMapping.disconnectMessage(for: nil)
+            return nil
         } catch {
-            return TunnelStateMapping.disconnectMessage(for: error)
+            return error
         }
+    }
+
+    private static func takeoverDrop(_ error: (any Error)?) -> VPNTakeover.Drop {
+        guard let error else { return .noError }
+        return TunnelProviderError.kind(of: error) == nil ? .system : .tunnel
     }
 
     private func recompute() {
         guard isAvailable else { return }
-        if externalVPNActive {
-            publish(.connected)
-            return
-        }
-        publish(TunnelStateMapping.state(status: vpnStatus, reply: lastReply, disconnectMessage: disconnectMessage))
+        let mapped = externalVPNActive
+            ? TunnelState.connected
+            : TunnelStateMapping.state(status: vpnStatus, reply: lastReply, disconnectMessage: disconnectMessage)
+        publish(VPNTakeover.displayedState(mapped, takingOver: takeoverRestarts != nil))
     }
 
     /// 이 앱의 VPN이 꺼져 있을 때 기기에 다른 tailnet 터널이 있는지 본다.

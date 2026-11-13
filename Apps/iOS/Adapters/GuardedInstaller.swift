@@ -55,6 +55,9 @@ final class GuardedInstaller {
         }
         preparations[id] = .working("VPN이 연결되기를 기다리는 중")
         let settled = await tunnel.waitUntilOwnTunnelSettles()
+        if tunnel.takeoverRestartsUsed > 0 || tunnel.lastTakeoverDrop != nil {
+            model.log(.info, "install", "VPN을 옮기는 중 iOS가 연결을 끊어 \(tunnel.takeoverRestartsUsed)번 다시 켬(끊김: \(tunnel.lastTakeoverDrop ?? "오류 없음"))")
+        }
         // 꺼져 있던 VPN을 설치 때문에 켰으면 자동으로 켠 것으로 본다. 설치가 끝난 뒤 쓸 일이 없으면 꺼진다.
         if startedFromOff { model.noteAutoStartedVPN() }
         guard settled else {
