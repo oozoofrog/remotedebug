@@ -50,8 +50,8 @@ import Testing
         #expect(AppPair.request(from: unknown) == nil)
     }
 
-    @Test func 스토어_앱은_VPN_앱을_짝으로_본다() throws {
-        // 시험은 스토어 앱 안에서 돈다.
+    @Test func RemoteDebug_앱은_업데이트_앱을_짝으로_본다() throws {
+        // 시험은 RemoteDebug 앱 안에서 돈다. 업데이트 앱의 번들 ID와 URL 스킴은 예전 이름 그대로다.
         #expect(AppPair.currentAppID.hasSuffix(AppPair.storeSuffix))
         #expect(AppPair.otherAppID.hasSuffix(AppPair.vpnSuffix))
         #expect(AppPair.url(toOther: .connect, returning: true)?.absoluteString == "remotedebug-vpn://vpn?action=connect&return=1")

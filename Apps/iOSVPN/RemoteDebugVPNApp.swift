@@ -1,9 +1,12 @@
 import PhoneClientKit
+import RDModels
 import SwiftUI
 import UIKit
 
-/// VPN만 맡는 앱. RemoteDebug 앱과 같은 tailnet 기기로 VPN을 켠다.
-/// RemoteDebug 앱을 업데이트하는 동안에도 이 앱의 VPN은 꺼지지 않는다.
+/// RemoteDebug 앱을 업데이트하는 앱(홈 화면 이름 RD 업데이트). 대상·스킴 이름은 RemoteDebugVPN 그대로다.
+///
+/// 페어링한 Mac에 게시된 RemoteDebug 앱의 빌드를 보여 주고 설치한다. RemoteDebug 앱과 같은 tailnet 기기로 VPN도 켠다.
+/// 설치하는 동안 iOS가 RemoteDebug 앱과 그 터널을 끝내므로, 설치 전에 VPN을 이 앱의 터널로 옮긴다.
 @main
 struct RemoteDebugVPNApp: App {
     @State private var services = VPNServices()
@@ -20,6 +23,14 @@ struct RemoteDebugVPNApp: App {
 final class VPNServices {
     let tunnel: TunnelController
     let opener = UIKitURLOpener()
+    /// RemoteDebug 앱이 공용 설정에 저장한 Mac. 페어링은 RemoteDebug 앱에서만 한다.
+    private let hostStore = UserDefaultsPairedHostStore(defaults: SharedContainer.defaults)
+    /// 빌드 목록과 설치. 페어링한 Mac이 바뀌면 새로 만든다.
+    private(set) var model: ClientModel
+    /// RemoteDebug를 설치하기 전에 VPN을 이 앱의 터널로 옮긴다.
+    let installer: GuardedInstaller
+    /// 이 iPhone에 설치된 RemoteDebug 앱의 버전. 읽지 못했으면 `nil`.
+    private(set) var storeInstalled: InstalledApp?
     /// 마지막 동작의 안내(실패 이유 등).
     var notice: String?
     /// 짝 앱의 요청을 처리하는 중이면 그 내용.
@@ -27,7 +38,59 @@ final class VPNServices {
 
     init() {
         // 이 앱만의 예전 저장소가 없으므로 옮길 것도 없다.
-        tunnel = TunnelController(settings: TunnelSettingsStore(legacy: nil))
+        let tunnel = TunnelController(settings: TunnelSettingsStore(legacy: nil))
+        self.tunnel = tunnel
+        installer = GuardedInstaller(tunnel: tunnel, role: .updater)
+        model = Self.makeModel(store: hostStore, opener: opener, tunnel: tunnel)
+    }
+
+    private static func makeModel(store: UserDefaultsPairedHostStore, opener: UIKitURLOpener, tunnel: TunnelController) -> ClientModel {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        return ClientModel(
+            deviceName: UIDevice.current.name,
+            client: ClientInfo(osVersion: UIDevice.current.systemVersion, appVersion: version),
+            store: store,
+            opener: opener,
+            tunnel: tunnel
+        )
+    }
+
+    /// Mac에 게시된 RemoteDebug 앱의 빌드(최신이 앞). 다른 앱의 빌드는 보여 주지 않는다.
+    var storeBuilds: [BuildDescriptor] { AppBuildFilter.only(AppPair.otherAppID, in: model.builds) }
+
+    var installActions: InstallActions {
+        InstallActions(
+            install: { [self] in installer.install($0, with: model) },
+            clearInstall: { [self] in
+                installer.clear($0)
+                model.clearInstall($0)
+            },
+            reopenInstaller: { [self] in await model.reopenInstaller($0) },
+            cancelInstall: { [self] in model.cancelInstall($0) }
+        )
+    }
+
+    func reloadInstalled() {
+        let found = InstalledApps.lookup(AppPair.otherAppID).app
+        if found != storeInstalled { storeInstalled = found }
+    }
+
+    /// 공용 설정의 Mac을 다시 읽고 빌드 목록을 받는다. RemoteDebug 앱에서 Mac을 바꾸거나 잊었으면 따라간다.
+    func syncPairing() async {
+        let stored = hostStore.load()
+        if let current = model.host, stored?.hostId != current.hostId || stored?.fqdn != current.fqdn {
+            model = Self.makeModel(store: hostStore, opener: opener, tunnel: tunnel)
+        }
+        if model.host == nil {
+            // 저장된 Mac을 불러오고 목록을 받는다. VPN이 꺼져 있으면 켜질 때 받는다.
+            await model.restore()
+        } else if model.tunnel == .connected {
+            await model.refresh()
+        }
+    }
+
+    func refresh() async {
+        await model.refresh()
     }
 
     let appVersion: String = {
@@ -83,7 +146,7 @@ final class VPNServices {
         case .connect:
             working = "VPN을 켜는 중…"
             await connect()
-            await waitForConnection()
+            await tunnel.waitUntilOwnTunnelSettles()
         case .disconnect:
             working = "VPN을 끄는 중…"
             await disconnect()
@@ -95,15 +158,6 @@ final class VPNServices {
         if request.returning, notice == nil { await openStore() }
     }
 
-    /// 연결되거나 로그인·오류로 멈출 때까지 최대 20초 기다린다.
-    private func waitForConnection() async {
-        for _ in 0..<40 {
-            switch tunnel.state {
-            case .connected, .needsLogin, .failed: return
-            default: try? await Task.sleep(for: .milliseconds(500))
-            }
-        }
-    }
 }
 
 struct VPNScreen: View {
@@ -116,6 +170,7 @@ struct VPNScreen: View {
     var body: some View {
         NavigationStack {
             Form {
+                StoreUpdateSection(services: services)
                 Section {
                     Label(title, systemImage: symbol)
                         .font(.headline)
@@ -150,16 +205,36 @@ struct VPNScreen: View {
                     }
                     LabeledContent("버전", value: services.appVersion)
                 } footer: {
-                    Text("이 앱이 VPN을 켜 두면 RemoteDebug 앱을 업데이트하는 동안에도 연결이 유지됩니다. 이 앱을 업데이트할 때는 RemoteDebug 앱이 VPN을 넘겨받습니다.")
+                    Text("이 앱의 새 빌드는 RemoteDebug 앱의 빌드 목록에서 설치합니다. 그때는 RemoteDebug 앱이 VPN을 넘겨받습니다.")
                 }
             }
-            .navigationTitle("RemoteDebug VPN")
+            .navigationTitle("RemoteDebug 업데이트")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .task { await tunnel.reload() }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { Task { await tunnel.reload(); tunnel.refreshExternal() } }
+        .task {
+            await tunnel.reload()
+            tunnel.refreshExternal()
+            services.reloadInstalled()
+            await services.syncPairing()
         }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                services.model.resumePolling()
+                // 설치가 끝났거나 RemoteDebug 앱에서 Mac을 바꿨을 수 있다.
+                services.reloadInstalled()
+                Task {
+                    await tunnel.reload()
+                    tunnel.refreshExternal()
+                    await services.syncPairing()
+                }
+            case .background:
+                services.model.stopPolling()
+            default:
+                break
+            }
+        }
+        .onChange(of: services.model.builds.map(\.id)) { _, _ in services.reloadInstalled() }
         .onOpenURL { url in Task { await services.handle(url) } }
     }
 
@@ -241,7 +316,7 @@ struct VPNScreen: View {
 
     private var detail: String? {
         if !ownActive, tunnel.externalVPNActive {
-            return tunnel.pairedAppOwnsVPN ? "지금 연결은 RemoteDebug 앱의 터널입니다. RemoteDebug 앱을 업데이트하려면 이 앱으로 옮기세요."
+            return tunnel.pairedAppOwnsVPN ? "지금 연결은 RemoteDebug 앱의 터널입니다. RemoteDebug를 설치할 때 이 앱의 터널로 옮깁니다."
                 : "tailnet 주소를 가진 다른 VPN입니다."
         }
         if case .failed(let message) = tunnel.state { return message }

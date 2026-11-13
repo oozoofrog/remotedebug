@@ -12,6 +12,7 @@ struct SettingsView: View {
     @State private var controlURLDraft: String
     @State private var controlURLInvalid = false
     @State private var controlURLSaved = false
+    @State private var updaterOpenFailed = false
 
     init(state: SettingsViewState, actions: SettingsActions) {
         self.state = state
@@ -114,16 +115,23 @@ struct SettingsView: View {
     // MARK: 이 앱
 
     private var appSection: some View {
-        Section("이 앱") {
+        Section {
             LabeledContent("버전", value: state.appVersion)
             LabeledContent("처음 실행", value: state.installedAt?.formatted(date: .abbreviated, time: .standard) ?? "알 수 없음")
-            if let host = state.host {
-                NavigationLink {
-                    SelfUpdateGuide(pageURL: host.updatePage, open: actions.openInstallPage)
-                } label: {
-                    Label("이 앱 업데이트하기", systemImage: "arrow.down.app")
-                }
+            Button {
+                Task { updaterOpenFailed = await !actions.openUpdaterApp() }
+            } label: {
+                Label("업데이트 앱 열기", systemImage: "arrow.up.forward.app")
             }
+            if updaterOpenFailed {
+                Label("업데이트 앱을 열지 못했습니다. 빌드 목록에서 RD 업데이트를 설치하세요.", systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+        } header: {
+            Text("이 앱")
+        } footer: {
+            Text("이 앱의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 업데이트 앱이 없으면 빌드 목록에서 RD 업데이트를 설치하세요.")
         }
     }
 

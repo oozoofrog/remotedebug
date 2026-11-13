@@ -71,21 +71,22 @@ open RemoteDebug.xcodeproj
 
 The build scripts call `eyebuild`; without it, create the [stand-in script](docs/setup.md#eyebuild가-없는-mac) first. Tailnet policy, signing, and troubleshooting are in [setup](docs/setup.md).
 
-## Two iPhone apps: RemoteDebug and RD VPN
+## Two iPhone apps: RemoteDebug and RD 업데이트
 
-Install two apps on the iPhone. Both can run the same VPN and appear as the same tailnet device (the Tailscale state lives in a shared App Group).
+Install two apps on the iPhone. Both can run the same VPN and appear as the same tailnet device (the Tailscale state and the paired Mac live in a shared App Group).
 
-- **RemoteDebug**: installs builds, receives files, collects crashes and feedback. It can also run the VPN.
-- **RD VPN** (scheme `RemoteDebugVPN`): only runs the VPN. While it holds the VPN, updating RemoteDebug does not drop the connection, so the update installs inside the app without the official Tailscale app.
+- **RemoteDebug** (scheme `RemoteDebugPhone`): installs builds of other apps, receives files, collects crashes and feedback. Pairing with the Mac happens here. Its own builds are not listed.
+- **RD 업데이트** (scheme `RemoteDebugVPN`, titled "RemoteDebug 업데이트" inside the app): the updater. It lists only the RemoteDebug builds published on the paired Mac and installs them. It also turns the VPN on and off and handles the Tailscale login.
 
-iOS runs one VPN at a time. When one app turns its VPN on the other one stops, and the Mac pairing stays because the device identity is the same.
+iOS runs one VPN at a time. When one app turns its VPN on the other one stops, and the Mac pairing stays because the device identity is the same. iOS stops an app and its VPN while that app is being installed, so each app is installed by the other one.
 
-- RemoteDebug's VPN app section moves the VPN to RD VPN or takes it back. The button opens the other app, which switches the VPN and returns.
-- Updating RemoteDebug: if RD VPN holds the VPN, the update button installs right away. Otherwise the button moves the VPN first.
-- Updating RD VPN: take the VPN over in RemoteDebug, then install RD VPN from the build list.
-- First install: update RemoteDebug, install RD VPN, then use RD VPN's button that fetches the device identity from RemoteDebug. The existing identity moves to the shared storage and the Mac pairing is kept.
+- Updating RemoteDebug: open RD 업데이트 and tap the install button on the RemoteDebug build. If the VPN is not the updater's own, it first moves the VPN to itself, shows each step, then installs. When a newer build exists, RemoteDebug shows a note and a button that opens the updater.
+- Updating RD 업데이트: install it from the build list in RemoteDebug. If the updater holds the VPN, RemoteDebug takes the VPN over first, then installs.
+- RemoteDebug's updater section can also move the VPN to the updater or take it back. The button opens the other app, which switches the VPN and returns.
+- First install: update RemoteDebug and open it once (the paired Mac moves to the shared storage), then install RD 업데이트 from the build list. If the updater reports that it has no device identity, use its button that fetches the identity from RemoteDebug.
+- Updating RemoteDebug without the updater: turn on the official Tailscale app and open the Mac's update page in Safari ([setup](docs/setup.md#iphone-앱-업데이트)).
 
-Switching between the two apps has not been verified on a real iPhone yet.
+Switching the VPN between the two apps, sharing the paired Mac, and installing from the updater have not been verified on a real iPhone. Only the simulator builds and unit tests pass.
 
 ## Crashes and feedback from your apps
 

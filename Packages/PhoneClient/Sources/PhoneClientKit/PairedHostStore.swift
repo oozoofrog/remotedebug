@@ -58,15 +58,25 @@ public protocol PairedHostStoring: AnyObject {
 }
 
 /// `UserDefaults`에 JSON으로 저장한다(비밀이 아니므로 Keychain을 쓰지 않는다).
+///
+/// 두 iPhone 앱(RemoteDebug와 업데이트 앱)이 같은 Mac을 보도록 App Group의 공용 설정을 `defaults`로 준다.
 @MainActor
 public final class UserDefaultsPairedHostStore: PairedHostStoring {
     public static let defaultKey = "RemoteDebug.pairedHost"
+    /// 예전 저장소의 값을 공용 설정으로 한 번 옮겼는가.
+    public static let migratedKey = "RemoteDebug.pairedHostMigrated"
     private let defaults: UserDefaults
     private let key: String
 
-    public init(defaults: UserDefaults = .standard, key: String = UserDefaultsPairedHostStore.defaultKey) {
+    /// `legacy`(RemoteDebug 앱만의 예전 저장소)에 페어링한 Mac이 있으면 처음 한 번 `defaults`로 옮긴다.
+    /// 옮긴 뒤에는 `defaults`만 쓴다. 업데이트 앱은 예전 저장소가 없으므로 `legacy`를 주지 않는다.
+    public init(defaults: UserDefaults = .standard, legacy: UserDefaults? = nil, key: String = UserDefaultsPairedHostStore.defaultKey) {
         self.defaults = defaults
         self.key = key
+        guard let legacy, legacy !== defaults, !defaults.bool(forKey: Self.migratedKey) else { return }
+        defaults.set(true, forKey: Self.migratedKey)
+        // 공용 설정에 이미 값이 있으면(새 빌드에서 페어링함) 그 값을 둔다.
+        if defaults.data(forKey: key) == nil, let data = legacy.data(forKey: key) { defaults.set(data, forKey: key) }
     }
 
     public func load() -> PairedHost? {

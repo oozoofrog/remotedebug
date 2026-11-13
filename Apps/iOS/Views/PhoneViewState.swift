@@ -9,12 +9,13 @@ struct PhoneViewState {
     var pairingExpiresAt: Date?
     var queuedPairingHost: String?
     var pendingReplacementHost: String?
+    /// Mac이 공유 중인 빌드. 이 앱 자신의 빌드는 뺀다(업데이트 앱에서 설치한다).
     var builds: [BuildDescriptor] = []
-    /// Mac에 게시된 이 앱 자신의 새 빌드. 없으면 `nil`.
-    var selfUpdate: BuildDescriptor?
     var buildsLoadedAt: Date?
     var refreshError: String?
     var installs: [String: InstallState] = [:]
+    /// 설치 전에 VPN을 이 앱으로 옮기는 단계(빌드 id별).
+    var installPreparations: [String: InstallPreparation] = [:]
     var tunnel: TunnelState = .off
     /// `false`면 VPN 컨트롤을 비활성화한다(시뮬레이터).
     var tunnelAvailable = true
@@ -38,31 +39,19 @@ struct PhoneViewState {
     var nodeFQDN: String?
     /// 진행 중이거나 VPN을 기다리는 페어링의 Mac 주소.
     var pairingHost: String?
-    /// VPN만 맡는 짝 앱(RemoteDebug VPN)과 지금 VPN을 켠 쪽.
+    /// 업데이트 앱과 지금 VPN을 켠 쪽.
     var vpnPair = VPNPairState()
 }
 
-/// 짝 앱(RemoteDebug VPN)의 설치 여부와 지금 VPN을 켠 쪽.
+/// 업데이트 앱(RD 업데이트)의 설치 여부와 지금 VPN을 켠 쪽.
 struct VPNPairState: Equatable {
-    enum Owner: Equatable {
-        /// VPN이 꺼져 있다.
-        case none
-        /// 이 앱의 터널.
-        case thisApp
-        /// RemoteDebug VPN 앱의 터널.
-        case vpnApp
-        /// tailnet 주소를 가진 다른 VPN(공식 Tailscale 등).
-        case other
-    }
-
-    var owner: Owner = .none
-    /// 이 iPhone에 설치된 VPN 앱. 없거나 읽지 못했으면 `nil`.
+    var owner: VPNHolder = .none
+    /// 이 iPhone에 설치된 업데이트 앱. 없거나 읽지 못했으면 `nil`.
     var installed: InstalledApp?
-    /// Mac에 게시된 VPN 앱 빌드(최신). 없으면 `nil`.
+    /// Mac에 게시된 업데이트 앱 빌드(최신). 없으면 `nil`.
     var published: BuildDescriptor?
-
-    /// 이 앱을 업데이트해도 VPN이 유지되는가.
-    var survivesSelfUpdate: Bool { owner == .vpnApp || owner == .other }
+    /// 지금 실행 중인 것보다 새 RemoteDebug 빌드가 Mac에 있다. 업데이트 앱에서 설치한다.
+    var hasNewerStoreBuild = false
 }
 
 extension PhoneViewState {
@@ -74,8 +63,7 @@ extension PhoneViewState {
             pairingExpiresAt: model.pairingExpiresAt,
             queuedPairingHost: model.queuedPairing?.host,
             pendingReplacementHost: model.pendingReplacement?.host,
-            builds: model.builds,
-            selfUpdate: SelfUpdate.candidate(in: model.builds, bundleID: Bundle.main.bundleIdentifier, installedAt: installedAt),
+            builds: AppBuildFilter.hiding(Bundle.main.bundleIdentifier, in: model.builds),
             buildsLoadedAt: model.buildsLoadedAt,
             refreshError: model.refreshError,
             installs: model.installs,
@@ -94,6 +82,7 @@ extension PhoneViewState {
         self.pairingHost = model.pairingHost
         self.agentBoard = model.agentBoard
         self.agentError = model.agentError
+        self.vpnPair.hasNewerStoreBuild = SelfUpdate.candidate(in: model.builds, bundleID: Bundle.main.bundleIdentifier, installedAt: installedAt) != nil
     }
 
     /// iPhone이 Mac과 다른 tailnet에 로그인했으면 두 tailnet 이름. 같거나 모르면 `nil`.
@@ -139,16 +128,15 @@ struct PhoneActions {
     /// 켜져 있는 VPN을 끄고, 꺼질 때까지 기다린 뒤 다시 켠다.
     var restartTunnel: @MainActor @Sendable () async -> Void
     var openLogin: (URL) -> Void
-    /// Mac이 알려 준 이 앱의 업데이트 페이지(공식 Tailscale 주소)를 Safari로 연다.
-    var openInstallPage: () -> Void = {}
     /// 저장된 Tailscale 로그인을 지우고 VPN을 다시 켠다(다른 계정으로 로그인).
     var reloginTunnel: @MainActor @Sendable () async -> Void = {}
     var connectWithAuthKey: @MainActor @Sendable (_ key: String) async -> Void
-    /// 이 앱의 VPN을 끄고 VPN 앱을 열어 거기서 켠 뒤 돌아온다.
-    var moveVPNToVPNApp: @MainActor @Sendable () async -> Void = {}
-    /// VPN 앱의 VPN을 이 앱의 터널로 넘겨받는다(VPN 앱을 업데이트하기 전에).
+    /// 업데이트 앱을 열어 거기서 VPN을 켠 뒤 돌아온다(이 앱의 VPN은 iOS가 끈다).
+    var moveVPNToUpdater: @MainActor @Sendable () async -> Void = {}
+    /// 업데이트 앱의 VPN을 이 앱의 터널로 넘겨받는다.
     var takeOverVPN: @MainActor @Sendable () async -> Void = {}
-    var openVPNApp: @MainActor @Sendable () async -> Void = {}
+    /// 업데이트 앱을 연다. 열지 못하면(설치돼 있지 않음) `false`.
+    var openUpdaterApp: @MainActor @Sendable () async -> Bool = { true }
     var clearError: () -> Void
     /// Mac이 보낸 파일을 받아 Documents에 저장한다.
     var downloadFile: (ResourceDescriptor) -> Void = { _ in }
@@ -158,6 +146,10 @@ struct PhoneActions {
     /// 요청을 Mac의 에이전트에 보낸다. 실패하면 안내 문구를 돌려준다.
     var sendAgentRequest: @MainActor @Sendable (AgentSubmission) async -> String? = { _ in nil }
     var cancelAgentRequest: @MainActor @Sendable (_ id: String) async -> Void = { _ in }
+
+    var installActions: InstallActions {
+        InstallActions(install: install, clearInstall: clearInstall, reopenInstaller: reopenInstaller, cancelInstall: cancelInstall)
+    }
 }
 
 /// 설정 화면이 그리는 값.
@@ -191,7 +183,8 @@ struct SettingsActions {
     /// 저장하면 `true`. 형식이 틀리면 `false`.
     var saveControlURL: (String) -> Bool
     var sendLogs: @MainActor @Sendable () async -> Void = {}
-    var openInstallPage: () -> Void = {}
+    /// 업데이트 앱을 연다. 열지 못하면(설치돼 있지 않음) `false`.
+    var openUpdaterApp: @MainActor @Sendable () async -> Bool = { true }
     /// iPhone 설정 앱을 연다(분석 데이터 화면을 먼저 시도한다).
     var openAnalyticsData: () -> Void = {}
     /// RemoteDebug 앱에 대한 피드백을 기록에 더하고 Mac에 보낸다. `includeLogs`면 최근 진단 로그를 붙인다.

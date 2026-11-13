@@ -56,6 +56,12 @@ final class TunnelController: TunnelControlling {
         externalVPNActive && sharedState?.connected == true && sharedState?.owner == AppPair.otherAppID
     }
 
+    /// 지금 VPN을 켜고 있는 쪽.
+    var vpnHolder: VPNHolder {
+        if TunnelStateMapping.isActive(vpnStatus) { return .thisApp }
+        return pairedAppOwnsVPN ? .pairedApp : (externalVPNActive ? .other : .none)
+    }
+
     let settings: TunnelSettingsStore
 
     // MARK: 내부
@@ -206,6 +212,22 @@ final class TunnelController: TunnelControlling {
             if status == .disconnected || status == .invalid { return }
             try? await Task.sleep(for: .milliseconds(200))
         }
+    }
+
+    /// 이 앱의 터널이 연결되거나 로그인·오류로 멈출 때까지 최대 20초 기다린다. 이 앱의 터널로 연결됐으면 `true`.
+    @discardableResult
+    func waitUntilOwnTunnelSettles() async -> Bool {
+        for _ in 0..<40 {
+            if TunnelStateMapping.isActive(vpnStatus) {
+                switch state {
+                case .connected: return true
+                case .needsLogin, .failed: return false
+                default: break
+                }
+            }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        return false
     }
 
     // MARK: 구성

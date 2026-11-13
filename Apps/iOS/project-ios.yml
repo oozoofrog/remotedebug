@@ -1,7 +1,7 @@
 # RemoteDebugPhone·RemoteDebugTunnel 대상 정의. project.yml이 포함한다(경로는 저장소 루트 기준).
 # 번들 ID는 $(RD_BUNDLE_PREFIX)로 시작한다(Config/Signing.xcconfig). 기본 앞부분이면 com.oozoofrog.app.RemoteDebugPhone,
 # com.oozoofrog.app.RemoteDebugPhone.Tunnel, com.oozoofrog.app.RemoteDebugPhone.Widgets가 된다.
-# VPN만 맡는 두 번째 앱은 com.oozoofrog.app.RemoteDebugVPN, 그 터널은 com.oozoofrog.app.RemoteDebugVPN.Tunnel이다.
+# RemoteDebug 앱을 업데이트하는 두 번째 앱(홈 화면 이름 RD 업데이트)은 com.oozoofrog.app.RemoteDebugVPN, 그 터널은 com.oozoofrog.app.RemoteDebugVPN.Tunnel이다.
 # 두 앱은 App Group(group.<앞부분>.RemoteDebug)으로 같은 Tailscale 상태를 써서 같은 tailnet 기기로 보인다.
 targets:
   RemoteDebugPhone:
@@ -141,7 +141,8 @@ targets:
         "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
         ARCHS: arm64
         TARGETED_DEVICE_FAMILY: "1"
-  # VPN만 맡는 앱. RemoteDebug 앱을 업데이트하는 동안에도 VPN을 유지한다. 터널 확장은 RemoteDebugTunnel과 같은 소스다.
+  # RemoteDebug 앱을 업데이트하는 앱(홈 화면 이름 RD 업데이트). 대상·스킴·번들 ID는 예전 이름 그대로 둔다.
+  # Mac에 게시된 RemoteDebug 빌드를 설치하고 VPN도 켠다. 터널 확장은 RemoteDebugTunnel과 같은 소스다.
   RemoteDebugVPN:
     type: application
     platform: iOS
@@ -157,6 +158,11 @@ targets:
       - path: Apps/iOS/Adapters/TunnelSettingsStore.swift
       - path: Apps/iOS/Adapters/TunnelStateMapping.swift
       - path: Apps/iOS/Adapters/UIKitURLOpener.swift
+      - path: Apps/iOS/Adapters/InstalledApps.swift
+      - path: Apps/iOS/Adapters/GuardedInstaller.swift
+      # 빌드 한 줄과 설치 진행(두 앱이 같은 화면을 쓴다).
+      - path: Apps/iOS/Views/InstallViews.swift
+      - path: Apps/iOS/Views/PhoneTheme.swift
     entitlements:
       path: Apps/iOSVPN/RemoteDebugVPN.entitlements
       properties:
@@ -167,7 +173,7 @@ targets:
     info:
       path: Apps/iOSVPN/Info.plist
       properties:
-        CFBundleDisplayName: RD VPN
+        CFBundleDisplayName: RD 업데이트
         RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -217,7 +223,7 @@ targets:
     info:
       path: Apps/iOSVPN/TunnelInfo.plist
       properties:
-        CFBundleDisplayName: RD VPN 터널
+        CFBundleDisplayName: RD 업데이트 터널
         RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)

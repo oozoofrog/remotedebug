@@ -71,21 +71,22 @@ open RemoteDebug.xcodeproj
 
 빌드 스크립트는 `eyebuild` 명령을 부르므로, 없으면 [대체 스크립트](docs/setup.md#eyebuild가-없는-mac)를 먼저 만든다. tailnet 정책, 서명, 문제 해결은 [설정 문서](docs/setup.md)에 있다.
 
-## iPhone 앱 두 개: RemoteDebug와 RD VPN
+## iPhone 앱 두 개: RemoteDebug와 RD 업데이트
 
-iPhone에는 앱을 두 개 설치한다. 둘 다 같은 VPN을 켤 수 있고, 같은 tailnet 기기로 보인다(App Group에 Tailscale 상태를 함께 둔다).
+iPhone에는 앱을 두 개 설치한다. 둘 다 같은 VPN을 켤 수 있고, 같은 tailnet 기기로 보인다(App Group에 Tailscale 상태와 페어링한 Mac을 함께 둔다).
 
-- **RemoteDebug**: 빌드 설치, 파일, 크래시·피드백. VPN도 켤 수 있다.
-- **RD VPN**(스킴 `RemoteDebugVPN`): VPN만 맡는다. 이 앱이 VPN을 켜 두면 RemoteDebug를 업데이트하는 동안에도 연결이 유지되어, 공식 Tailscale 앱 없이 앱 안에서 바로 업데이트한다.
+- **RemoteDebug**(스킴 `RemoteDebugPhone`): 다른 앱의 빌드 설치, 파일, 크래시·피드백. Mac 페어링도 여기서 한다. RemoteDebug 자신의 빌드는 목록에 나오지 않는다.
+- **RD 업데이트**(스킴 `RemoteDebugVPN`, 앱 안 제목은 "RemoteDebug 업데이트"): Mac에 게시된 RemoteDebug의 빌드만 보여 주고 설치한다. VPN 켜기·끄기와 로그인도 한다.
 
-iOS는 VPN을 한 번에 하나만 켠다. 한 앱이 켜면 다른 앱의 것은 꺼지고, 기기 정보가 같아서 Mac 페어링은 그대로다.
+iOS는 VPN을 한 번에 하나만 켠다. 한 앱이 켜면 다른 앱의 것은 꺼지고, 기기 정보가 같아서 Mac 페어링은 그대로다. iOS는 앱을 설치하는 동안 그 앱과 그 앱의 VPN을 끝내므로, 각 앱은 상대 앱이 설치한다.
 
-- RemoteDebug의 **VPN 앱** 칸에서 VPN을 RD VPN으로 옮기거나 넘겨받는다. 버튼을 누르면 상대 앱이 열려 VPN을 켜고 돌아온다.
-- RemoteDebug를 업데이트할 때: VPN이 RD VPN 쪽에 있으면 **업데이트**가 바로 설치한다. 이 앱 쪽에 있으면 버튼이 **VPN 옮기기**로 바뀐다.
-- RD VPN을 업데이트할 때: RemoteDebug에서 **이 앱으로 넘겨받기**를 누른 뒤 빌드 목록에서 RD VPN을 설치한다.
-- 처음 설치할 때: RemoteDebug를 새 빌드로 올린 뒤 RD VPN을 설치하고, RD VPN의 **RemoteDebug 앱에서 기기 정보 가져오기**를 누른다. 예전 기기 정보가 공용 저장소로 옮겨져 Mac 페어링이 유지된다.
+- RemoteDebug를 업데이트할 때: RD 업데이트를 열고 RemoteDebug 빌드의 **업데이트**를 누른다. VPN이 RD 업데이트의 것이 아니면 먼저 RD 업데이트로 옮긴 뒤 설치하고, 그 단계를 화면에 보여 준다. 새 빌드가 있으면 RemoteDebug의 **업데이트 앱** 칸에 안내와 **업데이트 앱 열기**가 나온다.
+- RD 업데이트를 업데이트할 때: RemoteDebug의 빌드 목록에서 RD 업데이트를 설치한다. RD 업데이트가 VPN을 켜 두었으면 RemoteDebug가 먼저 VPN을 넘겨받은 뒤 설치한다.
+- RemoteDebug의 **업데이트 앱** 칸에서 VPN을 RD 업데이트로 옮기거나 넘겨받을 수도 있다. 버튼을 누르면 상대 앱이 열려 VPN을 켜고 돌아온다.
+- 처음 설치할 때: RemoteDebug를 새 빌드로 올리고 한 번 연 뒤(페어링한 Mac이 공용 저장소로 옮겨진다), 빌드 목록에서 RD 업데이트를 설치한다. RD 업데이트에 기기 정보가 없다고 나오면 **RemoteDebug 앱에서 기기 정보 가져오기**를 누른다.
+- RD 업데이트 없이 RemoteDebug를 업데이트하려면 공식 Tailscale을 켜고 Mac의 업데이트 페이지를 Safari로 연다([설정 문서](docs/setup.md#iphone-앱-업데이트)).
 
-두 앱 사이의 전환은 실기기에서 아직 확인하지 않았다.
+두 앱 사이의 VPN 전환, 페어링한 Mac 공유, RD 업데이트에서 하는 설치는 실기기에서 아직 확인하지 않았다. 시뮬레이터 빌드와 단위 시험만 통과했다.
 
 ## 앱의 크래시와 피드백 받기
 

@@ -389,7 +389,7 @@ iOS는 앱을 바꾸는 동안 그 앱의 패킷 터널을 멈춘다. 그래서 
 ### I.3 앱 동작
 
 - Mac 앱: 시작할 때 서버를 연다. 경로(`/remotedebug-update-<32자>`)와 포트는 `update-page.json`에 저장해 다시 쓴다. 게시된 빌드 중 번들 id가 `<앞부분>.RemoteDebugPhone`(기본 앞부분은 `Config/Signing.xcconfig`의 `RD_BUNDLE_PREFIX`, 다른 팀으로 서명한 앞부분도 포함)인 가장 최근 빌드를 자동으로 올린다. **네트워크 > iPhone 앱 업데이트**의 **공식 Tailscale로 열기**가 `tailscale serve --bg --yes --set-path <경로> http://127.0.0.1:<포트>`를, **닫기**가 `tailscale serve --https=443 --set-path <경로> off`를 실행한다. 공식 Tailscale 상태는 60초마다 다시 읽는다. 공식 Tailscale 명령은 `/Applications/Tailscale.app/Contents/MacOS/Tailscale`, `/opt/homebrew/bin/tailscale`, `/usr/local/bin/tailscale` 순서로 찾는다.
-- iPhone 앱: "앱 업데이트" 칸의 **업데이트**와 설정 > "이 앱" > **이 앱 업데이트하기**가 순서 안내 화면을 연다(공식 Tailscale 켜기 → 업데이트 페이지 열기 → 설치 → RemoteDebug VPN 다시 켜기). 앱 안에서 바로 설치하는 버튼은 뺐다.
+- iPhone 앱: RemoteDebug 앱에는 자기 업데이트 화면이 없다. 자기 빌드는 업데이트 앱이 설치한다(M.4). 업데이트 페이지는 업데이트 앱 없이 설치할 때 Safari에서 직접 연다. 앱은 `updatePage` 값을 페어링 정보에 저장만 한다.
 - 에이전트 `status` 응답에 `updatePage`가 있다.
 
 ## J. 페어링 링크의 1회용 Tailscale 키
@@ -490,14 +490,20 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 
 ## M. iPhone 앱 두 개와 공용 VPN 신원
 
-iPhone 앱은 둘이다. RemoteDebug(스킴 `RemoteDebugPhone`)와 VPN만 맡는 RD VPN(스킴 `RemoteDebugVPN`). 두 앱은 각자 터널 확장을 갖고, 두 확장은 같은 소스(`Apps/iOSTunnel`)로 빌드한다.
+iPhone 앱은 둘이다. RemoteDebug(스킴 `RemoteDebugPhone`)와 업데이트 앱(스킴 `RemoteDebugVPN`, 홈 화면 이름 "RD 업데이트", 앱 안 제목 "RemoteDebug 업데이트"). 두 앱은 각자 터널 확장을 갖고, 두 확장은 같은 소스(`Apps/iOSTunnel`)로 빌드한다.
+
+- RemoteDebug: 다른 앱의 빌드 설치, 파일, 크래시·피드백, Mac 페어링. 자기 번들 ID의 빌드는 목록에서 뺀다.
+- 업데이트 앱: Mac의 빌드 목록에서 RemoteDebug 앱의 번들 ID인 빌드만 보여 주고 설치한다. VPN 켜기·끄기, 로그인, 기기 정보 가져오기도 한다. 페어링 화면은 없다.
+
+업데이트 앱의 대상·스킴 이름, 번들 ID(`<앞부분>.RemoteDebugVPN`), URL 스킴(`remotedebug-vpn`)은 이 앱이 VPN만 맡던 때의 것을 그대로 쓴다. 호스트 API와 메시지 형식은 바뀌지 않았다. 업데이트 앱도 같은 tailnet 기기로 `/v1/info`, `/v1/builds`, 설치 세션을 부르므로 Mac은 두 앱을 같은 페어링한 기기로 본다.
 
 ### M.1 공용 저장소
 
 - App Group `group.<번들 ID 앞부분>.RemoteDebug`(Info.plist의 App Group 키)를 두 앱과 두 확장이 함께 쓴다.
 - Tailscale 상태(`tailscaled.state`, 노드 키)는 공용 컨테이너의 `Library/Application Support/RemoteDebug/tailscale`에 둔다. 그래서 어느 앱이 VPN을 켜도 같은 tailnet 기기이고 Mac 페어링이 유지된다.
-- 예전 위치(RemoteDebug 터널 확장의 컨테이너)의 상태는 그 확장이 새 빌드로 처음 켜질 때 공용 위치로 옮긴다. 예전 상태가 Mac과 페어링한 기기라서, 공용 위치에 다른 상태가 이미 있어도(RD VPN을 먼저 켜 새 기기가 생긴 경우) 예전 상태로 바꾸고 밀려난 것은 `tailscale.replaced`에 한 벌 남긴다. 옮긴 뒤 공용 설정에 표시를 남긴다.
-- RemoteDebug 앱은 열릴 때 RD VPN이 VPN을 켜 두었고 그 표시가 없으면, 자기 터널을 한 번 켜서 기기 정보를 옮긴 뒤 RD VPN을 열어 VPN을 돌려준다. 그 전까지 RD VPN은 다른 기기로 연결돼 있어 Mac이 `not_paired`로 거절한다.
+- 예전 위치(RemoteDebug 터널 확장의 컨테이너)의 상태는 그 확장이 새 빌드로 처음 켜질 때 공용 위치로 옮긴다. 예전 상태가 Mac과 페어링한 기기라서, 공용 위치에 다른 상태가 이미 있어도(업데이트 앱을 먼저 켜 새 기기가 생긴 경우) 예전 상태로 바꾸고 밀려난 것은 `tailscale.replaced`에 한 벌 남긴다. 옮긴 뒤 공용 설정에 표시를 남긴다.
+- RemoteDebug 앱은 열릴 때 업데이트 앱이 VPN을 켜 두었고 그 표시가 없으면, 자기 터널을 한 번 켜서 기기 정보를 옮긴 뒤 업데이트 앱을 열어 VPN을 돌려준다. 그 전까지 업데이트 앱은 다른 기기로 연결돼 있어 Mac이 `not_paired`로 거절한다.
+- 페어링한 Mac(`hostId`, 이름, 주소, 페어링 시각, `updatePage`)은 공용 설정의 `RemoteDebug.pairedHost`에 둔다. RemoteDebug 앱의 예전 값(앱만의 설정)은 처음 한 번 옮기고 `RemoteDebug.pairedHostMigrated`를 적는다. 공용 설정에 값이 이미 있으면 덮지 않는다. 업데이트 앱은 이 값을 읽기만 하고(Mac이 알려 준 이름·`updatePage`가 바뀌면 다시 저장한다), 앞으로 올 때마다 다시 읽어 Mac이 바뀌었으면 목록을 새로 받는다. 값이 없으면 "페어링한 Mac이 없습니다"와 RemoteDebug 앱을 여는 버튼을 보여 준다.
 - 기기 식별자(기기 이름의 뒷부분)와 제어 서버 주소는 공용 설정(UserDefaults suite)에 둔다. RemoteDebug 앱의 예전 값은 처음 한 번 옮긴다.
 - 확장은 켜지고 꺼질 때 공용 설정에 `{owner, connected, updatedAt}`을 적는다. `owner`는 VPN을 켠 앱의 번들 ID다.
 
@@ -508,8 +514,8 @@ iPhone 앱은 둘이다. RemoteDebug(스킴 `RemoteDebugPhone`)와 VPN만 맡는
 ### M.3 서로를 여는 주소
 
 ```
-remotedebug-vpn://vpn?action=connect&return=1     RemoteDebug → RD VPN
-remotedebug://vpn?action=connect&return=1         RD VPN → RemoteDebug
+remotedebug-vpn://vpn?action=connect&return=1     RemoteDebug → 업데이트 앱
+remotedebug://vpn?action=connect&return=1         업데이트 앱 → RemoteDebug
 ```
 
 - `action`: `connect`(그 앱의 터널로 VPN을 켠다. 다른 앱의 VPN은 iOS가 끈다), `disconnect`, `open`.
@@ -518,6 +524,10 @@ remotedebug://vpn?action=connect&return=1         RD VPN → RemoteDebug
 
 ### M.4 업데이트
 
-- RemoteDebug 업데이트: 다른 앱이 VPN을 켜 두었으면 앱 안에서 바로 설치한다. 자기 VPN이면 먼저 RD VPN으로 옮기게 한다. RD VPN이 없으면 I의 업데이트 페이지를 안내한다.
-- RD VPN 업데이트: RemoteDebug가 VPN을 넘겨받은 뒤 빌드 목록에서 설치한다.
-- 두 앱 사이의 전환, 상태 이전, 설치 중 연결 유지는 실기기에서 확인하지 않았다.
+iOS는 앱을 설치하는 동안 그 앱과 그 앱의 터널 확장을 끝낸다. 설치할 앱의 터널이 VPN을 켜고 있으면 전송이 도중에 끊기므로, 각 앱은 상대 앱이 설치하고 설치 전에 VPN을 자기 터널로 옮긴다.
+
+- RemoteDebug 업데이트: 업데이트 앱에서 한다. VPN이 업데이트 앱의 터널이 아니면(RemoteDebug의 터널, 다른 VPN, 꺼짐) 먼저 자기 터널을 켜고, 연결될 때까지 최대 20초 기다린 뒤 설치 세션을 만든다. 단계("VPN을 이 앱으로 옮기는 중", "VPN이 연결되기를 기다리는 중")를 빌드 줄에 보여 준다. 연결되지 않거나 로그인이 필요하면 설치를 시작하지 않고 이유를 보여 준다.
+- RemoteDebug 앱은 지금 빌드를 처음 실행한 시각보다 늦게 게시된 자기 빌드가 Mac에 있으면 "업데이트 앱" 칸에 "새 RemoteDebug 빌드가 있습니다. 업데이트 앱에서 설치하세요."와 **업데이트 앱 열기**(`action=open`)를 보여 준다. 설정 > "이 앱"에도 같은 버튼이 있다. 업데이트 앱이 열리지 않으면 빌드 목록에서 RD 업데이트를 설치하라고 안내한다.
+- 업데이트 앱 업데이트: RemoteDebug의 빌드 목록에서 설치한다. 업데이트 앱의 터널이 VPN을 켜고 있으면 RemoteDebug가 같은 순서로 VPN을 넘겨받은 뒤 설치한다. 다른 앱의 빌드를 설치할 때는 VPN을 건드리지 않는다.
+- 업데이트 앱이 없을 때 RemoteDebug를 업데이트하려면 공식 Tailscale을 켜고 I의 업데이트 페이지를 Safari로 연다.
+- 두 앱 사이의 전환, 상태 이전, 페어링한 Mac 공유, VPN을 옮긴 뒤의 설치는 실기기에서 확인하지 않았다. 시뮬레이터 빌드와 단위 시험(저장소 이전, 빌드 고르기, VPN을 옮길지 정하는 규칙)만 통과했다.

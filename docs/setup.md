@@ -232,7 +232,9 @@ Mac 앱 **네트워크** 화면의 "iPhone 자동 연결"에 Tailscale OAuth 클
 
 ### iPhone 앱 업데이트
 
-RemoteDebug iPhone 앱은 설치하는 동안 자기 VPN이 꺼지므로, 자기 업데이트는 Mac의 공식 Tailscale로 받는다. 규칙은 [`protocol-addenda.md`](protocol-addenda.md)의 I.
+RemoteDebug iPhone 앱은 설치하는 동안 자기 VPN이 꺼지므로 자기 빌드를 스스로 설치하지 않는다. 업데이트 앱(RD 업데이트)에서 설치한다: RD 업데이트를 열고 RemoteDebug 빌드의 **업데이트**를 누른다. RD 업데이트는 RemoteDebug의 빌드 목록에서 설치한다. 규칙은 [`protocol-addenda.md`](protocol-addenda.md)의 M.
+
+아래는 RD 업데이트 없이 Mac의 공식 Tailscale로 받는 방법이다. 규칙은 [`protocol-addenda.md`](protocol-addenda.md)의 I.
 
 처음 한 번(Mac):
 
@@ -242,13 +244,11 @@ RemoteDebug iPhone 앱은 설치하는 동안 자기 VPN이 꺼지므로, 자기
 업데이트할 때마다:
 
 1. Mac에서 이 저장소의 `RemoteDebug.xcodeproj`를 스킴 `RemoteDebugPhone`으로 빌드해 게시한다(프로젝트 화면이나 `rd build`). 업데이트 페이지는 가장 최근 빌드를 자동으로 내준다.
-2. iPhone RemoteDebug 앱에서 빌드 목록을 새로고침한다. "앱 업데이트" 칸의 **업데이트**를 누르면 순서 안내가 열린다.
-3. 공식 Tailscale 앱을 연결하고(RemoteDebug VPN은 꺼진다) 안내 화면으로 돌아와 **업데이트 페이지 열기**를 누른다. Safari에서 **설치**, iOS 창에서 **설치**를 누른다.
+2. iPhone에서 공식 Tailscale 앱을 연결한다(RemoteDebug VPN은 꺼진다).
+3. Mac 앱 **네트워크** 화면의 "iPhone 앱 업데이트"에 나온 주소를 iPhone의 Safari로 연다. Safari에서 **설치**, iOS 창에서 **설치**를 누른다.
 4. 설치가 끝나면 RemoteDebug를 열고 VPN을 다시 켠다. 설정 > "이 앱"의 버전으로 확인한다.
 
-- 새 빌드인지는 게시 시각과 지금 빌드를 처음 실행한 시각으로 가린다. Mac과 iPhone의 시계가 어긋나 있으면 칸이 나오지 않거나 이미 설치한 빌드에 나올 수 있다. 칸이 없어도 설정 > "이 앱" > **이 앱 업데이트하기**로 같은 안내를 연다.
 - 업데이트 페이지 주소는 Mac의 공식 Tailscale tailnet 안에서만 열린다. Mac 앱이 꺼져 있으면 페이지가 응답하지 않는다.
-- 이 기능이 없는 예전 iPhone 앱은 Mac 네트워크 화면의 주소를 직접 Safari로 열어(공식 Tailscale 연결 상태에서) 한 번 설치한다.
 
 ### Mac에서 iPhone으로 파일 보내기
 

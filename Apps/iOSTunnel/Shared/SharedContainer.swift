@@ -1,6 +1,6 @@
 import Foundation
 
-/// RemoteDebug 앱과 RemoteDebug VPN 앱, 두 앱의 터널 확장이 함께 쓰는 저장소(App Group).
+/// RemoteDebug 앱과 업데이트 앱(RD 업데이트), 두 앱의 터널 확장이 함께 쓰는 저장소(App Group).
 ///
 /// 두 앱은 같은 tailnet 기기로 보여야 한다. 그래서 Tailscale 상태(`tailscaled.state`, 노드 키)와
 /// 기기 식별자·제어 서버 주소를 App Group 컨테이너에 둔다. iOS는 VPN을 한 번에 하나만 켜므로
@@ -30,7 +30,7 @@ enum SharedContainer {
 
     /// 예전 위치(RemoteDebug 터널 확장의 컨테이너)의 Tailscale 상태를 공용 위치로 옮긴다.
     ///
-    /// 예전 상태는 Mac과 페어링한 기기 정보다. 그래서 공용 위치에 다른 상태가 이미 있어도(RD VPN 앱을 먼저 켜서
+    /// 예전 상태는 Mac과 페어링한 기기 정보다. 그래서 공용 위치에 다른 상태가 이미 있어도(업데이트 앱을 먼저 켜서
     /// 새 기기가 만들어진 경우) 예전 상태가 이긴다. 밀려난 상태는 `tailscale.replaced`로 한 벌 남긴다.
     /// 옮겼으면 `true`.
     @discardableResult
@@ -83,6 +83,8 @@ struct SharedVPNState: Codable, Equatable {
 }
 
 /// 두 앱의 번들 ID와 서로를 여는 주소.
+///
+/// `vpn…` 이름은 업데이트 앱(RD 업데이트)을 가리킨다. 번들 ID와 URL 스킴은 이 앱이 VPN만 맡던 때의 것을 그대로 쓴다.
 enum AppPair {
     static let storeSuffix = ".RemoteDebugPhone"
     static let vpnSuffix = ".RemoteDebugVPN"

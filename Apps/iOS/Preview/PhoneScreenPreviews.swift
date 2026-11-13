@@ -142,9 +142,16 @@ private func screen(_ state: PhoneViewState) -> some View {
     screen(PreviewFixtures.paired(builds: [PreviewFixtures.buildA, PreviewFixtures.buildB]))
 }
 
-#Preview("⑦-1 앱 업데이트 있음") {
+#Preview("⑦-1 새 RemoteDebug 빌드 있음") {
     var state = PreviewFixtures.paired(builds: [PreviewFixtures.buildA, PreviewFixtures.buildB])
-    state.selfUpdate = PreviewFixtures.buildB
+    state.vpnPair = VPNPairState(owner: .thisApp, installed: InstalledApp(version: "0.2.0", buildNumber: "20"), hasNewerStoreBuild: true)
+    return screen(state)
+}
+
+#Preview("⑦-2 업데이트 앱 설치 전 VPN 넘겨받는 중") {
+    var state = PreviewFixtures.paired(builds: [PreviewFixtures.buildA])
+    state.vpnPair = VPNPairState(owner: .pairedApp)
+    state.installPreparations = [PreviewFixtures.buildA.id: .working("VPN을 이 앱으로 옮기는 중")]
     return screen(state)
 }
 
