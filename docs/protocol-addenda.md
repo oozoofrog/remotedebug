@@ -487,3 +487,36 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 - 실기기에서 확인하지 않은 것: 다른 앱의 요청이 VPN을 지나 Mac에 닿는지, 메일 작성 화면과 첨부, 받은 첨부를 Mac에서 푸는 전체 경로.
 - 기록은 iPhone에 50개까지 남기고, 페어링한 Mac과 VPN이 연결되면 보내지 않은 것을 보낸다.
 - Mac 앱은 `CrashLogs/`에 원문 파일과 `index.json`을 두고(200개까지) **크래시** 화면과 MCP 도구 `remotedebug_crash_logs`로 보여 준다. 같은 내용의 기록은 한 번만 남긴다.
+
+## M. iPhone 앱 두 개와 공용 VPN 신원
+
+iPhone 앱은 둘이다. RemoteDebug(스킴 `RemoteDebugPhone`)와 VPN만 맡는 RD VPN(스킴 `RemoteDebugVPN`). 두 앱은 각자 터널 확장을 갖고, 두 확장은 같은 소스(`Apps/iOSTunnel`)로 빌드한다.
+
+### M.1 공용 저장소
+
+- App Group `group.<번들 ID 앞부분>.RemoteDebug`(Info.plist의 App Group 키)를 두 앱과 두 확장이 함께 쓴다.
+- Tailscale 상태(`tailscaled.state`, 노드 키)는 공용 컨테이너의 `Library/Application Support/RemoteDebug/tailscale`에 둔다. 그래서 어느 앱이 VPN을 켜도 같은 tailnet 기기이고 Mac 페어링이 유지된다.
+- 예전 위치(RemoteDebug 터널 확장의 컨테이너)의 상태는 그 확장이 새 빌드로 처음 켜질 때 공용 위치로 옮긴다. 공용 위치에 상태가 이미 있으면 옮기지 않는다.
+- 기기 식별자(기기 이름의 뒷부분)와 제어 서버 주소는 공용 설정(UserDefaults suite)에 둔다. RemoteDebug 앱의 예전 값은 처음 한 번 옮긴다.
+- 확장은 켜지고 꺼질 때 공용 설정에 `{owner, connected, updatedAt}`을 적는다. `owner`는 VPN을 켠 앱의 번들 ID다.
+
+### M.2 VPN을 켠 쪽 알아내기
+
+앱은 자기 VPN이 꺼져 있을 때 기기에 100.64.0.0/10 주소를 가진 `utun` 인터페이스가 있으면 다른 앱의 VPN이 켜져 있다고 보고 연결됨으로 다룬다. 공용 설정의 `owner`가 짝 앱이면 짝 앱의 VPN으로 표시한다. 공식 Tailscale 앱의 VPN도 같은 식으로 잡힌다.
+
+### M.3 서로를 여는 주소
+
+```
+remotedebug-vpn://vpn?action=connect&return=1     RemoteDebug → RD VPN
+remotedebug://vpn?action=connect&return=1         RD VPN → RemoteDebug
+```
+
+- `action`: `connect`(그 앱의 터널로 VPN을 켠다. 다른 앱의 VPN은 iOS가 끈다), `disconnect`, `open`.
+- `return=1`: 일을 마친 뒤 요청한 앱으로 돌아간다. 로그인이 필요하면 돌아가지 않고 그 앱에 머문다.
+- 다른 `action`이나 `vpn`이 아닌 호스트는 VPN 요청으로 다루지 않는다(페어링 링크 `remotedebug://pair`는 J).
+
+### M.4 업데이트
+
+- RemoteDebug 업데이트: 다른 앱이 VPN을 켜 두었으면 앱 안에서 바로 설치한다. 자기 VPN이면 먼저 RD VPN으로 옮기게 한다. RD VPN이 없으면 I의 업데이트 페이지를 안내한다.
+- RD VPN 업데이트: RemoteDebug가 VPN을 넘겨받은 뒤 빌드 목록에서 설치한다.
+- 두 앱 사이의 전환, 상태 이전, 설치 중 연결 유지는 실기기에서 확인하지 않았다.

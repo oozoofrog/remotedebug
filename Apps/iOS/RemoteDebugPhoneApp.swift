@@ -80,6 +80,8 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var installedApps: [String: InstalledApp] = [:]
     @State private var loggedInstalledApps = false
+    /// 이 iPhone에 설치된 VPN 앱(RemoteDebug VPN).
+    @State private var vpnAppInstalled: InstalledApp?
     @State private var crashNotice: String?
 
     private var model: ClientModel { services.model }
@@ -89,6 +91,13 @@ struct RootView: View {
         var state = PhoneViewState(model: model, tunnelAvailable: tunnel.isAvailable, tunnelActive: tunnel.isTunnelActive,
                                    installedAt: services.installedAt, nodeFQDN: tunnel.lastReply?.status?.fqdn)
         state.installedApps = installedApps
+        let vpnID = AppPair.otherAppID
+        let owner: VPNPairState.Owner = TunnelStateMapping.isActive(tunnel.vpnStatus) ? .thisApp
+            : (tunnel.pairedAppOwnsVPN ? .vpnApp : (tunnel.externalVPNActive ? .other : .none))
+        state.vpnPair = VPNPairState(
+            owner: owner,
+            installed: vpnAppInstalled,
+            published: model.builds.filter { $0.bundleId == vpnID }.max { $0.publishedAt < $1.publishedAt })
         return state
     }
 
@@ -106,6 +115,8 @@ struct RootView: View {
 
     /// 게시된 빌드의 앱이 이 iPhone에 어떤 버전으로 설치돼 있는지 다시 읽는다. 결과가 바뀌면 진단 로그에 남긴다.
     private func reloadInstalledApps() {
+        let vpnApp = InstalledApps.lookup(AppPair.otherAppID).app
+        if vpnApp != vpnAppInstalled { vpnAppInstalled = vpnApp }
         var found: [String: InstalledApp] = [:]
         var traces: [String] = []
         for bundleID in Set(model.builds.map(\.bundleId)).sorted() {
@@ -154,6 +165,8 @@ struct RootView: View {
                         ? "크래시 기록을 Mac에 보냈습니다."
                         : "크래시 기록을 받았습니다. Mac과 연결되면 보냅니다.")
                 }
+            } else if let request = AppPair.request(from: url) {
+                Task { await handleVPNRequest(request.action, returning: request.returning) }
             } else {
                 model.handle(url: url)
             }
@@ -219,6 +232,37 @@ struct RootView: View {
         }
         await model.addCrash(CrashReport.feedback(
             message: message, bundleId: Bundle.main.bundleIdentifier ?? "", appVersion: services.appVersion, details: details, image: image, date: Date()))
+    }
+
+    /// VPN 앱을 열어 요청을 넘긴다. `returning`이면 VPN 앱이 일을 마치고 이 앱으로 돌아온다.
+    private func openVPNApp(_ action: AppPair.Action, returning: Bool) async {
+        guard let url = AppPair.url(toOther: action, returning: returning) else { return }
+        // VPN 앱이 켜면 iOS가 이 앱의 터널을 끈다. 따로 끄지 않는다(끄면 그 사이 연결이 비는 시간이 길어진다).
+        if await !services.opener.open(url) {
+            model.log(.warning, "vpn", "VPN 앱을 열지 못함(설치돼 있지 않을 수 있음)")
+        }
+    }
+
+    /// VPN 앱이 보낸 요청: 이 앱의 터널로 VPN을 켜거나 끈다. `returning`이면 마친 뒤 VPN 앱으로 돌아간다.
+    private func handleVPNRequest(_ action: AppPair.Action, returning: Bool) async {
+        switch action {
+        case .open:
+            return
+        case .connect:
+            model.log(.info, "vpn", "VPN 앱의 요청으로 이 앱의 VPN을 켬")
+            do { try await tunnel.connectOwn() } catch { model.log(.error, "vpn", "켜기 실패: \(error.localizedDescription)") }
+            // 터널이 뜨면서 예전 기기 정보를 공용 저장소로 옮긴다. 다 뜬 뒤에 돌아간다.
+            for _ in 0..<40 {
+                if case .connecting = tunnel.state { try? await Task.sleep(for: .milliseconds(500)) } else if tunnel.state == .off { try? await Task.sleep(for: .milliseconds(500)) } else { break }
+            }
+            // 로그인이 필요하면 이 앱에 머문다.
+            if case .needsLogin = tunnel.state { return }
+        case .disconnect:
+            model.log(.info, "vpn", "VPN 앱의 요청으로 이 앱의 VPN을 끔")
+            await model.disconnectTunnel()
+            await tunnel.waitUntilStopped()
+        }
+        if returning { await openVPNApp(.open, returning: false) }
     }
 
     /// iPhone 설정 앱을 연다. 분석 데이터 화면 주소를 먼저 시도하고, 열지 못하면 이 앱의 설정 화면을 연다.
@@ -289,7 +333,14 @@ struct RootView: View {
             reopenInstaller: { await model.reopenInstaller($0) },
             cancelInstall: { model.cancelInstall($0) },
             connectTunnel: { await model.connectTunnel() },
-            disconnectTunnel: { await model.disconnectTunnel() },
+            disconnectTunnel: {
+                if !TunnelStateMapping.isActive(tunnel.vpnStatus), tunnel.pairedAppOwnsVPN {
+                    // VPN 앱의 터널이다. 그 앱을 열어 끄고 돌아온다.
+                    await openVPNApp(.disconnect, returning: true)
+                } else {
+                    await model.disconnectTunnel()
+                }
+            },
             restartTunnel: {
                 // 돌고 있는 터널에 startVPNTunnel을 부르지 않는다. 끈 뒤 꺼질 때까지 기다렸다가 켠다.
                 await model.disconnectTunnel()
@@ -318,6 +369,15 @@ struct RootView: View {
                 // 시작 전에 실패했으면 키를 남기지 않는다.
                 tunnel.setPendingAuthKey("")
             },
+            moveVPNToVPNApp: {
+                model.log(.info, "vpn", "VPN을 VPN 앱으로 옮김")
+                await openVPNApp(.connect, returning: true)
+            },
+            takeOverVPN: {
+                model.log(.info, "vpn", "VPN 앱의 VPN을 이 앱으로 넘겨받음")
+                do { try await tunnel.connectOwn() } catch { model.log(.error, "vpn", "넘겨받기 실패: \(error.localizedDescription)") }
+            },
+            openVPNApp: { await openVPNApp(.open, returning: false) },
             clearError: { model.clearError() },
             downloadFile: { model.download($0) },
             cancelDownload: { model.cancelDownload($0) },

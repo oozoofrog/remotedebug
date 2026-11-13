@@ -24,7 +24,7 @@ struct PhoneScreen: View {
                 }
 
                 if let update = state.selfUpdate {
-                    SelfUpdateSection(build: update, install: state.installs[update.id], actions: actions, updatePage: state.host?.updatePage)
+                    SelfUpdateSection(build: update, install: state.installs[update.id], actions: actions, updatePage: state.host?.updatePage, pair: state.vpnPair)
                 }
 
                 if let mismatch = state.tailnetMismatch {
@@ -32,6 +32,8 @@ struct PhoneScreen: View {
                 }
 
                 VPNCard(state: state, actions: actions)
+
+                VPNPairSection(pair: state.vpnPair, actions: actions)
 
                 if state.host == nil, !state.isPairingInFlight, state.queuedPairingHost == nil {
                     Section {
@@ -198,6 +200,76 @@ struct TailnetMismatchSection: View {
             .padding(.vertical, 4)
         } footer: {
             Text("이 iPhone에 저장된 Tailscale 로그인을 지우고 VPN을 다시 켭니다. 로그인 페이지가 나오면 Mac과 같은 계정을 고르세요.")
+        }
+    }
+}
+
+/// VPN만 맡는 짝 앱(RemoteDebug VPN)의 상태와, 두 앱 사이에서 VPN을 옮기는 동작.
+struct VPNPairSection: View {
+    var pair: VPNPairState
+    var actions: PhoneActions
+    @State private var working = false
+
+    var body: some View {
+        Section {
+            Label(title, systemImage: pair.owner == .vpnApp ? "checkmark.shield.fill" : "shield.lefthalf.filled")
+                .foregroundStyle(pair.owner == .vpnApp ? Color.green : Color.primary)
+            if pair.installed != nil || pair.owner == .vpnApp {
+                switch pair.owner {
+                case .thisApp:
+                    button("VPN 앱으로 옮기기", "arrow.left.arrow.right", actions.moveVPNToVPNApp)
+                case .vpnApp:
+                    button("이 앱으로 넘겨받기", "arrow.left.arrow.right", actions.takeOverVPN)
+                    button("VPN 앱 열기", "arrow.up.forward.app", actions.openVPNApp)
+                case .none:
+                    button("VPN 앱에서 켜기", "power", actions.moveVPNToVPNApp)
+                case .other:
+                    button("VPN 앱 열기", "arrow.up.forward.app", actions.openVPNApp)
+                }
+            }
+        } header: {
+            Text("VPN 앱")
+        } footer: {
+            Text(footer)
+        }
+        .disabled(working)
+    }
+
+    private func button(_ title: String, _ symbol: String, _ action: @escaping @MainActor @Sendable () async -> Void) -> some View {
+        Button {
+            working = true
+            Task {
+                await action()
+                working = false
+            }
+        } label: {
+            Label(title, systemImage: symbol)
+        }
+    }
+
+    private var title: String {
+        switch pair.owner {
+        case .vpnApp: return "VPN 앱이 VPN을 켜 두었습니다"
+        case .thisApp: return pair.installed == nil ? "이 앱이 VPN을 켜 두었습니다" : "이 앱이 VPN을 켜 두었습니다 · VPN 앱 \(version)"
+        case .other: return "다른 앱의 VPN이 켜져 있습니다"
+        case .none: return pair.installed == nil ? "VPN 앱이 설치되어 있지 않습니다" : "VPN 앱 \(version) 설치됨"
+        }
+    }
+
+    private var version: String {
+        pair.installed.map { "\($0.version) (\($0.buildNumber))" } ?? ""
+    }
+
+    private var footer: String {
+        if pair.installed == nil, pair.owner != .vpnApp {
+            return pair.published == nil
+                ? "RemoteDebug VPN 앱이 VPN을 맡으면 이 앱을 업데이트하는 동안에도 연결이 유지됩니다. Mac에서 RemoteDebugVPN 스킴을 게시하면 아래 빌드 목록에서 설치할 수 있습니다."
+                : "RemoteDebug VPN 앱이 VPN을 맡으면 이 앱을 업데이트하는 동안에도 연결이 유지됩니다. 아래 빌드 목록에서 RD VPN을 설치하세요."
+        }
+        switch pair.owner {
+        case .vpnApp: return "이 앱을 업데이트해도 VPN이 유지됩니다. VPN 앱을 업데이트할 때는 먼저 이 앱으로 넘겨받으세요."
+        case .thisApp: return "이 앱을 업데이트하려면 먼저 VPN 앱으로 옮기세요. 두 앱은 같은 tailnet 기기로 연결합니다."
+        default: return "두 앱은 같은 tailnet 기기로 연결하고, 한 번에 한 앱만 VPN을 켭니다."
         }
     }
 }

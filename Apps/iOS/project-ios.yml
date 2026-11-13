@@ -1,6 +1,8 @@
 # RemoteDebugPhone·RemoteDebugTunnel 대상 정의. project.yml이 포함한다(경로는 저장소 루트 기준).
 # 번들 ID는 $(RD_BUNDLE_PREFIX)로 시작한다(Config/Signing.xcconfig). 기본 앞부분이면 com.oozoofrog.app.RemoteDebugPhone,
 # com.oozoofrog.app.RemoteDebugPhone.Tunnel, com.oozoofrog.app.RemoteDebugPhone.Widgets가 된다.
+# VPN만 맡는 두 번째 앱은 com.oozoofrog.app.RemoteDebugVPN, 그 터널은 com.oozoofrog.app.RemoteDebugVPN.Tunnel이다.
+# 두 앱은 App Group(group.<앞부분>.RemoteDebug)으로 같은 Tailscale 상태를 써서 같은 tailnet 기기로 보인다.
 targets:
   RemoteDebugPhone:
     type: application
@@ -22,10 +24,14 @@ targets:
       properties:
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider
+        com.apple.security.application-groups:
+          - group.$(RD_BUNDLE_PREFIX).RemoteDebug
     info:
       path: Apps/iOS/Info.plist
       properties:
         CFBundleDisplayName: RemoteDebug
+        # 두 앱과 두 터널 확장이 함께 쓰는 저장소(SharedContainer).
+        RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
@@ -84,10 +90,13 @@ targets:
       properties:
         com.apple.developer.networking.networkextension:
           - packet-tunnel-provider
+        com.apple.security.application-groups:
+          - group.$(RD_BUNDLE_PREFIX).RemoteDebug
     info:
       path: Apps/iOSTunnel/Info.plist
       properties:
         CFBundleDisplayName: RemoteDebug 터널
+        RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
@@ -132,6 +141,101 @@ targets:
         "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
         ARCHS: arm64
         TARGETED_DEVICE_FAMILY: "1"
+  # VPN만 맡는 앱. RemoteDebug 앱을 업데이트하는 동안에도 VPN을 유지한다. 터널 확장은 RemoteDebugTunnel과 같은 소스다.
+  RemoteDebugVPN:
+    type: application
+    platform: iOS
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    sources:
+      - path: Apps/iOSVPN
+        excludes:
+          - "*.entitlements"
+      - path: Apps/iOSTunnel/Shared
+      - path: Apps/iOS/Adapters/TunnelController.swift
+      - path: Apps/iOS/Adapters/TunnelSettingsStore.swift
+      - path: Apps/iOS/Adapters/TunnelStateMapping.swift
+      - path: Apps/iOS/Adapters/UIKitURLOpener.swift
+    entitlements:
+      path: Apps/iOSVPN/RemoteDebugVPN.entitlements
+      properties:
+        com.apple.developer.networking.networkextension:
+          - packet-tunnel-provider
+        com.apple.security.application-groups:
+          - group.$(RD_BUNDLE_PREFIX).RemoteDebug
+    info:
+      path: Apps/iOSVPN/Info.plist
+      properties:
+        CFBundleDisplayName: RD VPN
+        RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        CFBundleURLTypes:
+          - CFBundleURLName: com.oozoofrog.app.RemoteDebugVPN.control
+            CFBundleURLSchemes:
+              - remotedebug-vpn
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        PRODUCT_BUNDLE_IDENTIFIER: $(RD_BUNDLE_PREFIX).RemoteDebugVPN
+        PRODUCT_NAME: RemoteDebugVPN
+        TARGETED_DEVICE_FAMILY: "1"
+        CODE_SIGN_STYLE: Automatic
+        "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
+        ARCHS: arm64
+    dependencies:
+      - target: RemoteDebugVPNTunnel
+        embed: true
+      - package: RemoteDebugKit
+        product: RDModels
+      - package: PhoneClient
+        product: PhoneClientKit
+  RemoteDebugVPNTunnel:
+    type: app-extension
+    platform: iOS
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
+    sources:
+      - path: Apps/iOSTunnel
+        excludes:
+          - Info.plist
+          - "*.entitlements"
+    entitlements:
+      path: Apps/iOSVPN/RemoteDebugVPNTunnel.entitlements
+      properties:
+        com.apple.developer.networking.networkextension:
+          - packet-tunnel-provider
+        com.apple.security.application-groups:
+          - group.$(RD_BUNDLE_PREFIX).RemoteDebug
+    info:
+      path: Apps/iOSVPN/TunnelInfo.plist
+      properties:
+        CFBundleDisplayName: RD VPN 터널
+        RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.networkextension.packet-tunnel
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).PacketTunnelProvider
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: $(RD_BUNDLE_PREFIX).RemoteDebugVPN.Tunnel
+        SKIP_INSTALL: YES
+        CODE_SIGN_STYLE: Automatic
+        "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
+        ARCHS: arm64
+    dependencies:
+      - package: RDCore
+        product: RDCoreBridge
+      - package: RemoteDebugKit
+        product: RDModels
   RemoteDebugPhoneTests:
     type: bundle.unit-test
     platform: iOS
@@ -148,6 +252,12 @@ targets:
     dependencies:
       - target: RemoteDebugPhone
 schemes:
+  RemoteDebugVPN:
+    build:
+      targets:
+        RemoteDebugVPN: all
+    run:
+      config: Debug
   RemoteDebugPhone:
     build:
       targets:

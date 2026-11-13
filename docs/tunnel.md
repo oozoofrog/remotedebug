@@ -23,6 +23,7 @@
         ↑ rd_start / rd_next_event / rd_status / rd_tunnel_set_default_interface / rd_stop
 ```
 
+- 터널 확장은 둘이다(RemoteDebug 앱의 것과 RD VPN 앱의 것). 같은 소스로 빌드하고, Tailscale 상태를 App Group의 공용 컨테이너에 두어 같은 tailnet 기기로 뜬다(`docs/protocol-addenda.md` M). iOS가 VPN을 하나만 켜므로 둘이 동시에 돌지 않는다.
 - 프로세스당 터널 노드는 하나다. 터널 노드가 살아 있는 동안 두 번째 터널 `rd_start`는 `invalid_config`로 실패한다. 메시지는 `stateDir`에 따라 다르다. 같은 `stateDir`면 `stateDir` 검사가 먼저 걸려 `"state_dir_in_use"`, 다른 `stateDir`면 `"tunnel_in_use"`다. 둘 다 "앞 노드를 `rd_stop`한 뒤 다시 시작"으로 처리한다. `rd_stop`이 끝나면 다시 시작할 수 있다. 시작이 터널 자리를 잡은 뒤 실패해도(로그 파일, utun, 엔진 생성) 자리는 풀린다. 호스트·프록시 노드와는 함께 돌 수 있다.
 - 상태는 `stateDir/tailscaled.state` 파일에 둔다. 확장이 다시 시작돼도 노드 키·tailnet IP·StableID가 유지되므로 호스트의 페어링(StableID 기준)이 깨지지 않는다. 앱의 프록시 모드와 같은 `stateDir`를 쓰지 않는다(A.3의 `state_dir_in_use`).
 

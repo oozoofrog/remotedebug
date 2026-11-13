@@ -46,7 +46,15 @@ final class TunnelController: TunnelControlling {
     private(set) var disconnectMessage: String?
 
     /// VPN이 켜져 있거나 켜지거나 꺼지는 중이면 `true`. 다시 켜려면 먼저 끄고 `waitUntilStopped()`를 기다린다.
-    var isTunnelActive: Bool { TunnelStateMapping.isActive(vpnStatus) }
+    var isTunnelActive: Bool { TunnelStateMapping.isActive(vpnStatus) || externalVPNActive }
+    /// 이 앱의 VPN은 꺼져 있는데 기기에 tailnet 터널이 있다. 짝 앱(또는 다른 Tailscale 앱)이 VPN을 켜 둔 것이다.
+    private(set) var externalVPNActive = false
+    /// 공용 설정에 적힌, VPN을 켠 앱. 짝 앱이 켰는지 알릴 때 쓴다.
+    private(set) var sharedState: SharedVPNState?
+    /// 짝 앱이 VPN을 켜 두었는가.
+    var pairedAppOwnsVPN: Bool {
+        externalVPNActive && sharedState?.connected == true && sharedState?.owner == AppPair.otherAppID
+    }
 
     let settings: TunnelSettingsStore
 
@@ -62,6 +70,7 @@ final class TunnelController: TunnelControlling {
     @ObservationIgnored private var statusObserver: (any NSObjectProtocol)?
     /// 사용자가 끄거나 다시 켜는 중이면 끊김을 오류로 보지 않는다.
     @ObservationIgnored private var userStopped = true
+    @ObservationIgnored private var externalTask: Task<Void, Never>?
 
     init(settings: TunnelSettingsStore) {
         self.settings = settings
@@ -72,6 +81,13 @@ final class TunnelController: TunnelControlling {
         isAvailable = true
         state = .off
         #endif
+        externalTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { return }
+                self.refreshExternal()
+                try? await Task.sleep(for: Self.pollInterval)
+            }
+        }
         statusObserver = NotificationCenter.default.addObserver(forName: .NEVPNStatusDidChange, object: nil, queue: .main) { [weak self] note in
             let connection = note.object as AnyObject?
             let identifier = connection.map(ObjectIdentifier.init)
@@ -107,7 +123,15 @@ final class TunnelController: TunnelControlling {
         try await task.value
     }
 
+    /// 다른 앱이 켠 VPN이 이미 있으면 그대로 쓴다. 이 앱의 터널로 옮기려면 `connectOwn()`을 부른다.
     func connect() async throws {
+        refreshExternal()
+        if externalVPNActive, pendingAuthKey == nil, !pendingResetLogin { return }
+        try await connectOwn()
+    }
+
+    /// 이 앱의 터널을 켠다. 다른 앱의 VPN이 켜져 있으면 iOS가 그것을 끄고 이 앱의 것으로 바꾼다.
+    func connectOwn() async throws {
         guard isAvailable else { throw ControllerError.unavailable }
         if manager?.connection.status == .disconnecting {
             // 끄는 중에 켜면 시작이 끄기에 묻힌다. 다 꺼진 뒤에 켠다.
@@ -261,6 +285,7 @@ final class TunnelController: TunnelControlling {
         let previous = vpnStatus
         let status = manager.connection.status
         vpnStatus = status
+        if TunnelStateMapping.isActive(status) { externalVPNActive = false }
         if status == .connecting || status == .connected, previous == .disconnected || previous == .invalid {
             // 앱 밖(설정 앱, 다른 실행)에서 켠 VPN도 끊기면 알린다.
             userStopped = false
@@ -295,7 +320,23 @@ final class TunnelController: TunnelControlling {
 
     private func recompute() {
         guard isAvailable else { return }
+        if externalVPNActive {
+            publish(.connected)
+            return
+        }
         publish(TunnelStateMapping.state(status: vpnStatus, reply: lastReply, disconnectMessage: disconnectMessage))
+    }
+
+    /// 이 앱의 VPN이 꺼져 있을 때 기기에 다른 tailnet 터널이 있는지 본다.
+    func refreshExternal() {
+        guard isAvailable else { return }
+        let ownActive = TunnelStateMapping.isActive(vpnStatus)
+        let external = !ownActive && TailnetInterface.isUp()
+        let shared = SharedVPNState.read()
+        guard external != externalVPNActive || shared != sharedState else { return }
+        externalVPNActive = external
+        sharedState = shared
+        recompute()
     }
 
     private func publish(_ newState: TunnelState) {

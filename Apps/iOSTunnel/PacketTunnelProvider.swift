@@ -48,6 +48,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
             do {
                 let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
                 try TunnelStorage.resetStateDirectory(in: support)
+                if let shared = SharedContainer.groupSupportDirectory() { try TunnelStorage.resetStateDirectory(in: shared) }
                 logger.log("저장된 Tailscale 로그인을 지웠습니다")
             } catch {
                 logger.error("Tailscale 로그인을 지우지 못했습니다: \(error.localizedDescription, privacy: .public)")
@@ -125,11 +126,13 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         guard lifecycle.isCurrent(generation) else { throw stoppedDuringStart() }
         // Running을 기다리지 않는다. NeedsLogin이면 앱이 상태를 물어 authURL을 보여 준다.
         logger.log("코어 시작됨")
+        SharedVPNState(owner: AppPair.currentAppID, connected: true, updatedAt: Date()).write()
     }
 
     // MARK: 종료
 
     override func stopTunnel(with reason: NEProviderStopReason) async {
+        SharedVPNState(owner: AppPair.currentAppID, connected: false, updatedAt: Date()).write()
         logger.log("터널 종료 요청: 사유 \(reason.rawValue)")
         let (node, cleanups) = lifecycle.requestStop()
         applier.discardPending()
@@ -303,9 +306,14 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
     }
 
     /// 확장 컨테이너의 `Library/Application Support/RemoteDebug/tailscale`(첫 잠금 해제 후 접근 가능, 백업 제외).
+    /// 두 앱이 같은 tailnet 기기로 보이도록 App Group 컨테이너를 쓴다. 예전 위치의 상태는 처음 한 번 옮긴다.
     static func prepareStateDirectory() throws -> URL {
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        return try TunnelStorage.prepareStateDirectory(in: support)
+        guard let shared = SharedContainer.groupSupportDirectory() else {
+            return try TunnelStorage.prepareStateDirectory(in: support)
+        }
+        SharedContainer.migrateState(from: support, to: shared)
+        return try TunnelStorage.prepareStateDirectory(in: shared)
     }
 
     static func logFileURL() throws -> URL {

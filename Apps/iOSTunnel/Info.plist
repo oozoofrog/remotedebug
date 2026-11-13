@@ -27,5 +27,7 @@
 		<key>NSExtensionPrincipalClass</key>
 		<string>$(PRODUCT_MODULE_NAME).PacketTunnelProvider</string>
 	</dict>
+	<key>RDAppGroup</key>
+	<string>group.$(RD_BUNDLE_PREFIX).RemoteDebug</string>
 </dict>
 </plist>

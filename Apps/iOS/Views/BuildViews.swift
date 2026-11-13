@@ -95,7 +95,9 @@ struct SelfUpdateSection: View {
     var install: InstallState?
     var actions: PhoneActions
     var updatePage: URL?
+    var pair = VPNPairState()
     @State private var showsGuide = false
+    @State private var moving = false
 
     var body: some View {
         Section {
@@ -112,12 +114,28 @@ struct SelfUpdateSection: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button("업데이트") { showsGuide = true }
+                    if install == nil {
+                        Button(pair.survivesSelfUpdate || pair.installed == nil ? "업데이트" : "VPN 옮기기") {
+                            if pair.survivesSelfUpdate {
+                                // 다른 앱이 VPN을 켜 두었다. 설치하는 동안에도 연결이 유지되므로 여기서 바로 설치한다.
+                                actions.install(build)
+                            } else if pair.installed != nil {
+                                moving = true
+                                Task {
+                                    await actions.moveVPNToVPNApp()
+                                    moving = false
+                                }
+                            } else {
+                                showsGuide = true
+                            }
+                        }
                         .font(.subheadline.weight(.semibold))
                         .buttonStyle(.borderedProminent)
                         .buttonBorderShape(.capsule)
                         .fixedSize()
-                        .accessibilityLabel("RemoteDebug 업데이트 순서 보기")
+                        .disabled(moving)
+                        .accessibilityLabel(pair.survivesSelfUpdate ? "RemoteDebug 업데이트" : (pair.installed != nil ? "VPN 앱으로 VPN 옮기기" : "RemoteDebug 업데이트 순서 보기"))
+                    }
                 }
                 if let install {
                     InstallStatusView(build: build, state: install, actions: actions)
@@ -127,7 +145,13 @@ struct SelfUpdateSection: View {
         } header: {
             Text("앱 업데이트")
         } footer: {
-            Text("이 앱은 설치하는 동안 VPN이 꺼져 자기 VPN으로는 업데이트할 수 없습니다. 공식 Tailscale로 Mac의 업데이트 페이지를 엽니다.")
+            if pair.survivesSelfUpdate {
+                Text("다른 앱이 VPN을 켜 두어서, 설치하는 동안에도 연결이 유지됩니다.")
+            } else if pair.installed != nil {
+                Text("이 앱의 VPN은 설치하는 동안 꺼집니다. VPN 앱으로 옮긴 뒤 돌아와 업데이트하세요.")
+            } else {
+                Text("이 앱은 설치하는 동안 VPN이 꺼져 자기 VPN으로는 업데이트할 수 없습니다. RD VPN 앱을 설치해 VPN을 맡기거나, 공식 Tailscale로 Mac의 업데이트 페이지를 엽니다.")
+            }
         }
         .sheet(isPresented: $showsGuide) {
             NavigationStack {

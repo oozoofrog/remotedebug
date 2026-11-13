@@ -71,6 +71,22 @@ open RemoteDebug.xcodeproj
 
 The build scripts call `eyebuild`; without it, create the [stand-in script](docs/setup.md#eyebuild가-없는-mac) first. Tailnet policy, signing, and troubleshooting are in [setup](docs/setup.md).
 
+## Two iPhone apps: RemoteDebug and RD VPN
+
+Install two apps on the iPhone. Both can run the same VPN and appear as the same tailnet device (the Tailscale state lives in a shared App Group).
+
+- **RemoteDebug**: installs builds, receives files, collects crashes and feedback. It can also run the VPN.
+- **RD VPN** (scheme `RemoteDebugVPN`): only runs the VPN. While it holds the VPN, updating RemoteDebug does not drop the connection, so the update installs inside the app without the official Tailscale app.
+
+iOS runs one VPN at a time. When one app turns its VPN on the other one stops, and the Mac pairing stays because the device identity is the same.
+
+- RemoteDebug's VPN app section moves the VPN to RD VPN or takes it back. The button opens the other app, which switches the VPN and returns.
+- Updating RemoteDebug: if RD VPN holds the VPN, the update button installs right away. Otherwise the button moves the VPN first.
+- Updating RD VPN: take the VPN over in RemoteDebug, then install RD VPN from the build list.
+- First install: update RemoteDebug, install RD VPN, then use RD VPN's button that fetches the device identity from RemoteDebug. The existing identity moves to the shared storage and the Mac pairing is kept.
+
+Switching between the two apps has not been verified on a real iPhone yet.
+
 ## Crashes and feedback from your apps
 
 Problems in apps installed through RemoteDebug show up on the Mac, in the Mac app's crash and feedback screen and in the agent tool `remotedebug_crash_logs`.
