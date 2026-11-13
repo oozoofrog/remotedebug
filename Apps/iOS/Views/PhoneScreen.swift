@@ -211,7 +211,7 @@ struct VPNPairSection: View {
     @State private var working = false
     @State private var openFailed = false
 
-    private var updaterAvailable: Bool { pair.installed != nil || pair.owner == .pairedApp }
+    private var updaterAvailable: Bool { pair.installed != nil || pair.present || pair.owner == .pairedApp }
 
     var body: some View {
         Section {
@@ -264,9 +264,9 @@ struct VPNPairSection: View {
     private var title: String {
         switch pair.owner {
         case .pairedApp: return "업데이트 앱이 VPN을 켜 두었습니다"
-        case .thisApp: return pair.installed == nil ? "이 앱이 VPN을 켜 두었습니다" : "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 \(version)"
+        case .thisApp: return pair.installed == nil ? (pair.present ? "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 설치됨" : "이 앱이 VPN을 켜 두었습니다") : "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 \(version)"
         case .other: return "다른 앱의 VPN이 켜져 있습니다"
-        case .none: return pair.installed == nil ? "업데이트 앱이 설치되어 있지 않습니다" : "업데이트 앱 \(version) 설치됨"
+        case .none: return pair.installed == nil ? (pair.present ? "업데이트 앱 설치됨" : "업데이트 앱이 설치되어 있지 않습니다") : "업데이트 앱 \(version) 설치됨"
         }
     }
 

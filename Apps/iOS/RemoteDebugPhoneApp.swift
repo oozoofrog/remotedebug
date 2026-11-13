@@ -89,6 +89,8 @@ struct RootView: View {
     @State private var loggedInstalledApps = false
     /// 이 iPhone에 설치된 업데이트 앱.
     @State private var updaterInstalled: InstalledApp?
+    /// 업데이트 앱의 주소를 열 수 있는가. 설치된 버전을 읽지 못하는 iOS에서도 설치 여부는 이것으로 안다.
+    @State private var updaterPresent = false
     @State private var mergingIdentity = false
     @State private var crashNotice: String?
 
@@ -110,6 +112,7 @@ struct RootView: View {
         state.peerPath = tunnel.peerPath
         state.vpnPair.owner = tunnel.vpnHolder
         state.vpnPair.installed = updaterInstalled
+        state.vpnPair.present = updaterPresent
         state.vpnPair.published = AppBuildFilter.only(AppPair.otherAppID, in: model.builds).first
         return state
     }
@@ -130,6 +133,8 @@ struct RootView: View {
     private func reloadInstalledApps() {
         let updater = InstalledApps.lookup(AppPair.otherAppID).app
         if updater != updaterInstalled { updaterInstalled = updater }
+        let present = AppPair.url(toOther: .open, returning: false).map { UIApplication.shared.canOpenURL($0) } ?? false
+        if present != updaterPresent { updaterPresent = present }
         var found: [String: InstalledApp] = [:]
         var traces: [String] = []
         // 이 앱 자신의 빌드는 목록에 없다.

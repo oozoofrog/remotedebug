@@ -58,6 +58,8 @@ struct VPNPairState: Equatable {
     var owner: VPNHolder = .none
     /// 이 iPhone에 설치된 업데이트 앱. 없거나 읽지 못했으면 `nil`.
     var installed: InstalledApp?
+    /// 짝 앱이 이 iPhone에 있는가(짝 앱의 주소를 열 수 있는지로 안다). 버전을 읽지 못하는 기기에서도 참이다.
+    var present = false
     /// Mac에 게시된 업데이트 앱 빌드(최신). 없으면 `nil`.
     var published: BuildDescriptor?
     /// 지금 실행 중인 것보다 새 RemoteDebug 빌드가 Mac에 있다. 업데이트 앱에서 설치한다.
