@@ -101,9 +101,15 @@ private func expectRoundTrip<T: Codable>(_ type: T.Type, _ json: String) throws 
     // MARK: json-3, json-4 CoreConfig
 
     @Test func tunnelConfigExampleRoundTrips() throws {
-        let json = try DocJSON.block("tunnel.md", withKeys: ["mode", "utunFd"])
+        // 문서 예시는 터널 모드가 쓰지 않는 호스트 전용 키를 생략한다. Swift 모델은 항상 내보내므로 기본값을 채워 읽는다.
+        let doc = try DocJSON.block("tunnel.md", withKeys: ["mode", "utunFd"])
+        var merged = try JSONSerialization.jsonObject(with: Data(doc.utf8)) as! [String: Any]
+        for (key, value) in ["listenTLS": true, "port": 443, "publishDir": "", "allowedTargets": [String]()] as [String: Any] where merged[key] == nil {
+            merged[key] = value
+        }
+        let json = String(decoding: try JSONSerialization.data(withJSONObject: merged), as: UTF8.self)
         let c = try expectRoundTrip(CoreConfig.self, json)
-        #expect(c.mode == .tunnel && c.utunFd == 7 && c.mtu == 1280 && c.goMemLimitMiB == 28 && !c.listenTLS)
+        #expect(c.mode == .tunnel && c.utunFd == 7 && c.mtu == 1280 && c.goMemLimitMiB == 28)
     }
 
     @Test func optionalConfigFieldsAreOmittedUnlessSet() throws {
@@ -132,9 +138,10 @@ private func expectRoundTrip<T: Codable>(_ type: T.Type, _ json: String) throws 
         let s = try expectRoundTrip(CoreStatus.self, json)
         let t = try #require(s.tunnel)
         #expect(t.addresses == ["100.64.0.11/32", "fd7a:115c:a1e0::b/128"])
-        #expect(t.routes == ["100.64.0.0/10", "fd7a:115c:a1e0::/48"])
-        #expect(t.dnsServers == ["100.100.100.100"] && t.dnsMatchDomains == ["example-tailnet.ts.net"])
-        #expect(t.mtu == 1280 && t.peerCount == 2)
+        #expect(t.routes == ["100.64.0.10/32", "fd7a:115c:a1e0::/48", "100.100.100.100/32", "fd7a:115c:a1e0::53/128"])
+        #expect(t.dnsServers == ["100.100.100.100", "fd7a:115c:a1e0::53"])
+        #expect(t.dnsMatchDomains == ["example-tailnet.ts.net", "64.100.in-addr.arpa"])
+        #expect(t.mtu == 1280 && t.peerCount == 1)
         #expect(s.errorMessage == nil)
     }
 
@@ -203,8 +210,9 @@ private func expectRoundTrip<T: Codable>(_ type: T.Type, _ json: String) throws 
         let e = try expectRoundTrip(CoreEvent.self, json)
         guard case .networkSettings(let n) = e else { Issue.record("network-settings가 아님: \(e)"); return }
         #expect(e.type == "network-settings")
-        #expect(n.addresses.count == 2 && n.routes.first == "100.64.0.0/10" && n.mtu == 1280)
-        #expect(n.dnsServers == ["100.100.100.100"] && n.dnsMatchDomains == ["example-tailnet.ts.net"])
+        #expect(n.addresses.count == 2 && n.routes.first == "100.64.0.10/32" && n.mtu == 1280)
+        #expect(n.dnsServers == ["100.100.100.100", "fd7a:115c:a1e0::53"])
+        #expect(n.dnsMatchDomains == ["example-tailnet.ts.net", "64.100.in-addr.arpa"])
         let wrapped = try decode(NextEventResponse.self, #"{"event":\#(json)}"#)
         #expect(wrapped.event == e)
     }
