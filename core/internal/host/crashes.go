@@ -1,6 +1,7 @@
 package host
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -12,8 +13,10 @@ import (
 
 // Limits for POST /v1/crashes (protocol-addenda L).
 const (
-	MaxCrashBodyBytes = 2 << 20
+	MaxCrashBodyBytes = 4 << 20
 	MaxCrashTextBytes = 1536 << 10
+	// MaxCrashImageBytes limits the decoded screenshot of a feedback report.
+	MaxCrashImageBytes = 1 << 20
 	maxCrashField     = 200
 )
 
@@ -27,6 +30,8 @@ type CrashReport struct {
 	AppVersion string `json:"appVersion"`
 	CrashedAt  string `json:"crashedAt"`
 	Text       string `json:"text"`
+	// Image is an optional base64 JPEG or PNG screenshot (feedback only).
+	Image string `json:"image,omitempty"`
 }
 
 // handleDeviceCrash accepts one crash report from a paired device and hands it
@@ -49,6 +54,13 @@ func (h *Host) handleDeviceCrash(w http.ResponseWriter, r *http.Request) {
 	if strings.TrimSpace(c.Text) == "" || len(c.Text) > MaxCrashTextBytes {
 		apierr.Write(w, apierr.BadRequest("text는 비어 있지 않고 1536KB 이하여야 합니다."))
 		return
+	}
+	if c.Image != "" {
+		raw, err := base64.StdEncoding.DecodeString(c.Image)
+		if err != nil || len(raw) == 0 || len(raw) > MaxCrashImageBytes || c.Kind != "feedback" {
+			apierr.Write(w, apierr.BadRequest("image는 feedback에만 붙일 수 있고 base64로 1MB 이하여야 합니다."))
+			return
+		}
 	}
 	c.Name = truncateUTF8(strings.ToValidUTF8(c.Name, "?"), maxCrashField)
 	c.BundleID = truncateUTF8(strings.ToValidUTF8(c.BundleID, "?"), maxCrashField)

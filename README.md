@@ -81,11 +81,16 @@ Problems in apps installed through RemoteDebug show up on the Mac, in the Mac ap
 ```swift
 import RemoteDebugFeedback
 
-#if DEBUG
-RemoteDebugFeedback.start(host: "<Mac address>")       // collects and sends crash records
-#endif
-.remoteDebugFeedback(isPresented: $showsFeedback)      // feedback form
+RemoteDebugFeedback.start(.init(
+    macHost: "<Mac address>",           // builds installed through RemoteDebug send straight to the Mac
+    email: "<address for feedback>",    // optional: used when the Mac is unreachable, and by release builds
+    publicKeyBase64: "<public key>"     // optional: Debug builds attach encrypted logs and the screenshot to the mail
+))
+.remoteDebugFeedback(isPresented: $showsFeedback)      // form with text, screenshot, and recent logs
 ```
+
+- Drop an encrypted mail attachment (`.afdiag`) on the Mac app's crash and feedback screen to open it. The key stays in that Mac's keychain.
+- The package needs iOS 17 or later.
 
 - Apps without the package: open the crash record button in the iPhone build list, open iPhone Settings, and share the `.ips` file from Analytics Data into RemoteDebug.
 

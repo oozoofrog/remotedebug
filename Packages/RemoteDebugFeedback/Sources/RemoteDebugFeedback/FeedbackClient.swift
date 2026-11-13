@@ -8,6 +8,8 @@ public struct FeedbackReport: Codable, Equatable, Sendable {
     public var appVersion: String
     public var crashedAt: String
     public var text: String
+    /// 화면 사진(JPEG나 PNG)의 base64. 피드백에만 붙인다.
+    public var image: String?
 }
 
 /// 기록을 폴더에 쌓아 두고 Mac의 `POST /v1/crashes`로 보낸다. 보내지 못한 기록은 남겨 두었다가 다음에 다시 보낸다.
@@ -38,6 +40,18 @@ public actor FeedbackClient {
               text.unicodeScalars.allSatisfy({ ("a"..."z").contains($0) || ("0"..."9").contains($0) || $0 == "-" || $0 == "." }),
               text.contains(".") else { return nil }
         return URL(string: "https://\(text)/v1/crashes")
+    }
+
+    /// 쌓지 않고 한 번 보내 본다. Mac이 받았으면 `true`.
+    public func trySend(_ report: FeedbackReport) async -> Bool {
+        guard let body = try? JSONEncoder().encode(report) else { return false }
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 8
+        request.httpBody = body
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        guard let (_, response) = try? await send(request), let http = response as? HTTPURLResponse else { return false }
+        return (200..<300).contains(http.statusCode)
     }
 
     /// 기록을 쌓고 바로 보내 본다. 이번에 Mac이 받았으면 `true`.

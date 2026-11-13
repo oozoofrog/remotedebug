@@ -460,7 +460,8 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 ```
 
 - `kind`: `ips`(iOS가 만든 크래시 파일, 사용자가 iPhone 앱으로 넘긴 것), `metrickit`(앱이 자기 크래시를 MetricKit에서 받은 JSON), `feedback`(사람이 앱에서 쓴 피드백, `text`가 내용). 다른 값은 `400 bad_request`.
-- `text`: 원문. 비어 있거나 1536KB를 넘으면 `400 bad_request`. 본문 전체는 2MB까지 읽는다.
+- `image`: 선택. 화면 사진(JPEG나 PNG)의 base64. `kind`가 `feedback`일 때만 받고, 풀었을 때 1MB를 넘거나 base64가 아니면 `400 bad_request`.
+- `text`: 원문. 비어 있거나 1536KB를 넘으면 `400 bad_request`. 본문 전체는 4MB까지 읽는다.
 - `name`, `bundleId`, `appVersion`: 200바이트에서 자른다. `crashedAt`이 ISO-8601 시각이 아니면 받은 시각으로 바꾼다.
 - 응답: `202`와 `{"accepted":1}`.
 
@@ -476,7 +477,13 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 
 - iPhone 앱은 자신의 크래시를 MetricKit에서 받아 다음 실행 때 기록으로 만든다. 다른 앱의 기록은 iOS가 앱에 내주지 않으므로, 사용자가 설정 앱의 분석 데이터에서 `.ips` 파일을 공유로 넘기거나 파일에서 가져온다.
 - iPhone 앱의 빌드 목록에서 설치된 앱마다 **크래시 기록**을 열면 그 앱(번들 ID가 같은 것)의 기록만 보이고, iPhone 설정 앱을 여는 버튼이 있다. 버튼은 분석 데이터 화면 주소(`App-prefs:Privacy&path=PROBLEM_REPORTING/DIAGNOSTIC_USAGE_DATA`)를 먼저 시도한다. iOS 27.2 시뮬레이터에서는 이 주소가 설정 앱의 첫 화면만 열었다.
-- iPhone 앱의 설정 > 크래시·피드백에서 RemoteDebug 앱에 대한 피드백을 적어 보낸다. 최근 진단 로그 100줄을 붙일 수 있다.
-- 다른 앱은 저장소 루트의 Swift 패키지 `RemoteDebugFeedback`을 넣어 자기 크래시(`metrickit`)와 피드백(`feedback`)을 같은 주소로 직접 보낸다. 요청은 그 iPhone의 RemoteDebug VPN을 지나므로 페어링한 기기의 요청으로 인증된다. 보내지 못한 기록은 앱 데이터 폴더에 30개까지 남겼다가 다음 실행 때 다시 보낸다. Mac 앱의 프로젝트 화면은 패키지를 쓰지 않는 프로젝트에 넣는 방법과 Mac 주소가 든 코드를 보여 준다. 다른 앱의 요청이 실제로 VPN을 지나 Mac에 닿는지는 실기기에서 확인하지 않았다.
+- iPhone 앱의 설정 > 크래시·피드백에서 RemoteDebug 앱에 대한 피드백을 적어 보낸다. 사진 보관함에서 고른 화면 사진과 최근 진단 로그 100줄을 붙일 수 있다.
+- 다른 앱은 저장소 루트의 Swift 패키지 `RemoteDebugFeedback`(iOS 17 이상)을 넣는다. 패키지는 자기 크래시(`metrickit`)를 모아 보내고, 피드백 화면 하나에서 글, 화면 사진(띄우기 직전 화면이나 고른 사진), 최근 로그(앱이 `log`로 남긴 줄과 이 앱의 시스템 로그 최근 15분, 300줄까지)를 받는다.
+- 피드백은 먼저 Mac으로 직접 보낸다(`feedback`). 요청은 그 iPhone의 RemoteDebug VPN을 지나므로 페어링한 기기의 요청으로 인증된다. Mac에 닿지 않으면 메일로 보내거나 저장했다가(30개까지) 다음에 보낸다. Mac 주소가 없는 빌드는 메일만 쓴다.
+- 메일 경로: iOS 메일 작성 화면을 띄우고, 메일 계정이 없으면 `mailto:` 링크를 연다. Debug 빌드에서 공개키가 설정돼 있으면 로그와 화면 사진을 JSON으로 묶어 암호화한 파일(`.afdiag`)을 붙인다. Release 빌드에는 이 코드가 들어가지 않는다.
+- `.afdiag` 형식: 머리말 `AFDIAG1\0`(8바이트), 공개키 SHA-256의 앞 8바이트, HPKE 캡슐화 키 32바이트, 암호문. HPKE는 X25519, HKDF-SHA256, ChaCha20-Poly1305이고 info는 `AppFeedback diagnostics v1`, 평문은 LZFSE로 압축한 JSON(2MB까지)이다. 머리말 16바이트는 인증 데이터로 묶는다.
+- 개인키는 Mac 키체인(서비스 `RemoteDebug feedback diagnostics`, 계정 `<프로젝트 이름> v1`)에만 둔다. Mac 앱의 **크래시·피드백** 화면에 파일을 끌어다 놓거나 **암호화된 진단 열기…**로 고르면 풀어서 목록에 넣는다. 명령줄에서는 `scripts/feedback_diagnostics.swift`가 같은 형식을 다룬다.
+- Mac 앱의 프로젝트 화면은 패키지를 쓰지 않는 프로젝트에 넣는 방법, 키 만들기, Mac 주소·메일 주소·공개키가 든 코드를 보여 준다.
+- 실기기에서 확인하지 않은 것: 다른 앱의 요청이 VPN을 지나 Mac에 닿는지, 메일 작성 화면과 첨부, 받은 첨부를 Mac에서 푸는 전체 경로.
 - 기록은 iPhone에 50개까지 남기고, 페어링한 Mac과 VPN이 연결되면 보내지 않은 것을 보낸다.
 - Mac 앱은 `CrashLogs/`에 원문 파일과 `index.json`을 두고(200개까지) **크래시** 화면과 MCP 도구 `remotedebug_crash_logs`로 보여 준다. 같은 내용의 기록은 한 번만 남긴다.

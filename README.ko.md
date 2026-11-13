@@ -81,11 +81,16 @@ RemoteDebug로 설치한 앱에서 생긴 문제를 Mac에서 바로 볼 수 있
 ```swift
 import RemoteDebugFeedback
 
-#if DEBUG
-RemoteDebugFeedback.start(host: "<Mac 주소>")          // 크래시 기록을 모아 보낸다
-#endif
-.remoteDebugFeedback(isPresented: $showsFeedback)      // 피드백 화면
+RemoteDebugFeedback.start(.init(
+    macHost: "<Mac 주소>",              // RemoteDebug로 설치한 빌드가 Mac으로 바로 보낸다
+    email: "<받을 메일 주소>",           // 선택. Mac에 닿지 않을 때와 배포 빌드의 경로
+    publicKeyBase64: "<공개키>"         // 선택. Debug 빌드가 메일에 로그·화면 사진을 암호화해 붙인다
+))
+.remoteDebugFeedback(isPresented: $showsFeedback)      // 글, 화면 사진, 최근 로그를 받는 피드백 화면
 ```
+
+- 메일로 온 암호화 첨부(`.afdiag`)는 Mac 앱의 **크래시·피드백** 화면에 끌어다 놓으면 풀린다. 키는 그 Mac의 키체인에만 있다.
+- 패키지는 iOS 17 이상이다.
 
 - 패키지를 넣지 않은 앱: iPhone 빌드 목록의 **크래시 기록**에서 iPhone 설정을 열고, 분석 데이터의 `.ips` 파일을 공유로 RemoteDebug에 넘긴다.
 

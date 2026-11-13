@@ -34,4 +34,16 @@ func TestDeviceCrashValidatesBody(t *testing.T) {
 	if w.Code != http.StatusAccepted {
 		t.Fatalf("feedback status %d body %s", w.Code, w.Body)
 	}
+	w = servePost(h, "/v1/crashes", `{"kind":"feedback","text":"화면이 깨져요","image":"aGVsbG8="}`)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("feedback image status %d body %s", w.Code, w.Body)
+	}
+	for _, body := range []string{
+		`{"kind":"feedback","text":"x","image":"not base64!"}`,
+		`{"kind":"ips","text":"x","image":"aGVsbG8="}`,
+	} {
+		if w := servePost(h, "/v1/crashes", body); w.Code != http.StatusBadRequest {
+			t.Fatalf("status %d for %.50s", w.Code, body)
+		}
+	}
 }

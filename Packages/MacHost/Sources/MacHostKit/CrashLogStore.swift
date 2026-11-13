@@ -18,6 +18,8 @@ public final class CrashLogStore {
         public var deviceName: String
         /// `CrashLogs/` 안의 원문 파일 이름.
         public var file: String
+        /// 피드백에 붙은 화면 사진 파일 이름. 없으면 `nil`.
+        public var imageFile: String?
 
         /// 목록에 보일 이름: 번들 ID의 마지막 마디, 없으면 파일 이름.
         public var title: String {
@@ -49,10 +51,12 @@ public final class CrashLogStore {
         let item = Item(id: report.id, kind: report.kind, name: report.name, bundleId: report.bundleId,
                         appVersion: report.appVersion, crashedAt: report.crashedAt, receivedAt: now(),
                         deviceId: event.deviceId, deviceName: event.deviceName,
-                        file: "\(report.id).\(report.kind.fileExtension)")
+                        file: "\(report.id).\(report.kind.fileExtension)",
+                        imageFile: report.image == nil || directory == nil ? nil : "\(report.id).\(report.image?.first == 0x89 ? "png" : "jpg")")
         if let url = fileURL(item) {
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? Data(report.text.utf8).write(to: url, options: .atomic)
+            if let image = report.image, let imageURL = imageURL(item) { try? image.write(to: imageURL, options: .atomic) }
         } else {
             memory[item.id] = report.text
         }
@@ -65,6 +69,11 @@ public final class CrashLogStore {
 
     public func fileURL(_ item: Item) -> URL? {
         directory?.appendingPathComponent(item.file)
+    }
+
+    public func imageURL(_ item: Item) -> URL? {
+        guard let name = item.imageFile else { return nil }
+        return directory?.appendingPathComponent(name)
     }
 
     public func text(_ item: Item) -> String? {
@@ -82,6 +91,7 @@ public final class CrashLogStore {
     private func removeFile(_ item: Item) {
         memory[item.id] = nil
         if let url = fileURL(item) { try? FileManager.default.removeItem(at: url) }
+        if let url = imageURL(item) { try? FileManager.default.removeItem(at: url) }
     }
 
     private func save() {
@@ -109,7 +119,7 @@ public final class CrashLogStore {
         }
         let stamp = Date.ISO8601FormatStyle()
         let lines = items.map { item in
-            "\(item.id)  \(item.crashedAt.formatted(stamp))  \(item.bundleId.isEmpty ? item.name : item.bundleId) \(item.appVersion)  [\(item.kind.label)]  \(item.deviceName)  \(directory.appendingPathComponent(item.file).path)"
+            "\(item.id)  \(item.crashedAt.formatted(stamp))  \(item.bundleId.isEmpty ? item.name : item.bundleId) \(item.appVersion)  [\(item.kind.label)]  \(item.deviceName)  \(directory.appendingPathComponent(item.file).path)\(item.imageFile.map { "  사진: " + directory.appendingPathComponent($0).path } ?? "")"
         }
         return (["# 크래시·피드백 \(items.count)개 (id, 시각, 앱, 종류, 기기, 원문 파일)"] + lines).joined(separator: "\n")
     }

@@ -37,8 +37,14 @@ public struct CrashReport: Codable, Sendable, Hashable {
     public var appVersion: String
     public var crashedAt: Date
     public var text: String
+    /// 피드백에 붙인 화면 사진(JPEG나 PNG). 1MB까지.
+    public var image: Data?
 
-    public init(kind: Kind, name: String, bundleId: String, appVersion: String, crashedAt: Date, text: String) {
+    /// 코어가 받는 화면 사진 크기 한도(바이트).
+    public static let maxImageBytes = 1 << 20
+
+    public init(kind: Kind, name: String, bundleId: String, appVersion: String, crashedAt: Date, text: String, image: Data? = nil) {
+        self.image = image
         self.kind = kind
         self.name = name
         self.bundleId = bundleId
@@ -47,7 +53,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         self.text = text
     }
 
-    enum CodingKeys: String, CodingKey { case kind, name, bundleId, appVersion, crashedAt, text }
+    enum CodingKeys: String, CodingKey { case kind, name, bundleId, appVersion, crashedAt, text, image }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -57,6 +63,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         appVersion = try c.decodeIfPresent(String.self, forKey: .appVersion) ?? ""
         crashedAt = try c.decodeRDDate(forKey: .crashedAt)
         text = try c.decode(String.self, forKey: .text)
+        image = try c.decodeIfPresent(String.self, forKey: .image).flatMap { Data(base64Encoded: $0) }
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -67,6 +74,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         try c.encode(appVersion, forKey: .appVersion)
         try c.encode(crashedAt.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true)), forKey: .crashedAt)
         try c.encode(text, forKey: .text)
+        try c.encodeIfPresent(image?.base64EncodedString(), forKey: .image)
     }
 
     /// 내용으로 정한 id. 같은 기록을 두 번 받아도 하나로 남는다.
@@ -78,12 +86,12 @@ public struct CrashReport: Codable, Sendable, Hashable {
     public static let maxTextBytes = 1536 << 10
 
     /// 사람이 쓴 피드백에서 기록을 만든다. `details`는 내용 아래에 붙일 참고 정보(기기, 최근 로그 등)다.
-    public static func feedback(message: String, bundleId: String, appVersion: String, details: String = "", date: Date) -> CrashReport {
+    public static func feedback(message: String, bundleId: String, appVersion: String, details: String = "", image: Data? = nil, date: Date) -> CrashReport {
         let stamp = date.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true))
         var text = message.trimmingCharacters(in: .whitespacesAndNewlines) + "\n\n---\n앱: \(bundleId) \(appVersion)\n보낸 시각: \(stamp)\n"
         if !details.isEmpty { text += details + "\n" }
         let name = "feedback-" + stamp.replacingOccurrences(of: ":", with: "") + ".txt"
-        return CrashReport(kind: .feedback, name: name, bundleId: bundleId, appVersion: appVersion, crashedAt: date, text: text)
+        return CrashReport(kind: .feedback, name: name, bundleId: bundleId, appVersion: appVersion, crashedAt: date, text: text, image: image)
     }
 
     /// .ips 파일 내용에서 기록을 만든다. 첫 줄의 JSON 머리말에서 앱과 시각을 읽고, 없으면 `fallbackDate`와 파일 이름을 쓴다.

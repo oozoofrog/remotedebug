@@ -2,92 +2,120 @@ import Foundation
 #if canImport(MetricKit) && os(iOS)
 import MetricKit
 #endif
-#if canImport(UIKit)
-import UIKit
-#endif
 
-/// RemoteDebug로 설치한 Debug 빌드가 자기 크래시 기록과 피드백을 Mac에 보내게 한다.
+/// 앱의 문제와 피드백을 개발자에게 보낸다.
+///
+/// - RemoteDebug로 설치한 빌드는 개발자의 Mac으로 바로 보낸다(이 iPhone에서 RemoteDebug 앱의 VPN이 켜져 있을 때).
+/// - Mac에 닿지 않거나 Mac 주소가 없는 빌드는 메일로 보낸다. Debug 빌드는 로그와 화면 사진을 암호화해 붙인다.
 ///
 /// ```swift
-/// #if DEBUG
-/// RemoteDebugFeedback.start(host: "rd-mac-….ts.net")   // Mac 앱의 프로젝트 화면이 알려 주는 주소
-/// #endif
+/// RemoteDebugFeedback.start(.init(macHost: "rd-mac-….ts.net", email: "dev@example.com", publicKeyBase64: "…"))
 /// ```
-///
-/// 보내려면 이 iPhone에서 RemoteDebug 앱의 VPN이 켜져 있고 Mac과 페어링돼 있어야 한다.
-/// 보내지 못한 기록은 앱 데이터 폴더에 남겨 두었다가 다음 실행이나 다음 보내기 때 다시 보낸다.
 public enum RemoteDebugFeedback {
-    private static let lock = NSLock()
-    nonisolated(unsafe) private static var client: FeedbackClient?
-    nonisolated(unsafe) private static var collector: AnyObject?
+    public struct Configuration: Sendable {
+        /// RemoteDebug Mac 앱의 주소. Mac 앱의 프로젝트 화면이 알려 준다. 없으면 Mac으로 보내지 않는다.
+        public var macHost: String?
+        /// 피드백 메일을 받을 주소. 없으면 메일 경로를 쓰지 않는다.
+        public var email: String?
+        /// 메일에 붙는 진단을 암호화할 공개키(Mac 앱이 만든다). Debug 빌드에서만 쓴다.
+        public var publicKeyBase64: String?
 
-    /// 앱을 시작할 때 한 번 부른다. 크래시 기록을 모으기 시작하고, 쌓여 있던 기록을 보낸다.
-    /// `host`가 주소 형식이 아니면 아무것도 하지 않고 `false`를 돌려준다.
-    @discardableResult
-    public static func start(host: String) -> Bool {
-        guard let endpoint = FeedbackClient.endpoint(host: host),
-              let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return false }
-        let made = FeedbackClient(endpoint: endpoint, directory: base.appendingPathComponent("RemoteDebugFeedback", isDirectory: true))
+        public init(macHost: String? = nil, email: String? = nil, publicKeyBase64: String? = nil) {
+            self.macHost = macHost
+            self.email = email
+            self.publicKeyBase64 = publicKeyBase64
+        }
+    }
+
+    struct State {
+        var configuration = Configuration()
+        var client: FeedbackClient?
+        var collector: AnyObject?
+    }
+
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var state = State()
+
+    static func withState<T>(_ body: (inout State) -> T) -> T {
         lock.lock()
-        client = made
-        lock.unlock()
+        defer { lock.unlock() }
+        return body(&state)
+    }
+
+    /// 앱을 시작할 때 한 번 부른다. Mac 주소가 있으면 크래시 기록을 모으기 시작하고 쌓여 있던 기록을 보낸다.
+    public static func start(_ configuration: Configuration) {
+        var client: FeedbackClient?
+        if let host = configuration.macHost, let endpoint = FeedbackClient.endpoint(host: host),
+           let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            client = FeedbackClient(endpoint: endpoint, directory: base.appendingPathComponent("RemoteDebugFeedback", isDirectory: true))
+        }
+        withState { $0.configuration = configuration; $0.client = client }
+        guard let client else { return }
         #if canImport(MetricKit) && os(iOS)
-        let subscriber = CrashCollector(client: made)
+        let subscriber = CrashCollector(client: client)
         MXMetricManager.shared.add(subscriber)
         subscriber.handle(MXMetricManager.shared.pastDiagnosticPayloads)
-        lock.lock()
-        collector = subscriber
-        lock.unlock()
+        withState { $0.collector = subscriber }
         #endif
-        Task { await made.flush() }
+        Task { await client.flush() }
+    }
+
+    /// Mac 주소만으로 시작한다. 주소 형식이 아니면 `false`.
+    @discardableResult
+    public static func start(host: String) -> Bool {
+        guard FeedbackClient.endpoint(host: host) != nil else { return false }
+        start(Configuration(macHost: host))
         return true
     }
 
-    /// `start(host:)`를 불렀는가.
+    /// 보낼 곳(Mac이나 메일)이 하나라도 설정됐는가.
     public static var isStarted: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return client != nil
+        withState { $0.client != nil || !($0.configuration.email ?? "").isEmpty }
     }
 
-    /// 피드백을 보낸다. 이번에 Mac이 받았으면 `true`, 쌓아 두기만 했으면 `false`.
+    static var client: FeedbackClient? { withState { $0.client } }
+    static var configuration: Configuration { withState { $0.configuration } }
+
+    /// 피드백에 함께 갈 로그 한 줄을 남긴다. 최근 500줄만 메모리에 둔다.
+    public static func log(_ message: String) {
+        FeedbackLog.shared.add(message)
+    }
+
+    /// 화면 없이 피드백을 Mac으로 보낸다. 이번에 Mac이 받았으면 `true`, 쌓아 두기만 했거나 Mac 주소가 없으면 `false`.
     @discardableResult
-    public static func send(_ message: String, details: String = "") async -> Bool {
-        let current = currentClient()
+    public static func send(_ message: String, details: String = "", image: Data? = nil) async -> Bool {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let current, !trimmed.isEmpty else { return false }
-        return await current.submit(report(message: trimmed, details: details, date: Date()))
+        guard let client, !trimmed.isEmpty else { return false }
+        return await client.submit(report(message: trimmed, details: details, image: image, date: Date()))
     }
 
-    private static func currentClient() -> FeedbackClient? {
-        lock.lock()
-        defer { lock.unlock() }
-        return client
-    }
-
-    static func report(message: String, details: String, date: Date) -> FeedbackReport {
+    static func report(message: String, details: String, image: Data? = nil, date: Date) -> FeedbackReport {
         let stamp = ISO8601DateFormatter.fractional.string(from: date)
         var text = "\(message)\n\n---\n앱: \(bundleID) \(appVersion)\n기기: \(deviceSummary)\n보낸 시각: \(stamp)\n"
         if !details.isEmpty { text += details + "\n" }
         return FeedbackReport(kind: "feedback", name: "feedback-\(stamp.replacingOccurrences(of: ":", with: "")).txt",
-                              bundleId: bundleID, appVersion: appVersion, crashedAt: stamp, text: text)
+                              bundleId: bundleID, appVersion: appVersion, crashedAt: stamp, text: text,
+                              image: image?.base64EncodedString())
     }
 
     static var bundleID: String { Bundle.main.bundleIdentifier ?? "" }
 
-    static var appVersion: String {
+    static var appName: String {
         let info = Bundle.main.infoDictionary ?? [:]
-        let short = info["CFBundleShortVersionString"] as? String ?? ""
-        let build = info["CFBundleVersion"] as? String ?? ""
-        return build.isEmpty ? short : "\(short) (\(build))"
+        return info["CFBundleDisplayName"] as? String ?? info["CFBundleName"] as? String ?? "App"
     }
 
-    static var deviceSummary: String {
+    static var shortVersion: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "" }
+    static var buildNumber: String { Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "" }
+    static var appVersion: String { buildNumber.isEmpty ? shortVersion : "\(shortVersion) (\(buildNumber))" }
+
+    static var deviceModel: String {
         var system = utsname()
         uname(&system)
-        let model = withUnsafeBytes(of: &system.machine) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
-        return "\(model), \(ProcessInfo.processInfo.operatingSystemVersionString)"
+        return withUnsafeBytes(of: &system.machine) { String(decoding: $0.prefix { $0 != 0 }, as: UTF8.self) }
     }
+
+    static var deviceSummary: String { "\(deviceModel), \(ProcessInfo.processInfo.operatingSystemVersionString)" }
 }
 
 extension ISO8601DateFormatter {
@@ -112,12 +140,11 @@ final class CrashCollector: NSObject, MXMetricManagerSubscriber, @unchecked Send
         for payload in payloads {
             for crash in payload.crashDiagnostics ?? [] {
                 let stamp = ISO8601DateFormatter.fractional.string(from: payload.timeStampEnd)
-                let name = (Bundle.main.infoDictionary?["CFBundleName"] as? String ?? "App")
-                    + "-\(stamp.replacingOccurrences(of: ":", with: "")).json"
                 reports.append(FeedbackReport(
-                    kind: "metrickit", name: name, bundleId: RemoteDebugFeedback.bundleID,
+                    kind: "metrickit", name: "\(RemoteDebugFeedback.appName)-\(stamp.replacingOccurrences(of: ":", with: "")).json",
+                    bundleId: RemoteDebugFeedback.bundleID,
                     appVersion: "\(crash.applicationVersion) (\(crash.metaData.applicationBuildVersion))",
-                    crashedAt: stamp, text: String(decoding: crash.jsonRepresentation(), as: UTF8.self)))
+                    crashedAt: stamp, text: String(decoding: crash.jsonRepresentation(), as: UTF8.self), image: nil))
             }
         }
         guard !reports.isEmpty else { return }

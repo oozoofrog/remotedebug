@@ -1,6 +1,8 @@
 import PhoneClientKit
 import RDModels
 import SwiftUI
+import PhotosUI
+import UIKit
 import UniformTypeIdentifiers
 
 /// 빌드 목록의 앱 하나에서 크래시 기록을 열 때 쓰는 자료.
@@ -153,6 +155,8 @@ struct FeedbackComposer: View {
     @State private var message = ""
     @State private var includesLogs = true
     @State private var isSending = false
+    @State private var image: Data?
+    @State private var picked: PhotosPickerItem?
 
     var body: some View {
         Form {
@@ -164,6 +168,18 @@ struct FeedbackComposer: View {
                 Text("무엇이 문제인가요?")
             }
             Section {
+                if let image, let preview = UIImage(data: image) {
+                    Image(uiImage: preview)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxHeight: 180)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityLabel("붙일 화면 사진")
+                    Button("사진 빼기", role: .destructive) { self.image = nil }
+                }
+                PhotosPicker(selection: $picked, matching: .images) {
+                    Label("화면 사진 고르기", systemImage: "photo")
+                }
                 Toggle("최근 진단 로그 붙이기", isOn: $includesLogs)
             } footer: {
                 Text(canSendNow
@@ -173,17 +189,37 @@ struct FeedbackComposer: View {
         }
         .navigationTitle("피드백 보내기")
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: picked) { _, item in
+            Task {
+                guard let data = try? await item?.loadTransferable(type: Data.self), let photo = UIImage(data: data) else { return }
+                image = Self.compressed(photo)
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("보내기") {
                     isSending = true
                     Task {
-                        await actions.sendFeedback(message, includesLogs)
+                        await actions.sendFeedback(message, includesLogs, image)
                         dismiss()
                     }
                 }
                 .disabled(isSending || message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
+    }
+
+    /// 긴 변을 1600픽셀 아래로 줄이고 Mac이 받는 한도(1MB)에 들어올 때까지 JPEG 품질을 낮춘다.
+    static func compressed(_ photo: UIImage) -> Data? {
+        let longest = max(photo.size.width, photo.size.height) * photo.scale
+        let scale = min(1, 1600 / max(longest, 1))
+        let size = CGSize(width: photo.size.width * photo.scale * scale, height: photo.size.height * photo.scale * scale)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let resized = UIGraphicsImageRenderer(size: size, format: format).image { _ in photo.draw(in: CGRect(origin: .zero, size: size)) }
+        for quality in [0.7, 0.5, 0.3, 0.15] {
+            if let data = resized.jpegData(compressionQuality: quality), data.count <= 900 << 10 { return data }
+        }
+        return nil
     }
 }

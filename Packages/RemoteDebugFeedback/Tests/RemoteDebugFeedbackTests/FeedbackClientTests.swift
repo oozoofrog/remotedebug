@@ -46,13 +46,30 @@ final class FeedbackClientTests: XCTestCase {
         XCTAssertTrue(left.isEmpty)
     }
 
+    func testTrySendDoesNotQueue() async {
+        let dir = directory()
+        let offline = FeedbackClient(endpoint: URL(string: "https://mac.example/v1/crashes")!, directory: dir) { _ in throw URLError(.timedOut) }
+        let delivered = await offline.trySend(RemoteDebugFeedback.report(message: "느려요", details: "", date: Date()))
+        let pending = await offline.pending()
+        XCTAssertFalse(delivered)
+        XCTAssertTrue(pending.isEmpty)
+    }
+
+    func testLogKeepsRecentLinesOnly() {
+        let log = FeedbackLog()
+        for index in 0..<(FeedbackLog.limit + 20) { log.add("line \(index)") }
+        XCTAssertEqual(log.recorded.count, FeedbackLog.limit)
+        XCTAssertTrue(log.recorded.last?.hasSuffix("line \(FeedbackLog.limit + 19)") ?? false)
+    }
+
     func testReportCarriesMessageAndKind() throws {
-        let report = RemoteDebugFeedback.report(message: "느려요", details: "최근 화면: 설정", date: Date(timeIntervalSince1970: 1_794_478_500))
+        let report = RemoteDebugFeedback.report(message: "느려요", details: "최근 화면: 설정", image: Data("jpeg".utf8), date: Date(timeIntervalSince1970: 1_794_478_500))
         XCTAssertEqual(report.kind, "feedback")
+        XCTAssertEqual(report.image, "anBlZw==")
         XCTAssertTrue(report.text.hasPrefix("느려요\n"))
         XCTAssertTrue(report.text.contains("최근 화면: 설정"))
         XCTAssertTrue(report.name.hasSuffix(".txt"))
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(report)) as? [String: Any])
-        XCTAssertEqual(Set(object.keys), ["kind", "name", "bundleId", "appVersion", "crashedAt", "text"])
+        XCTAssertEqual(Set(object.keys), ["kind", "name", "bundleId", "appVersion", "crashedAt", "text", "image"])
     }
 }

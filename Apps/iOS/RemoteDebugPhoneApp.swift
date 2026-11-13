@@ -200,7 +200,7 @@ struct RootView: View {
                 sendLogs: { await model.sendLogs() },
                 openInstallPage: openInstallPage,
                 openAnalyticsData: openAnalyticsData,
-                sendFeedback: { await sendFeedback($0, includeLogs: $1) },
+                sendFeedback: { await sendFeedback($0, includeLogs: $1, image: $2) },
                 crashText: { model.crashBook.text($0) },
                 crashFile: { model.crashBook.fileURL($0) },
                 deleteCrash: { model.crashBook.remove($0) },
@@ -211,14 +211,14 @@ struct RootView: View {
     }
 
     /// RemoteDebug 앱에 대한 피드백을 크래시·피드백 기록에 더한다. Mac과 연결돼 있으면 바로 보낸다.
-    private func sendFeedback(_ message: String, includeLogs: Bool) async {
+    private func sendFeedback(_ message: String, includeLogs: Bool, image: Data?) async {
         var details = "iOS: \(UIDevice.current.systemVersion)\nVPN: \(TunnelStateMapping.label(tunnel.vpnStatus))"
         if includeLogs {
             let lines = model.logBook.recent.suffix(100).map(\.line)
             if !lines.isEmpty { details += "\n\n최근 진단 로그\n" + lines.joined(separator: "\n") }
         }
         await model.addCrash(CrashReport.feedback(
-            message: message, bundleId: Bundle.main.bundleIdentifier ?? "", appVersion: services.appVersion, details: details, date: Date()))
+            message: message, bundleId: Bundle.main.bundleIdentifier ?? "", appVersion: services.appVersion, details: details, image: image, date: Date()))
     }
 
     /// iPhone 설정 앱을 연다. 분석 데이터 화면 주소를 먼저 시도하고, 열지 못하면 이 앱의 설정 화면을 연다.

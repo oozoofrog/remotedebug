@@ -111,6 +111,7 @@ public final class HostModel {
     @ObservationIgnored private let deviceStore: JSONFile<StoredDeviceList>
     @ObservationIgnored private let tailscaleAPI: TailscaleAPI
     @ObservationIgnored private let tailscaleClients: any TailscaleClientStoring
+    @ObservationIgnored private let feedbackKeys: any FeedbackKeyStoring
     /// OAuth 클라이언트로 받은 API 토큰(1시간). 메모리에만 둔다.
     @ObservationIgnored private var tailscaleAccess: TailscaleAPI.AccessToken?
 
@@ -174,6 +175,7 @@ public final class HostModel {
         openURL: @escaping @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) },
         tailscaleAPI: TailscaleAPI = TailscaleAPI(),
         tailscaleClients: any TailscaleClientStoring = KeychainTailscaleClientStore(),
+        feedbackKeys: any FeedbackKeyStoring = KeychainFeedbackKeyStore(),
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.core = core
@@ -192,6 +194,7 @@ public final class HostModel {
         self.deviceStore = JSONFile(url: paths.devicesFile)
         self.tailscaleAPI = tailscaleAPI
         self.tailscaleClients = tailscaleClients
+        self.feedbackKeys = feedbackKeys
         let client = tailscaleClients.load()
         self.hasTailscaleClient = client != nil
         self.tailscaleTags = client?.tags ?? []
@@ -1281,4 +1284,42 @@ public struct WatchProblem: Sendable, Hashable {
 public struct ShareFileFailure: Error, Sendable, Hashable {
     public var message: String
     public init(_ message: String) { self.message = message }
+}
+
+// MARK: 피드백 메일의 암호화된 진단
+
+extension HostModel {
+    /// 프로젝트의 진단 암호화 공개키(base64). 키가 없으면 만들어 이 Mac의 키체인에 둔다.
+    public func feedbackPublicKey(for project: ConnectedProject) throws -> String {
+        try feedbackKeys.makeKey(account: "\(project.name) v1").publicKey.rawRepresentation.base64EncodedString()
+    }
+
+    /// 메일로 받은 암호화된 진단 파일(`.afdiag`)을 풀어 크래시·피드백 목록에 넣는다. 실패하면 안내 문구를 돌려준다.
+    @discardableResult
+    public func importDiagnostics(_ url: URL) -> String? {
+        guard let sealed = try? Data(contentsOf: url) else { return "\(url.lastPathComponent)을 읽지 못했습니다." }
+        let plain: Data
+        do {
+            plain = try FeedbackEnvelope.open(sealed, keys: feedbackKeys.allKeys())
+        } catch {
+            return error.message
+        }
+        var image: Data?
+        var text = String(decoding: plain, as: UTF8.self)
+        if var object = (try? JSONSerialization.jsonObject(with: plain)) as? [String: Any] {
+            // 화면 사진은 따로 저장하고 글에서는 뺀다.
+            if var diagnostics = object["diagnostics"] as? [String: Any] {
+                image = (diagnostics.removeValue(forKey: "screenshotBase64") as? String).flatMap { Data(base64Encoded: $0) }
+                object["diagnostics"] = diagnostics
+            }
+            if let pretty = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]) {
+                text = String(decoding: pretty, as: UTF8.self)
+            }
+        }
+        let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? Date()
+        let name = url.deletingPathExtension().lastPathComponent + ".json"
+        crashLogs.receive(DeviceCrashEvent(deviceId: "", deviceName: "메일 첨부", nodeName: "",
+                                           report: CrashReport(kind: .feedback, name: name, bundleId: "", appVersion: "", crashedAt: modified, text: text, image: image)))
+        return nil
+    }
 }

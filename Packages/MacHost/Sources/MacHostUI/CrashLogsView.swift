@@ -8,6 +8,7 @@ struct CrashLogsView: View {
     @Environment(HostModel.self) private var model
     @State private var selection: String?
     @State private var search = ""
+    @State private var importError: String?
 
     private var store: CrashLogStore { model.crashLogs }
 
@@ -35,7 +36,7 @@ struct CrashLogsView: View {
                     }
                     .frame(minWidth: 240, idealWidth: 280, maxWidth: 360)
                     if let selected {
-                        CrashText(text: store.text(selected))
+                        CrashText(text: store.text(selected), image: store.imageURL(selected))
                             .id(selected.id)
                             .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
                     } else {
@@ -47,8 +48,26 @@ struct CrashLogsView: View {
         }
         .navigationTitle("크래시·피드백")
         .searchable(text: $search, placement: .toolbar, prompt: "앱·기기 검색")
+        .dropDestination(for: URL.self) { urls, _ in
+            importDiagnostics(urls)
+            return true
+        }
+        .alert("암호화된 진단", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
+            Button("확인") { importError = nil }
+        } message: {
+            Text(importError ?? "")
+        }
         .toolbar {
             ToolbarItemGroup {
+                Button {
+                    let panel = NSOpenPanel()
+                    panel.allowsMultipleSelection = true
+                    panel.message = "피드백 메일에 붙어 온 암호화된 진단 파일(.afdiag)을 고르세요."
+                    if panel.runModal() == .OK { importDiagnostics(panel.urls) }
+                } label: {
+                    Label("암호화된 진단 열기…", systemImage: "lock.open")
+                }
+                .help("피드백 메일에 붙어 온 암호화된 진단 파일을 이 Mac의 키로 풀어 목록에 넣는다")
                 Button {
                     guard let selected, let text = store.text(selected) else { return }
                     NSPasteboard.general.clearContents()
@@ -79,6 +98,14 @@ struct CrashLogsView: View {
     }
 }
 
+extension CrashLogsView {
+    private func importDiagnostics(_ urls: [URL]) {
+        for url in urls {
+            if let error = model.importDiagnostics(url) { importError = error }
+        }
+    }
+}
+
 private struct CrashRow: View {
     let item: CrashLogStore.Item
 
@@ -104,14 +131,24 @@ private struct CrashRow: View {
 
 private struct CrashText: View {
     let text: String?
+    var image: URL?
 
     var body: some View {
         ScrollView([.vertical, .horizontal]) {
-            Text(text ?? "기록 파일을 읽을 수 없습니다.")
-                .font(.callout.monospaced())
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .padding(12)
+            VStack(alignment: .leading, spacing: 12) {
+                if let image, let picture = NSImage(contentsOf: image) {
+                    Image(nsImage: picture)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxHeight: 420)
+                        .accessibilityLabel("피드백에 붙은 화면 사진")
+                }
+                Text(text ?? "기록 파일을 읽을 수 없습니다.")
+                    .font(.callout.monospaced())
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+            }
+            .padding(12)
         }
     }
 }

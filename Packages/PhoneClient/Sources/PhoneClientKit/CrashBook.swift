@@ -55,8 +55,10 @@ public final class CrashBook {
         if let url = fileURL(item) {
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? Data(report.text.utf8).write(to: url, options: .atomic)
+            if let image = report.image, let imageURL = imageURL(item) { try? image.write(to: imageURL, options: .atomic) }
         } else {
             memory[item.id] = report.text
+            images[item.id] = report.image
         }
         items.append(item)
         items.sort { $0.crashedAt > $1.crashedAt }
@@ -71,6 +73,16 @@ public final class CrashBook {
         directory?.appendingPathComponent("\(item.id).\(item.kind.fileExtension)")
     }
 
+    /// 피드백에 붙인 화면 사진을 두는 파일.
+    func imageURL(_ item: Item) -> URL? {
+        directory?.appendingPathComponent("\(item.id).image")
+    }
+
+    public func image(_ item: Item) -> Data? {
+        if let url = imageURL(item) { return try? Data(contentsOf: url) }
+        return images[item.id]
+    }
+
     public func text(_ item: Item) -> String? {
         if let url = fileURL(item) { return try? String(contentsOf: url, encoding: .utf8) }
         return memory[item.id]
@@ -78,7 +90,7 @@ public final class CrashBook {
 
     public func report(_ item: Item) -> CrashReport? {
         text(item).map {
-            CrashReport(kind: item.kind, name: item.name, bundleId: item.bundleId, appVersion: item.appVersion, crashedAt: item.crashedAt, text: $0)
+            CrashReport(kind: item.kind, name: item.name, bundleId: item.bundleId, appVersion: item.appVersion, crashedAt: item.crashedAt, text: $0, image: image(item))
         }
     }
 
@@ -96,10 +108,13 @@ public final class CrashBook {
     }
 
     @ObservationIgnored private var memory: [String: String] = [:]
+    @ObservationIgnored private var images: [String: Data] = [:]
 
     private func removeFile(_ item: Item) {
         memory[item.id] = nil
+        images[item.id] = nil
         if let url = fileURL(item) { try? FileManager.default.removeItem(at: url) }
+        if let url = imageURL(item) { try? FileManager.default.removeItem(at: url) }
     }
 
     private func save() {
