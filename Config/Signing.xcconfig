@@ -1,8 +1,12 @@
-// iPhone 앱(RemoteDebugPhone)과 터널 확장(RemoteDebugTunnel)의 기기 서명 설정.
+// iPhone 앱(RemoteDebugPhone), 터널 확장(RemoteDebugTunnel), Mac 앱(RemoteDebugMac)의 서명 설정.
 // 개인 값(개발 팀 ID)은 같은 폴더의 Signing.local.xcconfig에 둔다. 그 파일은 저장소에 올리지 않고,
 // 없으면 이 줄은 건너뛴다. xcodegen으로 프로젝트를 다시 만들어도 팀 ID가 남는다.
 // 예시 파일: Signing.local.xcconfig.example
 // 번들 ID 앞부분. 다른 팀으로 서명하면 그 팀에서 쓸 수 있는 값으로 바꾼다(Signing.local.xcconfig 또는 xcodebuild 인자).
 // 앱은 $(RD_BUNDLE_PREFIX).RemoteDebugPhone, 터널은 ….Tunnel, 위젯은 ….Widgets가 된다.
 RD_BUNDLE_PREFIX = com.oozoofrog.app
+// Mac 앱의 서명. 기본은 이 Mac에서만 실행하는 임시 서명(-)이다. 임시 서명은 빌드마다 다른 앱으로 보여서
+// 키체인에 둔 값(Tailscale OAuth 클라이언트, 피드백 진단 키)을 다시 설치할 때마다 허용해야 한다.
+// 개발 인증서로 서명하려면 Signing.local.xcconfig에 RD_MAC_SIGN_IDENTITY = Apple Development 를 넣는다.
+RD_MAC_SIGN_IDENTITY = -
 #include? "Signing.local.xcconfig"

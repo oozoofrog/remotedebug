@@ -3,6 +3,9 @@ targets:
   RemoteDebugMac:
     type: application
     platform: macOS
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
     sources:
       - path: Apps/Mac
         excludes:
@@ -39,7 +42,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.oozoofrog.app.RemoteDebugMac
         PRODUCT_NAME: RemoteDebug
         CODE_SIGN_STYLE: Automatic
-        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_IDENTITY: $(RD_MAC_SIGN_IDENTITY)
         ENABLE_HARDENED_RUNTIME: YES
         # RDCore.xcframework는 arm64 전용이다(Apple silicon).
         ARCHS: arm64
@@ -55,6 +58,9 @@ targets:
   RemoteDebugMacTests:
     type: bundle.unit-test
     platform: macOS
+    configFiles:
+      Debug: Config/Signing.xcconfig
+      Release: Config/Signing.xcconfig
     sources:
       - path: Apps/MacTests
     settings:
@@ -64,7 +70,7 @@ targets:
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/RemoteDebug.app/Contents/MacOS/RemoteDebug
         BUNDLE_LOADER: $(TEST_HOST)
         GENERATE_INFOPLIST_FILE: YES
-        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_IDENTITY: $(RD_MAC_SIGN_IDENTITY)
         ARCHS: arm64
         ONLY_ACTIVE_ARCH: YES
     dependencies:

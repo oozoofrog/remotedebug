@@ -1295,15 +1295,20 @@ extension HostModel {
     }
 
     /// 메일로 받은 암호화된 진단 파일(`.afdiag`)을 풀어 크래시·피드백 목록에 넣는다. 실패하면 안내 문구를 돌려준다.
+    /// 키체인이 허용을 물으면 응답할 때까지 걸릴 수 있어, 키를 읽고 푸는 일은 화면 밖에서 한다.
     @discardableResult
-    public func importDiagnostics(_ url: URL) -> String? {
-        guard let sealed = try? Data(contentsOf: url) else { return "\(url.lastPathComponent)을 읽지 못했습니다." }
-        let plain: Data
-        do {
-            plain = try FeedbackEnvelope.open(sealed, keys: feedbackKeys.allKeys())
-        } catch {
-            return error.message
-        }
+    public func importDiagnostics(_ url: URL) async -> String? {
+        let keys = feedbackKeys
+        // 결과: (푼 내용, 실패 안내). 둘 중 하나만 있다.
+        let (opened, failure) = await Task.detached { () -> (Data?, String?) in
+            guard let sealed = try? Data(contentsOf: url) else { return (nil, "\(url.lastPathComponent)을 읽지 못했습니다.") }
+            do throws(FeedbackEnvelope.Failure) {
+                return (try FeedbackEnvelope.open(sealed, keys: keys.allKeys()), nil)
+            } catch {
+                return (nil, error.message)
+            }
+        }.value
+        guard let plain = opened else { return failure }
         var image: Data?
         var text = String(decoding: plain, as: UTF8.self)
         if var object = (try? JSONSerialization.jsonObject(with: plain)) as? [String: Any] {

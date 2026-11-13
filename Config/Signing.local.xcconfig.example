@@ -4,3 +4,5 @@
 DEVELOPMENT_TEAM = XXXXXXXXXX
 // 번들 ID 앞부분(선택). 다른 팀이면 그 팀이 쓸 수 있는 값으로 바꾼다. 예: dev.<팀 ID 소문자>
 // RD_BUNDLE_PREFIX = dev.xxxxxxxxxx
+// Mac 앱을 개발 인증서로 서명한다(선택). 넣지 않으면 임시 서명이고, 다시 설치할 때마다 키체인 허용을 묻는다.
+// RD_MAC_SIGN_IDENTITY = Apple Development

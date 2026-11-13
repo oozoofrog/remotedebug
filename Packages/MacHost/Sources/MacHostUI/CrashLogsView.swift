@@ -100,8 +100,10 @@ struct CrashLogsView: View {
 
 extension CrashLogsView {
     private func importDiagnostics(_ urls: [URL]) {
-        for url in urls {
-            if let error = model.importDiagnostics(url) { importError = error }
+        Task {
+            for url in urls {
+                if let error = await model.importDiagnostics(url) { importError = error }
+            }
         }
     }
 }
