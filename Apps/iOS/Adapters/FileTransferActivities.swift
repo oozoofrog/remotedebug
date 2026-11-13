@@ -95,6 +95,7 @@ final class PhoneAppDelegate: NSObject, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         // 알림을 눌러 앱이 시작된 경우에도 받도록 시작이 끝나기 전에 대리자를 둔다.
         UNUserNotificationCenter.current().delegate = PushNotifications.shared
+        PushNotifications.shared.registerCategories()
         return true
     }
 

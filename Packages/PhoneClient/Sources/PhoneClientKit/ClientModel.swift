@@ -1611,9 +1611,21 @@ public final class ClientModel {
     }
 
     /// 알림을 눌러 앱이 열렸다. 갈 탭은 앱이 정하고, 모델은 목록을 새로 받는다(VPN 자동 켜기 규칙을 그대로 따른다).
-    public func openNotification(_ target: PushTarget) async {
-        log(.info, "push", "알림 열림: \(target)")
+    /// 목록을 새로 받고, 동작 버튼을 눌렀으면 그 항목을 찾아 돌려준다. 설치·열기는 화면 쪽이 한다.
+    /// 그 사이 항목이 목록에서 빠졌으면 `.none`(목록만 보인다).
+    @discardableResult
+    public func openNotification(_ open: PushOpen) async -> PushFollowUp {
+        log(.info, "push", "알림 열림: \(open.target) \(open.action)")
         await refresh()
+        guard open.action != .show, let id = open.id else { return .none }
+        let followUp: PushFollowUp = switch open.action {
+        case .show: .none
+        case .install: builds.first { $0.id == id }.map(PushFollowUp.install) ?? .none
+        case .openLink: resources.first { $0.id == id }.flatMap(\.link).flatMap(URL.init(string:)).map(PushFollowUp.openLink) ?? .none
+        case .download: resources.first { $0.id == id && !$0.isLink }.map(PushFollowUp.download) ?? .none
+        }
+        if followUp == .none { log(.warning, "push", "알림의 항목이 목록에 없음: \(id)") }
+        return followUp
     }
 
     private func pushAction(for current: PairedHost) -> PushRegistrationPolicy.Action {

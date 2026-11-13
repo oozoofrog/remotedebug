@@ -15,23 +15,26 @@ public struct APNsNotification: Sendable, Hashable {
     public var kind: Kind
     /// 빌드 id 또는 리소스 id. 여러 항목을 묶었거나 이름을 숨기면 없다.
     public var id: String?
+    /// iPhone이 동작 버튼을 고르는 분류. `id`가 있을 때만 넣는다.
+    public var category: PushCategory?
 
-    public init(title: String, body: String, kind: Kind, id: String? = nil) {
+    public init(title: String, body: String, kind: Kind, id: String? = nil, category: PushCategory? = nil) {
         self.title = title
         self.body = body
         self.kind = kind
         self.id = id
+        self.category = id == nil ? nil : category
     }
 
-    /// `{"aps":{"alert":{"title","body"},"sound":"default"},"rd":{"kind","id"}}`
+    /// `{"aps":{"alert":{"title","body"},"category","sound":"default"},"rd":{"kind","id"}}`
     public func payload() -> Data {
         struct Alert: Encodable { var title: String; var body: String }
-        struct APS: Encodable { var alert: Alert; var sound = "default" }
+        struct APS: Encodable { var alert: Alert; var category: String?; var sound = "default" }
         struct RD: Encodable { var kind: String; var id: String? }
         struct Payload: Encodable { var aps: APS; var rd: RD }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        let value = Payload(aps: APS(alert: Alert(title: title, body: body)), rd: RD(kind: kind.rawValue, id: id))
+        let value = Payload(aps: APS(alert: Alert(title: title, body: body), category: category?.rawValue), rd: RD(kind: kind.rawValue, id: id))
         return (try? encoder.encode(value)) ?? Data()
     }
 }

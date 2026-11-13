@@ -73,7 +73,7 @@ public enum PushPlanner {
     }
 
     public static func buildNotification(_ build: BuildDescriptor) -> APNsNotification {
-        APNsNotification(title: "새 빌드", body: "\(build.displayName) \(build.version) (\(build.buildNumber))", kind: .build, id: build.id)
+        APNsNotification(title: "새 빌드", body: "\(build.displayName) \(build.version) (\(build.buildNumber))", kind: .build, id: build.id, category: .build)
     }
 
     public static func resourceNotification(_ items: [ResourceDescriptor], hideNames: Bool) -> APNsNotification? {
@@ -81,7 +81,8 @@ public enum PushPlanner {
         if hideNames { return APNsNotification(title: "RemoteDebug", body: "새 파일이 있습니다", kind: .resource) }
         let allLinks = items.allSatisfy(\.isLink)
         if items.count == 1 {
-            return APNsNotification(title: allLinks ? "새 링크" : "새 파일", body: first.name, kind: .resource, id: first.id)
+            return APNsNotification(title: allLinks ? "새 링크" : "새 파일", body: first.name, kind: .resource, id: first.id,
+                                    category: first.isLink ? .link : .file)
         }
         return APNsNotification(title: allLinks ? "새 링크" : "새 파일", body: allLinks ? "링크 \(items.count)개" : "파일 \(items.count)개", kind: .resource)
     }

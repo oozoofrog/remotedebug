@@ -42,7 +42,7 @@ struct PushPlannerTests {
         var batch = PushBatch()
         batch.add(changes)
         let list = PushPlanner.notifications(for: batch, hideNames: false)
-        #expect(list == [APNsNotification(title: "새 빌드", body: "데모 2.1 (7)", kind: .build, id: "b_2")])
+        #expect(list == [APNsNotification(title: "새 빌드", body: "데모 2.1 (7)", kind: .build, id: "b_2", category: .build)])
     }
 
     @Test func consecutiveBuildsOfOneAppKeepTheLatest() {
@@ -67,8 +67,8 @@ struct PushPlannerTests {
     @Test func fileAndLinkWording() {
         let file = pushFile("r_1", name: "a.txt")
         let link = pushFile("r_2", name: "문서", link: "https://example.com/doc")
-        #expect(PushPlanner.resourceNotification([file], hideNames: false) == APNsNotification(title: "새 파일", body: "a.txt", kind: .resource, id: "r_1"))
-        #expect(PushPlanner.resourceNotification([link], hideNames: false) == APNsNotification(title: "새 링크", body: "문서", kind: .resource, id: "r_2"))
+        #expect(PushPlanner.resourceNotification([file], hideNames: false) == APNsNotification(title: "새 파일", body: "a.txt", kind: .resource, id: "r_1", category: .file))
+        #expect(PushPlanner.resourceNotification([link], hideNames: false) == APNsNotification(title: "새 링크", body: "문서", kind: .resource, id: "r_2", category: .link))
         #expect(PushPlanner.resourceNotification([link, pushFile("r_3", name: "b", link: "https://example.com/b")], hideNames: false)
             == APNsNotification(title: "새 링크", body: "링크 2개", kind: .resource))
         #expect(PushPlanner.resourceNotification([file, link], hideNames: false) == APNsNotification(title: "새 파일", body: "파일 2개", kind: .resource))

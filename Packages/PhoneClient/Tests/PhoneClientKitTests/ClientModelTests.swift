@@ -1488,7 +1488,16 @@ private final class Recorder {
         let (h, _) = harness()
         await h.model.restore()
         let before = h.transport.count("GET", "/v1/info")
-        await h.model.openNotification(target)
+        #expect(await h.model.openNotification(PushOpen(target: target)) == .none)
         #expect(h.transport.count("GET", "/v1/info") == before + 1)
+    }
+
+    @Test func installActionReturnsTheBuildFromTheRefreshedList() async {
+        let (h, _) = harness()
+        await h.model.restore()
+        let id = h.model.builds[0].id
+        #expect(await h.model.openNotification(PushOpen(target: .builds, action: .install, id: id)) == .install(h.model.builds[0]))
+        #expect(await h.model.openNotification(PushOpen(target: .builds, action: .install, id: "b_gone0000")) == PushFollowUp.none)
+        #expect(await h.model.openNotification(PushOpen(target: .files, action: .openLink, id: id)) == PushFollowUp.none)
     }
 }

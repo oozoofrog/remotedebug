@@ -1,5 +1,6 @@
 import Observation
 import PhoneClientKit
+import RDModels
 import UIKit
 import UserNotifications
 
@@ -12,8 +13,8 @@ import UserNotifications
 final class PushNotifications: NSObject {
     static let shared = PushNotifications()
 
-    /// 알림을 눌러 가야 할 곳. 화면이 받아 처리하면 `nil`로 돌린다.
-    var pendingTarget: PushTarget?
+    /// 알림이나 동작 버튼을 눌러 할 일. 화면이 받아 처리하면 `nil`로 돌린다.
+    var pendingOpen: PushOpen?
     /// 받은 기기 토큰(16진수). 받는 쪽이 정해지기 전에 오면 들고 있다.
     @ObservationIgnored private var pendingToken: String?
     /// 기기 토큰을 받을 곳(모델).
@@ -75,8 +76,23 @@ final class PushNotifications: NSObject {
         onToken(token)
     }
 
-    fileprivate func open(_ target: PushTarget) {
-        pendingTarget = target
+    fileprivate func open(_ open: PushOpen) {
+        pendingOpen = open
+    }
+
+    /// 분류마다 동작 버튼을 등록한다. 모두 앱을 앞으로 가져온다(설치 창과 링크 열기는 앱이 앞에 있어야 한다).
+    func registerCategories() {
+        func action(_ id: PushActionID, _ title: String) -> UNNotificationAction {
+            UNNotificationAction(identifier: id.rawValue, title: title, options: [.foreground])
+        }
+        func category(_ id: PushCategory, _ actions: [UNNotificationAction]) -> UNNotificationCategory {
+            UNNotificationCategory(identifier: id.rawValue, actions: actions, intentIdentifiers: [], options: [])
+        }
+        UNUserNotificationCenter.current().setNotificationCategories([
+            category(.build, [action(.install, "설치"), action(.show, "빌드 목록 보기")]),
+            category(.link, [action(.openLink, "링크 열기"), action(.show, "파일 목록 보기")]),
+            category(.file, [action(.download, "받기"), action(.show, "파일 목록 보기")]),
+        ])
     }
 
     fileprivate func arrivedInForeground() {
@@ -99,15 +115,15 @@ extension PushNotifications: UNUserNotificationCenterDelegate {
         }
     }
 
-    /// 알림을 눌렀다. `rd.kind`에 맞는 탭으로 간다.
+    /// 알림이나 동작 버튼을 눌렀다. `rd.kind`에 맞는 탭으로 가고, 버튼이면 그 일을 한다.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        let target = PushTarget(userInfo: response.notification.request.content.userInfo)
+        let open = PushOpen(userInfo: response.notification.request.content.userInfo, actionIdentifier: response.actionIdentifier)
         nonisolated(unsafe) let done = completionHandler
         DispatchQueue.main.async {
-            self.open(target)
+            self.open(open)
             done()
         }
     }

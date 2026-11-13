@@ -196,16 +196,23 @@ struct RootView: View {
             }
             await model.restore()
         }
-        .onChange(of: PushNotifications.shared.pendingTarget, initial: true) { _, target in
-            // 알림을 눌렀다. 앱이 꺼져 있다 시작한 경우에도 화면이 뜬 뒤 여기서 처리한다.
-            guard let target else { return }
-            PushNotifications.shared.pendingTarget = nil
-            switch target {
+        .onChange(of: PushNotifications.shared.pendingOpen, initial: true) { _, open in
+            // 알림이나 동작 버튼을 눌렀다. 앱이 꺼져 있다 시작한 경우에도 화면이 뜬 뒤 여기서 처리한다.
+            guard let open else { return }
+            PushNotifications.shared.pendingOpen = nil
+            switch open.target {
             case .builds: tab = .builds
             case .files: tab = .files
             case .unchanged: break
             }
-            Task { await model.openNotification(target) }
+            Task {
+                switch await model.openNotification(open) {
+                case .install(let build): services.installer.install(build, with: model)
+                case .openLink(let url): _ = await services.opener.open(url)
+                case .download(let resource): model.download(resource)
+                case .none: break
+                }
+            }
         }
         .onChange(of: model.host?.fqdn, initial: true) { _, fqdn in
             // 터널이 이 Mac까지의 경로(직접·중계)를 알아보게 한다.

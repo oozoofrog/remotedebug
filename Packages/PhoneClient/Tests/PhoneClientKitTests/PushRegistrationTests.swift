@@ -81,6 +81,27 @@ let phoneBundleID = "com.oozoofrog.app.RemoteDebugPhone"
     }
 }
 
+@Suite struct PushOpenTests {
+    let build: [AnyHashable: Any] = ["rd": ["kind": "build", "id": "b_9f3a1c2e"]]
+    let file: [AnyHashable: Any] = ["rd": ["kind": "resource", "id": "r_1f334c0e"]]
+
+    @Test func actionButtonsMapToTheirWork() {
+        #expect(PushOpen(userInfo: build, actionIdentifier: "rd.install") == PushOpen(target: .builds, action: .install, id: "b_9f3a1c2e"))
+        #expect(PushOpen(userInfo: file, actionIdentifier: "rd.open") == PushOpen(target: .files, action: .openLink, id: "r_1f334c0e"))
+        #expect(PushOpen(userInfo: file, actionIdentifier: "rd.download") == PushOpen(target: .files, action: .download, id: "r_1f334c0e"))
+    }
+
+    /// 본문을 눌렀거나, 종류와 맞지 않거나, `id`가 없으면 목록으로만 간다.
+    @Test func anythingElseOnlyShowsTheList() {
+        #expect(PushOpen(userInfo: build, actionIdentifier: "com.apple.UNNotificationDefaultActionIdentifier").action == .show)
+        #expect(PushOpen(userInfo: build, actionIdentifier: "rd.show").action == .show)
+        #expect(PushOpen(userInfo: build, actionIdentifier: "rd.open").action == .show)
+        #expect(PushOpen(userInfo: file, actionIdentifier: "rd.install").action == .show)
+        #expect(PushOpen(userInfo: ["rd": ["kind": "build"]], actionIdentifier: "rd.install") == PushOpen(target: .builds))
+        #expect(PushOpen(userInfo: [:], actionIdentifier: "rd.install") == PushOpen(target: .unchanged))
+    }
+}
+
 @Suite struct PushTargetTests {
     @Test func kindPicksTab() {
         #expect(PushTarget(userInfo: ["rd": ["kind": "build", "id": "b_9f3a1c2e"]]) == .builds)

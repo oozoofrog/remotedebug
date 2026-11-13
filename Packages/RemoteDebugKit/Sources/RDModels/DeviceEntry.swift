@@ -86,3 +86,11 @@ public struct DeviceList: Codable, Sendable, Hashable {
         self.devices = devices
     }
 }
+
+/// 알림의 `aps.category`(docs/protocol-addenda.md P.5). iPhone 앱이 이 값마다 동작 버튼을 등록한다.
+/// 항목 하나를 가리키는 알림(`rd.id`가 있다)에만 붙는다.
+public enum PushCategory: String, Sendable, Hashable, CaseIterable {
+    case build = "rd.build"
+    case link = "rd.link"
+    case file = "rd.file"
+}

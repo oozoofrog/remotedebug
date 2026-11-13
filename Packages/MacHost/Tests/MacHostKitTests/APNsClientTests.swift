@@ -108,6 +108,20 @@ struct APNsClientTests {
         let data = APNsNotification(title: "새 파일", body: "파일 3개", kind: .resource).payload()
         let body = try jsonDict(data)
         #expect(body["rd"] as? [String: String] == ["kind": "resource"])
+        #expect((body["aps"] as? [String: Any])?["category"] == nil)
+    }
+
+    /// 항목 하나를 가리키는 알림에만 동작 버튼 분류가 붙는다.
+    @Test func payloadCarriesTheCategoryOnlyWithAnID() throws {
+        func category(_ n: APNsNotification) throws -> String? {
+            (try jsonDict(n.payload())["aps"] as? [String: Any])?["category"] as? String
+        }
+        #expect(try category(PushPlanner.buildNotification(pushBuild("b_1"))) == "rd.build")
+        #expect(try category(#require(PushPlanner.resourceNotification([pushFile("r_1", name: "a.txt")], hideNames: false))) == "rd.file")
+        #expect(try category(#require(PushPlanner.resourceNotification([pushFile("r_1", name: "a.txt"), pushFile("r_2", name: "b.txt")], hideNames: false))) == nil)
+        #expect(try category(#require(PushPlanner.resourceNotification([pushFile("r_1", name: "a.txt")], hideNames: true))) == nil)
+        #expect(try category(APNsNotification(title: "t", body: "b", kind: .build, category: .build)) == nil)
+        #expect(try category(PushPlanner.test) == nil)
     }
 
     @Test func jwtCarriesKeyTeamAndAValidSignature() async throws {

@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import RDModels
 
 // 새 빌드·파일 알림(docs/protocol-addenda.md P): 기기 토큰 등록 기록, 등록 판단, 알림을 눌렀을 때 갈 곳.
 
@@ -175,6 +176,57 @@ public enum PushTarget: Equatable, Sendable {
         let rd = userInfo["rd"] as? [AnyHashable: Any]
         self.init(kind: rd?["kind"] as? String)
     }
+}
+
+/// 알림에 다는 동작 버튼의 식별자. 분류(`PushCategory`)마다 앱이 등록한다.
+public enum PushActionID: String, Sendable, CaseIterable {
+    /// 빌드를 바로 설치한다.
+    case install = "rd.install"
+    /// 링크를 바로 연다.
+    case openLink = "rd.open"
+    /// 파일을 바로 받는다.
+    case download = "rd.download"
+    /// 목록으로만 간다(알림 본문을 누른 것과 같다).
+    case show = "rd.show"
+}
+
+/// 알림이나 그 동작 버튼을 눌러 할 일.
+public struct PushOpen: Equatable, Sendable {
+    public enum Action: Equatable, Sendable {
+        case show, install, openLink, download
+    }
+
+    public var target: PushTarget
+    public var action: Action
+    /// 빌드 id 또는 리소스 id(`rd.id`).
+    public var id: String?
+
+    public init(target: PushTarget, action: Action = .show, id: String? = nil) {
+        self.target = target
+        self.action = action
+        self.id = id
+    }
+
+    /// 알림의 `userInfo`와 누른 동작으로 정한다. 종류와 맞지 않는 동작, `id` 없는 알림, 모르는 동작은 목록으로만 간다.
+    public init(userInfo: [AnyHashable: Any], actionIdentifier: String) {
+        let rd = userInfo["rd"] as? [AnyHashable: Any]
+        target = PushTarget(kind: rd?["kind"] as? String)
+        id = (rd?["id"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        switch (PushActionID(rawValue: actionIdentifier), target) {
+        case (.install, .builds) where id != nil: action = .install
+        case (.openLink, .files) where id != nil: action = .openLink
+        case (.download, .files) where id != nil: action = .download
+        default: action = .show
+        }
+    }
+}
+
+/// 목록을 새로 받은 뒤 화면이 이어서 할 일.
+public enum PushFollowUp: Equatable, Sendable {
+    case none
+    case install(BuildDescriptor)
+    case openLink(URL)
+    case download(ResourceDescriptor)
 }
 
 extension String {
