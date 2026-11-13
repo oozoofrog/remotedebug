@@ -29,6 +29,26 @@ public struct InfoResponse: Codable, Sendable, Hashable {
     }
 }
 
+/// `POST /v1/direct/enroll`(docs/protocol-addenda.md O). tailnet 리스너에서만 받는다.
+public struct DirectEnrollment: Codable, Sendable, Hashable {
+    /// Mac이 Bonjour로 광고하는 인스턴스 이름.
+    public var directId: String
+    public var port: Int
+    /// 직접 연결 리스너 인증서의 SubjectPublicKeyInfo SHA-256(base64).
+    public var tlsSPKI: String
+    public var deviceId: String
+    /// 이 기기의 직접 연결 토큰. 다시 등록하면 바뀐다.
+    public var token: String
+
+    public init(directId: String, port: Int, tlsSPKI: String, deviceId: String, token: String) {
+        self.directId = directId
+        self.port = port
+        self.tlsSPKI = tlsSPKI
+        self.deviceId = deviceId
+        self.token = token
+    }
+}
+
 /// `GET /v1/builds`. `builds` 키는 반드시 있어야 한다(`null`은 빈 목록). 오류 본문(`{"error":…}`)은 디코딩에 실패하므로
 /// 호출자는 `APIErrorBody`로 다시 읽는다.
 public struct BuildsResponse: Codable, Sendable, Hashable {

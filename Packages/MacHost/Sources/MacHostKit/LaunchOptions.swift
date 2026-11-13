@@ -14,6 +14,7 @@ public struct LaunchOptions: Sendable {
     public static let startSharingKey = "RDStartSharing"
     public static let stateRootNameKey = "RDStateRootName"
     public static let testingKey = "RDTesting"
+    public static let directListenKey = "RDDirectListen"
     public static let defaultStateRootName = "RemoteDebug"
 
     public var controlURL: String
@@ -21,6 +22,8 @@ public struct LaunchOptions: Sendable {
     public var startSharing: Bool
     public var stateRootName: String
     public var isTesting: Bool
+    /// 같은 네트워크 직접 연결을 받는다(docs/protocol-addenda.md O). 저장한 적이 없으면 켠다.
+    public var directListen: Bool
 
     /// `arguments`는 명령줄 인자(UserDefaults 인자 도메인)다. 저장 폴더를 바꾸면 기본 폴더의 저장값 대신 이 값을 먼저 본다.
     public init(defaults: UserDefaults, environment: [String: String] = ProcessInfo.processInfo.environment,
@@ -32,12 +35,16 @@ public struct LaunchOptions: Sendable {
         stateRootName = Self.isValidRootName(name) ? name : Self.defaultStateRootName
         let savedControlURL = defaults.string(forKey: Self.scopedKey(Self.controlURLKey, root: stateRootName))
         controlURL = ((arguments[Self.controlURLKey] as? String) ?? savedControlURL ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        directListen = defaults.object(forKey: Self.scopedKey(Self.directListenKey, root: stateRootName)) as? Bool ?? true
         isTesting = defaults.bool(forKey: Self.testingKey) || environment["XCTestConfigurationFilePath"] != nil
             || environment["XCTestBundlePath"] != nil || environment["XCTestSessionIdentifier"] != nil
     }
 
     /// 고급 설정에서 바꾼 제어 서버를 저장하는 키.
     public var savedControlURLKey: String { Self.scopedKey(Self.controlURLKey, root: stateRootName) }
+
+    /// 직접 연결 스위치를 저장하는 키.
+    public var savedDirectListenKey: String { Self.scopedKey(Self.directListenKey, root: stateRootName) }
 
     /// 감시 폴더 북마크를 저장하는 키.
     public var folderBookmarkKey: String { Self.scopedKey(UserDefaultsFolderBookmarks.defaultKey, root: stateRootName) }

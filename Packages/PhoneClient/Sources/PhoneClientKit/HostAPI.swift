@@ -44,6 +44,26 @@ public struct HostAPI: Sendable {
     private let baseURL: URL
     private let transport: any HTTPTransport
     private let client: ClientInfo
+    /// 직접 연결(docs/protocol-addenda.md O)의 `Authorization` 값. tailnet 경로에서는 `nil`.
+    private let authorization: String?
+
+    /// 같은 네트워크 직접 연결인가.
+    public var isDirect: Bool { authorization != nil }
+
+    /// 직접 연결용: `https://<사설 IP>:<포트>`로 보내고 요청마다 기기 토큰을 싣는다.
+    /// `transport`는 인증서의 공개 키를 고정한 전송이어야 한다(`DirectTransportMaking`).
+    /// 주소가 사설·링크 로컬 IP가 아니면 `nil`(토큰을 다른 곳으로 보내지 않는다).
+    init?(direct endpoint: DirectEndpoint, authorization: String, transport: any HTTPTransport, client: ClientInfo, timeouts: Timeouts = .standard) {
+        let authority = endpoint.host.contains(":") ? "[\(endpoint.host)]" : endpoint.host
+        guard (1...65535).contains(endpoint.port), PeerPath.isPrivateEndpoint("\(authority):\(endpoint.port)"),
+              let base = URL(string: "https://\(authority):\(endpoint.port)") else { return nil }
+        self.host = endpoint.host
+        self.baseURL = base
+        self.transport = transport
+        self.client = client
+        self.timeouts = timeouts
+        self.authorization = authorization
+    }
 
     /// 호스트가 정책을 통과하지 못하면 `nil`.
     public init?(
@@ -61,6 +81,12 @@ public struct HostAPI: Sendable {
         self.transport = transport
         self.client = client
         self.timeouts = timeouts
+        self.authorization = nil
+    }
+
+    /// 직접 연결에 등록한다(docs/protocol-addenda.md O). tailnet 경로에서만 부른다. 다시 부르면 토큰이 바뀐다.
+    public func enrollDirect() async throws -> DirectEnrollment {
+        try await call("POST", ["v1", "direct", "enroll"], bodyData: nil, timeout: timeouts.request, expect: DirectEnrollment.self)
     }
 
     public func info() async throws -> InfoResponse {
@@ -105,6 +131,7 @@ public struct HostAPI: Sendable {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.setValue(client.headerValue, forHTTPHeaderField: "X-RD-Client")
+        if let authorization { request.setValue(authorization, forHTTPHeaderField: "Authorization") }
         let file: URL
         let response: HTTPURLResponse
         do {
@@ -223,6 +250,7 @@ public struct HostAPI: Sendable {
         request.timeoutInterval = timeout
         request.setValue(client.headerValue, forHTTPHeaderField: "X-RD-Client")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let authorization { request.setValue(authorization, forHTTPHeaderField: "Authorization") }
         if let bodyData {
             request.httpBody = bodyData
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

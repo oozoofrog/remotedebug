@@ -78,6 +78,12 @@ public struct RDNode: Sendable, Hashable {
         _ = try RDCall.consume(rd_host_set_devices(handle, RDCall.string(devices)))
     }
 
+    /// `rd_host_set_direct`(docs/protocol-addenda.md O). 같은 네트워크 직접 연결 리스너를 켜거나 끈다.
+    /// `{"ok":true,"direct":{"listening","port","id"}}`.
+    public func setDirect(_ on: Bool) throws -> Data {
+        try RDCall.consume(rd_host_set_direct(handle, on ? 1 : 0))
+    }
+
     /// `rd_host_pairing_open`. `ttlSeconds <= 0`이면 코어 기본값(300초). `{"code","expiresAt"}`.
     public func openPairing(ttlSeconds: Int32 = 0) throws -> Data {
         try RDCall.consume(rd_host_pairing_open(handle, ttlSeconds))

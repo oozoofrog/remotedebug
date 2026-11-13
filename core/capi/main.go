@@ -62,6 +62,11 @@ func rd_host_set_devices(handle C.int64_t, devicesJSON *C.char) *C.char {
 	return out(api.HostSetDevices(int64(handle), C.GoString(devicesJSON)))
 }
 
+//export rd_host_set_direct
+func rd_host_set_direct(handle C.int64_t, on C.int32_t) *C.char {
+	return out(api.HostSetDirect(int64(handle), on != 0))
+}
+
 //export rd_host_pairing_open
 func rd_host_pairing_open(handle C.int64_t, ttlSeconds C.int32_t) *C.char {
 	return out(api.HostPairingOpen(int64(handle), int(ttlSeconds)))

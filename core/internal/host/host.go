@@ -26,6 +26,9 @@ type Options struct {
 	Info       func() Info      // required; read on each request
 	BaseURL    func() string    // required; e.g. https://<fqdn>
 	Limits     Limits
+	// Direct reports the running same-network listener (protocol-addenda O).
+	// nil, or false, means there is none and enrollment answers 404.
+	Direct func() (DirectInfo, bool)
 }
 
 // Host holds the in-memory host state. All methods are safe for concurrent use.
@@ -37,6 +40,7 @@ type Host struct {
 	info       func() Info
 	baseURL    func() string
 	lim        Limits
+	direct     func() (DirectInfo, bool)
 
 	snapDir string // publishDir/.rd-snapshots, owned by the core
 
@@ -47,9 +51,11 @@ type Host struct {
 	requests map[string]*pairRequest
 	builds   map[string]*build
 	files    map[string]*resource // by resource id
-	sessions map[string]*session // by session id
-	tokens   map[string]*session // by token
-	denials  map[string]*denial  // denied-event rate limit, by node + path
+	sessions map[string]*session  // by session id
+	tokens   map[string]*session  // by token
+	denials  map[string]*denial   // denied-event rate limit, by node + path
+	// directFails limits failed direct authentications, by remote IP.
+	directFails map[string]*directFailure
 
 	agentBoard   []byte // GET /v1/agent body, set by the host app
 	agentEnabled bool
@@ -84,21 +90,23 @@ func New(opts Options) (*Host, error) {
 		return nil, err
 	}
 	return &Host{
-		whois:      opts.WhoIs,
-		now:        now,
-		events:     opts.Events,
-		publishDir: dir,
-		snapDir:    snapDir,
-		info:       opts.Info,
-		baseURL:    opts.BaseURL,
-		lim:        opts.Limits.withDefaults(),
-		devices:    map[string]DeviceEntry{},
-		requests:   map[string]*pairRequest{},
-		builds:     map[string]*build{},
-		files:      map[string]*resource{},
-		sessions:   map[string]*session{},
-		tokens:     map[string]*session{},
-		denials:    map[string]*denial{},
+		whois:       opts.WhoIs,
+		now:         now,
+		events:      opts.Events,
+		publishDir:  dir,
+		snapDir:     snapDir,
+		info:        opts.Info,
+		baseURL:     opts.BaseURL,
+		lim:         opts.Limits.withDefaults(),
+		direct:      opts.Direct,
+		directFails: map[string]*directFailure{},
+		devices:     map[string]DeviceEntry{},
+		requests:    map[string]*pairRequest{},
+		builds:      map[string]*build{},
+		files:       map[string]*resource{},
+		sessions:    map[string]*session{},
+		tokens:      map[string]*session{},
+		denials:     map[string]*denial{},
 	}, nil
 }
 
@@ -118,6 +126,7 @@ func (h *Host) Handler() http.Handler {
 	mux.HandleFunc("POST /v1/agent/requests/{id}/cancel", h.handleAgentCancel)
 	mux.HandleFunc("GET /v1/resources", h.handleResources)
 	mux.HandleFunc("GET /v1/resources/{id}", h.handleResourceFile)
+	mux.HandleFunc("POST /v1/direct/enroll", h.handleDirectEnroll)
 	mux.HandleFunc("GET /i/{token}/manifest.plist", h.handleManifest)
 	mux.HandleFunc("GET /i/{token}/app.ipa", h.handleIPA)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -209,10 +218,19 @@ func (h *Host) Sweep() {
 			delete(h.denials, k)
 		}
 	}
+	for k, f := range h.directFails {
+		if now.Sub(f.first) >= directFailWindow {
+			delete(h.directFails, k)
+		}
+	}
 }
 
-// identify runs WhoIs; failure maps to 403 not_paired.
+// identify returns the peer the direct listener authenticated, or runs WhoIs
+// on the tailnet listener; failure maps to 403 not_paired.
 func (h *Host) identify(w http.ResponseWriter, r *http.Request) (Peer, bool) {
+	if p, ok := r.Context().Value(peerKey{}).(Peer); ok {
+		return p, true
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 	defer cancel()
 	p, err := h.whois(ctx, r.RemoteAddr)

@@ -8,18 +8,25 @@ public struct DeviceEntry: Codable, Sendable, Hashable, Identifiable {
     public var nodeName: String
     public var loginName: String
     public var pairedAt: Date
+    /// docs/protocol-addenda.md O: 이 기기의 직접 연결 토큰의 SHA-256(16진수). 기기가 등록하기 전에는 없다.
+    /// 토큰 자체는 Mac에 저장하지 않는다.
+    public var directTokenHash: String?
 
-    public init(id: String, name: String, nodeStableId: String, nodeName: String, loginName: String, pairedAt: Date) {
+    /// 같은 네트워크 직접 연결에 등록한 기기인가.
+    public var isDirectEnrolled: Bool { directTokenHash?.isEmpty == false }
+
+    public init(id: String, name: String, nodeStableId: String, nodeName: String, loginName: String, pairedAt: Date, directTokenHash: String? = nil) {
         self.id = id
         self.name = name
         self.nodeStableId = nodeStableId
         self.nodeName = nodeName
         self.loginName = loginName
         self.pairedAt = pairedAt
+        self.directTokenHash = directTokenHash
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, nodeStableId, nodeName, loginName, pairedAt
+        case id, name, nodeStableId, nodeName, loginName, pairedAt, directTokenHash
     }
 
     public init(from decoder: any Decoder) throws {
@@ -30,6 +37,7 @@ public struct DeviceEntry: Codable, Sendable, Hashable, Identifiable {
         nodeName = try c.decode(String.self, forKey: .nodeName)
         loginName = try c.decode(String.self, forKey: .loginName)
         pairedAt = try c.decodeRDDate(forKey: .pairedAt)
+        directTokenHash = try c.decodeIfPresent(String.self, forKey: .directTokenHash)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -40,6 +48,7 @@ public struct DeviceEntry: Codable, Sendable, Hashable, Identifiable {
         try c.encode(nodeName, forKey: .nodeName)
         try c.encode(loginName, forKey: .loginName)
         try c.encodeRDDate(pairedAt, forKey: .pairedAt)
+        if let directTokenHash, !directTokenHash.isEmpty { try c.encode(directTokenHash, forKey: .directTokenHash) }
     }
 }
 

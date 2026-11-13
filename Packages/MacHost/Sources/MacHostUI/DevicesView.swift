@@ -142,6 +142,11 @@ struct DeviceRow: View {
                 }
                 Text("등록 \(device.pairedAt.formatted(date: .abbreviated, time: .shortened))")
                     .font(.callout)
+                if device.isDirectEnrolled {
+                    Label("같은 네트워크 직접 연결 등록됨", systemImage: "wifi")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
                 if let path {
                     Label(path.label, systemImage: path.direct ? "arrow.left.arrow.right" : "arrow.triangle.branch")
                         .font(.callout)

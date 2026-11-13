@@ -36,6 +36,10 @@ type Config struct {
 	// Optional extensions (docs/protocol-addenda.md): shown in /v1/info.
 	HostDisplayName string `json:"hostDisplayName"`
 	AppVersion      string `json:"appVersion"`
+
+	// Host mode: open the same-network listener at start
+	// (docs/protocol-addenda.md O). rd_host_set_direct changes it later.
+	DirectListen bool `json:"directListen"`
 }
 
 // MaxGoMemLimitMiB bounds goMemLimitMiB.

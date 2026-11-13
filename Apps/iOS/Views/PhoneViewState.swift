@@ -30,6 +30,8 @@ struct PhoneViewState {
     var vpnAutoStarted = false
     /// 이 앱의 VPN 구성이 있고 선택돼 있어, Mac이 필요할 때 자동으로 켤 수 있다.
     var vpnAutoStartReady = false
+    /// 같은 Wi-Fi의 Mac과 VPN 없이 직접 주고받고 있다.
+    var directConnected = false
     /// 이 앱의 터널에서 페어링한 Mac까지 가는 경로. 모르거나 다른 앱의 VPN이면 `nil`.
     var peerPath: PeerPath?
     /// Mac이 보낸 파일.
@@ -89,6 +91,7 @@ extension PhoneViewState {
         self.nodeFQDN = nodeFQDN
         self.vpnAutoStarting = model.isAutoStartingVPN
         self.vpnAutoStarted = model.vpnAutoStarted
+        self.directConnected = model.isDirectConnected
         self.pairingHost = model.pairingHost
         self.agentBoard = model.agentBoard
         self.agentError = model.agentError

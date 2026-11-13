@@ -109,6 +109,10 @@ extension TunnelState {
 public enum VPNStatusText {
     public static let autoStarting = "VPN 켜는 중…"
     public static let connected = "연결됨"
+    /// VPN은 꺼져 있고 같은 Wi-Fi의 Mac과 직접 주고받는다(docs/protocol-addenda.md O).
+    public static let direct = "직접 연결(같은 Wi-Fi, VPN 없이)"
+    public static let directDetail = "같은 Wi-Fi의 Mac과 직접 주고받습니다. 앱을 설치할 때만 VPN을 자동으로 켭니다."
+    public static let directWithVPNDetail = "빌드 목록·파일·로그는 같은 Wi-Fi로 Mac과 직접 주고받습니다."
 
     /// 연결됐을 때의 문구. 이 앱의 터널이 아니면(다른 앱의 VPN) 경로를 알 수 없으므로 경로를 말하지 않는다.
     public static func connected(holder: VPNHolder, path: PeerPath?) -> String {

@@ -25,6 +25,10 @@ targets:
         RDSourceRoot: $(SRCROOT)
         LSMinimumSystemVersion: "26.0"
         NSUserNotificationAlertStyle: alert
+        # 같은 네트워크의 iPhone이 이 Mac을 찾도록 Bonjour로 알린다(docs/protocol-addenda.md O).
+        NSLocalNetworkUsageDescription: 같은 네트워크의 페어링한 iPhone이 VPN 없이 이 Mac에 연결하도록 알립니다.
+        NSBonjourServices:
+          - _remotedebug._tcp
         # 프로젝트 폴더·프로젝트 파일·빌드를 Dock 아이콘에 끌어 놓거나 `open -a RemoteDebug <경로>`로 넘길 수 있다.
         CFBundleDocumentTypes:
           - CFBundleTypeName: 프로젝트 폴더 또는 빌드

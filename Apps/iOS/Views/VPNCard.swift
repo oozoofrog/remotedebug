@@ -125,7 +125,7 @@ struct VPNCard: View {
         if !state.tunnelAvailable { return "사용할 수 없음" }
         if isAutoStarting { return VPNStatusText.autoStarting }
         switch state.tunnel {
-        case .off: return "꺼짐"
+        case .off: return state.directConnected ? VPNStatusText.direct : "꺼짐"
         case .connecting: return "연결 중"
         case .disconnecting: return "끄는 중"
         case .needsLogin: return "로그인 필요"
@@ -137,12 +137,15 @@ struct VPNCard: View {
     private var detail: String? {
         switch state.tunnel {
         case .off:
-            state.vpnAutoStartReady
+            state.directConnected ? VPNStatusText.directDetail
+                : state.vpnAutoStartReady
                 ? "Mac에 연결할 때 자동으로 켜고, 쓰지 않으면 30초 뒤에 끕니다."
                 : "Mac과 통신하려면 VPN이 켜져 있어야 합니다. 여기서 한 번 켜 두면 다음부터는 필요할 때 자동으로 켭니다."
         case .connecting, .disconnecting: nil
         case .needsLogin(let url): url == nil ? "tailnet 로그인 주소를 받는 중입니다." : "tailnet에 로그인해야 합니다. 로그인하면 자동으로 연결됩니다."
-        case .connected: state.vpnAutoStarted ? "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다." : nil
+        case .connected:
+            state.vpnAutoStarted ? "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다."
+                : state.directConnected ? VPNStatusText.directWithVPNDetail : nil
         case .failed(let message): message
         }
     }
@@ -150,7 +153,7 @@ struct VPNCard: View {
     private var symbol: String {
         if !state.tunnelAvailable { return "network.slash" }
         switch state.tunnel {
-        case .off: return "network.slash"
+        case .off: return state.directConnected ? "wifi" : "network.slash"
         case .connecting: return "network"
         case .disconnecting: return "network.slash"
         case .needsLogin: return "person.badge.key"
@@ -162,7 +165,7 @@ struct VPNCard: View {
     private var tint: Color {
         if !state.tunnelAvailable { return .secondary }
         switch state.tunnel {
-        case .off: return .secondary
+        case .off: return state.directConnected ? .green : .secondary
         case .connecting: return .blue
         case .disconnecting: return .secondary
         case .needsLogin: return .orange

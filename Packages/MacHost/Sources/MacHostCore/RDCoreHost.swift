@@ -124,6 +124,10 @@ public final class RDCoreHost: HostCore, @unchecked Sendable {
         _ = try await call { try $0.setDevices(body); return Data() }
     }
 
+    public func setDirect(_ on: Bool) async throws {
+        _ = try await call { try $0.setDirect(on) }
+    }
+
     public func openPairing(ttlSeconds: Int) async throws -> PairingCode {
         let ttl = Int32(clamping: ttlSeconds)
         let data = try await call { try $0.openPairing(ttlSeconds: ttl) }

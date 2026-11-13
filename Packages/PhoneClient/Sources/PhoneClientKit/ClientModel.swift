@@ -242,6 +242,8 @@ public final class ClientModel {
     /// 지금 VPN은 앱이 자동으로 켠 것이다. 쓸 일이 없어지면 `Timing.autoOffDelay` 뒤에 끈다.
     /// 사용자가 켜거나 끈 VPN, 다른 앱의 VPN에는 `false`다.
     public private(set) var vpnAutoStarted = false
+    /// 같은 네트워크의 Mac에 VPN 없이 직접 연결해 쓰고 있다(docs/protocol-addenda.md O).
+    public private(set) var isDirectConnected = false
     /// 진단 로그. 화면과 앱(시작·VPN)도 여기에 남긴다.
     public let logBook: DeviceLogBook
     public let crashBook: CrashBook
@@ -268,6 +270,8 @@ public final class ClientModel {
     private let policy: HostPolicy
     private let timing: Timing
     private let receivedStore: ReceivedFileStore
+    /// 같은 네트워크 직접 연결. 없으면 모든 요청이 VPN(tailnet) 경로로 간다.
+    private let direct: DirectRoute?
 
     // MARK: 내부 상태
 
@@ -294,6 +298,8 @@ public final class ClientModel {
     @ObservationIgnored private var idle = AutoVPNIdle()
     @ObservationIgnored private var idleTask: Task<Void, Never>?
     @ObservationIgnored private var idleToken: UUID?
+    /// 직접 경로로 받는 중인 파일. VPN이 필요한 일로 세지 않는다.
+    @ObservationIgnored private var directDownloads: Set<String> = []
 
     public init(
         deviceName: String,
@@ -307,7 +313,8 @@ public final class ClientModel {
         timing: Timing = .standard,
         logBook: DeviceLogBook? = nil,
         crashBook: CrashBook? = nil,
-        receivedFiles: ReceivedFileStore? = nil
+        receivedFiles: ReceivedFileStore? = nil,
+        direct: DirectRoute? = nil
     ) {
         self.deviceName = deviceName
         self.client = client
@@ -318,6 +325,7 @@ public final class ClientModel {
         self.clock = clock
         self.policy = hostPolicy
         self.timing = timing
+        self.direct = direct
         self.logBook = logBook ?? DeviceLogBook()
         self.crashBook = crashBook ?? CrashBook()
         #if os(iOS)
@@ -615,7 +623,7 @@ public final class ClientModel {
     // MARK: 빌드 목록
 
     public func refresh() async {
-        guard let current = host, let api = makeAPI(current.fqdn) else { return }
+        guard let current = host, makeAPI(current.fqdn) != nil else { return }
         let generation = hostGeneration
         refreshesInFlight += 1
         isRefreshing = true
@@ -623,21 +631,28 @@ public final class ClientModel {
             refreshesInFlight -= 1
             isRefreshing = refreshesInFlight > 0
         }
-        // VPN이 꺼져 있고 자동으로 켤 수 있으면 켜고 연결을 기다린다. 그러지 못하면 연결될 때 이어 한다.
-        guard await connectedTunnel(queue: .refresh), generation == hostGeneration else { return }
+        // 같은 네트워크면 직접 받는다. 아니면 VPN으로: 꺼져 있고 자동으로 켤 수 있으면 켜고 연결을 기다린다.
+        // 그러지 못하면 연결될 때 이어 한다.
+        let api: HostAPI
         do {
-            let info = try await api.info()
+            let (info, list, used) = try await viaHost(current, tunnel: { [self] in
+                await connectedTunnel(queue: .refresh) && generation == hostGeneration
+            }) { api -> (InfoResponse, [BuildDescriptor]?, HostAPI) in
+                let info = try await api.info()
+                // 다른 Mac이거나 규약이 다르면 빌드 목록을 받지 않는다.
+                guard info.hostId == current.hostId, info.protocolVersion == 1 else { return (info, nil, api) }
+                return (info, try await api.builds(), api)
+            }
+            api = used
             guard generation == hostGeneration else { return }
             guard info.hostId == current.hostId else {
                 failRefresh(Self.hostChangedMessage)
                 return
             }
-            guard info.protocolVersion == 1 else {
+            guard info.protocolVersion == 1, let list else {
                 failRefresh(HostAPIError.protocolMismatch("info.protocol").userMessage)
                 return
             }
-            let list = try await api.builds()
-            guard generation == hostGeneration else { return }
             if builds.map(\.id) != list.map(\.id) {
                 log(.info, "builds", "빌드 목록 \(list.count)개: " + list.map { "\($0.displayName) \($0.id) 게시 \(RDTimestamp.string($0.publishedAt))" }.joined(separator: ", "))
             }
@@ -653,6 +668,8 @@ public final class ClientModel {
                 host = updated
                 try? store.save(updated)
             }
+        } catch is VPNNotConnected {
+            return
         } catch {
             guard !(error is CancellationError), generation == hostGeneration else { return }
             failRefresh(Self.message(for: error))
@@ -691,8 +708,8 @@ public final class ClientModel {
 
     /// 파일을 받아 Documents에 저장한다(같은 이름은 바꾼다). 이미 받는 중이면 아무것도 하지 않는다.
     public func download(_ resource: ResourceDescriptor) {
-        guard !resource.isLink, downloadTasks[resource.id] == nil, let current = host, let api = makeAPI(current.fqdn) else { return }
-        guard tunnelUsable() else { return }
+        guard !resource.isLink, downloadTasks[resource.id] == nil, let current = host, makeAPI(current.fqdn) != nil else { return }
+        guard direct?.mayReach(current) == true || tunnelUsable() else { return }
         let generation = hostGeneration
         fileDownloads[resource.id] = .downloading
         fileProgress[resource.id] = FileTransferProgress(received: 0, total: resource.size, startedAt: clock.now)
@@ -706,12 +723,15 @@ public final class ClientModel {
         downloadTasks[resource.id] = Task { [weak self] in
             let result: Result<URL, any Error>
             do {
-                guard await self?.connectedForTransfer() ?? false else { throw VPNNotConnected() }
-                result = .success(try await api.download(resource, progress: report))
+                guard let self else { throw CancellationError() }
+                result = .success(try await self.viaHost(current, tunnel: { await self.connectedForTransfer() }, route: { direct in
+                    if direct { self.directDownloads.insert(resource.id) } else { self.directDownloads.remove(resource.id) }
+                }) { try await $0.download(resource, progress: report) })
             } catch {
                 result = .failure(error)
             }
             guard let self else { return }
+            self.directDownloads.remove(resource.id)
             self.downloadTasks[resource.id] = nil
             defer { self.fileProgress[resource.id] = nil }
             guard generation == self.hostGeneration else {
@@ -1114,6 +1134,8 @@ public final class ClientModel {
 
     /// 멈춘 진행 확인을 다시 시작한다. 마감이 지났으면 호스트에 한 번 물어 결과를 정한다.
     public func resumePolling() {
+        // 앱이 다시 활성이 됐다. 네트워크가 바뀌었을 수 있으니 직접 경로를 다시 찾는다.
+        noteNetworkChange()
         if pairing == nil, let poll = pairingPoll, let api = makeAPI(poll.link.host) {
             let token = UUID()
             pairing = PairingRun(token: token, link: poll.link, task: Task { [weak self] in
@@ -1140,6 +1162,8 @@ public final class ClientModel {
         lastApprovedLink = nil
         resetHostScopedState()
         store.clear()
+        direct?.forget()
+        isDirectConnected = false
         host = nil
         phase = .unpaired
         needsTunnel = false
@@ -1167,6 +1191,62 @@ public final class ClientModel {
         refreshError = nil
         resumeTask?.cancel()
         resumeTask = nil
+    }
+
+    // MARK: 경로 선택 (docs/protocol-addenda.md O)
+
+    /// 네트워크 경로가 바뀌었다(Wi-Fi ↔ 셀룰러, 다른 Wi-Fi). 다음 요청에서 직접 경로를 다시 찾는다.
+    public func noteNetworkChange() {
+        guard let direct else { return }
+        direct.invalidate()
+        isDirectConnected = false
+    }
+
+    /// 직접 경로가 있거나 VPN이 연결돼 있다(꺼져 있으면 자동으로 켠다).
+    private func reachable(_ current: PairedHost) async -> Bool {
+        if await direct?.api(for: current, client: client, timeouts: timing.requestTimeouts) != nil {
+            isDirectConnected = true
+            return true
+        }
+        isDirectConnected = false
+        return await connectedForTransfer()
+    }
+
+    /// `work`를 Mac에 보낸다. 같은 네트워크면 직접 경로로 보내고, 연결 오류면 한 번 다시 찾아 보낸 뒤
+    /// VPN(tailnet) 경로로 넘어간다. 직접 경로가 토큰을 거절하면 VPN 경로로 보내고 다시 등록한다.
+    /// VPN 경로는 `ensure`가 `true`일 때만 쓴다(아니면 `VPNNotConnected`).
+    /// 설치는 이 함수를 거치지 않는다: 설치 주소는 tailnet 이름이어야 iOS가 받는다.
+    private func viaHost<T>(
+        _ current: PairedHost,
+        tunnel ensure: () async -> Bool,
+        route: (Bool) -> Void = { _ in },
+        _ work: (HostAPI) async throws -> T
+    ) async throws -> T {
+        if let direct {
+            for attempt in 0..<2 {
+                guard let api = await direct.api(for: current, client: client, timeouts: timing.requestTimeouts) else { break }
+                if !isDirectConnected { log(.info, "direct", "같은 네트워크의 Mac에 직접 연결") }
+                isDirectConnected = true
+                route(true)
+                do {
+                    return try await work(api)
+                } catch let error as HostAPIError where error.isConnectionFailure {
+                    log(.info, "direct", "직접 연결 실패(\(error.code)), \(attempt == 0 ? "다시 찾음" : "VPN 경로로 넘어감")")
+                    direct.connectionFailed(final: attempt == 1)
+                } catch let error as HostAPIError where error.code == "not_paired" || error.code == "too_many_attempts" {
+                    log(.info, "direct", "직접 연결 토큰을 Mac이 받지 않음(\(error.code)), VPN 경로로 다시 등록")
+                    direct.rejected()
+                    break
+                }
+            }
+            isDirectConnected = false
+        }
+        route(false)
+        guard await ensure(), let api = makeAPI(current.fqdn) else { throw VPNNotConnected() }
+        let result = try await work(api)
+        // VPN 경로가 살아 있을 때 직접 연결 등록을 해 둔다(같은 Wi-Fi에 오면 VPN 없이 쓴다).
+        if let direct, host?.hostId == current.hostId { await direct.enrollIfNeeded(using: api, host: current) }
+        return result
     }
 
     // MARK: VPN
@@ -1207,8 +1287,9 @@ public final class ClientModel {
 
     // MARK: VPN 자동 켜기·끄기 (docs/protocol-addenda.md N)
 
-    /// VPN이 연결돼 있거나, 꺼져 있어도 Mac이 필요할 때 자동으로 켤 수 있다.
+    /// 같은 네트워크에서 직접 닿을 수 있거나, VPN이 연결돼 있거나, 꺼져 있어도 Mac이 필요할 때 자동으로 켤 수 있다.
     public var canReachHost: Bool {
+        if let host, direct?.mayReach(host) == true { return true }
         let state = tunnelController.currentState()
         return state == .connected || autoStartTask != nil || autoStartDecision(state) == .start
     }
@@ -1315,7 +1396,8 @@ public final class ClientModel {
     private var hasVPNNeed: Bool {
         autoStartTask != nil || refreshesInFlight > 0 || isSendingLogs || isSendingCrashes
             || !installTasks.isEmpty || !activeSessions.isEmpty || installs.values.contains(where: \.isInProgress)
-            || !downloadTasks.isEmpty || fileDownloads.values.contains(.downloading)
+            || downloadTasks.keys.contains { !directDownloads.contains($0) }
+            || fileDownloads.contains { $0.value == .downloading && !directDownloads.contains($0.key) }
             || pairing != nil || pairingPoll != nil || queuedPairing != nil
     }
 
@@ -1401,10 +1483,10 @@ public final class ClientModel {
     /// 쌓인 로그를 페어링한 Mac에 보낸다. 목록을 받은 뒤에도 자동으로 부른다.
     /// VPN이 꺼져 있으면 자동으로 켤 수 있을 때만 켜서 보낸다. 보내지 못하면 로그를 남겨 두고 다음에 다시 보낸다.
     public func sendLogs() async {
-        guard !isSendingLogs, let current = host, let api = makeAPI(current.fqdn), canReachHost else { return }
+        guard !isSendingLogs, let current = host, makeAPI(current.fqdn) != nil, canReachHost else { return }
         isSendingLogs = true
         defer { isSendingLogs = false }
-        guard await connectedForTransfer() else { return }
+        guard await reachable(current) else { return }
         let generation = hostGeneration
         while generation == hostGeneration {
             let batch = logBook.nextBatch()
@@ -1414,9 +1496,9 @@ public final class ClientModel {
                 return
             }
             do {
-                try await api.sendLogs(batch)
+                _ = try await viaHost(current, tunnel: { [self] in await connectedForTransfer() }) { try await $0.sendLogs(batch) }
             } catch {
-                guard !(error is CancellationError) else { return }
+                guard !(error is CancellationError), !(error is VPNNotConnected) else { return }
                 logSendError = Self.message(for: error)
                 return
             }
@@ -1437,19 +1519,19 @@ public final class ClientModel {
 
     /// 아직 보내지 않은 크래시 기록을 페어링한 Mac에 보낸다. 보내지 못하면 남겨 두고 다음에 다시 보낸다.
     public func sendCrashes() async {
-        guard !isSendingCrashes, !crashBook.unsent.isEmpty, let current = host, let api = makeAPI(current.fqdn),
+        guard !isSendingCrashes, !crashBook.unsent.isEmpty, let current = host, makeAPI(current.fqdn) != nil,
               canReachHost
         else { return }
         isSendingCrashes = true
         defer { isSendingCrashes = false }
-        guard await connectedForTransfer() else { return }
+        guard await reachable(current) else { return }
         let generation = hostGeneration
         for item in crashBook.unsent where generation == hostGeneration {
             guard let report = crashBook.report(item) else { continue }
             do {
-                try await api.sendCrash(report)
+                try await viaHost(current, tunnel: { [self] in await connectedForTransfer() }) { try await $0.sendCrash(report) }
             } catch {
-                guard !(error is CancellationError) else { return }
+                guard !(error is CancellationError), !(error is VPNNotConnected) else { return }
                 crashSendError = Self.message(for: error)
                 return
             }

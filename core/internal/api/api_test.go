@@ -1,11 +1,17 @@
 package api
 
 import (
+	"crypto/tls"
 	"encoding/json"
+	"net"
+	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
+	"remotedebug/core/internal/direct"
 	"remotedebug/core/internal/node"
 )
 
@@ -146,5 +152,84 @@ func TestSetDevicesRequiresDevices(t *testing.T) {
 	json.Unmarshal([]byte(Status(h)), &st)
 	if st.PairedDevices != 0 {
 		t.Fatalf("after clearing: %d devices", st.PairedDevices)
+	}
+}
+
+// The same-network listener does not wait for the tailnet: it is up while the
+// control server is unreachable, keeps its port and id, and can be switched
+// off and on.
+func TestDirectListenerRunsWithoutTheTailnet(t *testing.T) {
+	stateDir := filepath.Join(t.TempDir(), "state")
+	start := func() int64 {
+		pub := t.TempDir()
+		out := StartWithOptions(`{"mode":"host","stateDir":"`+stateDir+`","hostname":"rd-mac-dead","controlURL":"`+deadControl+`","publishDir":"`+pub+`","directListen":true}`,
+			node.Options{Direct: direct.Options{Host: "127.0.0.1", Allow: func(net.Addr) bool { return true }}})
+		var started struct{ Handle int64 }
+		json.Unmarshal([]byte(out), &started)
+		if started.Handle == 0 {
+			t.Fatalf("start: %s", out)
+		}
+		return started.Handle
+	}
+	type directStatus struct {
+		Listening bool
+		Port      int
+		ID        string
+	}
+	status := func(h int64) directStatus {
+		var st struct{ Direct *directStatus }
+		json.Unmarshal([]byte(Status(h)), &st)
+		if st.Direct == nil {
+			t.Fatalf("no direct status: %s", Status(h))
+		}
+		return *st.Direct
+	}
+	h := start()
+	first := status(h)
+	if !first.Listening || first.Port == 0 || len(first.ID) != 16 {
+		t.Fatalf("status %+v", first)
+	}
+	client := &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}}}
+	url := "https://127.0.0.1:" + strconv.Itoa(first.Port) + "/v1/info"
+	resp, err := client.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusForbidden || resp.Header.Get("X-RD-Protocol") != "1" {
+		t.Fatalf("stranger: %d", resp.StatusCode)
+	}
+
+	if out := HostSetDirect(h, false); !strings.Contains(out, `"listening":false`) {
+		t.Fatalf("off: %s", out)
+	}
+	client.CloseIdleConnections()
+	if _, err := client.Get(url); err == nil {
+		t.Fatal("listener still answers after it was turned off")
+	}
+	if out := HostSetDirect(h, true); !strings.Contains(out, `"listening":true`) {
+		t.Fatalf("on: %s", out)
+	}
+	if got := status(h); got.Port != first.Port || got.ID != first.ID {
+		t.Fatalf("changed after off/on: %+v", got)
+	}
+	Stop(h)
+
+	h = start()
+	defer Stop(h)
+	if got := status(h); got.Port != first.Port || got.ID != first.ID || !got.Listening {
+		t.Fatalf("changed after restart: %+v, was %+v", got, first)
+	}
+}
+
+func TestSetDirectNeedsHostMode(t *testing.T) {
+	h := startDead(t, "proxy", filepath.Join(t.TempDir(), "state"))
+	if code := errorCode(t, HostSetDirect(h, true)); code != "invalid_config" {
+		t.Fatalf("code %q", code)
+	}
+	// Without directListen a host has no direct status until it is turned on.
+	host := startDead(t, "host", filepath.Join(t.TempDir(), "state2"))
+	if strings.Contains(Status(host), `"direct"`) {
+		t.Fatalf("direct status without directListen: %s", Status(host))
 	}
 }

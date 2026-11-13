@@ -74,12 +74,25 @@ open RemoteDebug.xcodeproj
 
 ## VPN: 자동 켜기·끄기와 직접·중계 경로
 
-Mac과 iPhone 사이의 통신은 모두 tailnet을 지나고, iPhone에서는 그것이 VPN이다. 두 기기가 같은 네트워크에 있으면 Tailscale이 중계 서버를 거치지 않고 직접 연결한다.
+Mac과 iPhone 사이의 통신은 tailnet을 지나고, iPhone에서는 그것이 VPN이다. 두 기기가 같은 네트워크에 있고 아래의 [직접 연결](#같은-네트워크-직접-연결vpn-없이)이 되면 VPN 없이 주고받는다. tailnet에서도 두 기기가 같은 네트워크에 있으면 Tailscale이 중계 서버를 거치지 않고 직접 연결한다.
 
 - **자동 켜기**: 앱이 Mac을 필요로 할 때(빌드 목록 새로고침, 설치, 파일 받기, 로그·크래시·피드백 보내기, 링크로 시작한 페어링) VPN이 꺼져 있으면 이 앱의 VPN을 켜고 최대 15초 기다리며 "VPN 켜는 중…"을 보여 준다. 이 앱의 VPN 구성이 이미 있고 선택돼 있을 때만 그렇게 한다. iOS의 "VPN 구성 추가" 동의를 띄우지 않고, 선택된 다른 VPN을 바꾸지 않으며, 켜져 있는 다른 앱의 VPN을 이 앱의 것으로 바꾸지 않는다. 이 셋은 버튼을 눌러야 한다.
 - **자동 끄기**: 앱이 스스로 켠 VPN은 설치(iOS 설치기를 기다리는 것 포함), 파일 전송, 보내기가 없는 채로 30초가 지나면 끈다. 사용자가 켠 VPN과 다른 앱의 VPN은 건드리지 않는다.
 - **경로**: VPN 칸에 "연결됨 · 직접 연결(같은 네트워크)", "연결됨 · 직접 연결", "연결됨 · 중계 서버 경유" 가운데 하나가 나온다. Mac의 **기기** 화면도 기기별로 같은 내용을 보여 준다.
 - **주문형 연결(선택, 기본 꺼짐)**: 설정의 "Mac에 연결할 때 VPN 자동으로 켜기(주문형)"를 켜면 페어링한 Mac 주소에 대한 iOS 주문형 연결 규칙을 저장한다. 켜 두면 VPN을 직접 꺼도 iOS가 다시 켠다.
+
+## 같은 네트워크 직접 연결(VPN 없이)
+
+Mac과 iPhone이 같은 Wi-Fi에 있으면 iPhone 앱이 VPN 없이 Mac과 직접 주고받는다. 빌드 목록, 파일 목록과 파일 받기, 로그·크래시·피드백 보내기가 해당한다. 직접 연결이 되지 않으면 위의 VPN 경로로 넘어가고 VPN은 앱이 스스로 켠다. 자세한 규칙은 [docs/protocol-addenda.md의 O절](docs/protocol-addenda.md#o-같은-네트워크-직접-연결)에 있다.
+
+- **연결 방식**: Mac이 사설·링크 로컬 주소만 받는 HTTPS 포트를 하나 더 열고, Bonjour(`_remotedebug._tcp`)로 무작위 식별자만 광고한다. 광고에 Mac 이름과 tailnet 주소는 없다. iPhone은 tailnet으로 한 번 등록해 기기 토큰과 리스너의 공개 키 고정 값을 받는다. 그 뒤에는 `https://<Mac의 LAN IP>:<포트>`에 연결해 그 공개 키일 때만 받아들이고, 토큰은 TLS 1.3 안에서만 보낸다.
+- **설치는 계속 VPN**: iOS 설치기(`itms-services`)는 시스템이 신뢰하는 인증서의 HTTPS 주소에서만 받는데, 그런 주소는 tailnet 이름뿐이다. 설치를 누르면 직접 연결 중이어도 VPN을 자동으로 켠다.
+- **넘어가기**: 연결 오류가 나면 Mac을 한 번 다시 찾고, 그래도 안 되면 그 요청을 VPN으로 보내고 60초 동안 다시 찾지 않는다. 네트워크가 바뀌거나 앱이 다시 앞으로 오면 다시 찾는다. iOS의 로컬 네트워크 권한을 거절했으면 다시 묻지 않고 VPN 경로를 쓴다.
+- **화면**: VPN 칸에 "직접 연결(같은 Wi-Fi, VPN 없이)"이 나온다. Mac의 **네트워크** 화면에 "같은 네트워크에서 직접 연결" 스위치(기본 켜짐)와 포트가 있고, **기기** 화면은 등록한 기기를 표시한다.
+- **보안에서 달라지는 점**: 이전에는 tailnet 안에 있어야 닿았지만, 이제 같은 LAN의 누구나 직접 연결 포트의 TLS까지는 닿는다. API를 쓰려면 페어링한 기기의 토큰이 필요하고, 그 밖의 요청은 모두 `403`이다. 직접 연결 포트에는 페어링, 등록, 설치, 웹 페이지가 없다. Tailscale ACL은 직접 경로에 적용되지 않는다. 받아들일 수 없으면 Mac에서 스위치를 끈다.
+- **한계**: 직접 경로로 받는 파일은 앱이 떠 있는 동안만 받는다(끊기면 이어 받는다). VPN 경로는 이전처럼 시스템 백그라운드 세션을 쓴다.
+
+실기기에서 확인하지 않은 것: 로컬 네트워크 권한 창, ATS 아래에서 공개 키를 고정한 자체 서명 인증서에 연결되는지, 두 iPhone 앱이 Keychain으로 토큰을 함께 쓰는지, macOS 방화벽의 허용 창. 단위 시험과 Mac의 루프백 TLS 시험은 통과했다.
 
 모두 실기기에서 확인하지 않았다. 단위 시험과 시뮬레이터 빌드만 통과했다. 규칙과 상태 필드는 [프로토콜 보충 N](docs/protocol-addenda.md#n-vpn-자동-켜기와-경로-표시)에 있다.
 
@@ -133,6 +146,8 @@ RemoteDebugFeedback.start(.init(
 | --- | --- | --- |
 | Go 코어: 페어링·세션·IPA 제공을 가짜 tailnet(`testcontrol`)으로 | 확인함 | `scripts/go.sh test -race -count=1 ./...` |
 | Go 코어 터널 모드: 가짜 tailnet과 메모리 TUN으로 | 확인함 | `scripts/go.sh test -race -count=1 -run TestTunnel -v ./...` |
+| 같은 네트워크 직접 연결: 리스너·토큰·등록·공개 키 고정을 루프백의 실제 TLS 1.3으로, 경로 선택을 가짜 전송으로 | 확인함 | `scripts/go.sh test ./...`, `swift test --package-path Packages/PhoneClient` |
+| 실제 Mac과 iPhone 사이의 같은 네트워크 직접 연결 | 확인하지 않음 | [O.9](docs/protocol-addenda.md#o9-보안-속성과-확인하지-못한-것) |
 | `RDCore.xcframework` 생성(macOS, iOS, iOS 시뮬레이터 arm64) | 확인함 | `scripts/build-core.sh` |
 | 디버그 빌드 검사와 IPA 묶기: 단위 시험, 픽스처, 작성 환경의 실제 Debug 빌드 | 확인함 | `swift test --package-path Packages/RemoteDebugKit`, `scripts/check-ipa-roundtrip.sh`, `scripts/check-real-builds.sh` |
 | Mac 호스트: 실제 Go 코어와 가짜 tailnet, 앱 실행과 종료 | 확인함 | `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost`, `RD_E2E_APP=1 scripts/e2e-mac.sh` |

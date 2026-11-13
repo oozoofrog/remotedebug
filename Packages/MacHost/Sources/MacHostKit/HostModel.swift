@@ -92,6 +92,9 @@ public final class HostModel {
     /// 저장된 기기(`devices`)를 페어링한 제어 서버(`normalizedControlURL`, 빈 문자열은 Tailscale 기본 제어 서버).
     /// 노드 StableID는 제어 서버가 정하므로 허용 목록은 그 서버에서만 뜻이 있다.
     public private(set) var deviceControlURL: String = ""
+    /// 같은 네트워크의 iPhone이 VPN 없이 직접 연결하게 한다(docs/protocol-addenda.md O).
+    /// 앱이 저장된 설정을 넣는다. 화면에서는 `setDirectEnabled`를 쓴다.
+    public var directEnabled = false
 
     public let nodeName: String
     public let hostDisplayName: String
@@ -112,6 +115,7 @@ public final class HostModel {
     @ObservationIgnored private let tailscaleAPI: TailscaleAPI
     @ObservationIgnored private let tailscaleClients: any TailscaleClientStoring
     @ObservationIgnored private let feedbackKeys: any FeedbackKeyStoring
+    @ObservationIgnored private let advertiser: (any DirectAdvertising)?
     /// OAuth 클라이언트로 받은 API 토큰(1시간). 메모리에만 둔다.
     @ObservationIgnored private var tailscaleAccess: TailscaleAPI.AccessToken?
 
@@ -176,6 +180,7 @@ public final class HostModel {
         tailscaleAPI: TailscaleAPI = TailscaleAPI(),
         tailscaleClients: any TailscaleClientStoring = KeychainTailscaleClientStore(),
         feedbackKeys: any FeedbackKeyStoring = KeychainFeedbackKeyStore(),
+        advertiser: (any DirectAdvertising)? = nil,
         now: @escaping @Sendable () -> Date = { Date() }
     ) {
         self.core = core
@@ -195,6 +200,7 @@ public final class HostModel {
         self.tailscaleAPI = tailscaleAPI
         self.tailscaleClients = tailscaleClients
         self.feedbackKeys = feedbackKeys
+        self.advertiser = advertiser
         let client = tailscaleClients.load()
         self.hasTailscaleClient = client != nil
         self.tailscaleTags = client?.tags ?? []
@@ -480,7 +486,7 @@ public final class HostModel {
         await fileLibrary.deactivate()
         await stopCoreIfStarted()
         isRunning = false
-        status = nil
+        setStatus(nil)
         await refreshLibrary()
     }
 
@@ -491,7 +497,7 @@ public final class HostModel {
         eventTask?.cancel()
         eventTask = nil
         isRunning = false
-        status = nil
+        setStatus(nil)
         pairingState = .idle
         pairRequests = []
         decidingRequestIDs = []
@@ -542,7 +548,7 @@ public final class HostModel {
         guard isRunning else { return }
         do {
             let s = try await core.status()
-            if isRunning { status = s }
+            if isRunning { setStatus(s) }
         } catch {
             lastError = "공유 상태를 읽지 못했습니다: \(Self.message(for: error))"
         }
@@ -583,7 +589,8 @@ public final class HostModel {
             goMemLimitMiB: 0,
             logPath: paths.coreLogFile.path,
             hostDisplayName: hostDisplayName,
-            appVersion: appVersion
+            appVersion: appVersion,
+            directListen: directEnabled
         )
     }
 
@@ -643,7 +650,7 @@ public final class HostModel {
     func handle(_ event: CoreEvent) {
         switch event {
         case .state(let s):
-            if isRunning { status = s }
+            if isRunning { setStatus(s) }
         case .pairRequest(let e):
             pruneExpiredPairRequests()
             pairRequests.removeAll { $0.requestId == e.requestId }
@@ -661,6 +668,8 @@ public final class HostModel {
         case .deviceAdded(let d):
             guard storeApprovedDevice(d, approvedBy: coreControlURL) else { break }
             appendActivity(.deviceAdded(d), "\(d.name) 기기를 허용 목록에 추가했습니다.")
+        case .deviceUpdated(let d):
+            storeDirectToken(of: d)
         case .denied(let e):
             appendActivity(.denied(e), ActivityText.denied(e))
             notePairingDenial(e)
@@ -1016,6 +1025,46 @@ public final class HostModel {
         deviceControlURL = approving
         upsertDevice(device)
         return true
+    }
+
+    /// 기기가 직접 연결에 등록했다(addenda O). 이미 허용한 기기의 토큰 해시만 바꿔 저장한다.
+    /// 그사이 목록에서 지운 기기는 다시 넣지 않는다.
+    private func storeDirectToken(of device: DeviceEntry) {
+        guard coreControlURL == deviceControlURL,
+              let i = devices.firstIndex(where: { $0.id == device.id && $0.nodeStableId == device.nodeStableId }),
+              devices[i].directTokenHash != device.directTokenHash else { return }
+        devices[i].directTokenHash = device.directTokenHash
+        saveDevices()
+    }
+
+    // MARK: 같은 네트워크 직접 연결
+
+    /// 직접 연결 리스너를 켜거나 끈다. 공유 중이면 바로 적용하고, 끄면 Bonjour 광고도 멈춘다.
+    public func setDirectEnabled(_ on: Bool) async {
+        directEnabled = on
+        guard coreStarted else { return syncAdvertisement() }
+        do {
+            try await core.setDirect(on)
+        } catch {
+            lastError = "직접 연결을 \(on ? "켜지" : "끄지") 못했습니다: \(Self.message(for: error))"
+        }
+        await refreshStatus()
+        syncAdvertisement()
+    }
+
+    private func setStatus(_ new: CoreStatus?) {
+        status = new
+        syncAdvertisement()
+    }
+
+    /// 리스너가 열려 있고 설정이 켜져 있을 때만 광고한다.
+    private func syncAdvertisement() {
+        guard let advertiser else { return }
+        if directEnabled, isRunning, let direct = status?.direct, direct.listening, direct.port > 0 {
+            advertiser.advertise(id: direct.id, port: direct.port)
+        } else {
+            advertiser.stop()
+        }
     }
 
     private func upsertDevice(_ device: DeviceEntry) {

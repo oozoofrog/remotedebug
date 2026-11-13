@@ -134,6 +134,7 @@ final class FakeHostCore: HostCore {
         case publish(PublishRequest)
         case unpublish(String)
         case setDevices([DeviceEntry])
+        case setDirect(Bool)
         case openPairing(Int)
         case decide(String, Bool)
     }
@@ -147,6 +148,7 @@ final class FakeHostCore: HostCore {
         /// 게시 취소가 `build_not_found` 밖의 오류로 실패한다.
         var failUnpublish = false
         var failSetDevices = false
+        var failSetDirect = false
         /// `start` 호출마다 하나씩 꺼내 그 문이 열릴 때까지 멈춘다.
         var startGates: [Gate] = []
         /// `decidePairing` 호출마다 하나씩 꺼내 그 문이 열릴 때까지 멈춘다.
@@ -244,6 +246,13 @@ final class FakeHostCore: HostCore {
         if delay > .zero { try await Task.sleep(for: delay) }
         if state.withLock({ $0.failSetDevices }) { throw APIErrorBody(code: "not_running", message: "") }
         state.withLock { $0.appliedDevices.append(devices) }
+    }
+
+    /// 실제 코어처럼 상태의 `direct`를 바꾼다.
+    func setDirect(_ on: Bool) async throws {
+        record(.setDirect(on))
+        if state.withLock({ $0.failSetDirect }) { throw APIErrorBody(code: "internal", message: "port") }
+        state.withLock { $0.status.direct = DirectStatus(listening: on, port: 49152, id: "0123456789abcdef") }
     }
 
     func openPairing(ttlSeconds: Int) async throws -> PairingCode {

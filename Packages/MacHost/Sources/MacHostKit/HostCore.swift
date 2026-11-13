@@ -69,6 +69,8 @@ public protocol HostCore: Sendable {
     func setAgentBoard(_ board: Data) async throws
     /// 허용 목록 전체를 바꾼다. 모델은 이 호출을 한 번에 하나씩 순서대로 보낸다(앞 호출이 끝난 뒤 다음 호출).
     func setDevices(_ devices: [DeviceEntry]) async throws
+    /// 같은 네트워크 직접 연결 리스너를 켜거나 끈다(addenda O). 결과는 다음 `status()`의 `direct`에 나온다.
+    func setDirect(_ on: Bool) async throws
     func openPairing(ttlSeconds: Int) async throws -> PairingCode
     /// 승인하면 허용 목록에 들어간 기기, 거절하면 nil.
     func decidePairing(requestID: String, allow: Bool) async throws -> DeviceEntry?
@@ -78,4 +80,5 @@ public protocol HostCore: Sendable {
 
 extension HostCore {
     public func setAgentBoard(_ board: Data) async throws {}
+    public func setDirect(_ on: Bool) async throws {}
 }

@@ -224,6 +224,8 @@ remotedebug://pair?host=<fqdn>&code=<code>
 
 Swift 앱이 허용 목록을 저장한다. 시작할 때 `rd_host_set_devices`로 코어에 밀어 넣고, 승인되면 코어가 `device-added` 이벤트를 보내 Swift가 저장한다. 앱이 저장하기 전에 종료되면 그 기기는 다시 페어링해야 한다.
 
+선택 필드 `directTokenHash`(같은 네트워크 직접 연결에 등록한 기기의 토큰 해시)는 [protocol-addenda.md](protocol-addenda.md)의 O.4에 있다. 등록하지 않은 기기에는 키가 없다.
+
 ## 6. 클라이언트 동작 (iPhone)
 
 1. 터널 확장이 `mode: "proxy"`로 노드를 시작하고 `rd_proxy_start("127.0.0.1:0")`로 로컬 HTTP CONNECT 프록시를 연다.
@@ -318,6 +320,7 @@ C API 전용 코드: `invalid_config`, `not_running`, `unknown_handle`, `path_ou
 - `publishDir`: 게시본 IPA는 이 폴더 안의 일반 파일이어야 한다(아니면 `path_outside_publish_dir`). 코어는 게시 시점에 크기·SHA-256을 계산해 `build_json`의 값과 비교한다.
 - `allowedTargets`: `proxy` 모드에서 CONNECT를 허용할 `host:port` 목록. 실행 중 변경은 `rd_start`를 다시 호출한다.
 - `goMemLimitMiB`: 0이 아니면 Go 런타임 메모리 한도로 적용한다(NE용).
+- 선택 필드 `directListen`(`host` 모드): `true`면 같은 네트워크 직접 연결 리스너를 함께 연다. 없으면 열지 않는다. [protocol-addenda.md](protocol-addenda.md)의 O.1.
 
 상태(`rd_status`):
 
@@ -340,6 +343,8 @@ C API 전용 코드: `invalid_config`, `not_running`, `unknown_handle`, `path_ou
 `backendState`는 `Stopped`, `Starting`, `NeedsLogin`, `NeedsMachineAuth`, `Running`, `Error` 중 하나다. `NeedsLogin`이면 `authURL`을 채운다.
 
 선택 필드 `peerPaths`(페어링한 기기까지의 경로, 직접·중계)와 터널 모드의 `peerPath`는 [protocol-addenda.md](protocol-addenda.md)의 N.3에 있다. 값이 없으면 키도 없다.
+
+선택 필드 `direct`(같은 네트워크 직접 연결 리스너의 `listening`, `port`, `id`)는 [protocol-addenda.md](protocol-addenda.md)의 O.1에 있다. 리스너를 켠 적이 없으면 키가 없다. 리스너를 켜고 끄는 `rd_host_set_direct`와 이벤트 `device-updated`도 O절에 있다.
 
 ## 10. 이벤트
 

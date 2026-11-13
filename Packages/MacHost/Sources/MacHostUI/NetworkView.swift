@@ -36,6 +36,16 @@ struct NetworkView: View {
 
     private var isStopped: Bool { !model.isRunning && !model.isStarting }
 
+    static let directFooter = "같은 Wi-Fi의 페어링한 iPhone이 VPN 없이 빌드 목록·파일·로그를 주고받습니다. 같은 네트워크의 다른 기기도 이 포트에 접속할 수는 있지만, 페어링한 iPhone의 토큰이 없으면 아무것도 받지 못합니다. 앱 설치는 계속 VPN으로 합니다."
+
+    /// "직접 연결" 줄의 상태 문구.
+    static func directStatusText(_ model: HostModel) -> String {
+        guard model.directEnabled else { return "꺼짐" }
+        guard model.isRunning else { return "공유를 시작하면 켜집니다" }
+        guard let direct = model.status?.direct else { return "여는 중" }
+        return direct.listening ? "켜짐 · 포트 \(direct.port)" : "포트를 열지 못했습니다"
+    }
+
     var body: some View {
         @Bindable var authKey = authKey
         Form {
@@ -109,6 +119,21 @@ struct NetworkView: View {
                     Text("공유 중에만 tailnet 주소를 표시합니다.")
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            Section {
+                Toggle("같은 네트워크에서 직접 연결", isOn: Binding(
+                    get: { model.directEnabled },
+                    set: { on in
+                        UserDefaults.standard.set(on, forKey: LaunchOptions(defaults: .standard).savedDirectListenKey)
+                        Task { await model.setDirectEnabled(on) }
+                    }
+                ))
+                LabeledContent("상태") { Text(Self.directStatusText(model)) }
+            } header: {
+                Text("직접 연결")
+            } footer: {
+                Text(Self.directFooter)
             }
 
             Section {

@@ -38,6 +38,9 @@ char *rd_host_set_agent_board(int64_t handle, const char *board_json);
 char *rd_update_page_set(const char *config_json);
 /* Replaces the allow-list with {"devices":[DeviceEntry]}. Returns {"ok":true}. */
 char *rd_host_set_devices(int64_t handle, const char *devices_json);
+/* Turns the same-network listener on (1) or off (0) (protocol-addenda O).
+ * Returns {"ok":true,"direct":{"listening":bool,"port":N,"id":"…"}}. */
+char *rd_host_set_direct(int64_t handle, int32_t on);
 /* Opens a pairing code; ttl_seconds <= 0 means 300. Returns {"code":"…","expiresAt":"…"}. */
 char *rd_host_pairing_open(int64_t handle, int32_t ttl_seconds);
 /* allow is 0 or 1. Returns {"ok":true,"device":{…}} on approval, {"ok":true} on denial. */

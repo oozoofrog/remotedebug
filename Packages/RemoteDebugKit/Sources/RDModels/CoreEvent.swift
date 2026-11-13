@@ -124,6 +124,8 @@ public enum CoreEvent: Codable, Sendable, Hashable {
     case pairRequest(PairRequestEvent)
     case pairDecided(PairDecidedEvent)
     case deviceAdded(DeviceEntry)
+    /// docs/protocol-addenda.md O: 허용 목록에 있는 기기의 항목이 바뀌었다(직접 연결 토큰 해시).
+    case deviceUpdated(DeviceEntry)
     case denied(DeniedEvent)
     case session(SessionEvent)
     case log(LogEvent)
@@ -148,6 +150,7 @@ public enum CoreEvent: Codable, Sendable, Hashable {
         case .pairRequest: "pair-request"
         case .pairDecided: "pair-decided"
         case .deviceAdded: "device-added"
+        case .deviceUpdated: "device-updated"
         case .denied: "denied"
         case .session: "session"
         case .log: "log"
@@ -168,6 +171,7 @@ public enum CoreEvent: Codable, Sendable, Hashable {
         case "pair-request": self = .pairRequest(try PairRequestEvent(from: decoder))
         case "pair-decided": self = .pairDecided(try PairDecidedEvent(from: decoder))
         case "device-added": self = .deviceAdded(try c.decode(DeviceEntry.self, forKey: .device))
+        case "device-updated": self = .deviceUpdated(try c.decode(DeviceEntry.self, forKey: .device))
         case "denied": self = .denied(try DeniedEvent(from: decoder))
         case "session": self = .session(try SessionEvent(from: decoder))
         case "log": self = .log(try LogEvent(from: decoder))
@@ -188,6 +192,7 @@ public enum CoreEvent: Codable, Sendable, Hashable {
         case .pairRequest(let e): try e.encode(to: encoder)
         case .pairDecided(let e): try e.encode(to: encoder)
         case .deviceAdded(let d): try c.encode(d, forKey: .device)
+        case .deviceUpdated(let d): try c.encode(d, forKey: .device)
         case .denied(let e): try e.encode(to: encoder)
         case .session(let e): try e.encode(to: encoder)
         case .log(let e): try e.encode(to: encoder)

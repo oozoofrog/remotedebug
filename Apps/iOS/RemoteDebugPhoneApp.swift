@@ -22,6 +22,7 @@ final class AppServices {
     let opener: UIKitURLOpener
     let model: ClientModel
     let transfers = FileTransferActivities()
+    private let directConnection = DirectConnection()
     /// 업데이트 앱을 설치하기 전에 필요하면 VPN을 이 앱으로 넘겨받는다.
     let installer: GuardedInstaller
     private var crashDiagnostics: CrashDiagnostics?
@@ -50,8 +51,10 @@ final class AppServices {
             opener: opener,
             tunnel: tunnel,
             logBook: DeviceLogBook(fileURL: DeviceLogBook.defaultFileURL()),
-            crashBook: CrashBook(directory: CrashBook.defaultDirectory())
+            crashBook: CrashBook(directory: CrashBook.defaultDirectory()),
+            direct: directConnection.route
         )
+        directConnection.onNetworkChange = { [weak model] in model?.noteNetworkChange() }
         let transfers = self.transfers
         let model = self.model
         model.onFileTransfer = { transfers.handle($0) }

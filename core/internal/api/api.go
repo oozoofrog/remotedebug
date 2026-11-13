@@ -233,6 +233,19 @@ func HostSetDevices(h int64, devicesJSON string) string {
 	return okJSON(map[string]bool{"ok": true})
 }
 
+// HostSetDirect implements rd_host_set_direct (protocol-addenda O): turns the
+// same-network listener on or off and returns the new status.direct.
+func HostSetDirect(h int64, on bool) string {
+	n, err := lookup(h)
+	if err != nil {
+		return errJSON(err)
+	}
+	if err := n.SetDirect(on); err != nil {
+		return errJSON(err)
+	}
+	return okJSON(map[string]any{"ok": true, "direct": n.Status().Direct})
+}
+
 // HostPairingOpen implements rd_host_pairing_open (ttl <= 0 means 300 s).
 func HostPairingOpen(h int64, ttlSeconds int) string {
 	hs, err := lookupHost(h)

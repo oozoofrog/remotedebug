@@ -158,8 +158,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 paths = appPaths
                 lock = try StateDirLock.acquire(root: appPaths.root)
                 let bookmarks = UserDefaultsFolderBookmarks(defaults: defaults, key: options.folderBookmarkKey, securityScoped: false)
-                let model = HostModel(core: RDCoreHost(), paths: appPaths, bookmarks: bookmarks, id8: options.nodeID8)
+                let model = HostModel(core: RDCoreHost(), paths: appPaths, bookmarks: bookmarks, id8: options.nodeID8,
+                                      advertiser: BonjourAdvertiser())
                 model.controlURL = options.controlURL
+                model.directEnabled = options.directListen
                 launch = .ready(model)
             } catch StateDirLock.Failure.held {
                 launch = .failed(.alreadyRunning)

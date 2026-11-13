@@ -25,6 +25,8 @@ final class VPNServices {
     let opener = UIKitURLOpener()
     /// RemoteDebug 앱이 공용 설정에 저장한 Mac. 페어링은 RemoteDebug 앱에서만 한다.
     private let hostStore = UserDefaultsPairedHostStore(defaults: SharedContainer.defaults)
+    /// 같은 Wi-Fi의 Mac에는 VPN 없이 연결한다. 모델을 새로 만들어도 같은 경로를 쓴다.
+    private let directConnection = DirectConnection()
     /// 빌드 목록과 설치. 페어링한 Mac이 바뀌면 새로 만든다.
     private(set) var model: ClientModel
     /// RemoteDebug를 설치하기 전에 VPN을 이 앱의 터널로 옮긴다.
@@ -41,17 +43,19 @@ final class VPNServices {
         let tunnel = TunnelController(settings: TunnelSettingsStore(legacy: nil))
         self.tunnel = tunnel
         installer = GuardedInstaller(tunnel: tunnel, role: .updater)
-        model = Self.makeModel(store: hostStore, opener: opener, tunnel: tunnel)
+        model = Self.makeModel(store: hostStore, opener: opener, tunnel: tunnel, direct: directConnection.route)
+        directConnection.onNetworkChange = { [weak self] in self?.model.noteNetworkChange() }
     }
 
-    private static func makeModel(store: UserDefaultsPairedHostStore, opener: UIKitURLOpener, tunnel: TunnelController) -> ClientModel {
+    private static func makeModel(store: UserDefaultsPairedHostStore, opener: UIKitURLOpener, tunnel: TunnelController, direct: DirectRoute) -> ClientModel {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
         return ClientModel(
             deviceName: UIDevice.current.name,
             client: ClientInfo(osVersion: UIDevice.current.systemVersion, appVersion: version),
             store: store,
             opener: opener,
-            tunnel: tunnel
+            tunnel: tunnel,
+            direct: direct
         )
     }
 
@@ -79,7 +83,7 @@ final class VPNServices {
     func syncPairing() async {
         let stored = hostStore.load()
         if let current = model.host, stored?.hostId != current.hostId || stored?.fqdn != current.fqdn {
-            model = Self.makeModel(store: hostStore, opener: opener, tunnel: tunnel)
+            model = Self.makeModel(store: hostStore, opener: opener, tunnel: tunnel, direct: directConnection.route)
         }
         if model.host == nil {
             // 저장된 Mac을 불러오고 목록을 받는다. VPN이 꺼져 있으면 켜질 때 받는다.
@@ -313,7 +317,7 @@ struct VPNScreen: View {
             return VPNStatusText.autoStarting
         }
         switch tunnel.state {
-        case .off: return "꺼짐"
+        case .off: return services.model.isDirectConnected ? VPNStatusText.direct : "꺼짐"
         case .connecting: return "연결하는 중"
         case .disconnecting: return "끄는 중"
         case .connected: return VPNStatusText.connected(holder: tunnel.vpnHolder, path: tunnel.peerPath)
@@ -331,6 +335,10 @@ struct VPNScreen: View {
         if let message = tunnel.disconnectMessage { return message }
         if services.model.vpnAutoStarted, tunnel.state == .connected {
             return "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다."
+        }
+        if services.model.isDirectConnected {
+            if tunnel.state == .off { return VPNStatusText.directDetail }
+            if tunnel.state == .connected { return VPNStatusText.directWithVPNDetail }
         }
         return nil
     }

@@ -58,6 +58,9 @@ type DeviceEntry struct {
 	NodeName     string `json:"nodeName"`
 	LoginName    string `json:"loginName"`
 	PairedAt     string `json:"pairedAt"`
+	// DirectTokenHash is the hex SHA-256 of the device's direct token
+	// (protocol-addenda O). Empty until the device enrolls.
+	DirectTokenHash string `json:"directTokenHash,omitempty"`
 }
 
 // Peer is the tailnet identity of a request, as reported by WhoIs.

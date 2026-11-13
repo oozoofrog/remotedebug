@@ -32,6 +32,8 @@ public struct CoreConfig: Codable, Sendable, Hashable {
     public var hostDisplayName: String?
     /// `/v1/info`의 `appVersion`.
     public var appVersion: String?
+    /// docs/protocol-addenda.md O: 호스트 모드에서 같은 네트워크 직접 연결 리스너를 시작할 때 연다. `true`일 때만 인코딩한다.
+    public var directListen: Bool
 
     public init(
         mode: Mode,
@@ -49,7 +51,8 @@ public struct CoreConfig: Codable, Sendable, Hashable {
         utunFd: Int? = nil,
         mtu: Int? = nil,
         hostDisplayName: String? = nil,
-        appVersion: String? = nil
+        appVersion: String? = nil,
+        directListen: Bool = false
     ) {
         self.mode = mode
         self.stateDir = stateDir
@@ -67,12 +70,34 @@ public struct CoreConfig: Codable, Sendable, Hashable {
         self.mtu = mtu
         self.hostDisplayName = hostDisplayName
         self.appVersion = appVersion
+        self.directListen = directListen
     }
 
     enum CodingKeys: String, CodingKey {
         case mode, stateDir, hostname, authKey, controlURL, ephemeral, listenTLS, port
         case publishDir, allowedTargets, goMemLimitMiB, logPath
-        case utunFd, mtu, hostDisplayName, appVersion
+        case utunFd, mtu, hostDisplayName, appVersion, directListen
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        mode = try c.decode(Mode.self, forKey: .mode)
+        stateDir = try c.decode(String.self, forKey: .stateDir)
+        hostname = try c.decode(String.self, forKey: .hostname)
+        authKey = try c.decode(String.self, forKey: .authKey)
+        controlURL = try c.decode(String.self, forKey: .controlURL)
+        ephemeral = try c.decode(Bool.self, forKey: .ephemeral)
+        listenTLS = try c.decode(Bool.self, forKey: .listenTLS)
+        port = try c.decode(Int.self, forKey: .port)
+        publishDir = try c.decode(String.self, forKey: .publishDir)
+        allowedTargets = try c.decode([String].self, forKey: .allowedTargets)
+        goMemLimitMiB = try c.decode(Int.self, forKey: .goMemLimitMiB)
+        logPath = try c.decode(String.self, forKey: .logPath)
+        utunFd = try c.decodeIfPresent(Int.self, forKey: .utunFd)
+        mtu = try c.decodeIfPresent(Int.self, forKey: .mtu)
+        hostDisplayName = try c.decodeIfPresent(String.self, forKey: .hostDisplayName)
+        appVersion = try c.decodeIfPresent(String.self, forKey: .appVersion)
+        directListen = try c.decodeIfPresent(Bool.self, forKey: .directListen) ?? false
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -93,6 +118,7 @@ public struct CoreConfig: Codable, Sendable, Hashable {
         try c.encodeIfPresent(mtu, forKey: .mtu)
         if let hostDisplayName, !hostDisplayName.isEmpty { try c.encode(hostDisplayName, forKey: .hostDisplayName) }
         if let appVersion, !appVersion.isEmpty { try c.encode(appVersion, forKey: .appVersion) }
+        if directListen { try c.encode(true, forKey: .directListen) }
     }
 }
 
@@ -141,6 +167,8 @@ public struct CoreStatus: Codable, Sendable, Hashable {
     public var peerPath: PeerPath?
     /// docs/protocol-addenda.md N: 호스트 노드가 페어링한 기기까지 가는 경로(`nodeStableId` 기준). 모르는 기기는 없다.
     public var peerPaths: [String: PeerPath]?
+    /// docs/protocol-addenda.md O: 같은 네트워크 직접 연결 리스너. 이번 실행에서 한 번도 켜지 않았으면 없다.
+    public var direct: DirectStatus?
 
     public init(
         backendState: BackendState,
@@ -157,7 +185,8 @@ public struct CoreStatus: Codable, Sendable, Hashable {
         errorMessage: String? = nil,
         tunnel: TunnelStatus? = nil,
         peerPath: PeerPath? = nil,
-        peerPaths: [String: PeerPath]? = nil
+        peerPaths: [String: PeerPath]? = nil,
+        direct: DirectStatus? = nil
     ) {
         self.backendState = backendState
         self.authURL = authURL
@@ -174,12 +203,13 @@ public struct CoreStatus: Codable, Sendable, Hashable {
         self.tunnel = tunnel
         self.peerPath = peerPath
         self.peerPaths = peerPaths
+        self.direct = direct
     }
 
     enum CodingKeys: String, CodingKey {
         case backendState, authURL, hostname, fqdn, tailscaleIPs, certDomains
         case tlsReady, listening, publishedBuilds, pairedDevices, rssMiB
-        case errorMessage, tunnel, peerPath, peerPaths
+        case errorMessage, tunnel, peerPath, peerPaths, direct
     }
 
     public init(from decoder: any Decoder) throws {
@@ -200,6 +230,23 @@ public struct CoreStatus: Codable, Sendable, Hashable {
         // 경로는 표시용이다. 모양이 달라도 상태 전체를 버리지 않는다.
         peerPath = (try? c.decodeIfPresent(PeerPath.self, forKey: .peerPath)) ?? nil
         peerPaths = (try? c.decodeIfPresent([String: PeerPath].self, forKey: .peerPaths)) ?? nil
+        direct = (try? c.decodeIfPresent(DirectStatus.self, forKey: .direct)) ?? nil
+    }
+}
+
+/// docs/protocol-addenda.md O `rd_status.direct`: 같은 네트워크 직접 연결 리스너.
+public struct DirectStatus: Codable, Sendable, Hashable {
+    /// 지금 연결을 받고 있다.
+    public var listening: Bool
+    /// 처음 한 번 정해 저장한 포트.
+    public var port: Int
+    /// Bonjour 인스턴스 이름으로 쓰는 무작위 식별자(16진수 16자).
+    public var id: String
+
+    public init(listening: Bool, port: Int, id: String) {
+        self.listening = listening
+        self.port = port
+        self.id = id
     }
 }
 

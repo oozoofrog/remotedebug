@@ -23,6 +23,7 @@ import (
 	"tailscale.com/tsnet"
 
 	"remotedebug/core/internal/apierr"
+	"remotedebug/core/internal/direct"
 	"remotedebug/core/internal/events"
 	"remotedebug/core/internal/host"
 	"remotedebug/core/internal/ids"
@@ -42,6 +43,9 @@ type Options struct {
 	Limits host.Limits
 	// Tun replaces the utunFd device in tunnel mode (in-memory TUN for tests).
 	Tun tun.Device
+	// Direct changes where the same-network listener binds and whom it
+	// accepts (tests use loopback).
+	Direct direct.Options
 }
 
 // Timings of the background work; variables so tests can shorten them.
@@ -79,6 +83,17 @@ type Status struct {
 	// PeerPaths is the host node's path to each paired device, keyed by
 	// nodeStableId. Devices without recent traffic are left out.
 	PeerPaths map[string]PeerPath `json:"peerPaths,omitempty"`
+	// Direct is the same-network listener (docs/protocol-addenda.md O). Host
+	// mode only; absent until it was turned on once in this run.
+	Direct *DirectStatus `json:"direct,omitempty"`
+}
+
+// DirectStatus is status.direct. The host app advertises ID on Port over
+// Bonjour while Listening.
+type DirectStatus struct {
+	Listening bool   `json:"listening"`
+	Port      int    `json:"port"`
+	ID        string `json:"id"`
 }
 
 // PeerPath says how packets reach one peer: directly (UDP to Addr) or through
@@ -235,7 +250,11 @@ type Node struct {
 	pathPeer    string // tunnel: MagicDNS name whose path is reported (SetPathPeer)
 	peerPath    *PeerPath
 	peerPaths   map[string]PeerPath // host: paired devices by stable ID
-	tunErr      string // tunnel: set when the engine stopped by itself
+	tunErr      string              // tunnel: set when the engine stopped by itself
+
+	directOpt direct.Options
+	directID  *direct.Identity // host: loaded when the direct listener is first turned on
+	directSrv *http.Server     // host: non-nil while the direct listener runs
 }
 
 // Start validates cfg, starts the node and returns immediately; the node
@@ -299,12 +318,20 @@ func Start(cfg *Config, opt Options) (_ *Node, err error) {
 			Info:       n.info,
 			BaseURL:    n.baseURL,
 			Limits:     opt.Limits,
+			Direct:     n.directInfo,
 		})
 		if err != nil {
 			n.closeLog()
 			return nil, err
 		}
 		n.host = h
+		n.directOpt = opt.Direct
+		if cfg.DirectListen {
+			// Independent of the tailnet: a failure here never stops the node.
+			if err := n.SetDirect(true); err != nil {
+				n.logf("warn", "직접 연결 리스너를 열지 못했습니다: %v", err)
+			}
+		}
 	}
 
 	n.srv = &tsnet.Server{
@@ -320,6 +347,7 @@ func Start(cfg *Config, opt Options) (_ *Node, err error) {
 	}
 	if err := n.srv.Start(); err != nil {
 		if n.host != nil {
+			n.SetDirect(false)
 			n.host.Close()
 		}
 		n.closeLog()
@@ -510,8 +538,13 @@ func shortName(fqdn string) string {
 func (n *Node) info() host.Info {
 	n.mu.Lock()
 	defer n.mu.Unlock()
+	hostID := ids.HostID(n.selfID)
+	if n.selfID == "" && n.directID != nil && n.directID.HostID() != "" {
+		// The direct listener answers before the tailnet node is up.
+		hostID = n.directID.HostID()
+	}
 	return host.Info{
-		HostID:     ids.HostID(n.selfID),
+		HostID:     hostID,
 		HostName:   n.cfg.HostDisplayName,
 		FQDN:       n.fqdn,
 		AppVersion: n.cfg.AppVersion,
@@ -637,6 +670,65 @@ func (n *Node) refresh() {
 		n.fqdn = strings.TrimSuffix(st.Self.DNSName, ".")
 		n.selfID = string(st.Self.ID)
 	}
+	if n.directID != nil && n.selfID != "" {
+		n.directID.SetHostID(ids.HostID(n.selfID))
+	}
+}
+
+// SetDirect turns the same-network listener on or off (host mode,
+// docs/protocol-addenda.md O). It does not depend on the tailnet state.
+func (n *Node) SetDirect(on bool) error {
+	if n.host == nil {
+		return apierr.InvalidConfig("host 모드가 아닙니다.")
+	}
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if !on {
+		if n.directSrv != nil {
+			n.directSrv.Close()
+			n.directSrv = nil
+		}
+		return nil
+	}
+	if n.closed {
+		return apierr.NotRunning("노드가 종료되었습니다.")
+	}
+	if n.directSrv != nil {
+		return nil
+	}
+	if n.directID == nil {
+		id, err := direct.Load(n.cfg.StateDir)
+		if err != nil {
+			return apierr.Internal("직접 연결 키를 준비하지 못했습니다: " + err.Error())
+		}
+		n.directID = id
+		if n.selfID != "" {
+			id.SetHostID(ids.HostID(n.selfID))
+		}
+	}
+	ln, err := n.directID.Listen(n.directOpt)
+	if err != nil {
+		return apierr.Internal("직접 연결 포트를 열지 못했습니다: " + err.Error())
+	}
+	n.directSrv = &http.Server{
+		Handler:           n.host.DirectHandler(),
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+		ErrorLog:          log.New(io.Discard, "", 0),
+	}
+	go n.directSrv.Serve(ln)
+	return nil
+}
+
+// directInfo tells the host what an enrolling device needs to reach the
+// direct listener; false while it is off.
+func (n *Node) directInfo() (host.DirectInfo, bool) {
+	n.mu.Lock()
+	defer n.mu.Unlock()
+	if n.directSrv == nil || n.directID == nil {
+		return host.DirectInfo{}, false
+	}
+	return host.DirectInfo{ID: n.directID.ID(), Port: n.directID.Port(), SPKI: n.directID.SPKI()}, true
 }
 
 func (n *Node) kickLogin() {
@@ -769,6 +861,9 @@ func (n *Node) Status() Status {
 	if n.closed {
 		st.BackendState, st.ErrorMessage = "Stopped", ""
 	}
+	if n.directID != nil {
+		st.Direct = &DirectStatus{Listening: n.directSrv != nil && !n.closed, Port: n.directID.Port(), ID: n.directID.ID()}
+	}
 	peers := n.peerCount
 	if n.peerPath != nil && st.BackendState == "Running" {
 		p := *n.peerPath
@@ -864,6 +959,8 @@ func (n *Node) Close() error {
 	}
 	n.closed = true
 	hs, prx := n.httpSrv, n.prx
+	ds := n.directSrv
+	n.directSrv = nil
 	n.mu.Unlock()
 
 	n.cancel()
@@ -873,6 +970,9 @@ func (n *Node) Close() error {
 	}
 	if hs != nil {
 		hs.Close()
+	}
+	if ds != nil {
+		ds.Close()
 	}
 	if prx != nil {
 		prx.Close()

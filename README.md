@@ -74,12 +74,25 @@ The build scripts call `eyebuild`; without it, create the [stand-in script](docs
 
 ## VPN: automatic on and off, direct or relayed
 
-All traffic between the Mac and the iPhone goes through the tailnet, which on the iPhone means the VPN. When both are on the same network Tailscale connects them directly instead of through a relay server.
+Traffic between the Mac and the iPhone goes through the tailnet, which on the iPhone means the VPN, unless both are on the same network and the [direct connection](#same-network-direct-connection-no-vpn) below is available. On the tailnet, when both are on the same network Tailscale connects them directly instead of through a relay server.
 
 - **Automatic on**: when the app needs the Mac (refreshing the build list, installing, receiving a file, sending logs, crashes or feedback, pairing from a link) and no VPN is up, it turns its own VPN on, waits up to 15 seconds, and shows "VPN 켜는 중…". It does this only when its VPN configuration already exists and is the selected one. It never triggers the iOS "Add VPN Configurations" prompt, never switches away from another selected VPN, and never replaces another app's running VPN; those stay behind the buttons.
 - **Automatic off**: a VPN the app turned on by itself is turned off after 30 seconds without an install (including one waiting in the iOS installer), a file transfer, or a send. A VPN you turned on yourself, or another app's VPN, is left alone.
 - **Path**: the VPN card shows "연결됨 · 직접 연결(같은 네트워크)" (direct, same network), "연결됨 · 직접 연결" (direct), or "연결됨 · 중계 서버 경유" (through a relay). The Mac's **기기** (Devices) screen shows the same per device.
 - **On Demand (optional, off by default)**: Settings > "Mac에 연결할 때 VPN 자동으로 켜기(주문형)" saves an iOS On Demand rule for the paired Mac's address. With it on, iOS turns the VPN back on even after you turn it off.
+
+## Same-network direct connection (no VPN)
+
+When the Mac and the iPhone are on the same Wi-Fi, the iPhone app talks to the Mac directly, without the VPN: build list, file list and downloads, logs, crashes and feedback. When that is not possible the app falls back to the VPN path above and turns the VPN on by itself. Details are in [docs/protocol-addenda.md, section O](docs/protocol-addenda.md#o-같은-네트워크-직접-연결).
+
+- **How it connects**: the Mac opens a second HTTPS port for private and link-local addresses only and advertises it over Bonjour (`_remotedebug._tcp`) under a random id, with no Mac name or tailnet address in the advertisement. The iPhone enrolls once over the tailnet and gets a device token and the listener's public-key pin. After that it connects to `https://<Mac LAN IP>:<port>`, accepts only that key, and sends the token inside TLS 1.3.
+- **Installing still uses the VPN**: the iOS installer (`itms-services`) only downloads from an HTTPS address with a system-trusted certificate, and only the tailnet name has one. Tapping install turns the VPN on automatically, also while the direct connection is in use.
+- **Fallback**: on a connection error the app looks for the Mac once more, then sends the request over the VPN and does not look again for 60 seconds. It looks again when the network changes or the app comes back to the foreground. If the iOS local network permission is denied the app uses the VPN path without asking again.
+- **Screens**: the VPN card shows "직접 연결(같은 Wi-Fi, VPN 없이)" (direct, same Wi-Fi, no VPN). The Mac's **네트워크** (Network) screen has the switch "같은 네트워크에서 직접 연결" (on by default) and shows the port; the **기기** (Devices) screen marks enrolled devices.
+- **What changes for security**: anyone on the same LAN can reach the direct port's TLS, where before they had to be on the tailnet. Using the API needs a paired device's token; every other request gets `403`, and the direct port has no pairing, enrollment, install or web page. Tailscale ACLs do not apply to the direct path. Turn the switch off on the Mac if that is not acceptable.
+- **Limits**: a file received over the direct path is downloaded only while the app is running (interrupted downloads resume); the VPN path keeps using the system background session.
+
+Not verified on a real iPhone: the local network permission prompt, connecting to the pinned self-signed certificate under App Transport Security, sharing the token between the two iPhone apps through the Keychain, and the macOS firewall prompt. Unit tests and a loopback TLS test on the Mac pass.
 
 None of this has been verified on a real iPhone; only unit tests and simulator builds pass. Rules and the status field are in [protocol addenda N](docs/protocol-addenda.md#n-vpn-자동-켜기와-경로-표시).
 
@@ -133,6 +146,8 @@ Sending needs the RemoteDebug VPN on the iPhone. Without it the app keeps the re
 | --- | --- | --- |
 | Go core: pairing, sessions, IPA serving over a fake tailnet (`testcontrol`) | Confirmed | `scripts/go.sh test -race -count=1 ./...` |
 | Go core tunnel mode: fake tailnet and in-memory TUN | Confirmed | `scripts/go.sh test -race -count=1 -run TestTunnel -v ./...` |
+| Same-network direct connection: listener, token, enrollment, key pin over real TLS 1.3 on loopback; route selection with fakes | Confirmed | `scripts/go.sh test ./...`, `swift test --package-path Packages/PhoneClient` |
+| Same-network direct connection between a real Mac and iPhone | Not confirmed | [Section O.9](docs/protocol-addenda.md#o9-보안-속성과-확인하지-못한-것) |
 | `RDCore.xcframework` (macOS, iOS, iOS simulator; arm64) | Confirmed | `scripts/build-core.sh` |
 | Debug build checks and IPA packaging: unit tests, fixtures, real Debug builds of the author's machine | Confirmed | `swift test --package-path Packages/RemoteDebugKit`, `scripts/check-ipa-roundtrip.sh`, `scripts/check-real-builds.sh` |
 | Mac host: real Go core with a fake tailnet, app launch and quit | Confirmed | `RD_TEST_TMPDIR=<writable folder> swift test --package-path Packages/MacHost`, `RD_E2E_APP=1 scripts/e2e-mac.sh` |
