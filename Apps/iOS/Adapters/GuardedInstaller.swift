@@ -27,7 +27,9 @@ final class GuardedInstaller {
         if case .working = preparations[build.id] { return }
         tunnel.refreshExternal()
         let holder = tunnel.vpnHolder
-        guard InstallVPNGuard.takesOverFirst(role: role, installing: build.bundleId, pairedAppID: AppPair.otherAppID, holder: holder) else {
+        let takesOver = InstallVPNGuard.takesOverFirst(role: role, installing: build.bundleId, pairedAppID: AppPair.otherAppID, holder: holder)
+            || InstallVPNGuard.connectsOwnFirst(state: tunnel.currentState(), holder: holder, configuration: tunnel.autoStartConfiguration)
+        guard takesOver else {
             preparations[build.id] = nil
             model.install(build)
             return

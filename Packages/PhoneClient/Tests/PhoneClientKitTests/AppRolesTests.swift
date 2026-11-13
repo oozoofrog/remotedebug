@@ -102,4 +102,15 @@ import Testing
         _ = UserDefaultsPairedHostStore(defaults: defaults, legacy: defaults)
         #expect(!defaults.bool(forKey: UserDefaultsPairedHostStore.migratedKey))
     }
+
+    @Test func VPN이_꺼져_있고_자동으로_켤_수_없으면_설치_전에_이_앱의_VPN을_켠다() {
+        #expect(InstallVPNGuard.connectsOwnFirst(state: .off, holder: .none, configuration: .missing))
+        #expect(InstallVPNGuard.connectsOwnFirst(state: .off, holder: .none, configuration: .disabled))
+        // 자동으로 켤 수 있으면 모델이 켠다.
+        #expect(!InstallVPNGuard.connectsOwnFirst(state: .off, holder: .none, configuration: .ready))
+        // 다른 VPN이 켜져 있거나 이미 연결돼 있으면 건드리지 않는다.
+        #expect(!InstallVPNGuard.connectsOwnFirst(state: .off, holder: .other, configuration: .missing))
+        #expect(!InstallVPNGuard.connectsOwnFirst(state: .connected, holder: .none, configuration: .missing))
+        #expect(!InstallVPNGuard.connectsOwnFirst(state: .needsLogin(authURL: nil), holder: .none, configuration: .missing))
+    }
 }
