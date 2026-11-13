@@ -3,7 +3,7 @@ import MacHostKit
 import RDModels
 import SwiftUI
 
-/// iPhone이 보낸 크래시 기록: 목록과 원문.
+/// iPhone이 보낸 크래시 기록과 피드백: 목록과 원문.
 struct CrashLogsView: View {
     @Environment(HostModel.self) private var model
     @State private var selection: String?
@@ -24,9 +24,9 @@ struct CrashLogsView: View {
         Group {
             if store.items.isEmpty {
                 ContentUnavailableView {
-                    Label("받은 크래시 기록 없음", systemImage: "exclamationmark.triangle")
+                    Label("받은 크래시·피드백 없음", systemImage: "exclamationmark.triangle")
                 } description: {
-                    Text("RemoteDebug iPhone 앱이 비정상 종료되면 다시 열 때 기록을 보냅니다. 다른 앱의 기록은 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 열고, 공유 버튼으로 RemoteDebug에 넘기면 여기로 들어옵니다.")
+                    Text("RemoteDebug iPhone 앱이 비정상 종료되면 다시 열 때 기록을 보냅니다. 다른 앱의 기록은 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 열고, 공유 버튼으로 RemoteDebug에 넘기면 여기로 들어옵니다. 프로젝트 화면의 \"크래시·피드백 보내기 추가\"대로 패키지를 넣은 앱은 자기 크래시와 피드백을 직접 보냅니다.")
                 }
             } else {
                 HSplitView {
@@ -45,7 +45,7 @@ struct CrashLogsView: View {
                 }
             }
         }
-        .navigationTitle("크래시")
+        .navigationTitle("크래시·피드백")
         .searchable(text: $search, placement: .toolbar, prompt: "앱·기기 검색")
         .toolbar {
             ToolbarItemGroup {
@@ -84,11 +84,15 @@ private struct CrashRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(item.title).font(.headline).lineLimit(1)
+            HStack(spacing: 6) {
+                Image(systemName: item.kind == .feedback ? "text.bubble" : "exclamationmark.triangle")
+                    .foregroundStyle(item.kind == .feedback ? Color.accentColor : Color.orange)
+                Text(item.title).font(.headline).lineLimit(1)
+            }
             Text(item.crashedAt.formatted(date: .abbreviated, time: .standard))
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            Text("\(item.appVersion) · \(item.deviceName)")
+            Text("\(item.kind.label) · \(item.appVersion) · \(item.deviceName)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

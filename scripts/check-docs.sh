@@ -144,7 +144,7 @@ for spec, body in specs.items():
             packages.add(key.group(1))
     bundle_ids.update(m.rstrip(".") for m in BUNDLE_ID.findall(body))
 modules = set()
-for manifest in glob.glob("Packages/*/Package.swift"):
+for manifest in glob.glob("Packages/*/Package.swift") + glob.glob("Package.swift"):
     modules.update(re.findall(r'\bname:\s*"([^"]+)"', read(manifest)))
 known_names = targets | schemes | packages | modules
 MODULE_SPAN = re.compile(r"(?:MacHost|PhoneClient|RD|RemoteDebug)[A-Z][A-Za-z0-9]*")

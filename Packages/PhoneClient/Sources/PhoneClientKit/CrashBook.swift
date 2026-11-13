@@ -68,7 +68,7 @@ public final class CrashBook {
 
     /// 공유하거나 열 파일. 메모리에만 두면 `nil`.
     public func fileURL(_ item: Item) -> URL? {
-        directory?.appendingPathComponent("\(item.id).\(item.kind == .ips ? "ips" : "json")")
+        directory?.appendingPathComponent("\(item.id).\(item.kind.fileExtension)")
     }
 
     public func text(_ item: Item) -> String? {

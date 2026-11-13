@@ -30,4 +30,8 @@ func TestDeviceCrashValidatesBody(t *testing.T) {
 	if w.Code != http.StatusAccepted || !strings.Contains(w.Body.String(), `"accepted":1`) {
 		t.Fatalf("status %d body %s", w.Code, w.Body)
 	}
+	w = servePost(h, "/v1/crashes", `{"kind":"feedback","bundleId":"com.example.app","text":"버튼이 눌리지 않아요"}`)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("feedback status %d body %s", w.Code, w.Body)
+	}
 }

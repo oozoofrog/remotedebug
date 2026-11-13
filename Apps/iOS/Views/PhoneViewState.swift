@@ -164,6 +164,8 @@ struct SettingsActions {
     var openInstallPage: () -> Void = {}
     /// iPhone 설정 앱을 연다(분석 데이터 화면을 먼저 시도한다).
     var openAnalyticsData: () -> Void = {}
+    /// RemoteDebug 앱에 대한 피드백을 기록에 더하고 Mac에 보낸다. `includeLogs`면 최근 진단 로그를 붙인다.
+    var sendFeedback: @MainActor @Sendable (_ message: String, _ includeLogs: Bool) async -> Void = { _, _ in }
     var crashText: (CrashBook.Item) -> String? = { _ in nil }
     var crashFile: (CrashBook.Item) -> URL? = { _ in nil }
     var deleteCrash: (_ id: String) -> Void = { _ in }

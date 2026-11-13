@@ -18,8 +18,8 @@ const (
 )
 
 // CrashReport is one crash report a paired device sends: an .ips file the
-// user shared into the phone app, or a MetricKit crash diagnostic of the
-// phone app itself.
+// user shared into the phone app, a MetricKit crash diagnostic an app
+// collected about itself, or feedback text a person wrote in an app.
 type CrashReport struct {
 	Kind       string `json:"kind"`
 	Name       string `json:"name"`
@@ -41,8 +41,8 @@ func (h *Host) handleDeviceCrash(w http.ResponseWriter, r *http.Request) {
 		apierr.Write(w, apierr.BadRequest("크래시 기록 본문을 읽을 수 없습니다."))
 		return
 	}
-	if c.Kind != "ips" && c.Kind != "metrickit" {
-		apierr.Write(w, apierr.BadRequest("kind는 ips 또는 metrickit이어야 합니다."))
+	if c.Kind != "ips" && c.Kind != "metrickit" && c.Kind != "feedback" {
+		apierr.Write(w, apierr.BadRequest("kind는 ips, metrickit, feedback 가운데 하나여야 합니다."))
 		return
 	}
 	c.Text = strings.ToValidUTF8(c.Text, "?")

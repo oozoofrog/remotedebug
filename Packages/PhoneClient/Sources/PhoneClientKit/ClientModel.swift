@@ -1236,7 +1236,7 @@ public final class ClientModel {
             return
         }
         guard let item = crashBook.add(report) else { return }
-        log(.error, "crash", "크래시 기록 \(item.id): \(report.name), \(report.bundleId) \(report.appVersion), \(report.crashedAt.formatted(Date.ISO8601FormatStyle()))")
+        log(report.kind == .feedback ? .info : .error, "crash", "\(report.kind.label) 기록 \(item.id): \(report.name), \(report.bundleId) \(report.appVersion), \(report.crashedAt.formatted(Date.ISO8601FormatStyle()))")
         await sendCrashes()
     }
 

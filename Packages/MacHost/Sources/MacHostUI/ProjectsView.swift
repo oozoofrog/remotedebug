@@ -131,6 +131,9 @@ private struct ProjectRow: View {
     let remove: () -> Void
 
     @State private var scheme = ""
+    @State private var showsFeedbackSetup = false
+    @State private var feedbackAdded = true
+    @Environment(HostModel.self) private var host
 
     private var schemes: [String] { projects.schemes[project.id] ?? [] }
     private var phase: ProjectsModel.Phase? { projects.phases[project.id] }
@@ -164,6 +167,7 @@ private struct ProjectRow: View {
                 .disabled(scheme.isEmpty || phase != nil)
                 Menu {
                     Button("에이전트 연결…", action: connectAgents)
+                    Button("크래시·피드백 보내기 추가…") { showsFeedbackSetup = true }
                     Button("스킴 다시 읽기") { Task { await reloadSchemes() } }
                     Button("Finder에서 보기") { NSWorkspace.shared.activateFileViewerSelecting([project.containerURL]) }
                     Divider()
@@ -176,10 +180,24 @@ private struct ProjectRow: View {
                 .fixedSize()
             }
             status
+            if !feedbackAdded {
+                HStack(spacing: 8) {
+                    Label("이 앱은 크래시 기록과 피드백을 Mac에 보내지 않습니다.", systemImage: "bubble.left.and.exclamationmark.bubble.right")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Button("추가 방법") { showsFeedbackSetup = true }
+                        .buttonStyle(.link)
+                        .font(.callout)
+                }
+            }
         }
         .rdCard()
+        .sheet(isPresented: $showsFeedbackSetup, onDismiss: { feedbackAdded = FeedbackSetup.isAdded(to: project) }) {
+            FeedbackSetupSheet(project: project, host: host.status?.fqdn ?? "")
+        }
         .onChange(of: schemes) { pickScheme() }
         .task(id: project.id) {
+            feedbackAdded = FeedbackSetup.isAdded(to: project)
             if schemes.isEmpty { await reloadSchemes() } else { pickScheme() }
         }
     }

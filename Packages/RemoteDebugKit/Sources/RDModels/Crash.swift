@@ -8,6 +8,26 @@ public struct CrashReport: Codable, Sendable, Hashable {
         case ips
         /// iPhone 앱 자신의 크래시를 MetricKit이 알려 준 JSON.
         case metrickit
+        /// 사람이 앱에서 쓴 피드백. `text`가 내용이다.
+        case feedback
+
+        /// 원문을 저장할 파일의 확장자.
+        public var fileExtension: String {
+            switch self {
+            case .ips: "ips"
+            case .metrickit: "json"
+            case .feedback: "txt"
+            }
+        }
+
+        /// 목록에 보일 종류 이름.
+        public var label: String {
+            switch self {
+            case .ips: "크래시"
+            case .metrickit: "크래시(MetricKit)"
+            case .feedback: "피드백"
+            }
+        }
     }
 
     public var kind: Kind
@@ -56,6 +76,15 @@ public struct CrashReport: Codable, Sendable, Hashable {
 
     /// 코어가 받는 본문 크기 한도(바이트).
     public static let maxTextBytes = 1536 << 10
+
+    /// 사람이 쓴 피드백에서 기록을 만든다. `details`는 내용 아래에 붙일 참고 정보(기기, 최근 로그 등)다.
+    public static func feedback(message: String, bundleId: String, appVersion: String, details: String = "", date: Date) -> CrashReport {
+        let stamp = date.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true))
+        var text = message.trimmingCharacters(in: .whitespacesAndNewlines) + "\n\n---\n앱: \(bundleId) \(appVersion)\n보낸 시각: \(stamp)\n"
+        if !details.isEmpty { text += details + "\n" }
+        let name = "feedback-" + stamp.replacingOccurrences(of: ":", with: "") + ".txt"
+        return CrashReport(kind: .feedback, name: name, bundleId: bundleId, appVersion: appVersion, crashedAt: date, text: text)
+    }
 
     /// .ips 파일 내용에서 기록을 만든다. 첫 줄의 JSON 머리말에서 앱과 시각을 읽고, 없으면 `fallbackDate`와 파일 이름을 쓴다.
     public static func ips(name: String, text: String, fallbackDate: Date) -> CrashReport {

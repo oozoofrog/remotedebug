@@ -17,7 +17,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable 
         case .files: "보낸 파일"
         case .devices: "기기"
         case .network: "네트워크"
-        case .crashes: "크래시"
+        case .crashes: "크래시·피드백"
         case .activity: "활동"
         case .logs: "iPhone 로그"
         }

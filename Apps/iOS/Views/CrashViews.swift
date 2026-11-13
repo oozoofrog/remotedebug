@@ -34,7 +34,7 @@ struct CrashSection: View {
                     CrashDetailView(item: item, actions: actions)
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(item.title).font(.body)
+                        Text(item.kind == .feedback ? "피드백 · \(item.title)" : item.title).font(.body)
                         Text("\(item.crashedAt.formatted(date: .abbreviated, time: .standard)) · \(item.appVersion)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -52,6 +52,13 @@ struct CrashSection: View {
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
+            if app == nil {
+                NavigationLink {
+                    FeedbackComposer(canSendNow: state.canSendLogs, actions: actions)
+                } label: {
+                    Label("RemoteDebug 피드백 보내기", systemImage: "text.bubble")
+                }
+            }
             Button {
                 actions.openAnalyticsData()
             } label: {
@@ -63,7 +70,7 @@ struct CrashSection: View {
                 Label("크래시 파일 가져오기…", systemImage: "folder")
             }
         } header: {
-            Text(app == nil ? "크래시 기록" : "\(app?.displayName ?? "") 크래시 기록")
+            Text(app == nil ? "크래시·피드백" : "\(app?.displayName ?? "") 크래시 기록")
         } footer: {
             if let app {
                 Text("iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 \(app.displayName)(으)로 시작하는 .ips 파일을 열고, 공유 버튼에서 RemoteDebug를 고르면 여기에 들어옵니다. 받은 기록은 Mac과 연결되면 자동으로 보냅니다.")
@@ -135,5 +142,48 @@ struct CrashDetailView: View {
             }
         }
         .task { text = actions.crashText(item) }
+    }
+}
+
+/// RemoteDebug 앱에 대한 피드백을 적어 Mac에 보낸다.
+struct FeedbackComposer: View {
+    var canSendNow: Bool
+    var actions: SettingsActions
+    @Environment(\.dismiss) private var dismiss
+    @State private var message = ""
+    @State private var includesLogs = true
+    @State private var isSending = false
+
+    var body: some View {
+        Form {
+            Section {
+                TextEditor(text: $message)
+                    .frame(minHeight: 160)
+                    .accessibilityLabel("피드백 내용")
+            } header: {
+                Text("무엇이 문제인가요?")
+            }
+            Section {
+                Toggle("최근 진단 로그 붙이기", isOn: $includesLogs)
+            } footer: {
+                Text(canSendNow
+                    ? "앱 버전, iOS 버전과 함께 페어링한 Mac으로 갑니다."
+                    : "지금은 Mac과 연결돼 있지 않습니다. 저장해 두었다가 연결되면 보냅니다.")
+            }
+        }
+        .navigationTitle("피드백 보내기")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("보내기") {
+                    isSending = true
+                    Task {
+                        await actions.sendFeedback(message, includesLogs)
+                        dismiss()
+                    }
+                }
+                .disabled(isSending || message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
     }
 }

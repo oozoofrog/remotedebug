@@ -49,7 +49,7 @@ public final class CrashLogStore {
         let item = Item(id: report.id, kind: report.kind, name: report.name, bundleId: report.bundleId,
                         appVersion: report.appVersion, crashedAt: report.crashedAt, receivedAt: now(),
                         deviceId: event.deviceId, deviceName: event.deviceName,
-                        file: "\(report.id).\(report.kind == .ips ? "ips" : "json")")
+                        file: "\(report.id).\(report.kind.fileExtension)")
         if let url = fileURL(item) {
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? Data(report.text.utf8).write(to: url, options: .atomic)
@@ -109,9 +109,9 @@ public final class CrashLogStore {
         }
         let stamp = Date.ISO8601FormatStyle()
         let lines = items.map { item in
-            "\(item.id)  \(item.crashedAt.formatted(stamp))  \(item.bundleId.isEmpty ? item.name : item.bundleId) \(item.appVersion)  [\(item.kind == .ips ? "ips" : "MetricKit")]  \(item.deviceName)  \(directory.appendingPathComponent(item.file).path)"
+            "\(item.id)  \(item.crashedAt.formatted(stamp))  \(item.bundleId.isEmpty ? item.name : item.bundleId) \(item.appVersion)  [\(item.kind.label)]  \(item.deviceName)  \(directory.appendingPathComponent(item.file).path)"
         }
-        return (["# 크래시 기록 \(items.count)개 (id, 시각, 앱, 종류, 기기, 원문 파일)"] + lines).joined(separator: "\n")
+        return (["# 크래시·피드백 \(items.count)개 (id, 시각, 앱, 종류, 기기, 원문 파일)"] + lines).joined(separator: "\n")
     }
 
     /// 기록 하나의 원문. `maxBytes`를 넘으면 앞부분만 돌려주고 파일 경로를 알려 준다.

@@ -71,6 +71,26 @@ open RemoteDebug.xcodeproj
 
 빌드 스크립트는 `eyebuild` 명령을 부르므로, 없으면 [대체 스크립트](docs/setup.md#eyebuild가-없는-mac)를 먼저 만든다. tailnet 정책, 서명, 문제 해결은 [설정 문서](docs/setup.md)에 있다.
 
+## 앱의 크래시와 피드백 받기
+
+RemoteDebug로 설치한 앱에서 생긴 문제를 Mac에서 바로 볼 수 있다. 받은 것은 Mac 앱의 **크래시·피드백** 화면과 에이전트 도구 `remotedebug_crash_logs`에 모인다.
+
+- RemoteDebug iPhone 앱: 비정상 종료되면 다음 실행 때 기록을 보낸다. 설정 > 크래시·피드백에서 피드백을 적어 보낼 수 있다.
+- 내 앱: 저장소 주소(`https://github.com/oozoofrog/remotedebug`)를 Swift 패키지로 추가해 `RemoteDebugFeedback`을 넣는다. Mac 앱의 프로젝트 화면에서 **추가 방법**을 누르면 Mac 주소가 든 코드가 나온다.
+
+```swift
+import RemoteDebugFeedback
+
+#if DEBUG
+RemoteDebugFeedback.start(host: "<Mac 주소>")          // 크래시 기록을 모아 보낸다
+#endif
+.remoteDebugFeedback(isPresented: $showsFeedback)      // 피드백 화면
+```
+
+- 패키지를 넣지 않은 앱: iPhone 빌드 목록의 **크래시 기록**에서 iPhone 설정을 열고, 분석 데이터의 `.ips` 파일을 공유로 RemoteDebug에 넘긴다.
+
+보낼 때는 iPhone에서 RemoteDebug 앱의 VPN이 켜져 있어야 한다. 꺼져 있으면 앱이 저장해 두었다가 다음에 보낸다. 패키지를 넣은 다른 앱이 실제 iPhone에서 Mac까지 보내는 것은 아직 확인하지 않았다.
+
 ## 현재 상태
 
 "확인함"은 그 행에 적은 범위까지만 뜻한다. 실기기 확인은 2026-11-12에 iPhone 한 대(iOS 27.2)로 했다.

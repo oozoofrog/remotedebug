@@ -71,6 +71,26 @@ open RemoteDebug.xcodeproj
 
 The build scripts call `eyebuild`; without it, create the [stand-in script](docs/setup.md#eyebuild가-없는-mac) first. Tailnet policy, signing, and troubleshooting are in [setup](docs/setup.md).
 
+## Crashes and feedback from your apps
+
+Problems in apps installed through RemoteDebug show up on the Mac, in the Mac app's crash and feedback screen and in the agent tool `remotedebug_crash_logs`.
+
+- RemoteDebug iPhone app: after an abnormal exit it sends the record on the next launch. Settings has a form for sending feedback about RemoteDebug.
+- Your app: add this repository (`https://github.com/oozoofrog/remotedebug`) as a Swift package and link `RemoteDebugFeedback`. The Mac app's project screen shows the code with the Mac address filled in.
+
+```swift
+import RemoteDebugFeedback
+
+#if DEBUG
+RemoteDebugFeedback.start(host: "<Mac address>")       // collects and sends crash records
+#endif
+.remoteDebugFeedback(isPresented: $showsFeedback)      // feedback form
+```
+
+- Apps without the package: open the crash record button in the iPhone build list, open iPhone Settings, and share the `.ips` file from Analytics Data into RemoteDebug.
+
+Sending needs the RemoteDebug VPN on the iPhone. Without it the app keeps the record and sends it later. Sending from another app with the package on a real iPhone has not been verified yet.
+
 ## Current status
 
 "Confirmed" means only the scope written in the row. Real-device checks used one iPhone (iOS 27.2) on 2026-11-12.

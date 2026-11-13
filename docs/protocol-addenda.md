@@ -459,7 +459,7 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 {"kind":"ips","name":"Sample-2026-11-13-140501.ips","bundleId":"com.example.sample","appVersion":"1.2 (7)","crashedAt":"2026-11-13T05:05:01.000Z","text":"…"}
 ```
 
-- `kind`: `ips`(iOS가 만든 크래시 파일, 사용자가 iPhone 앱으로 넘긴 것) 또는 `metrickit`(iPhone 앱 자신의 크래시를 MetricKit이 알려 준 JSON). 다른 값은 `400 bad_request`.
+- `kind`: `ips`(iOS가 만든 크래시 파일, 사용자가 iPhone 앱으로 넘긴 것), `metrickit`(앱이 자기 크래시를 MetricKit에서 받은 JSON), `feedback`(사람이 앱에서 쓴 피드백, `text`가 내용). 다른 값은 `400 bad_request`.
 - `text`: 원문. 비어 있거나 1536KB를 넘으면 `400 bad_request`. 본문 전체는 2MB까지 읽는다.
 - `name`, `bundleId`, `appVersion`: 200바이트에서 자른다. `crashedAt`이 ISO-8601 시각이 아니면 받은 시각으로 바꾼다.
 - 응답: `202`와 `{"accepted":1}`.
@@ -476,5 +476,7 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 
 - iPhone 앱은 자신의 크래시를 MetricKit에서 받아 다음 실행 때 기록으로 만든다. 다른 앱의 기록은 iOS가 앱에 내주지 않으므로, 사용자가 설정 앱의 분석 데이터에서 `.ips` 파일을 공유로 넘기거나 파일에서 가져온다.
 - iPhone 앱의 빌드 목록에서 설치된 앱마다 **크래시 기록**을 열면 그 앱(번들 ID가 같은 것)의 기록만 보이고, iPhone 설정 앱을 여는 버튼이 있다. 버튼은 분석 데이터 화면 주소(`App-prefs:Privacy&path=PROBLEM_REPORTING/DIAGNOSTIC_USAGE_DATA`)를 먼저 시도한다. iOS 27.2 시뮬레이터에서는 이 주소가 설정 앱의 첫 화면만 열었다.
+- iPhone 앱의 설정 > 크래시·피드백에서 RemoteDebug 앱에 대한 피드백을 적어 보낸다. 최근 진단 로그 100줄을 붙일 수 있다.
+- 다른 앱은 저장소 루트의 Swift 패키지 `RemoteDebugFeedback`을 넣어 자기 크래시(`metrickit`)와 피드백(`feedback`)을 같은 주소로 직접 보낸다. 요청은 그 iPhone의 RemoteDebug VPN을 지나므로 페어링한 기기의 요청으로 인증된다. 보내지 못한 기록은 앱 데이터 폴더에 30개까지 남겼다가 다음 실행 때 다시 보낸다. Mac 앱의 프로젝트 화면은 패키지를 쓰지 않는 프로젝트에 넣는 방법과 Mac 주소가 든 코드를 보여 준다. 다른 앱의 요청이 실제로 VPN을 지나 Mac에 닿는지는 실기기에서 확인하지 않았다.
 - 기록은 iPhone에 50개까지 남기고, 페어링한 Mac과 VPN이 연결되면 보내지 않은 것을 보낸다.
 - Mac 앱은 `CrashLogs/`에 원문 파일과 `index.json`을 두고(200개까지) **크래시** 화면과 MCP 도구 `remotedebug_crash_logs`로 보여 준다. 같은 내용의 기록은 한 번만 남긴다.
