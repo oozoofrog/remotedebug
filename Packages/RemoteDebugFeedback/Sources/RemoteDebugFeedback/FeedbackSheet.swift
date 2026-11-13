@@ -16,6 +16,10 @@ public struct RemoteDebugFeedbackLabels: Sendable {
     public var close = "닫기"
     public var disclosure = "앱 버전과 기기 종류가 함께 개발자에게 갑니다."
     public var notConfigured = "이 빌드는 피드백을 보낼 곳이 설정되지 않았습니다."
+    public var collectingLogs = "로그를 모으는 중…"
+    public var sendingToMac = "개발자의 Mac으로 보내는 중…"
+    public var preparingMail = "메일을 준비하는 중…"
+    public var saving = "저장하는 중…"
     public var sent = "보냈습니다."
     public var unreachable = "지금은 개발자의 Mac에 닿지 않습니다."
     public var sendByMail = "메일로 보내기"
@@ -35,7 +39,9 @@ public struct RemoteDebugFeedbackSheet: View {
     @State private var message = ""
     @State private var image: Data?
     @State private var includesLogs = true
-    @State private var isSending = false
+    /// 지금 하고 있는 일. `nil`이면 쉬는 중이다.
+    @State private var progress: String?
+    @State private var collectedLogs: [String]?
     @State private var notice: String?
     @State private var asksRoute = false
     @State private var picked: PhotosPickerItem?
@@ -92,17 +98,26 @@ public struct RemoteDebugFeedbackSheet: View {
                 } footer: {
                     Text(hasMac || hasMail ? labels.disclosure : labels.notConfigured)
                 }
-                if let status = notice ?? mail.status {
+                if let progress {
+                    Section {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                            Text(progress)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                } else if let status = notice ?? mail.status {
                     Section { Text(status).font(.footnote) }
                 }
             }
+            .disabled(progress != nil)
             .navigationTitle(labels.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button(labels.close) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(labels.send) { Task { await send() } }
-                        .disabled(isSending || trimmed.isEmpty || !(hasMac || hasMail))
+                        .disabled(progress != nil || trimmed.isEmpty || !(hasMac || hasMail))
                 }
             }
             .confirmationDialog(labels.unreachable, isPresented: $asksRoute, titleVisibility: .visible) {
@@ -112,6 +127,7 @@ public struct RemoteDebugFeedbackSheet: View {
             .sheet(item: $mail.composing) { mail in
                 FeedbackMailComposer(mail: mail, onFinish: self.mail.finish).ignoresSafeArea()
             }
+            .onChange(of: includesLogs) { _, _ in collectedLogs = nil }
             .onChange(of: picked) { _, item in
                 Task {
                     guard let data = try? await item?.loadTransferable(type: Data.self) else { return }
@@ -121,9 +137,14 @@ public struct RemoteDebugFeedbackSheet: View {
         }
     }
 
+    /// 붙일 로그. 한 번 모은 것은 이 화면에서 다시 모으지 않는다.
     private func logLines() async -> [String] {
         guard includesLogs else { return [] }
-        return await Task.detached { FeedbackLog.shared.collect() }.value
+        if let collectedLogs { return collectedLogs }
+        progress = labels.collectingLogs
+        let lines = await Task.detached { FeedbackLog.shared.collect() }.value
+        collectedLogs = lines
+        return lines
     }
 
     private func report() async -> FeedbackReport {
@@ -133,23 +154,29 @@ public struct RemoteDebugFeedbackSheet: View {
     }
 
     private func send() async {
-        isSending = true
-        defer { isSending = false }
         notice = nil
-        if let client = RemoteDebugFeedback.client {
-            if await client.trySend(await report()) {
-                dismiss()
-                return
-            }
-            asksRoute = true
-        } else {
+        guard let client = RemoteDebugFeedback.client else {
             await sendMail()
+            return
+        }
+        let report = await report()
+        progress = labels.sendingToMac
+        let delivered = await client.trySend(report)
+        progress = nil
+        if delivered {
+            dismiss()
+        } else {
+            asksRoute = true
         }
     }
 
     private func sendLater() async {
         guard let client = RemoteDebugFeedback.client else { return }
-        if await client.submit(await report()) {
+        let report = await report()
+        progress = labels.saving
+        let delivered = await client.submit(report)
+        progress = nil
+        if delivered {
             dismiss()
         } else {
             notice = labels.saved
@@ -173,9 +200,10 @@ public struct RemoteDebugFeedbackSheet: View {
             mail.diagnostics = nil
         }
         #endif
-        if let url = await mail.prepare(canSendMail: MFMailComposeViewController.canSendMail()) {
-            openURL(url) { mail.openedMailLink(accepted: $0) }
-        }
+        progress = labels.preparingMail
+        let url = await mail.prepare(canSendMail: MFMailComposeViewController.canSendMail())
+        progress = nil
+        if let url { openURL(url) { mail.openedMailLink(accepted: $0) } }
     }
 }
 

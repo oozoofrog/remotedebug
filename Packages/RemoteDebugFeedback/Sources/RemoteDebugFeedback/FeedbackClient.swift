@@ -47,7 +47,7 @@ public actor FeedbackClient {
         guard let body = try? JSONEncoder().encode(report) else { return false }
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
-        request.timeoutInterval = 8
+        request.timeoutInterval = 5
         request.httpBody = body
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         guard let (_, response) = try? await send(request), let http = response as? HTTPURLResponse else { return false }

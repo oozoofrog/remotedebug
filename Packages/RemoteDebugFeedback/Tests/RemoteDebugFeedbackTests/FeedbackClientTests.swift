@@ -62,6 +62,13 @@ final class FeedbackClientTests: XCTestCase {
         XCTAssertTrue(log.recorded.last?.hasSuffix("line \(FeedbackLog.limit + 19)") ?? false)
     }
 
+    func testLogFilterDropsSystemLibraryLines() {
+        XCTAssertTrue(FeedbackLog.isFromApp(subsystem: "", sender: "HideFaces", process: "HideFaces"))
+        XCTAssertTrue(FeedbackLog.isFromApp(subsystem: "com.example.app", sender: "SomeKit", process: "HideFaces"))
+        XCTAssertFalse(FeedbackLog.isFromApp(subsystem: "", sender: "Metal", process: "HideFaces"))
+        XCTAssertFalse(FeedbackLog.isFromApp(subsystem: "com.apple.network", sender: "HideFaces", process: "HideFaces"))
+    }
+
     func testReportCarriesMessageAndKind() throws {
         let report = RemoteDebugFeedback.report(message: "느려요", details: "최근 화면: 설정", image: Data("jpeg".utf8), date: Date(timeIntervalSince1970: 1_794_478_500))
         XCTAssertEqual(report.kind, "feedback")
