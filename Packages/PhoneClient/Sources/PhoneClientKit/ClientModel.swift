@@ -1332,10 +1332,11 @@ public final class ClientModel {
             tunnel = tunnelController.currentState()
             return false
         }
-        // 그사이 다른 앱의 VPN이 켜졌으면 그것을 쓴다. 그 VPN은 끄지 않는다.
-        vpnAutoStarted = tunnelController.vpnHolder == .thisApp
         idle.noteNeed()
         let connected = await waitForAutoStart()
+        // 켠 직후에는 iOS가 아직 상태를 알려 주지 않아 누가 켰는지 알 수 없다. 기다린 뒤에 본다.
+        // 그사이 다른 앱의 VPN이 켜졌으면 그것을 쓴다. 그 VPN은 끄지 않는다.
+        vpnAutoStarted = tunnelController.vpnHolder == .thisApp
         if vpnAutoStarted { startIdleWatch() }
         if !connected { log(.warning, "vpn", "자동으로 켠 VPN이 연결되지 않음: \(tunnelController.currentState().logText)") }
         // 연결됐으면 VPN을 기다리던 페어링·새로고침을 이어 간다.
