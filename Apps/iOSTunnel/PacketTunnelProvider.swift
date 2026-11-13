@@ -312,7 +312,11 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         guard let shared = SharedContainer.groupSupportDirectory() else {
             return try TunnelStorage.prepareStateDirectory(in: support)
         }
-        SharedContainer.migrateState(from: support, to: shared)
+        if AppPair.currentAppID.hasSuffix(AppPair.storeSuffix) {
+            // 예전 기기 정보는 RemoteDebug 앱의 확장 컨테이너에만 있다.
+            SharedContainer.migrateState(from: support, to: shared)
+            SharedContainer.defaults.set(true, forKey: SharedContainer.storeMigratedKey)
+        }
         return try TunnelStorage.prepareStateDirectory(in: shared)
     }
 

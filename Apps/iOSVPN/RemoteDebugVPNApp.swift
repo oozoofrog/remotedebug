@@ -38,6 +38,8 @@ final class VPNServices {
     /// 공용 저장소에 Tailscale 로그인(기기 정보)이 있는가. 없으면 이 앱에서 켤 때 새 기기로 로그인하게 된다.
     var hasSharedLogin: Bool {
         guard let support = SharedContainer.groupSupportDirectory() else { return true }
+        // RemoteDebug 앱의 터널이 한 번 켜져야 페어링한 예전 기기 정보가 공용 저장소로 온다.
+        guard SharedContainer.defaults.bool(forKey: SharedContainer.storeMigratedKey) else { return false }
         return SharedContainer.hasState(support.appendingPathComponent("RemoteDebug/tailscale", isDirectory: true))
     }
 
@@ -165,6 +167,13 @@ struct VPNScreen: View {
         if !tunnel.isAvailable {
             Text(TunnelStateMapping.simulatorUnavailableMessage).font(.subheadline)
         } else if ownActive {
+            if !services.hasSharedLogin {
+                Button {
+                    Task { await services.openStore(.connect, returning: true) }
+                } label: {
+                    Label("RemoteDebug 앱에서 기기 정보 가져오기", systemImage: "square.and.arrow.down.on.square")
+                }
+            }
             if case .needsLogin(let url) = tunnel.state, let url {
                 Button {
                     Task { _ = await services.opener.open(url) }

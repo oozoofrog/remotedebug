@@ -23,15 +23,17 @@ import Testing
         #expect(!SharedContainer.migrateState(from: legacy, to: shared))
     }
 
-    @Test func 공용_위치에_상태가_있으면_덮어쓰지_않는다() throws {
+    @Test func 공용_위치에_다른_기기가_있어도_페어링한_예전_기기가_이긴다() throws {
         let legacy = try temp(), shared = try temp()
-        for (base, text) in [(legacy, "old"), (shared, "current")] {
+        for (base, text) in [(legacy, "paired"), (shared, "fresh")] {
             let dir = base.appendingPathComponent("RemoteDebug/tailscale")
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
             try Data(text.utf8).write(to: dir.appendingPathComponent("tailscaled.state"))
         }
-        #expect(!SharedContainer.migrateState(from: legacy, to: shared))
-        #expect(try Data(contentsOf: shared.appendingPathComponent("RemoteDebug/tailscale/tailscaled.state")) == Data("current".utf8))
+        #expect(SharedContainer.migrateState(from: legacy, to: shared))
+        #expect(try Data(contentsOf: shared.appendingPathComponent("RemoteDebug/tailscale/tailscaled.state")) == Data("paired".utf8))
+        // 밀려난 상태는 한 벌 남긴다.
+        #expect(try Data(contentsOf: shared.appendingPathComponent("RemoteDebug/tailscale.replaced/tailscaled.state")) == Data("fresh".utf8))
     }
 
     @Test func 짝_앱에_보내는_요청을_읽는다() throws {

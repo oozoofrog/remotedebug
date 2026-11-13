@@ -28,23 +28,33 @@ enum SharedContainer {
         groupURL()?.appendingPathComponent("Library/Application Support", isDirectory: true)
     }
 
-    /// 예전 위치(확장 컨테이너)의 Tailscale 상태를 공용 위치로 옮긴다. 공용 위치에 이미 상태가 있으면 그대로 둔다.
+    /// 예전 위치(RemoteDebug 터널 확장의 컨테이너)의 Tailscale 상태를 공용 위치로 옮긴다.
+    ///
+    /// 예전 상태는 Mac과 페어링한 기기 정보다. 그래서 공용 위치에 다른 상태가 이미 있어도(RD VPN 앱을 먼저 켜서
+    /// 새 기기가 만들어진 경우) 예전 상태가 이긴다. 밀려난 상태는 `tailscale.replaced`로 한 벌 남긴다.
     /// 옮겼으면 `true`.
     @discardableResult
     static func migrateState(from legacySupport: URL, to groupSupport: URL) -> Bool {
         let fm = FileManager.default
         let legacy = legacySupport.appendingPathComponent("RemoteDebug/tailscale", isDirectory: true)
         let target = groupSupport.appendingPathComponent("RemoteDebug/tailscale", isDirectory: true)
-        guard fm.fileExists(atPath: legacy.path), !hasState(target) else { return false }
+        guard hasState(legacy) else { return false }
         do {
             try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-            if fm.fileExists(atPath: target.path) { try fm.removeItem(at: target) }
+            if fm.fileExists(atPath: target.path) {
+                let replaced = target.deletingLastPathComponent().appendingPathComponent("tailscale.replaced", isDirectory: true)
+                try? fm.removeItem(at: replaced)
+                if hasState(target) { try fm.moveItem(at: target, to: replaced) } else { try fm.removeItem(at: target) }
+            }
             try fm.moveItem(at: legacy, to: target)
             return true
         } catch {
             return false
         }
     }
+
+    /// RemoteDebug 앱의 터널이 새 빌드로 한 번 켜져 예전 기기 정보를 공용 위치로 옮겼는가(옮길 것이 없었어도 참).
+    static let storeMigratedKey = "RemoteDebug.storeStateMigrated"
 
     /// 폴더에 파일이 하나라도 있는가.
     static func hasState(_ dir: URL) -> Bool {

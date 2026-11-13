@@ -496,7 +496,8 @@ iPhone 앱은 둘이다. RemoteDebug(스킴 `RemoteDebugPhone`)와 VPN만 맡는
 
 - App Group `group.<번들 ID 앞부분>.RemoteDebug`(Info.plist의 App Group 키)를 두 앱과 두 확장이 함께 쓴다.
 - Tailscale 상태(`tailscaled.state`, 노드 키)는 공용 컨테이너의 `Library/Application Support/RemoteDebug/tailscale`에 둔다. 그래서 어느 앱이 VPN을 켜도 같은 tailnet 기기이고 Mac 페어링이 유지된다.
-- 예전 위치(RemoteDebug 터널 확장의 컨테이너)의 상태는 그 확장이 새 빌드로 처음 켜질 때 공용 위치로 옮긴다. 공용 위치에 상태가 이미 있으면 옮기지 않는다.
+- 예전 위치(RemoteDebug 터널 확장의 컨테이너)의 상태는 그 확장이 새 빌드로 처음 켜질 때 공용 위치로 옮긴다. 예전 상태가 Mac과 페어링한 기기라서, 공용 위치에 다른 상태가 이미 있어도(RD VPN을 먼저 켜 새 기기가 생긴 경우) 예전 상태로 바꾸고 밀려난 것은 `tailscale.replaced`에 한 벌 남긴다. 옮긴 뒤 공용 설정에 표시를 남긴다.
+- RemoteDebug 앱은 열릴 때 RD VPN이 VPN을 켜 두었고 그 표시가 없으면, 자기 터널을 한 번 켜서 기기 정보를 옮긴 뒤 RD VPN을 열어 VPN을 돌려준다. 그 전까지 RD VPN은 다른 기기로 연결돼 있어 Mac이 `not_paired`로 거절한다.
 - 기기 식별자(기기 이름의 뒷부분)와 제어 서버 주소는 공용 설정(UserDefaults suite)에 둔다. RemoteDebug 앱의 예전 값은 처음 한 번 옮긴다.
 - 확장은 켜지고 꺼질 때 공용 설정에 `{owner, connected, updatedAt}`을 적는다. `owner`는 VPN을 켠 앱의 번들 ID다.
 

@@ -82,6 +82,7 @@ struct RootView: View {
     @State private var loggedInstalledApps = false
     /// 이 iPhone에 설치된 VPN 앱(RemoteDebug VPN).
     @State private var vpnAppInstalled: InstalledApp?
+    @State private var mergingIdentity = false
     @State private var crashNotice: String?
 
     private var model: ClientModel { services.model }
@@ -243,6 +244,40 @@ struct RootView: View {
         }
     }
 
+    /// 이 앱의 터널이 연결되거나 로그인·오류로 멈출 때까지 최대 20초 기다린다.
+    private func waitForOwnTunnel() async {
+        for _ in 0..<40 {
+            if TunnelStateMapping.isActive(tunnel.vpnStatus) {
+                switch tunnel.state {
+                case .connected, .needsLogin, .failed: return
+                default: break
+                }
+            }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+    }
+
+    /// VPN 앱이 VPN을 켜 두었는데 이 앱의 페어링한 기기 정보가 아직 공용 저장소로 가지 않았다.
+    /// 이대로면 VPN 앱은 다른 기기로 연결돼 Mac이 받아 주지 않는다. 이 앱의 터널을 한 번 켜서 옮기고 VPN 앱에 돌려준다.
+    private func mergeIdentityIfNeeded() async {
+        guard !mergingIdentity, tunnel.pairedAppOwnsVPN, !TunnelStateMapping.isActive(tunnel.vpnStatus),
+              !SharedContainer.defaults.bool(forKey: SharedContainer.storeMigratedKey) else { return }
+        mergingIdentity = true
+        defer { mergingIdentity = false }
+        model.log(.info, "vpn", "기기 정보 합치기: 이 앱의 터널을 한 번 켜 페어링한 기기 정보를 공용 저장소로 옮김")
+        do { try await tunnel.connectOwn() } catch {
+            model.log(.error, "vpn", "기기 정보 합치기 실패: \(error.localizedDescription)")
+            return
+        }
+        await waitForOwnTunnel()
+        guard tunnel.state == .connected else {
+            model.log(.warning, "vpn", "기기 정보 합치기: 이 앱의 VPN이 연결되지 않아 VPN 앱으로 돌려주지 않음")
+            return
+        }
+        model.log(.info, "vpn", "기기 정보 합치기 끝. VPN 앱으로 VPN을 돌려줌")
+        await openVPNApp(.connect, returning: true)
+    }
+
     /// VPN 앱이 보낸 요청: 이 앱의 터널로 VPN을 켜거나 끈다. `returning`이면 마친 뒤 VPN 앱으로 돌아간다.
     private func handleVPNRequest(_ action: AppPair.Action, returning: Bool) async {
         switch action {
@@ -252,11 +287,14 @@ struct RootView: View {
             model.log(.info, "vpn", "VPN 앱의 요청으로 이 앱의 VPN을 켬")
             do { try await tunnel.connectOwn() } catch { model.log(.error, "vpn", "켜기 실패: \(error.localizedDescription)") }
             // 터널이 뜨면서 예전 기기 정보를 공용 저장소로 옮긴다. 다 뜬 뒤에 돌아간다.
-            for _ in 0..<40 {
-                if case .connecting = tunnel.state { try? await Task.sleep(for: .milliseconds(500)) } else if tunnel.state == .off { try? await Task.sleep(for: .milliseconds(500)) } else { break }
-            }
+            await waitForOwnTunnel()
             // 로그인이 필요하면 이 앱에 머문다.
             if case .needsLogin = tunnel.state { return }
+            if returning {
+                // 요청한 VPN 앱이 같은 기기 정보로 다시 켜도록 넘긴다.
+                await openVPNApp(.connect, returning: true)
+                return
+            }
         case .disconnect:
             model.log(.info, "vpn", "VPN 앱의 요청으로 이 앱의 VPN을 끔")
             await model.disconnectTunnel()
@@ -284,6 +322,12 @@ struct RootView: View {
             model.reloadReceivedFiles()
             // 설치가 끝났거나 홈 화면에서 앱을 지웠을 수 있다.
             reloadInstalledApps()
+            Task {
+                // 다른 앱의 VPN 여부를 읽은 뒤에 판단한다.
+                try? await Task.sleep(for: .seconds(1))
+                tunnel.refreshExternal()
+                await mergeIdentityIfNeeded()
+            }
             Task {
                 await tunnel.reload()
                 // 앱으로 돌아올 때 새 빌드(이 앱의 업데이트 포함)를 바로 보여 준다. VPN이 꺼져 있으면 안내를 다시 띄우지 않는다.
