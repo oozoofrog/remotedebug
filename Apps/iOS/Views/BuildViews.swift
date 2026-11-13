@@ -2,10 +2,16 @@ import PhoneClientKit
 import RDModels
 import SwiftUI
 
-/// Mac이 공유 중인 빌드 목록. 이 앱 자신의 빌드는 `state.builds`에 없다(업데이트 앱에서 설치한다).
+/// Mac이 공유 중인 빌드 목록. 이 앱 자신의 빌드는 `state.builds`에 없고(업데이트 앱에서 설치한다),
+/// 업데이트 앱의 빌드는 `UpdaterBuildsSection`에 따로 보인다.
 struct BuildListSection: View {
     var state: PhoneViewState
     var actions: PhoneActions
+
+    /// 업데이트 앱을 뺀 빌드.
+    private var builds: [BuildDescriptor] {
+        state.builds.filter { $0.bundleId != AppPair.otherAppID }
+    }
 
     var body: some View {
         Section {
@@ -21,7 +27,7 @@ struct BuildListSection: View {
                     .font(.footnote)
                     .accessibilityHint(error)
                 }
-                if state.builds.isEmpty {
+                if builds.isEmpty {
                     ContentUnavailableView {
                         Label("공유 중인 빌드가 없습니다", systemImage: "shippingbox")
                     } description: {
@@ -29,7 +35,7 @@ struct BuildListSection: View {
                     }
                 } else {
                     // 같은 앱의 빌드는 최신 것만 보여 주고 나머지는 접어 둔다.
-                    ForEach(AppBuildGrouping.groups(state.builds)) { group in
+                    ForEach(AppBuildGrouping.groups(builds)) { group in
                         ListedBuildRow(build: group.latest, state: state, actions: actions)
                         if !group.older.isEmpty {
                             DisclosureGroup("\(group.latest.displayName) 이전 빌드 \(group.older.count)개") {
@@ -120,5 +126,37 @@ private struct ListedBuildRow: View {
         }
         .buttonStyle(.borderless)
         .accessibilityLabel("\(build.displayName) 크래시 기록")
+    }
+}
+
+/// 업데이트 앱(RD 업데이트)의 빌드. 다른 앱의 빌드와 섞이지 않게 따로 둔다. 게시된 빌드가 없으면 칸도 없다.
+struct UpdaterBuildsSection: View {
+    var state: PhoneViewState
+    var actions: PhoneActions
+
+    private var builds: [BuildDescriptor] {
+        state.builds.filter { $0.bundleId == AppPair.otherAppID }
+    }
+
+    var body: some View {
+        if !builds.isEmpty {
+            Section {
+                ForEach(AppBuildGrouping.groups(builds)) { group in
+                    ListedBuildRow(build: group.latest, state: state, actions: actions)
+                    if !group.older.isEmpty {
+                        DisclosureGroup("\(group.latest.displayName) 이전 빌드 \(group.older.count)개") {
+                            ForEach(group.older) { build in
+                                ListedBuildRow(build: build, state: state, actions: actions, isOlder: true)
+                            }
+                        }
+                        .font(.subheadline)
+                    }
+                }
+            } header: {
+                Text("RD 업데이트 빌드")
+            } footer: {
+                Text("RemoteDebug를 업데이트하는 앱입니다. 여기서 설치하거나 새 빌드로 올립니다.")
+            }
+        }
     }
 }

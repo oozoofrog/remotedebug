@@ -339,6 +339,8 @@ C API 전용 코드: `invalid_config`, `not_running`, `unknown_handle`, `path_ou
 
 `backendState`는 `Stopped`, `Starting`, `NeedsLogin`, `NeedsMachineAuth`, `Running`, `Error` 중 하나다. `NeedsLogin`이면 `authURL`을 채운다.
 
+선택 필드 `peerPaths`(페어링한 기기까지의 경로, 직접·중계)와 터널 모드의 `peerPath`는 [protocol-addenda.md](protocol-addenda.md)의 N.3에 있다. 값이 없으면 키도 없다.
+
 ## 10. 이벤트
 
 `rd_next_event`가 돌려주는 `event`는 `type` 필드로 구분한다.

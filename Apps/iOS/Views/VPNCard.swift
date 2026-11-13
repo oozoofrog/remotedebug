@@ -1,4 +1,5 @@
 import PhoneClientKit
+import RDModels
 import SwiftUI
 
 /// VPN 상태와 켜기·끄기·로그인.
@@ -107,28 +108,41 @@ struct VPNCard: View {
     private var isWorking: Bool {
         switch state.tunnel {
         case .connecting, .disconnecting: true
-        default: false
+        default: isAutoStarting
+        }
+    }
+
+    /// 앱이 VPN을 켜고 연결을 기다리는 중이다.
+    private var isAutoStarting: Bool {
+        guard state.vpnAutoStarting else { return false }
+        switch state.tunnel {
+        case .off, .connecting, .disconnecting: return true
+        default: return false
         }
     }
 
     private var statusLabel: String {
         if !state.tunnelAvailable { return "사용할 수 없음" }
+        if isAutoStarting { return VPNStatusText.autoStarting }
         switch state.tunnel {
         case .off: return "꺼짐"
         case .connecting: return "연결 중"
         case .disconnecting: return "끄는 중"
         case .needsLogin: return "로그인 필요"
-        case .connected: return "연결됨"
+        case .connected: return VPNStatusText.connected(holder: state.vpnPair.owner, path: state.peerPath)
         case .failed: return "오류"
         }
     }
 
     private var detail: String? {
         switch state.tunnel {
-        case .off: "Mac과 통신하려면 VPN이 켜져 있어야 합니다."
+        case .off:
+            state.vpnAutoStartReady
+                ? "Mac에 연결할 때 자동으로 켜고, 쓰지 않으면 30초 뒤에 끕니다."
+                : "Mac과 통신하려면 VPN이 켜져 있어야 합니다. 여기서 한 번 켜 두면 다음부터는 필요할 때 자동으로 켭니다."
         case .connecting, .disconnecting: nil
         case .needsLogin(let url): url == nil ? "tailnet 로그인 주소를 받는 중입니다." : "tailnet에 로그인해야 합니다. 로그인하면 자동으로 연결됩니다."
-        case .connected: nil
+        case .connected: state.vpnAutoStarted ? "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다." : nil
         case .failed(let message): message
         }
     }

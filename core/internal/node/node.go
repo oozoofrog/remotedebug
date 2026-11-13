@@ -72,6 +72,79 @@ type Status struct {
 	PairedDevices   int           `json:"pairedDevices"`
 	RSSMiB          float64       `json:"rssMiB"`
 	Tunnel          *TunnelStatus `json:"tunnel,omitempty"` // tunnel mode only
+	// PeerPath is the tunnel node's path to the peer set with SetPathPeer
+	// (docs/protocol-addenda.md N). Absent when no peer is set, the peer is
+	// unknown or it has no recent traffic.
+	PeerPath *PeerPath `json:"peerPath,omitempty"`
+	// PeerPaths is the host node's path to each paired device, keyed by
+	// nodeStableId. Devices without recent traffic are left out.
+	PeerPaths map[string]PeerPath `json:"peerPaths,omitempty"`
+}
+
+// PeerPath says how packets reach one peer: directly (UDP to Addr) or through
+// the relay (DERP region code).
+type PeerPath struct {
+	Direct bool   `json:"direct"`
+	Addr   string `json:"addr,omitempty"`  // direct only: the peer's UDP endpoint
+	Relay  string `json:"relay,omitempty"` // the peer's relay region code
+}
+
+// pathOf maps a peer's status to its path. A peer with a current UDP address
+// is direct. Without one, a peer with recent traffic is relayed; an idle peer
+// has no known path (nil).
+func pathOf(ps *ipnstate.PeerStatus) *PeerPath {
+	if ps == nil {
+		return nil
+	}
+	if ps.CurAddr != "" {
+		return &PeerPath{Direct: true, Addr: ps.CurAddr, Relay: ps.Relay}
+	}
+	if ps.Active {
+		return &PeerPath{Relay: ps.Relay}
+	}
+	return nil
+}
+
+// normalName lowercases a DNS name and drops the trailing dot.
+func normalName(s string) string {
+	return strings.ToLower(strings.TrimSuffix(strings.TrimSpace(s), "."))
+}
+
+// pathToName returns the path to the peer whose MagicDNS name is fqdn.
+func pathToName(st *ipnstate.Status, fqdn string) *PeerPath {
+	if st == nil || fqdn == "" {
+		return nil
+	}
+	for _, ps := range st.Peer {
+		if ps != nil && normalName(ps.DNSName) == fqdn {
+			return pathOf(ps)
+		}
+	}
+	return nil
+}
+
+// pathsToDevices returns the paths to the peers whose stable ID is in ids.
+func pathsToDevices(st *ipnstate.Status, ids []string) map[string]PeerPath {
+	if st == nil || len(ids) == 0 {
+		return nil
+	}
+	want := make(map[string]bool, len(ids))
+	for _, id := range ids {
+		want[id] = true
+	}
+	var out map[string]PeerPath
+	for _, ps := range st.Peer {
+		if ps == nil || !want[string(ps.ID)] {
+			continue
+		}
+		if p := pathOf(ps); p != nil {
+			if out == nil {
+				out = map[string]PeerPath{}
+			}
+			out[string(ps.ID)] = *p
+		}
+	}
+	return out
 }
 
 // TunnelStatus is status.tunnel (docs/tunnel.md): the last network settings
@@ -159,6 +232,9 @@ type Node struct {
 	lastErr     string
 	lastEmit    Status
 	peerCount   int    // tunnel: cached once per refresh
+	pathPeer    string // tunnel: MagicDNS name whose path is reported (SetPathPeer)
+	peerPath    *PeerPath
+	peerPaths   map[string]PeerPath // host: paired devices by stable ID
 	tunErr      string // tunnel: set when the engine stopped by itself
 }
 
@@ -507,9 +583,23 @@ func (n *Node) refresh() {
 		st    *ipnstate.Status
 		peers int
 	)
+	var (
+		path  *PeerPath
+		paths map[string]PeerPath
+	)
 	if n.tun != nil {
-		st = n.tun.LocalStatus()
-		peers = n.tun.PeerCount() // the only netmap copy per tick
+		n.mu.Lock()
+		target := n.pathPeer
+		n.mu.Unlock()
+		if target != "" {
+			// One status with peers replaces the netmap copy of PeerCount.
+			st = n.tun.FullStatus()
+			peers = len(st.Peer)
+			path = pathToName(st, target)
+		} else {
+			st = n.tun.LocalStatus()
+			peers = n.tun.PeerCount() // the only netmap copy per tick
+		}
 	} else {
 		lc, err := n.srv.LocalClient()
 		if err != nil {
@@ -517,14 +607,25 @@ func (n *Node) refresh() {
 		}
 		ctx, cancel := context.WithTimeout(n.ctx, 2*time.Second)
 		defer cancel()
-		st, err = lc.StatusWithoutPeers(ctx)
+		var ids []string
+		if n.host != nil {
+			ids = n.host.DeviceStableIDs()
+		}
+		if len(ids) > 0 {
+			st, err = lc.Status(ctx)
+		} else {
+			st, err = lc.StatusWithoutPeers(ctx)
+		}
 		if err != nil {
 			return
 		}
+		paths = pathsToDevices(st, ids)
 	}
 	n.mu.Lock()
 	defer n.mu.Unlock()
 	n.peerCount = peers
+	n.peerPath = path
+	n.peerPaths = paths
 	n.backend = st.BackendState
 	n.authURL = st.AuthURL
 	n.ips = n.ips[:0]
@@ -669,6 +770,16 @@ func (n *Node) Status() Status {
 		st.BackendState, st.ErrorMessage = "Stopped", ""
 	}
 	peers := n.peerCount
+	if n.peerPath != nil && st.BackendState == "Running" {
+		p := *n.peerPath
+		st.PeerPath = &p
+	}
+	if len(n.peerPaths) > 0 && st.BackendState == "Running" {
+		st.PeerPaths = make(map[string]PeerPath, len(n.peerPaths))
+		for id, p := range n.peerPaths {
+			st.PeerPaths[id] = p
+		}
+	}
 	n.mu.Unlock()
 	if n.tun != nil {
 		ts := &TunnelStatus{Addresses: []string{}, Routes: []string{}, DNSServers: []string{}, DNSMatchDomains: []string{}, MTU: n.cfg.MTU, PeerCount: peers}
@@ -685,6 +796,19 @@ func (n *Node) Status() Status {
 	}
 	st.RSSMiB = memstat.RSSMiB()
 	return st
+}
+
+// SetPathPeer sets the MagicDNS name of the peer whose path the tunnel node
+// reports as status.peerPath ("" stops reporting). The path appears after the
+// next status refresh.
+func (n *Node) SetPathPeer(fqdn string) {
+	name := normalName(fqdn)
+	n.mu.Lock()
+	if n.pathPeer != name {
+		n.pathPeer = name
+		n.peerPath = nil
+	}
+	n.mu.Unlock()
 }
 
 // SetDefaultInterface passes the device's default interface to the tunnel

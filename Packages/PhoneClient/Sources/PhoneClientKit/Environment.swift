@@ -50,6 +50,20 @@ public protocol TunnelControlling: AnyObject {
     func prepare() async throws
     func connect() async throws
     func disconnect() async
+    /// 지금 VPN을 켜고 있는 쪽. 다른 앱의 VPN이 켜져 있으면 자동으로 켜거나 끄지 않는다.
+    var vpnHolder: VPNHolder { get }
+    /// 이 앱의 VPN 구성이 저장돼 있고 선택돼 있는지. `ready`일 때만 자동으로 켠다.
+    var autoStartConfiguration: VPNConfigurationState { get }
+    /// 이 앱의 VPN을 사용자 조작 없이 켠다. 구성을 만들거나 저장하지 않고(iOS 동의 창을 띄우지 않는다),
+    /// 다른 앱의 VPN이 켜져 있으면 그것을 그대로 쓴다. 구성이 없거나 꺼져 있으면 오류를 던진다.
+    func connectAutomatically() async throws
+}
+
+/// 자동으로 켜기를 구현하지 않은 쪽(시험용 가짜)은 자동으로 켜지 않는다.
+public extension TunnelControlling {
+    var vpnHolder: VPNHolder { currentState() == .off ? .none : .thisApp }
+    var autoStartConfiguration: VPNConfigurationState { .missing }
+    func connectAutomatically() async throws { throw CancellationError() }
 }
 
 /// 현재 시각과 대기. 테스트는 실제로 기다리지 않는 구현을 넣는다.

@@ -206,7 +206,21 @@ final class FakeTunnel: TunnelControlling {
     private(set) var prepareCount = 0
     private(set) var connectCount = 0
     private(set) var disconnectCount = 0
+    /// 자동으로 켜기: 구성 상태, 켠 뒤의 상태, 켜기 오류, 부른 횟수.
+    var autoStartConfiguration: VPNConfigurationState = .missing
+    var autoStartResult: TunnelState = .connected
+    var autoStartError: (any Error)?
+    private(set) var autoStartCount = 0
+    /// 지금 VPN을 켠 쪽. `nil`이면 상태에서 정한다(꺼짐이면 없음, 아니면 이 앱).
+    var holder: VPNHolder?
+    var vpnHolder: VPNHolder { holder ?? (state == .off ? .none : .thisApp) }
     private var continuations: [AsyncStream<TunnelState>.Continuation] = []
+
+    func connectAutomatically() async throws {
+        autoStartCount += 1
+        if let autoStartError { throw autoStartError }
+        set(autoStartResult)
+    }
 
     init(_ state: TunnelState = .connected) {
         self.state = state
@@ -305,7 +319,8 @@ struct Harness {
         tunnel: TunnelState = .connected,
         storedHost: PairedHost? = nil,
         clock: TestClock = TestClock(),
-        policy: HostPolicy = .tailnetOnly
+        policy: HostPolicy = .tailnetOnly,
+        timing: ClientModel.Timing = .standard
     ) {
         self.tunnel = FakeTunnel(tunnel)
         self.store = InMemoryPairedHostStore(host: storedHost)
@@ -318,7 +333,8 @@ struct Harness {
             opener: opener,
             tunnel: self.tunnel,
             clock: clock,
-            hostPolicy: policy
+            hostPolicy: policy,
+            timing: timing
         )
     }
 

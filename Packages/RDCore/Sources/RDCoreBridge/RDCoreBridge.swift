@@ -103,6 +103,11 @@ public struct RDNode: Sendable, Hashable {
         _ = try RDCall.consume(rd_tunnel_set_default_interface(handle, name))
     }
 
+    /// `rd_tunnel_set_path_peer`. `rd_status`의 `peerPath`로 경로를 알릴 피어의 MagicDNS 이름. 빈 문자열이면 알리지 않는다.
+    public func setPathPeer(_ fqdn: String) throws {
+        _ = try RDCall.consume(rd_tunnel_set_path_peer(handle, fqdn))
+    }
+
     // MARK: 이벤트
 
     /// `rd_next_event`. 시간 초과면 nil, 아니면 `event` 객체의 JSON을 돌려준다. 최대 `timeoutMilliseconds` 동안 막는다.

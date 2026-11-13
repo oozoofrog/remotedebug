@@ -70,6 +70,30 @@ struct TunnelMessageTests {
         #expect(TunnelAppRequest.decode(Data("not json".utf8)) == nil)
     }
 
+    @Test("경로를 물을 피어는 선택 필드다")
+    func requestPeer() throws {
+        let request = TunnelAppRequest(cmd: .status, peer: "rd-mac-ab12cd34.example-tailnet.ts.net")
+        #expect(TunnelAppRequest.decode(try request.encoded()) == request)
+        // 이전 앱의 요청(피어 없음)도, 모르는 키가 든 요청도 읽는다.
+        #expect(TunnelAppRequest.decode(Data(#"{"cmd":"status"}"#.utf8))?.peer == nil)
+        #expect(TunnelAppRequest.decode(Data(#"{"cmd":"status","peer":"a.example.ts.net","later":1}"#.utf8))?.peer == "a.example.ts.net")
+    }
+
+    @Test("확장 응답의 경로를 그대로 읽는다")
+    func replyPeerPath() throws {
+        let status = CoreStatus(backendState: .running, peerPath: PeerPath(direct: true, addr: "192.168.0.10:41641", relay: "tok"))
+        let reply = TunnelStatusReply.make(phase: .running, status: status, physFootprintMiB: nil, lastError: nil)
+        #expect(TunnelStatusReply.decode(try reply.encoded())?.status?.peerPath == status.peerPath)
+    }
+
+    @Test("주문형 연결 규칙의 도메인은 켜져 있고 페어링한 Mac이 있을 때만")
+    @MainActor func onDemandDomains() {
+        #expect(TunnelController.onDemandDomains(enabled: true, host: "rd-mac-ab12cd34.example-tailnet.ts.net") == ["rd-mac-ab12cd34.example-tailnet.ts.net"])
+        #expect(TunnelController.onDemandDomains(enabled: false, host: "rd-mac-ab12cd34.example-tailnet.ts.net") == nil)
+        #expect(TunnelController.onDemandDomains(enabled: true, host: nil) == nil)
+        #expect(TunnelController.onDemandDomains(enabled: true, host: " ") == nil)
+    }
+
     @Test("응답은 rd_status + physFootprintMiB + 단계")
     func replyRoundTrip() throws {
         let status = CoreStatus(

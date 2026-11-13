@@ -80,7 +80,7 @@ struct DevicesView: View {
                             Text("허용한 기기가 없습니다.").foregroundStyle(.secondary)
                         }
                         ForEach(model.devices) { device in
-                            DeviceRow(device: device) { deviceToRemove = device }
+                            DeviceRow(device: device, path: model.status?.peerPaths?[device.nodeStableId]) { deviceToRemove = device }
                         }
                     }
                 }
@@ -121,6 +121,8 @@ struct DevicesView: View {
 
 struct DeviceRow: View {
     let device: DeviceEntry
+    /// 이 기기까지 가는 경로. 최근에 주고받은 것이 없으면 `nil`.
+    var path: PeerPath?
     let remove: () -> Void
 
     var body: some View {
@@ -140,6 +142,12 @@ struct DeviceRow: View {
                 }
                 Text("등록 \(device.pairedAt.formatted(date: .abbreviated, time: .shortened))")
                     .font(.callout)
+                if let path {
+                    Label(path.label, systemImage: path.direct ? "arrow.left.arrow.right" : "arrow.triangle.branch")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel("연결 경로 \(path.label)")
+                }
             }
             Spacer()
             Button("제거", action: remove)

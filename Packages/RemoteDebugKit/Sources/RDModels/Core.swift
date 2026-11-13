@@ -137,6 +137,10 @@ public struct CoreStatus: Codable, Sendable, Hashable {
     public var errorMessage: String?
     /// docs/tunnel.md: 터널 모드에서만 있다.
     public var tunnel: TunnelStatus?
+    /// docs/protocol-addenda.md N: 터널 노드가 페어링한 Mac까지 가는 경로. 모르면 없다.
+    public var peerPath: PeerPath?
+    /// docs/protocol-addenda.md N: 호스트 노드가 페어링한 기기까지 가는 경로(`nodeStableId` 기준). 모르는 기기는 없다.
+    public var peerPaths: [String: PeerPath]?
 
     public init(
         backendState: BackendState,
@@ -151,7 +155,9 @@ public struct CoreStatus: Codable, Sendable, Hashable {
         pairedDevices: Int = 0,
         rssMiB: Double = 0,
         errorMessage: String? = nil,
-        tunnel: TunnelStatus? = nil
+        tunnel: TunnelStatus? = nil,
+        peerPath: PeerPath? = nil,
+        peerPaths: [String: PeerPath]? = nil
     ) {
         self.backendState = backendState
         self.authURL = authURL
@@ -166,12 +172,14 @@ public struct CoreStatus: Codable, Sendable, Hashable {
         self.rssMiB = rssMiB
         self.errorMessage = errorMessage
         self.tunnel = tunnel
+        self.peerPath = peerPath
+        self.peerPaths = peerPaths
     }
 
     enum CodingKeys: String, CodingKey {
         case backendState, authURL, hostname, fqdn, tailscaleIPs, certDomains
         case tlsReady, listening, publishedBuilds, pairedDevices, rssMiB
-        case errorMessage, tunnel
+        case errorMessage, tunnel, peerPath, peerPaths
     }
 
     public init(from decoder: any Decoder) throws {
@@ -189,6 +197,60 @@ public struct CoreStatus: Codable, Sendable, Hashable {
         rssMiB = try c.decodeIfPresent(Double.self, forKey: .rssMiB) ?? 0
         errorMessage = try c.decodeIfPresent(String.self, forKey: .errorMessage)
         tunnel = try c.decodeIfPresent(TunnelStatus.self, forKey: .tunnel)
+        // 경로는 표시용이다. 모양이 달라도 상태 전체를 버리지 않는다.
+        peerPath = (try? c.decodeIfPresent(PeerPath.self, forKey: .peerPath)) ?? nil
+        peerPaths = (try? c.decodeIfPresent([String: PeerPath].self, forKey: .peerPaths)) ?? nil
+    }
+}
+
+/// docs/protocol-addenda.md N: 피어 하나까지 가는 경로.
+public struct PeerPath: Codable, Sendable, Hashable {
+    /// 중계 서버를 거치지 않고 피어와 직접 주고받는다.
+    public var direct: Bool
+    /// 직접 연결일 때 피어의 UDP 주소(`192.168.0.10:41641`).
+    public var addr: String?
+    /// 피어의 중계 지역 코드.
+    public var relay: String?
+
+    public init(direct: Bool, addr: String? = nil, relay: String? = nil) {
+        self.direct = direct
+        self.addr = addr
+        self.relay = relay
+    }
+
+    /// 직접 연결이고 피어 주소가 사설·링크 로컬 대역이다(같은 네트워크에 있다).
+    public var isLocalNetwork: Bool {
+        guard direct, let addr else { return false }
+        return Self.isPrivateEndpoint(addr)
+    }
+
+    /// 화면에 보여 줄 경로 이름.
+    public var label: String {
+        if !direct { return "중계 서버 경유" }
+        return isLocalNetwork ? "직접 연결(같은 네트워크)" : "직접 연결"
+    }
+
+    /// `주소:포트`의 주소가 사설(10/8, 172.16/12, 192.168/16)·링크 로컬(169.254/16, fe80::/10)·고유 로컬(fc00::/7)인가.
+    public static func isPrivateEndpoint(_ endpoint: String) -> Bool {
+        var host = endpoint
+        if host.hasPrefix("[") {
+            guard let end = host.firstIndex(of: "]") else { return false }
+            host = String(host[host.index(after: host.startIndex)..<end])
+        } else if let colon = host.lastIndex(of: ":"), host.firstIndex(of: ":") == colon {
+            host = String(host[..<colon])
+        }
+        if host.contains(":") {
+            let head = host.lowercased().split(separator: ":", omittingEmptySubsequences: false).first.map(String.init) ?? ""
+            guard let value = UInt16(head, radix: 16) else { return false }
+            return value & 0xFFC0 == 0xFE80 || value & 0xFE00 == 0xFC00
+        }
+        let parts = host.split(separator: ".").compactMap { UInt8($0) }
+        guard parts.count == 4, host.split(separator: ".").count == 4 else { return false }
+        switch (parts[0], parts[1]) {
+        case (10, _), (192, 168), (169, 254): return true
+        case (172, 16...31): return true
+        default: return false
+        }
     }
 }
 

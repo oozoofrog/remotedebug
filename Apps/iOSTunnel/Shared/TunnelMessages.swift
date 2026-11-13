@@ -1,13 +1,15 @@
 import Foundation
 import RDModels
 
-/// 앱 → 확장 메시지(`sendProviderMessage`). JSON: `{"cmd":"status"}`.
+/// 앱 → 확장 메시지(`sendProviderMessage`). JSON: `{"cmd":"status"}` 또는 `{"cmd":"status","peer":"mac.example.ts.net"}`.
 struct TunnelAppRequest: Codable, Equatable, Sendable {
     enum Command: String, Codable, Sendable {
         case status
     }
 
     var cmd: Command
+    /// 경로(직접·중계)를 알고 싶은 피어의 MagicDNS 이름(페어링한 Mac). 없으면 확장은 경로를 알아보지 않는다.
+    var peer: String?
 
     static let status = TunnelAppRequest(cmd: .status)
 

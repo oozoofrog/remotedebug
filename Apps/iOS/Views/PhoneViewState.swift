@@ -24,6 +24,14 @@ struct PhoneViewState {
     var lastError: String?
     var isRefreshing = false
     var needsTunnel = false
+    /// Mac이 필요한 동작 때문에 앱이 VPN을 켜는 중이다.
+    var vpnAutoStarting = false
+    /// 지금 VPN은 앱이 자동으로 켠 것이다(쓰지 않으면 끈다).
+    var vpnAutoStarted = false
+    /// 이 앱의 VPN 구성이 있고 선택돼 있어, Mac이 필요할 때 자동으로 켤 수 있다.
+    var vpnAutoStartReady = false
+    /// 이 앱의 터널에서 페어링한 Mac까지 가는 경로. 모르거나 다른 앱의 VPN이면 `nil`.
+    var peerPath: PeerPath?
     /// Mac이 보낸 파일.
     var resources: [ResourceDescriptor] = []
     /// 이 iPhone에 받아 둔 파일.
@@ -79,6 +87,8 @@ extension PhoneViewState {
             fileProgress: model.fileProgress
         )
         self.nodeFQDN = nodeFQDN
+        self.vpnAutoStarting = model.isAutoStartingVPN
+        self.vpnAutoStarted = model.vpnAutoStarted
         self.pairingHost = model.pairingHost
         self.agentBoard = model.agentBoard
         self.agentError = model.agentError
@@ -172,6 +182,10 @@ struct SettingsViewState {
     var isSendingLogs = false
     /// Mac에 보낼 수 있는지(페어링했고 VPN이 연결됨).
     var canSendLogs = false
+    /// 주문형 연결 설정(공용 설정에 저장된 값).
+    var onDemand = false
+    /// 주문형 연결 규칙을 둘 수 있는가(이 앱의 VPN 구성이 있다).
+    var canSetOnDemand = false
     /// 모은 크래시 기록(최근 것이 앞).
     var crashes: [CrashBook.Item] = []
     var crashSendError: String?
@@ -183,6 +197,8 @@ struct SettingsActions {
     /// 저장하면 `true`. 형식이 틀리면 `false`.
     var saveControlURL: (String) -> Bool
     var sendLogs: @MainActor @Sendable () async -> Void = {}
+    /// 주문형 연결을 켜거나 끈다. 저장하지 못하면 안내 문구를 돌려준다.
+    var setOnDemand: @MainActor @Sendable (Bool) async -> String? = { _ in nil }
     /// 업데이트 앱을 연다. 열지 못하면(설치돼 있지 않음) `false`.
     var openUpdaterApp: @MainActor @Sendable () async -> Bool = { true }
     /// iPhone 설정 앱을 연다(분석 데이터 화면을 먼저 시도한다).

@@ -39,6 +39,8 @@ final class GuardedInstaller {
     private func takeOverThenInstall(_ build: BuildDescriptor, model: ClientModel) async {
         let id = build.id
         model.log(.info, "install", "\(build.displayName) 설치 전에 VPN을 이 앱의 터널로 옮김")
+        // 설치 때문에 넘겨받은 VPN은 자동으로 끄지 않는다.
+        model.noteManualVPNChange()
         do {
             try await tunnel.connectOwn()
         } catch {

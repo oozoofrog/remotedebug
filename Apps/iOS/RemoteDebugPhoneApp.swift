@@ -97,6 +97,14 @@ struct RootView: View {
                                    installedAt: services.installedAt, nodeFQDN: tunnel.lastReply?.status?.fqdn)
         state.installedApps = installedApps
         state.installPreparations = services.installer.preparations
+        if model.isAutoStartingVPN {
+            // 설치를 눌렀는데 VPN이 꺼져 있었다. 연결될 때까지 빌드 줄에 단계를 보여 준다.
+            for (id, install) in model.installs where install == .preparing && state.installPreparations[id] == nil {
+                state.installPreparations[id] = .working(VPNStatusText.autoStarting)
+            }
+        }
+        state.vpnAutoStartReady = tunnel.autoStartConfiguration == .ready
+        state.peerPath = tunnel.peerPath
         state.vpnPair.owner = tunnel.vpnHolder
         state.vpnPair.installed = updaterInstalled
         state.vpnPair.published = AppBuildFilter.only(AppPair.otherAppID, in: model.builds).first
@@ -156,6 +164,10 @@ struct RootView: View {
             await tunnel.reload()
             await model.restore()
         }
+        .onChange(of: model.host?.fqdn, initial: true) { _, fqdn in
+            // 터널이 이 Mac까지의 경로(직접·중계)를 알아보게 한다.
+            tunnel.pathPeer = fqdn
+        }
         .onChange(of: tunnel.disconnectMessage) { _, message in
             if let message { model.log(.warning, "vpn", "터널 종료: \(message)") }
         }
@@ -202,7 +214,9 @@ struct RootView: View {
                 logsSentAt: model.logsSentAt,
                 logSendError: model.logSendError,
                 isSendingLogs: model.isSendingLogs,
-                canSendLogs: model.host != nil && model.tunnel == .connected,
+                canSendLogs: model.host != nil && model.canReachHost,
+                onDemand: tunnel.settings.onDemand,
+                canSetOnDemand: tunnel.autoStartConfiguration != .missing,
                 crashes: model.crashBook.items,
                 crashSendError: model.crashSendError
             )
@@ -214,6 +228,19 @@ struct RootView: View {
                     return true
                 },
                 sendLogs: { await model.sendLogs() },
+                setOnDemand: { enabled in
+                    let previous = tunnel.settings.onDemand
+                    tunnel.settings.onDemand = enabled
+                    do {
+                        try await tunnel.syncOnDemand()
+                        model.log(.info, "vpn", "주문형 연결 \(enabled ? "켬" : "끔")")
+                        return nil
+                    } catch {
+                        tunnel.settings.onDemand = previous
+                        model.log(.warning, "vpn", "주문형 연결 설정 저장 실패: \(error.localizedDescription)")
+                        return "설정을 저장하지 못했습니다. \(error.localizedDescription)"
+                    }
+                },
                 openUpdaterApp: { await openUpdater(.open, returning: false) },
                 openAnalyticsData: openAnalyticsData,
                 sendFeedback: { await sendFeedback($0, includeLogs: $1, image: $2) },
@@ -255,6 +282,7 @@ struct RootView: View {
         mergingIdentity = true
         defer { mergingIdentity = false }
         model.log(.info, "vpn", "기기 정보 합치기: 이 앱의 터널을 한 번 켜 페어링한 기기 정보를 공용 저장소로 옮김")
+        model.noteManualVPNChange()
         do { try await tunnel.connectOwn() } catch {
             model.log(.error, "vpn", "기기 정보 합치기 실패: \(error.localizedDescription)")
             return
@@ -275,6 +303,7 @@ struct RootView: View {
             return
         case .connect:
             model.log(.info, "vpn", "업데이트 앱의 요청으로 이 앱의 VPN을 켬")
+            model.noteManualVPNChange()
             do { try await tunnel.connectOwn() } catch { model.log(.error, "vpn", "켜기 실패: \(error.localizedDescription)") }
             // 터널이 뜨면서 예전 기기 정보를 공용 저장소로 옮긴다. 다 뜬 뒤에 돌아간다.
             await tunnel.waitUntilOwnTunnelSettles()
@@ -320,8 +349,9 @@ struct RootView: View {
             }
             Task {
                 await tunnel.reload()
-                // 앱으로 돌아올 때 새 빌드를 바로 보여 준다. VPN이 꺼져 있으면 안내를 다시 띄우지 않는다.
-                if model.host != nil, model.tunnel == .connected { await model.refresh() }
+                // 앱으로 돌아올 때 새 빌드를 바로 보여 준다. VPN이 꺼져 있으면 자동으로 켤 수 있을 때만 받는다
+                // (켤 수 없으면 안내를 다시 띄우지 않는다).
+                if model.host != nil, model.canReachHost { await model.refresh() }
             }
         case .background:
             model.log(.debug, "app", "앱 백그라운드")
@@ -399,6 +429,7 @@ struct RootView: View {
             },
             takeOverVPN: {
                 model.log(.info, "vpn", "업데이트 앱의 VPN을 이 앱으로 넘겨받음")
+                model.noteManualVPNChange()
                 do { try await tunnel.connectOwn() } catch { model.log(.error, "vpn", "넘겨받기 실패: \(error.localizedDescription)") }
             },
             openUpdaterApp: { await openUpdater(.open, returning: false) },

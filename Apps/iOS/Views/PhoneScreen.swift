@@ -31,6 +31,10 @@ struct PhoneScreen: View {
 
                 VPNPairSection(pair: state.vpnPair, actions: actions)
 
+                if state.host != nil {
+                    UpdaterBuildsSection(state: state, actions: actions)
+                }
+
                 if state.host == nil, !state.isPairingInFlight, state.queuedPairingHost == nil {
                     Section {
                         PairingForm(pair: actions.pair, handleScanned: actions.handleScanned, onSubmit: {})
@@ -221,7 +225,7 @@ struct VPNPairSection: View {
                 button("업데이트 앱 열기", "arrow.up.forward.app") { openFailed = await !actions.openUpdaterApp() }
             }
             if openFailed {
-                Label("업데이트 앱을 열지 못했습니다. 아래 빌드 목록에서 RD 업데이트를 설치하세요.", systemImage: "exclamationmark.triangle.fill")
+                Label("업데이트 앱을 열지 못했습니다. 아래 RD 업데이트 빌드 칸에서 설치하세요.", systemImage: "exclamationmark.triangle.fill")
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
@@ -273,8 +277,8 @@ struct VPNPairSection: View {
     private var footer: String {
         if !updaterAvailable {
             return pair.published == nil
-                ? "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. Mac에서 RemoteDebugVPN 스킴을 게시하면 아래 빌드 목록에서 RD 업데이트를 설치할 수 있습니다."
-                : "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 아래 빌드 목록에서 RD 업데이트를 설치하세요."
+                ? "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. Mac에서 RemoteDebugVPN 스킴을 게시하면 아래 RD 업데이트 빌드 칸에서 설치할 수 있습니다."
+                : "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 아래 RD 업데이트 빌드 칸에서 설치하세요."
         }
         return "RemoteDebug의 새 빌드는 업데이트 앱에서, 업데이트 앱의 새 빌드는 아래 빌드 목록에서 설치합니다. 두 앱은 같은 tailnet 기기로 연결하고, 한 번에 한 앱만 VPN을 켭니다."
     }

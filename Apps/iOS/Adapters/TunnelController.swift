@@ -14,6 +14,8 @@ import RDModels
 /// - 앱 밖에서 꺼졌을 때는 `fetchLastDisconnectError()`로 이유를 읽는다. 확장 오류(엔진 사망 등)면 `failed`로 올려
 ///   다시 연결을 제안하고, 오류가 없으면(설정 앱·제어 센터에서 끔) 꺼짐으로 둔다.
 ///   On Demand 규칙이 없으면 iOS는 다시 시작하지 않는다(docs/tunnel.md 4).
+/// - `connectAutomatically()`: Mac이 필요한 동작 때문에 모델이 부른다. 저장된 구성이 있고 선택돼 있을 때만 켠다.
+/// - 주문형 연결(선택, 기본 꺼짐): `syncOnDemand()`가 페어링한 Mac 이름으로 규칙을 저장하거나 지운다.
 @MainActor
 @Observable
 final class TunnelController: TunnelControlling {
@@ -25,11 +27,13 @@ final class TunnelController: TunnelControlling {
     enum ControllerError: LocalizedError {
         case unavailable
         case notPrepared
+        case notSelected
 
         var errorDescription: String? {
             switch self {
             case .unavailable: TunnelStateMapping.simulatorUnavailableMessage
             case .notPrepared: "VPN 구성이 없습니다."
+            case .notSelected: "iOS 설정에서 다른 VPN이 선택돼 있습니다."
             }
         }
     }
@@ -61,6 +65,30 @@ final class TunnelController: TunnelControlling {
         if TunnelStateMapping.isActive(vpnStatus) { return .thisApp }
         return pairedAppOwnsVPN ? .pairedApp : (externalVPNActive ? .other : .none)
     }
+
+    /// 이 앱의 VPN 구성이 저장돼 있고 선택돼 있는지(마지막으로 읽은 값). `ready`일 때만 앱이 VPN을 자동으로 켠다.
+    var autoStartConfiguration: VPNConfigurationState {
+        guard isAvailable, let manager else { return .missing }
+        return manager.isEnabled ? .ready : .disabled
+    }
+
+    /// 경로(직접·중계)를 알아볼 피어: 페어링한 Mac의 MagicDNS 이름. 앱이 넣는다.
+    /// 주문형 연결이 켜져 있으면 그 규칙의 도메인도 이 이름이다.
+    var pathPeer: String? {
+        didSet {
+            guard pathPeer != oldValue, settings.onDemand || onDemandActive else { return }
+            Task { try? await syncOnDemand() }
+        }
+    }
+
+    /// 이 앱의 터널에서 페어링한 Mac까지 가는 경로. 다른 앱의 VPN이거나 아직 모르면 `nil`.
+    var peerPath: PeerPath? {
+        guard vpnStatus == .connected, state == .connected else { return nil }
+        return lastReply?.status?.peerPath
+    }
+
+    /// 저장된 구성에 주문형 연결 규칙이 켜져 있는가.
+    private(set) var onDemandActive = false
 
     let settings: TunnelSettingsStore
 
@@ -148,6 +176,26 @@ final class TunnelController: TunnelControlling {
             try await prepare()
         }
         guard let manager else { throw ControllerError.notPrepared }
+        try start(manager)
+    }
+
+    /// 사용자 조작 없이 이 앱의 VPN을 켠다(Mac이 필요한 동작을 시작할 때).
+    /// 구성을 만들거나 저장하지 않으므로 iOS의 "VPN 구성 추가" 동의가 뜨지 않고, 선택된 다른 VPN을 바꾸지 않는다.
+    /// 다른 앱의 VPN이 켜져 있으면 그것을 그대로 쓴다.
+    func connectAutomatically() async throws {
+        guard isAvailable else { throw ControllerError.unavailable }
+        refreshExternal()
+        if externalVPNActive { return }
+        guard let manager else { throw ControllerError.notPrepared }
+        // 설정 앱에서 구성을 지웠거나 다른 VPN을 골랐을 수 있다. 다시 읽기만 한다.
+        try await manager.loadFromPreferences()
+        guard Self.isOurs(manager) else { throw ControllerError.notPrepared }
+        guard manager.isEnabled else { throw ControllerError.notSelected }
+        if manager.connection.status == .disconnecting { await waitUntilStopped() }
+        try start(manager)
+    }
+
+    private func start(_ manager: NETunnelProviderManager) throws {
         if TunnelStateMapping.isActive(manager.connection.status) {
             // 이미 켜져 있거나 켜지는 중이다. 돌고 있는 터널에 startVPNTunnel을 다시 부르지 않는다.
             logger.log("VPN이 이미 켜져 있어 시작하지 않습니다")
@@ -268,7 +316,9 @@ final class TunnelController: TunnelControlling {
                 config: TunnelProviderConfig(providerConfiguration: proto.providerConfiguration)
             )
         }
-        if Self.needsSave(existing: saved, desired: desired) {
+        let onDemandChanged = Self.setOnDemand(
+            Self.onDemandDomains(enabled: settings.onDemand && !AppPair.isVPNApp, host: pathPeer), on: target)
+        if Self.needsSave(existing: saved, desired: desired) || onDemandChanged {
             proto.providerBundleIdentifier = Self.providerBundleIdentifier
             proto.serverAddress = Self.serverAddress
             proto.providerConfiguration = try desired.providerConfiguration()
@@ -292,6 +342,54 @@ final class TunnelController: TunnelControlling {
 
     private func adopt(_ manager: NETunnelProviderManager) {
         self.manager = manager
+        let active = manager.isOnDemandEnabled
+        if active != onDemandActive { onDemandActive = active }
+    }
+
+    // MARK: 주문형 연결 (docs/protocol-addenda.md N)
+
+    /// 주문형 연결 규칙의 도메인. 설정이 꺼져 있거나 페어링한 Mac이 없으면 `nil`(규칙을 두지 않는다).
+    nonisolated static func onDemandDomains(enabled: Bool, host: String?) -> [String]? {
+        guard enabled, let host = host?.trimmingCharacters(in: .whitespaces), !host.isEmpty else { return nil }
+        return [host]
+    }
+
+    /// 구성의 주문형 연결 규칙을 `domains`에 맞춘다. 바뀐 것이 있으면 `true`(저장해야 한다).
+    private static func setOnDemand(_ domains: [String]?, on manager: NETunnelProviderManager) -> Bool {
+        let current = (manager.onDemandRules ?? []).compactMap { $0 as? NEOnDemandRuleEvaluateConnection }
+            .flatMap { $0.connectionRules ?? [] }.flatMap(\.matchDomains)
+        let active = manager.isOnDemandEnabled && !(manager.onDemandRules ?? []).isEmpty
+        guard let domains else {
+            guard manager.isOnDemandEnabled || !(manager.onDemandRules ?? []).isEmpty else { return false }
+            manager.onDemandRules = nil
+            manager.isOnDemandEnabled = false
+            return true
+        }
+        guard !active || current != domains else { return false }
+        let rule = NEOnDemandRuleEvaluateConnection()
+        rule.interfaceTypeMatch = .any
+        rule.connectionRules = [NEEvaluateConnectionRule(matchDomains: domains, andAction: .connectIfNeeded)]
+        manager.onDemandRules = [rule]
+        manager.isOnDemandEnabled = true
+        return true
+    }
+
+    /// 저장된 구성의 주문형 연결 규칙을 설정(`settings.onDemand`)과 페어링한 Mac(`pathPeer`)에 맞춘다.
+    /// 구성이 없으면 만들지 않는다(`notPrepared`). 업데이트 앱의 구성에는 규칙을 두지 않는다.
+    func syncOnDemand() async throws {
+        guard isAvailable else { throw ControllerError.unavailable }
+        let managers = try await NETunnelProviderManager.loadAllFromPreferences()
+        guard let target = managers.first(where: Self.isOurs) else {
+            if settings.onDemand, !AppPair.isVPNApp { throw ControllerError.notPrepared }
+            return
+        }
+        let domains = Self.onDemandDomains(enabled: settings.onDemand && !AppPair.isVPNApp, host: pathPeer)
+        if Self.setOnDemand(domains, on: target) {
+            try await target.saveToPreferences()
+            try await target.loadFromPreferences()
+            logger.log("주문형 연결 \(domains == nil ? "끔" : "켬", privacy: .public)")
+        }
+        adopt(target)
     }
 
     private func markUnavailable() {
@@ -386,7 +484,7 @@ final class TunnelController: TunnelControlling {
     private func pollOnce() async {
         guard let session = manager?.connection as? NETunnelProviderSession,
               TunnelStateMapping.shouldPoll(session.status),
-              let request = try? TunnelAppRequest.status.encoded()
+              let request = try? TunnelAppRequest(cmd: .status, peer: pathPeer).encoded()
         else { return }
         let response: Data? = await withCheckedContinuation { continuation in
             do {

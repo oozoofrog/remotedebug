@@ -84,9 +84,11 @@ final class VPNServices {
         if model.host == nil {
             // 저장된 Mac을 불러오고 목록을 받는다. VPN이 꺼져 있으면 켜질 때 받는다.
             await model.restore()
-        } else if model.tunnel == .connected {
+        } else if model.canReachHost {
+            // VPN이 꺼져 있어도 이 앱의 구성이 선택돼 있으면 자동으로 켜서 받는다.
             await model.refresh()
         }
+        tunnel.pathPeer = model.host?.fqdn
     }
 
     func refresh() async {
@@ -109,6 +111,8 @@ final class VPNServices {
     /// 이 앱의 터널을 켠다. 다른 앱이 켜 둔 VPN은 iOS가 끄고 이 앱의 것으로 바꾼다.
     func connect() async {
         notice = nil
+        // 사용자가 켠 VPN은 자동으로 끄지 않는다.
+        model.noteManualVPNChange()
         do {
             try await tunnel.connectOwn()
         } catch {
@@ -118,6 +122,7 @@ final class VPNServices {
 
     func disconnect() async {
         notice = nil
+        model.noteManualVPNChange()
         await tunnel.disconnect()
     }
 
@@ -304,11 +309,14 @@ struct VPNScreen: View {
         if !ownActive, tunnel.externalVPNActive {
             return tunnel.pairedAppOwnsVPN ? "RemoteDebug 앱이 VPN을 켜 두었습니다" : "다른 앱의 VPN이 켜져 있습니다"
         }
+        if services.model.isAutoStartingVPN, tunnel.state == .off || tunnel.state == .connecting {
+            return VPNStatusText.autoStarting
+        }
         switch tunnel.state {
         case .off: return "꺼짐"
         case .connecting: return "연결하는 중"
         case .disconnecting: return "끄는 중"
-        case .connected: return "연결됨"
+        case .connected: return VPNStatusText.connected(holder: tunnel.vpnHolder, path: tunnel.peerPath)
         case .needsLogin: return "로그인이 필요합니다"
         case .failed: return "연결하지 못했습니다"
         }
@@ -321,6 +329,9 @@ struct VPNScreen: View {
         }
         if case .failed(let message) = tunnel.state { return message }
         if let message = tunnel.disconnectMessage { return message }
+        if services.model.vpnAutoStarted, tunnel.state == .connected {
+            return "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다."
+        }
         return nil
     }
 

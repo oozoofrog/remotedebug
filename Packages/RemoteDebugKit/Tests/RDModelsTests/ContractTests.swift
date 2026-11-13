@@ -152,6 +152,50 @@ private func expectRoundTrip<T: Codable>(_ type: T.Type, _ json: String) throws 
         #expect(s.tunnel == TunnelStatus(mtu: 1280))
     }
 
+    // MARK: 경로 (docs/protocol-addenda.md N)
+
+    @Test func statusWithoutPeerPathStillDecodes() throws {
+        // 경로를 모르는 이전 코어의 상태.
+        let json = #"{"backendState":"Running","authURL":"","hostname":"h","fqdn":"h.example-tailnet.ts.net","tailscaleIPs":["100.64.0.11"],"certDomains":[],"tlsReady":false,"listening":false,"publishedBuilds":0,"pairedDevices":0,"rssMiB":1}"#
+        let s = try decode(CoreStatus.self, json)
+        #expect(s.peerPath == nil && s.peerPaths == nil)
+        // 경로가 없으면 키도 내보내지 않는다.
+        let obj = try object(s)
+        #expect(obj["peerPath"] == nil && obj["peerPaths"] == nil)
+    }
+
+    @Test func statusPeerPathDecodes() throws {
+        let base = #""backendState":"Running","hostname":"h","rssMiB":1"#
+        let direct = try decode(CoreStatus.self, #"{\#(base),"peerPath":{"direct":true,"addr":"192.168.0.10:41641","relay":"tok"}}"#)
+        #expect(direct.peerPath == PeerPath(direct: true, addr: "192.168.0.10:41641", relay: "tok"))
+        let relayed = try decode(CoreStatus.self, #"{\#(base),"peerPath":{"direct":false,"relay":"tok"}}"#)
+        #expect(relayed.peerPath == PeerPath(direct: false, relay: "tok"))
+        let host = try decode(CoreStatus.self, #"{\#(base),"peerPaths":{"nPhone1CNTRL":{"direct":false,"relay":"tok"}}}"#)
+        #expect(host.peerPaths == ["nPhone1CNTRL": PeerPath(direct: false, relay: "tok")])
+        _ = try expectRoundTrip(CoreStatus.self, #"{"backendState":"Running","authURL":"","hostname":"h","fqdn":"","tailscaleIPs":[],"certDomains":[],"tlsReady":false,"listening":false,"publishedBuilds":0,"pairedDevices":1,"rssMiB":1,"peerPath":{"direct":true,"addr":"192.168.0.10:41641","relay":"tok"},"peerPaths":{"nPhone1CNTRL":{"direct":false,"relay":"tok"}}}"#)
+        // 모양이 다른 경로는 버리고 나머지 상태는 읽는다.
+        let odd = try decode(CoreStatus.self, #"{\#(base),"peerPath":"direct","peerPaths":[1]}"#)
+        #expect(odd.backendState == .running && odd.peerPath == nil && odd.peerPaths == nil)
+    }
+
+    @Test func addendaPeerPathExampleDecodes() throws {
+        let json = try DocJSON.block("protocol-addenda.md", withKeys: ["direct", "addr"])
+        let path = try expectRoundTrip(PeerPath.self, json)
+        #expect(path.direct && path.isLocalNetwork && path.label == "직접 연결(같은 네트워크)")
+    }
+
+    @Test func peerPathLabels() {
+        #expect(PeerPath(direct: false, relay: "tok").label == "중계 서버 경유")
+        #expect(PeerPath(direct: true, addr: "203.0.113.7:41641").label == "직접 연결")
+        #expect(PeerPath(direct: true).label == "직접 연결")
+        for local in ["10.0.0.5:41641", "172.16.4.2:1", "172.31.255.1:1", "192.168.1.20:41641", "169.254.10.1:1", "[fe80::1c2b:3aff:fe4d:5e6f]:41641", "[fd12:3456:789a::1]:41641"] {
+            #expect(PeerPath.isPrivateEndpoint(local), "\(local)")
+        }
+        for remote in ["203.0.113.7:41641", "172.32.0.1:1", "100.64.0.10:41641", "[2001:db8::1]:41641", "", "example"] {
+            #expect(!PeerPath.isPrivateEndpoint(remote), "\(remote)")
+        }
+    }
+
     // MARK: 이벤트
 
     @Test func networkSettingsEventExampleRoundTrips() throws {

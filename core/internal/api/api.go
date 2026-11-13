@@ -293,6 +293,23 @@ func TunnelSetDefaultInterface(h int64, ifName string) string {
 	return okJSON(map[string]bool{"ok": true})
 }
 
+// TunnelSetPathPeer implements rd_tunnel_set_path_peer: the MagicDNS name of
+// the peer whose path rd_status reports as peerPath. "" stops reporting.
+func TunnelSetPathPeer(h int64, fqdn string) string {
+	n, err := lookup(h)
+	if err != nil {
+		return errJSON(err)
+	}
+	if n.Config().Mode != "tunnel" {
+		return errJSON(apierr.InvalidConfig("tunnel 모드가 아닙니다."))
+	}
+	if len(fqdn) > 253 {
+		return errJSON(apierr.BadRequest("피어 이름이 올바르지 않습니다."))
+	}
+	n.SetPathPeer(fqdn)
+	return okJSON(map[string]bool{"ok": true})
+}
+
 // validIfName accepts "" and BSD interface names (en0, pdp_ip0; < IFNAMSIZ).
 func validIfName(s string) bool {
 	if len(s) > 15 {

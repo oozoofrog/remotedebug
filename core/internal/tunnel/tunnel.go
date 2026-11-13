@@ -184,6 +184,11 @@ func (n *Node) Login(ctx context.Context) (err error) {
 // LocalStatus returns the backend status without peers.
 func (n *Node) LocalStatus() *ipnstate.Status { return n.lb.StatusWithoutPeers() }
 
+// FullStatus returns the backend status with peers (their current address
+// and relay). It is heavier than LocalStatus: call it only when a peer's path
+// is wanted.
+func (n *Node) FullStatus() *ipnstate.Status { return n.lb.Status() }
+
 // PeerCount returns the number of peers in the current netmap. It copies the
 // netmap: call it at most once per status poll.
 func (n *Node) PeerCount() int {

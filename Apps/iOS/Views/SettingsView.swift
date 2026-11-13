@@ -13,17 +13,22 @@ struct SettingsView: View {
     @State private var controlURLInvalid = false
     @State private var controlURLSaved = false
     @State private var updaterOpenFailed = false
+    @State private var onDemand: Bool
+    @State private var onDemandError: String?
+    @State private var savingOnDemand = false
 
     init(state: SettingsViewState, actions: SettingsActions) {
         self.state = state
         self.actions = actions
         _controlURLDraft = State(initialValue: state.controlURL)
+        _onDemand = State(initialValue: state.onDemand)
     }
 
     var body: some View {
         NavigationStack {
             Form {
                 macSection
+                onDemandSection
                 diagnosticsSection
                 logSection
                 CrashSection(state: state, actions: actions)
@@ -71,6 +76,39 @@ struct SettingsView: View {
                 Text("페어링한 Mac이 없습니다.")
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    // MARK: 주문형 연결
+
+    private var onDemandSection: some View {
+        Section {
+            Toggle("Mac에 연결할 때 VPN 자동으로 켜기(주문형)", isOn: Binding(
+                get: { onDemand },
+                set: { enabled in
+                    onDemand = enabled
+                    onDemandError = nil
+                    savingOnDemand = true
+                    Task {
+                        onDemandError = await actions.setOnDemand(enabled)
+                        if onDemandError != nil { onDemand = !enabled }
+                        savingOnDemand = false
+                    }
+                }
+            ))
+            .disabled(savingOnDemand || (!state.canSetOnDemand && !onDemand))
+            if let onDemandError {
+                Label(onDemandError, systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+        } header: {
+            Text("VPN 자동 연결")
+        } footer: {
+            Text((state.canSetOnDemand || onDemand ? "" : "이 앱의 VPN을 한 번 켠 뒤에 설정할 수 있습니다. ")
+                + "꺼 두어도 이 앱을 쓰는 동안에는 Mac이 필요할 때 VPN을 자동으로 켜고, 쓰지 않으면 30초 뒤에 끕니다. "
+                + "이 설정을 켜면 iOS가 페어링한 Mac 주소로 가는 연결을 볼 때 VPN을 켭니다. 그래서 VPN을 직접 꺼도 iOS가 다시 켭니다. "
+                + "실기기에서 확인하지 않은 기능입니다.")
         }
     }
 
@@ -124,14 +162,14 @@ struct SettingsView: View {
                 Label("업데이트 앱 열기", systemImage: "arrow.up.forward.app")
             }
             if updaterOpenFailed {
-                Label("업데이트 앱을 열지 못했습니다. 빌드 목록에서 RD 업데이트를 설치하세요.", systemImage: "exclamationmark.triangle.fill")
+                Label("업데이트 앱을 열지 못했습니다. RD 업데이트 빌드 칸에서 설치하세요.", systemImage: "exclamationmark.triangle.fill")
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
         } header: {
             Text("이 앱")
         } footer: {
-            Text("이 앱의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 업데이트 앱이 없으면 빌드 목록에서 RD 업데이트를 설치하세요.")
+            Text("이 앱의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 업데이트 앱이 없으면 RD 업데이트 빌드 칸에서 설치하세요.")
         }
     }
 
@@ -152,6 +190,12 @@ struct SettingsView: View {
                             Text(status.tailscaleIPs.joined(separator: "\n"))
                                 .multilineTextAlignment(.trailing)
                                 .textSelection(.enabled)
+                        }
+                    }
+                    if let path = status.peerPath {
+                        LabeledContent("Mac까지의 경로") {
+                            Text(path.direct ? [path.label, path.addr].compactMap { $0 }.joined(separator: "\n") : path.label)
+                                .multilineTextAlignment(.trailing)
                         }
                     }
                     if let tunnel = status.tunnel {

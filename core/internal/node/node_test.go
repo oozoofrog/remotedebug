@@ -2,17 +2,21 @@ package node
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"tailscale.com/ipn/ipnstate"
 	"tailscale.com/tsnet"
+	"tailscale.com/types/key"
 
 	"remotedebug/core/internal/apierr"
 	"remotedebug/core/internal/events"
@@ -227,5 +231,95 @@ func TestStopWhileListenerBlocked(t *testing.T) {
 	}
 	if st := n.Status(); st.BackendState != "Stopped" {
 		t.Fatalf("state %q", st.BackendState)
+	}
+}
+
+func TestPathOf(t *testing.T) {
+	cases := []struct {
+		name string
+		ps   *ipnstate.PeerStatus
+		want *PeerPath
+	}{
+		{"nil", nil, nil},
+		{"direct", &ipnstate.PeerStatus{CurAddr: "192.168.0.10:41641", Relay: "tok", Active: true}, &PeerPath{Direct: true, Addr: "192.168.0.10:41641", Relay: "tok"}},
+		{"relayed", &ipnstate.PeerStatus{Relay: "tok", Active: true}, &PeerPath{Relay: "tok"}},
+		{"idle", &ipnstate.PeerStatus{Relay: "tok"}, nil},
+	}
+	for _, c := range cases {
+		if got := pathOf(c.ps); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("%s: got %+v, want %+v", c.name, got, c.want)
+		}
+	}
+}
+
+func TestPathLookup(t *testing.T) {
+	st := &ipnstate.Status{Peer: map[key.NodePublic]*ipnstate.PeerStatus{
+		key.NewNode().Public(): {ID: "nMac1", DNSName: "RD-Mac-Test.example.ts.net.", CurAddr: "192.168.0.10:41641", Relay: "tok"},
+		key.NewNode().Public(): {ID: "nPhone1", DNSName: "rd-phone-a.example.ts.net.", Relay: "tok", Active: true},
+		key.NewNode().Public(): {ID: "nPhone2", DNSName: "rd-phone-b.example.ts.net.", Relay: "tok"},
+	}}
+	if p := pathToName(st, "rd-mac-test.example.ts.net"); p == nil || !p.Direct || p.Addr != "192.168.0.10:41641" {
+		t.Errorf("by name: %+v", p)
+	}
+	if p := pathToName(st, "other.example.ts.net"); p != nil {
+		t.Errorf("unknown peer: %+v", p)
+	}
+	if p := pathToName(st, ""); p != nil {
+		t.Errorf("no target: %+v", p)
+	}
+	got := pathsToDevices(st, []string{"nPhone1", "nPhone2", "nGone"})
+	want := map[string]PeerPath{"nPhone1": {Relay: "tok"}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("devices: got %+v, want %+v", got, want)
+	}
+	if got := pathsToDevices(st, nil); got != nil {
+		t.Errorf("no devices: %+v", got)
+	}
+}
+
+func TestStatusPeerPath(t *testing.T) {
+	n := testNode()
+	raw := func() map[string]json.RawMessage {
+		b, err := json.Marshal(n.Status())
+		if err != nil {
+			t.Fatal(err)
+		}
+		var m map[string]json.RawMessage
+		json.Unmarshal(b, &m)
+		return m
+	}
+	m := raw()
+	if _, ok := m["peerPath"]; ok {
+		t.Errorf("peerPath without a peer: %s", m["peerPath"])
+	}
+	if _, ok := m["peerPaths"]; ok {
+		t.Errorf("peerPaths without devices: %s", m["peerPaths"])
+	}
+
+	n.SetPathPeer("RD-Mac-Test.example.ts.net.")
+	if n.pathPeer != "rd-mac-test.example.ts.net" {
+		t.Errorf("pathPeer = %q", n.pathPeer)
+	}
+	n.peerPath = &PeerPath{Direct: true, Addr: "192.168.0.10:41641", Relay: "tok"}
+	n.peerPaths = map[string]PeerPath{"nPhone1": {Relay: "tok"}}
+	m = raw()
+	if got := string(m["peerPath"]); got != `{"direct":true,"addr":"192.168.0.10:41641","relay":"tok"}` {
+		t.Errorf("peerPath = %s", got)
+	}
+	if got := string(m["peerPaths"]); got != `{"nPhone1":{"direct":false,"relay":"tok"}}` {
+		t.Errorf("peerPaths = %s", got)
+	}
+
+	// A new target forgets the old peer's path.
+	n.SetPathPeer("other.example.ts.net")
+	if _, ok := raw()["peerPath"]; ok {
+		t.Error("peerPath kept after the target changed")
+	}
+	// Not Running: no path.
+	n.SetPathPeer("")
+	n.peerPath = &PeerPath{Relay: "tok"}
+	n.backend = "NeedsLogin"
+	if _, ok := raw()["peerPath"]; ok {
+		t.Error("peerPath while not Running")
 	}
 }

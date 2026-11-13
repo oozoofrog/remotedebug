@@ -174,6 +174,17 @@ func (h *Host) Counts() (builds, devices int) {
 	return len(h.builds), len(h.devices)
 }
 
+// DeviceStableIDs returns the stable node IDs of the paired devices.
+func (h *Host) DeviceStableIDs() []string {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	ids := make([]string, 0, len(h.devices))
+	for id := range h.devices {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 // Sweep expires pending pair requests and sessions and forgets old records.
 // The core calls it periodically; handlers also expire lazily.
 func (h *Host) Sweep() {

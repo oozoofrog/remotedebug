@@ -48,6 +48,10 @@ char *rd_proxy_start(int64_t handle, const char *listen_addr);
  * (NWPathMonitor), e.g. "en0" or "pdp_ip0". "" is ignored. A changed name makes
  * the core re-check the network at once and rebind its sockets. Returns {"ok":true}. */
 char *rd_tunnel_set_default_interface(int64_t handle, const char *if_name);
+/* Tunnel mode: MagicDNS name of the peer whose path rd_status reports as
+ * "peerPath" ({"direct":bool,"addr":"…","relay":"…"}). "" stops reporting.
+ * Returns {"ok":true}. */
+char *rd_tunnel_set_path_peer(int64_t handle, const char *fqdn);
 /* Waits up to timeout_ms. Returns {"event":{…}} or {"event":null}. */
 char *rd_next_event(int64_t handle, int32_t timeout_ms);
 /* Frees a string returned by any rd_* function. */

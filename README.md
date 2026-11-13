@@ -66,10 +66,21 @@ open RemoteDebug.xcodeproj
 
 1. Run the `RemoteDebugMac` scheme on the Mac and press **공유 시작** (Start sharing). Log in to Tailscale in the browser window it opens. MagicDNS and HTTPS certificates must be on for the tailnet.
 2. Connect the iPhone with a cable and use **iPhone 앱 설치…** on the **기기** (Devices) screen, or run the `RemoteDebugPhone` scheme from Xcode. The VPN entitlement needs a paid Apple Developer Program team.
-3. In the iPhone app, turn on the VPN and log in with the same Tailscale account as the Mac. Scan the pairing QR code from the Mac and approve the request on the Mac.
+3. In the iPhone app, turn on the VPN once and log in with the same Tailscale account as the Mac. After that the app turns the VPN on by itself when it needs the Mac. Scan the pairing QR code from the Mac and approve the request on the Mac.
 4. Drop an Xcode project on the Mac window. Tap **설치** on the iPhone.
 
 The build scripts call `eyebuild`; without it, create the [stand-in script](docs/setup.md#eyebuild가-없는-mac) first. Tailnet policy, signing, and troubleshooting are in [setup](docs/setup.md).
+
+## VPN: automatic on and off, direct or relayed
+
+All traffic between the Mac and the iPhone goes through the tailnet, which on the iPhone means the VPN. When both are on the same network Tailscale connects them directly instead of through a relay server.
+
+- **Automatic on**: when the app needs the Mac (refreshing the build list, installing, receiving a file, sending logs, crashes or feedback, pairing from a link) and no VPN is up, it turns its own VPN on, waits up to 15 seconds, and shows "VPN 켜는 중…". It does this only when its VPN configuration already exists and is the selected one. It never triggers the iOS "Add VPN Configurations" prompt, never switches away from another selected VPN, and never replaces another app's running VPN; those stay behind the buttons.
+- **Automatic off**: a VPN the app turned on by itself is turned off after 30 seconds without an install (including one waiting in the iOS installer), a file transfer, or a send. A VPN you turned on yourself, or another app's VPN, is left alone.
+- **Path**: the VPN card shows "연결됨 · 직접 연결(같은 네트워크)" (direct, same network), "연결됨 · 직접 연결" (direct), or "연결됨 · 중계 서버 경유" (through a relay). The Mac's **기기** (Devices) screen shows the same per device.
+- **On Demand (optional, off by default)**: Settings > "Mac에 연결할 때 VPN 자동으로 켜기(주문형)" saves an iOS On Demand rule for the paired Mac's address. With it on, iOS turns the VPN back on even after you turn it off.
+
+None of this has been verified on a real iPhone; only unit tests and simulator builds pass. Rules and the status field are in [protocol addenda N](docs/protocol-addenda.md#n-vpn-자동-켜기와-경로-표시).
 
 ## Two iPhone apps: RemoteDebug and RD 업데이트
 
@@ -81,7 +92,7 @@ Install two apps on the iPhone. Both can run the same VPN and appear as the same
 iOS runs one VPN at a time. When one app turns its VPN on the other one stops, and the Mac pairing stays because the device identity is the same. iOS stops an app and its VPN while that app is being installed, so each app is installed by the other one.
 
 - Updating RemoteDebug: open RD 업데이트 and tap the install button on the RemoteDebug build. If the VPN is not the updater's own, it first moves the VPN to itself, shows each step, then installs. When a newer build exists, RemoteDebug shows a note and a button that opens the updater.
-- Updating RD 업데이트: install it from the build list in RemoteDebug. If the updater holds the VPN, RemoteDebug takes the VPN over first, then installs.
+- Updating RD 업데이트: install it from its own section in RemoteDebug (separate from the build list). If the updater holds the VPN, RemoteDebug takes the VPN over first, then installs.
 - RemoteDebug's updater section can also move the VPN to the updater or take it back. The button opens the other app, which switches the VPN and returns.
 - First install: update RemoteDebug and open it once (the paired Mac moves to the shared storage), then install RD 업데이트 from the build list. If the updater reports that it has no device identity, use its button that fetches the identity from RemoteDebug.
 - Updating RemoteDebug without the updater: turn on the official Tailscale app and open the Mac's update page in Safari ([setup](docs/setup.md#iphone-앱-업데이트)).

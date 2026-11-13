@@ -88,6 +88,8 @@
 
 `tunnel`의 앞 다섯 필드는 마지막 `network-settings` 이벤트와 같다. `peerCount`는 netmap의 피어 수이며 2초 상태 점검마다 한 번 센다.
 
+`rd_tunnel_set_path_peer`로 피어를 정하면 그 피어까지의 경로(직접·중계)가 선택 필드 `peerPath`로 붙는다([protocol-addenda.md](protocol-addenda.md) N.3). 그때 `peerCount`는 피어를 포함한 상태에서 센다.
+
 ## 이벤트 `network-settings`
 
 엔진이 주소·경로·DNS를 계산하거나 바꿀 때 보낸다.

@@ -7,6 +7,8 @@ final class TunnelSettingsStore {
     static let nodeIDKey = "RemoteDebug.tunnelNodeID"
     static let controlURLKey = "RemoteDebug.controlURL"
     static let loggingKey = "RemoteDebug.tunnelLogging"
+    /// Mac에 연결할 때 iOS가 VPN을 켜게 하는 주문형 연결(기본 꺼짐). 공용 설정에 둔다.
+    static let onDemandKey = "RemoteDebug.vpnOnDemand"
 
     /// 두 앱이 같은 기기 식별자와 제어 서버 주소를 쓰도록 공용 설정에 둔다.
     /// `legacy`(이 앱만의 예전 저장소)에 값이 있으면 처음 한 번 공용 설정으로 옮긴다.
@@ -39,6 +41,11 @@ final class TunnelSettingsStore {
     var logging: Bool {
         get { defaults.bool(forKey: Self.loggingKey) }
         set { defaults.set(newValue, forKey: Self.loggingKey) }
+    }
+
+    var onDemand: Bool {
+        get { defaults.bool(forKey: Self.onDemandKey) }
+        set { defaults.set(newValue, forKey: Self.onDemandKey) }
     }
 
     func providerConfig() -> TunnelProviderConfig {

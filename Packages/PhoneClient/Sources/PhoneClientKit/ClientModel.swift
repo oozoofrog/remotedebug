@@ -168,19 +168,33 @@ public final class ClientModel {
         public var sessionTimeout: TimeInterval
         /// 호스트 요청의 제한 시간.
         public var requestTimeouts: HostAPI.Timeouts
+        /// 자동으로 켠 VPN이 연결되기를 기다리는 시간과 확인 간격.
+        public var autoStartTimeout: TimeInterval
+        public var autoStartPollInterval: Duration
+        /// 자동으로 켠 VPN을 쓸 일이 없어진 뒤 끄기까지의 시간과 확인 간격.
+        public var autoOffDelay: TimeInterval
+        public var autoOffCheckInterval: Duration
 
         public init(
             pairingPollInterval: Duration = .seconds(1),
             pairingTimeout: TimeInterval = 120,
             sessionPollInterval: Duration = .seconds(1),
             sessionTimeout: TimeInterval = 600,
-            requestTimeouts: HostAPI.Timeouts = .standard
+            requestTimeouts: HostAPI.Timeouts = .standard,
+            autoStartTimeout: TimeInterval = 15,
+            autoStartPollInterval: Duration = .milliseconds(250),
+            autoOffDelay: TimeInterval = 30,
+            autoOffCheckInterval: Duration = .seconds(1)
         ) {
             self.pairingPollInterval = pairingPollInterval
             self.pairingTimeout = pairingTimeout
             self.sessionPollInterval = sessionPollInterval
             self.sessionTimeout = sessionTimeout
             self.requestTimeouts = requestTimeouts
+            self.autoStartTimeout = autoStartTimeout
+            self.autoStartPollInterval = autoStartPollInterval
+            self.autoOffDelay = autoOffDelay
+            self.autoOffCheckInterval = autoOffCheckInterval
         }
 
         public static let standard = Timing()
@@ -223,6 +237,11 @@ public final class ClientModel {
     @ObservationIgnored public var onFileTransfer: (@MainActor (FileTransferUpdate) -> Void)?
     /// 마지막 동작이 VPN이 연결되지 않아 멈췄다. VPN이 연결되면 멈춘 페어링·새로고침을 이어 간다.
     public private(set) var needsTunnel = false
+    /// Mac이 필요한 동작 때문에 앱이 VPN을 켜고 연결을 기다리는 중이다. 화면은 "VPN 켜는 중…"을 보여 준다.
+    public private(set) var isAutoStartingVPN = false
+    /// 지금 VPN은 앱이 자동으로 켠 것이다. 쓸 일이 없어지면 `Timing.autoOffDelay` 뒤에 끈다.
+    /// 사용자가 켜거나 끈 VPN, 다른 앱의 VPN에는 `false`다.
+    public private(set) var vpnAutoStarted = false
     /// 진단 로그. 화면과 앱(시작·VPN)도 여기에 남긴다.
     public let logBook: DeviceLogBook
     public let crashBook: CrashBook
@@ -255,6 +274,7 @@ public final class ClientModel {
     private struct PairingPoll { var link: PairingLink; var requestID: String; var deadline: Date }
     private struct ActiveSession { var sessionID: String; var installURL: URL; var deadline: Date }
     private struct Running { var token: UUID; var task: Task<Void, Never> }
+    private struct VPNNotConnected: Error {}
     private struct PairingRun { var token: UUID; var link: PairingLink; var task: Task<Void, Never> }
 
     @ObservationIgnored private var refreshQueued = false
@@ -270,6 +290,10 @@ public final class ClientModel {
     @ObservationIgnored private var refreshesInFlight = 0
     /// 호스트가 바뀔 때(복원·다른 호스트 승인·잊기)마다 늘어난다. 기다리는 동안 값이 바뀐 작업은 결과를 쓰지 않는다.
     @ObservationIgnored private var hostGeneration = 0
+    @ObservationIgnored private var autoStartTask: Task<Bool, Never>?
+    @ObservationIgnored private var idle = AutoVPNIdle()
+    @ObservationIgnored private var idleTask: Task<Void, Never>?
+    @ObservationIgnored private var idleToken: UUID?
 
     public init(
         deviceName: String,
@@ -317,6 +341,8 @@ public final class ClientModel {
     isolated deinit {
         tunnelObserver?.cancel()
         resumeTask?.cancel()
+        autoStartTask?.cancel()
+        idleTask?.cancel()
         pairing?.task.cancel()
         for running in installTasks.values { running.task.cancel() }
         for task in downloadTasks.values { task.cancel() }
@@ -442,6 +468,8 @@ public final class ClientModel {
                 log(.info, "vpn", "링크의 Tailscale 키로 VPN 켜는 중")
                 lastError = nil
                 Task { await connect(key) }
+            } else {
+                autoStartForQueuedWork()
             }
             return
         }
@@ -588,7 +616,6 @@ public final class ClientModel {
 
     public func refresh() async {
         guard let current = host, let api = makeAPI(current.fqdn) else { return }
-        guard ensureTunnel(queue: .refresh) else { return }
         let generation = hostGeneration
         refreshesInFlight += 1
         isRefreshing = true
@@ -596,6 +623,8 @@ public final class ClientModel {
             refreshesInFlight -= 1
             isRefreshing = refreshesInFlight > 0
         }
+        // VPN이 꺼져 있고 자동으로 켤 수 있으면 켜고 연결을 기다린다. 그러지 못하면 연결될 때 이어 한다.
+        guard await connectedTunnel(queue: .refresh), generation == hostGeneration else { return }
         do {
             let info = try await api.info()
             guard generation == hostGeneration else { return }
@@ -663,7 +692,7 @@ public final class ClientModel {
     /// 파일을 받아 Documents에 저장한다(같은 이름은 바꾼다). 이미 받는 중이면 아무것도 하지 않는다.
     public func download(_ resource: ResourceDescriptor) {
         guard !resource.isLink, downloadTasks[resource.id] == nil, let current = host, let api = makeAPI(current.fqdn) else { return }
-        guard ensureTunnel(queue: nil) else { return }
+        guard tunnelUsable() else { return }
         let generation = hostGeneration
         fileDownloads[resource.id] = .downloading
         fileProgress[resource.id] = FileTransferProgress(received: 0, total: resource.size, startedAt: clock.now)
@@ -677,6 +706,7 @@ public final class ClientModel {
         downloadTasks[resource.id] = Task { [weak self] in
             let result: Result<URL, any Error>
             do {
+                guard await self?.connectedForTransfer() ?? false else { throw VPNNotConnected() }
                 result = .success(try await api.download(resource, progress: report))
             } catch {
                 result = .failure(error)
@@ -707,7 +737,7 @@ public final class ClientModel {
                 self.fileDownloads[resource.id] = nil
                 self.notifyTransfer(resource, .cancelled)
             case .failure(let error):
-                let message = Self.message(for: error)
+                let message = error is VPNNotConnected ? Self.vpnNotConnectedMessage(for: self.tunnel) : Self.message(for: error)
                 self.fileDownloads[resource.id] = .failed(message)
                 self.log(.warning, "files", "파일 받기 실패: \(resource.name) \(message) [\((error as? HostAPIError)?.message ?? String(describing: error))]")
                 self.notifyTransfer(resource, .failed(message))
@@ -833,7 +863,7 @@ public final class ClientModel {
             startSessionPolling(buildID: id, api: api, active: active)
             return
         }
-        guard ensureTunnel(queue: nil) else { return }
+        guard tunnelUsable() else { return }
         log(.info, "install", "설치 요청: \(build.displayName) \(build.version) (\(build.buildNumber)) \(id)")
         installs[id] = .preparing
         let token = UUID()
@@ -878,6 +908,13 @@ public final class ClientModel {
 
     private func runInstall(buildID id: String, api: HostAPI, token: UUID, generation: Int) async {
         defer { finishInstallTask(id, token: token) }
+        // 설치 세션을 만들기 전에 VPN이 연결돼 있게 한다(꺼져 있으면 자동으로 켠다).
+        guard await connectedForTransfer() else {
+            guard generation == hostGeneration, installs[id] == .preparing else { return }
+            installs[id] = Task.isCancelled ? nil : .failed(message: Self.vpnNotConnectedMessage(for: tunnel))
+            return
+        }
+        guard generation == hostGeneration else { return }
         let session: SessionResponse
         do {
             session = try await api.createSession(buildID: id)
@@ -1107,6 +1144,7 @@ public final class ClientModel {
         phase = .unpaired
         needsTunnel = false
         lastError = nil
+        vpnAutoStarted = false
         await tunnelController.disconnect()
         tunnel = tunnelController.currentState()
     }
@@ -1135,6 +1173,7 @@ public final class ClientModel {
 
     /// VPN 구성을 확인(`prepare`)한 뒤 VPN을 켠다.
     public func connectTunnel() async {
+        vpnAutoStarted = false
         do {
             try await tunnelController.prepare()
         } catch {
@@ -1155,8 +1194,164 @@ public final class ClientModel {
     }
 
     public func disconnectTunnel() async {
+        vpnAutoStarted = false
         await tunnelController.disconnect()
         tunnel = tunnelController.currentState()
+    }
+
+    /// 사용자가 모델을 거치지 않고 VPN을 켜거나 껐다(이 앱으로 넘겨받기, 짝 앱의 요청).
+    /// 그 VPN은 자동으로 켠 것이 아니므로 자동으로 끄지 않는다.
+    public func noteManualVPNChange() {
+        vpnAutoStarted = false
+    }
+
+    // MARK: VPN 자동 켜기·끄기 (docs/protocol-addenda.md N)
+
+    /// VPN이 연결돼 있거나, 꺼져 있어도 Mac이 필요할 때 자동으로 켤 수 있다.
+    public var canReachHost: Bool {
+        let state = tunnelController.currentState()
+        return state == .connected || autoStartTask != nil || autoStartDecision(state) == .start
+    }
+
+    private func autoStartDecision(_ state: TunnelState) -> AutoVPNPolicy.Start {
+        AutoVPNPolicy.start(state: state, holder: tunnelController.vpnHolder, configuration: tunnelController.autoStartConfiguration)
+    }
+
+    /// VPN이 연결돼 있으면 `true`. 꺼져 있고 자동으로 켤 수 있으면 켜고, 연결되거나 실패할 때까지 기다린다.
+    /// 이미 자동으로 켜는 중이면 그 결과를 함께 기다린다.
+    private func autoStartTunnel() async -> Bool {
+        let state = tunnelController.currentState()
+        if state == .connected { return true }
+        if let running = autoStartTask { return await running.value }
+        guard autoStartDecision(state) == .start else { return false }
+        let task = Task { [weak self] in await self?.performAutoStart() ?? false }
+        autoStartTask = task
+        return await task.value
+    }
+
+    private func performAutoStart() async -> Bool {
+        isAutoStartingVPN = true
+        defer {
+            isAutoStartingVPN = false
+            autoStartTask = nil
+        }
+        if let message = lastError, Self.tunnelMessages.contains(message) { lastError = nil }
+        log(.info, "vpn", "Mac 연결이 필요해 VPN을 자동으로 켬")
+        do {
+            try await tunnelController.connectAutomatically()
+        } catch {
+            log(.warning, "vpn", "VPN 자동 켜기 실패: \(error.localizedDescription)")
+            tunnel = tunnelController.currentState()
+            return false
+        }
+        // 그사이 다른 앱의 VPN이 켜졌으면 그것을 쓴다. 그 VPN은 끄지 않는다.
+        vpnAutoStarted = tunnelController.vpnHolder == .thisApp
+        idle.noteNeed()
+        let connected = await waitForAutoStart()
+        if vpnAutoStarted { startIdleWatch() }
+        if !connected { log(.warning, "vpn", "자동으로 켠 VPN이 연결되지 않음: \(tunnelController.currentState().logText)") }
+        // 연결됐으면 VPN을 기다리던 페어링·새로고침을 이어 간다.
+        tunnelDidChange(tunnelController.currentState())
+        return connected
+    }
+
+    /// 자동으로 켠 VPN이 연결될 때까지 기다린다. 로그인이 필요하거나 오류면 바로 `false`.
+    private func waitForAutoStart() async -> Bool {
+        let interval = timing.autoStartPollInterval
+        let step = Double(interval.components.seconds) + Double(interval.components.attoseconds) / 1e18
+        let steps = max(1, Int((timing.autoStartTimeout / max(step, 0.001)).rounded(.up)))
+        // 켜기를 부른 직후에는 iOS가 아직 꺼짐으로 알려 줄 수 있다. 잠깐은 꺼짐도 기다린다.
+        let offGrace = max(1, Int((3 / max(step, 0.001)).rounded(.up)))
+        var sawActive = false
+        for index in 0..<steps {
+            switch tunnelController.currentState() {
+            case .connected: return true
+            case .needsLogin, .failed: return false
+            case .off:
+                if sawActive || index >= offGrace { return false }
+            case .connecting, .disconnecting:
+                sawActive = true
+            }
+            do { try await clock.sleep(for: interval) } catch { return false }
+        }
+        return tunnelController.currentState() == .connected
+    }
+
+    /// VPN을 기다리게 된 페어링·새로고침을 위해 VPN을 자동으로 켠다. 켤 수 없으면 아무것도 하지 않는다.
+    private func autoStartForQueuedWork() {
+        guard autoStartTask != nil || autoStartDecision(tunnelController.currentState()) == .start else { return }
+        Task { [weak self] in
+            guard let self, !(await self.autoStartTunnel()) else { return }
+            if self.queuedPairing != nil || self.refreshQueued { self.lastError = Self.tunnelMessage(for: self.tunnel) }
+        }
+    }
+
+    /// 설치·파일 받기를 시작해도 되는가. VPN이 연결돼 있거나 자동으로 켤 수 있으면 `true`,
+    /// 아니면 VPN 안내를 띄운다. 실제 연결은 작업 안에서 `connectedForTransfer()`가 기다린다.
+    private func tunnelUsable() -> Bool {
+        let state = tunnelController.currentState()
+        if state != .connected, autoStartTask != nil || autoStartDecision(state) == .start {
+            idle.noteNeed()
+            return true
+        }
+        return ensureTunnel(queue: nil)
+    }
+
+    /// 설치·파일 받기·보내기 바로 앞에서 VPN 연결을 확인한다. 안내 문구는 바꾸지 않는다.
+    private func connectedForTransfer() async -> Bool {
+        let connected = await autoStartTunnel()
+        tunnel = tunnelController.currentState()
+        if connected { idle.noteNeed() }
+        return connected
+    }
+
+    /// 새로고침처럼 VPN이 연결되면 이어 할 수 있는 동작. 자동으로 켜지 못했으면 `ensureTunnel`과 같이 안내하고 기억한다.
+    private func connectedTunnel(queue action: Deferred?) async -> Bool {
+        if tunnelController.currentState() != .connected { _ = await autoStartTunnel() }
+        return ensureTunnel(queue: action)
+    }
+
+    /// Mac이 필요한 일이 남았는가. 남아 있으면 자동으로 켠 VPN을 끄지 않는다.
+    private var hasVPNNeed: Bool {
+        autoStartTask != nil || refreshesInFlight > 0 || isSendingLogs || isSendingCrashes
+            || !installTasks.isEmpty || !activeSessions.isEmpty || installs.values.contains(where: \.isInProgress)
+            || !downloadTasks.isEmpty || fileDownloads.values.contains(.downloading)
+            || pairing != nil || pairingPoll != nil || queuedPairing != nil
+    }
+
+    /// 자동으로 켠 VPN을 쓸 일이 없어졌는지 주기적으로 본다. 다시 부르면 새로 센다.
+    private func startIdleWatch() {
+        idleTask?.cancel()
+        idle = AutoVPNIdle()
+        let clock = clock
+        let interval = timing.autoOffCheckInterval
+        let token = UUID()
+        idleToken = token
+        idleTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do { try await clock.sleep(for: interval) } catch { return }
+                guard let self, self.idleToken == token, await self.idleTick() else { return }
+            }
+        }
+    }
+
+    /// 계속 지켜봐야 하면 `true`.
+    private func idleTick() async -> Bool {
+        let action = idle.check(now: clock.now, autoStarted: vpnAutoStarted, holder: tunnelController.vpnHolder,
+                                state: tunnelController.currentState(), hasNeed: hasVPNNeed, delay: timing.autoOffDelay)
+        switch action {
+        case .keep:
+            return true
+        case .forget:
+            vpnAutoStarted = false
+            return false
+        case .turnOff:
+            log(.info, "vpn", "자동으로 켠 VPN을 \(Int(timing.autoOffDelay))초 동안 쓰지 않아 끔")
+            vpnAutoStarted = false
+            await tunnelController.disconnect()
+            tunnel = tunnelController.currentState()
+            return false
+        }
     }
 
     private func tunnelDidChange(_ state: TunnelState) {
@@ -1188,6 +1383,7 @@ public final class ClientModel {
         tunnel = tunnelController.currentState()
         if tunnel == .connected {
             needsTunnel = false
+            idle.noteNeed()
             return true
         }
         needsTunnel = true
@@ -1203,13 +1399,12 @@ public final class ClientModel {
     // MARK: 로그
 
     /// 쌓인 로그를 페어링한 Mac에 보낸다. 목록을 받은 뒤에도 자동으로 부른다.
-    /// VPN이 꺼져 있거나 보내지 못하면 로그를 남겨 두고 다음에 다시 보낸다.
+    /// VPN이 꺼져 있으면 자동으로 켤 수 있을 때만 켜서 보낸다. 보내지 못하면 로그를 남겨 두고 다음에 다시 보낸다.
     public func sendLogs() async {
-        guard !isSendingLogs, let current = host, let api = makeAPI(current.fqdn),
-              tunnelController.currentState() == .connected
-        else { return }
+        guard !isSendingLogs, let current = host, let api = makeAPI(current.fqdn), canReachHost else { return }
         isSendingLogs = true
         defer { isSendingLogs = false }
+        guard await connectedForTransfer() else { return }
         let generation = hostGeneration
         while generation == hostGeneration {
             let batch = logBook.nextBatch()
@@ -1243,10 +1438,11 @@ public final class ClientModel {
     /// 아직 보내지 않은 크래시 기록을 페어링한 Mac에 보낸다. 보내지 못하면 남겨 두고 다음에 다시 보낸다.
     public func sendCrashes() async {
         guard !isSendingCrashes, !crashBook.unsent.isEmpty, let current = host, let api = makeAPI(current.fqdn),
-              tunnelController.currentState() == .connected
+              canReachHost
         else { return }
         isSendingCrashes = true
         defer { isSendingCrashes = false }
+        guard await connectedForTransfer() else { return }
         let generation = hostGeneration
         for item in crashBook.unsent where generation == hostGeneration {
             guard let report = crashBook.report(item) else { continue }
@@ -1333,6 +1529,11 @@ public final class ClientModel {
     /// 테스트용: 모델이 띄운 작업이 모두 끝날 때까지 기다린다.
     func waitForBackgroundWork() async {
         while true {
+            if let autoStartTask {
+                _ = await autoStartTask.value
+                await Task.yield()
+                continue
+            }
             var tasks: [Task<Void, Never>] = installTasks.values.map(\.task) + Array(downloadTasks.values)
             if let pairing { tasks.append(pairing.task) }
             if let resumeTask { tasks.append(resumeTask) }
@@ -1350,6 +1551,14 @@ public final class ClientModel {
     public nonisolated static let tunnelFailedMessage = "VPN 연결에 실패했습니다. ‘다시 연결’을 누르세요."
     public nonisolated static let tunnelMessages: Set<String> = [tunnelOffMessage, tunnelConnectingMessage, tunnelNeedsLoginMessage, tunnelFailedMessage]
     public nonisolated static let tunnelPrepareFailedMessage = "VPN 구성을 저장하지 못했습니다. VPN을 다시 켜고 'VPN 구성 추가' 알림이 뜨면 허용을 누르세요."
+    public nonisolated static let vpnNotConnectedMessage = "VPN이 연결되지 않았습니다. VPN 상태를 확인한 뒤 다시 시도하세요."
+    public nonisolated static let vpnLoginBeforeRetryMessage = "tailnet 로그인이 필요합니다. 로그인한 뒤 다시 시도하세요."
+
+    /// 설치·파일 받기를 시작하려다 VPN이 연결되지 않았을 때의 안내.
+    public nonisolated static func vpnNotConnectedMessage(for state: TunnelState) -> String {
+        state.isNeedsLogin ? vpnLoginBeforeRetryMessage : vpnNotConnectedMessage
+    }
+
     public nonisolated static let tunnelConnectFailedMessage = "VPN을 켜지 못했습니다. 잠시 뒤 VPN을 다시 켜세요."
     public nonisolated static let pairingDeniedMessage = "Mac에서 페어링을 거절했습니다. 다시 하려면 Mac에서 새 코드를 여세요."
     public nonisolated static let pairingExpiredMessage = "페어링 요청이 만료되었습니다. Mac에서 새 코드를 열고 다시 시도하세요."

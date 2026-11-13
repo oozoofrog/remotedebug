@@ -82,6 +82,11 @@ func rd_tunnel_set_default_interface(handle C.int64_t, ifName *C.char) *C.char {
 	return out(api.TunnelSetDefaultInterface(int64(handle), C.GoString(ifName)))
 }
 
+//export rd_tunnel_set_path_peer
+func rd_tunnel_set_path_peer(handle C.int64_t, fqdn *C.char) *C.char {
+	return out(api.TunnelSetPathPeer(int64(handle), C.GoString(fqdn)))
+}
+
 //export rd_next_event
 func rd_next_event(handle C.int64_t, timeoutMs C.int32_t) *C.char {
 	return out(api.NextEvent(int64(handle), int(timeoutMs)))

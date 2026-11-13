@@ -102,6 +102,10 @@ verify_tunnel() {
     echo "error: $1: rd_tunnel_set_default_interface is not exported" >&2
     return 1
   fi
+  if ! nm -gU "$lib" 2>/dev/null | grep -q ' _rd_tunnel_set_path_peer$'; then
+    echo "error: $1: rd_tunnel_set_path_peer is not exported" >&2
+    return 1
+  fi
   if ! grep -aq 'remotedebug/core/internal/tunnel.Start' "$lib"; then
     echo "error: $1: tunnel mode (internal/tunnel) is not linked" >&2
     return 1

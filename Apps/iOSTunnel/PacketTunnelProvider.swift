@@ -159,7 +159,18 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         }
         switch request.cmd {
         case .status:
+            notePathPeer(request.peer)
             return try? statusReply().encoded()
+        }
+    }
+
+    /// 앱이 알려 준 Mac 이름이 바뀌었으면 코어에 알린다. 코어는 다음 상태 점검부터 `peerPath`를 채운다.
+    private func notePathPeer(_ peer: String?) {
+        guard let peer, let node = lifecycle.currentNode, runtime.updatePathPeer(peer) else { return }
+        do {
+            try node.setPathPeer(peer)
+        } catch {
+            runtime.forgetPathPeer()
         }
     }
 
@@ -338,6 +349,7 @@ private final class TunnelRuntime: @unchecked Sendable {
     private var _lastError: String?
     private var _defaultInterface: String?
     private var _engineDead = false
+    private var _pathPeer: String?
 
     private func locked<T>(_ body: () -> T) -> T {
         lock.lock()
@@ -354,8 +366,20 @@ private final class TunnelRuntime: @unchecked Sendable {
             _lastError = nil
             _defaultInterface = nil
             _engineDead = false
+            _pathPeer = nil
         }
     }
+
+    /// 이름이 바뀌었으면 기억하고 `true`.
+    func updatePathPeer(_ name: String) -> Bool {
+        locked {
+            guard _pathPeer != name else { return false }
+            _pathPeer = name
+            return true
+        }
+    }
+
+    func forgetPathPeer() { locked { _pathPeer = nil } }
 
     func setStatus(_ status: CoreStatus) { locked { _status = status } }
     func setLastError(_ message: String?) { locked { _lastError = message } }
