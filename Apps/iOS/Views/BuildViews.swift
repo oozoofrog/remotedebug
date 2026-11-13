@@ -151,6 +151,12 @@ struct BuildRow: View {
     var isOlder = false
     /// 이 iPhone에 설치된 같은 앱의 버전. 읽지 못했으면 `nil`.
     var installed: InstalledApp?
+    @Environment(\.crashPanel) private var crashPanel
+    @State private var showsCrashes = false
+
+    private var crashCount: Int {
+        crashPanel?.state.crashes.count { $0.bundleId == build.bundleId } ?? 0
+    }
 
     private var isInstalledBuild: Bool {
         installed?.version == build.version && installed?.buildNumber == build.buildNumber
@@ -207,6 +213,16 @@ struct BuildRow: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            if installed != nil, !isOlder, crashPanel != nil {
+                Button {
+                    showsCrashes = true
+                } label: {
+                    Label(crashCount == 0 ? "크래시 기록" : "크래시 기록 \(crashCount)개", systemImage: "waveform.path.ecg")
+                        .font(.footnote)
+                }
+                .buttonStyle(.borderless)
+                .accessibilityLabel("\(build.displayName) 크래시 기록")
+            }
             if build.signing.profileExpires < .now {
                 Label("프로비저닝 프로파일이 \(build.signing.profileExpires.formatted(date: .abbreviated, time: .omitted))에 만료되었습니다. 설치해도 실행되지 않을 수 있습니다.", systemImage: "calendar.badge.exclamationmark")
                     .font(.footnote)
@@ -217,6 +233,9 @@ struct BuildRow: View {
             }
         }
         .padding(.vertical, 4)
+        .sheet(isPresented: $showsCrashes) {
+            if let crashPanel { AppCrashSheet(app: build, panel: crashPanel) }
+        }
     }
 
     static func size(_ bytes: Int64) -> String {

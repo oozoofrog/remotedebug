@@ -172,10 +172,7 @@ struct RootView: View {
     }
 
     private func buildsScreen(_ state: PhoneViewState) -> some View {
-        PhoneScreen(
-            state: state,
-            actions: actions,
-            settings: SettingsViewState(
+        let settings = SettingsViewState(
                 host: model.host,
                 nodeHostname: tunnel.settings.hostname,
                 vpnStatusLabel: tunnel.isAvailable ? TunnelStateMapping.label(tunnel.vpnStatus) : "사용할 수 없음",
@@ -192,8 +189,8 @@ struct RootView: View {
                 canSendLogs: model.host != nil && model.tunnel == .connected,
                 crashes: model.crashBook.items,
                 crashSendError: model.crashSendError
-            ),
-            settingsActions: SettingsActions(
+            )
+        let settingsActions = SettingsActions(
                 forgetHost: { await model.forgetHost() },
                 saveControlURL: { text in
                     guard let normalized = TunnelSettingsStore.normalizedControlURL(text) else { return false }
@@ -202,12 +199,24 @@ struct RootView: View {
                 },
                 sendLogs: { await model.sendLogs() },
                 openInstallPage: openInstallPage,
+                openAnalyticsData: openAnalyticsData,
                 crashText: { model.crashBook.text($0) },
                 crashFile: { model.crashBook.fileURL($0) },
                 deleteCrash: { model.crashBook.remove($0) },
                 importCrash: { await importCrash($0) }
             )
-        )
+        return PhoneScreen(state: state, actions: actions, settings: settings, settingsActions: settingsActions)
+            .environment(\.crashPanel, CrashPanel(state: settings, actions: settingsActions))
+    }
+
+    /// iPhone 설정 앱을 연다. 분석 데이터 화면 주소를 먼저 시도하고, 열지 못하면 이 앱의 설정 화면을 연다.
+    private func openAnalyticsData() {
+        model.log(.info, "crash", "iPhone 설정 열기(분석 데이터)")
+        guard let deep = URL(string: "App-prefs:Privacy&path=PROBLEM_REPORTING/DIAGNOSTIC_USAGE_DATA") else { return }
+        UIApplication.shared.open(deep) { opened in
+            guard !opened, let fallback = URL(string: UIApplication.openSettingsURLString) else { return }
+            UIApplication.shared.open(fallback)
+        }
     }
 
     private func handleScenePhase(_ phase: ScenePhase) {

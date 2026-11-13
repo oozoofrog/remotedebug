@@ -162,6 +162,8 @@ struct SettingsActions {
     var saveControlURL: (String) -> Bool
     var sendLogs: @MainActor @Sendable () async -> Void = {}
     var openInstallPage: () -> Void = {}
+    /// iPhone 설정 앱을 연다(분석 데이터 화면을 먼저 시도한다).
+    var openAnalyticsData: () -> Void = {}
     var crashText: (CrashBook.Item) -> String? = { _ in nil }
     var crashFile: (CrashBook.Item) -> URL? = { _ in nil }
     var deleteCrash: (_ id: String) -> Void = { _ in }
