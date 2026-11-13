@@ -6,6 +6,9 @@ import SwiftUI
 /// 페어링한 iPhone으로 보낼 파일. 끌어 놓거나 골라서 넣는다.
 struct FilesView: View {
     @Environment(HostModel.self) private var model
+    @Environment(ProjectsModel.self) private var projects: ProjectsModel?
+    /// 새로 넣는 파일·링크가 들어갈 구역. nil이면 공통이다.
+    @State private var area: ResourceProject?
     @State private var choosing = false
     @State private var isTargeted = false
     @State private var fileToRemove: ResourceDescriptor?
@@ -17,7 +20,7 @@ struct FilesView: View {
                 ContentUnavailableView {
                     Label("보낸 파일 없음", systemImage: "doc.on.doc")
                 } description: {
-                    Text("파일이나 링크를 여기에 끌어 놓으면 페어링한 iPhone의 RemoteDebug 앱에서 받을 수 있습니다. 이름이 같은 파일을 다시 넣으면 바뀝니다.")
+                    Text("파일이나 링크를 여기에 끌어 놓으면 페어링한 iPhone의 RemoteDebug 앱에서 받을 수 있습니다. 이름이 같은 파일을 다시 넣으면 바뀝니다. 연결한 프로젝트가 있으면 프로젝트별 구역으로 나눠 보낼 수 있습니다.")
                 } actions: {
                     Button("파일 고르기…") { choosing = true }
                     Button("링크 보내기…") { showsLinkSheet = true }
@@ -43,6 +46,15 @@ struct FilesView: View {
                         .controlSize(.small)
                         .accessibilityLabel("파일 \(model.filesInProgress)개 보내는 중")
                 }
+                if choices.count > 1 {
+                    Picker("넣을 구역", selection: $area) {
+                        ForEach(choices, id: \.self) { choice in
+                            Text(choice?.name ?? ResourceArea.commonTitle).tag(choice)
+                        }
+                    }
+                    .help("새로 보내는 파일과 링크가 들어갈 구역")
+                    .accessibilityLabel("넣을 구역")
+                }
                 Button { choosing = true } label: {
                     Label("파일 보내기…", systemImage: "square.and.arrow.up")
                 }
@@ -62,12 +74,12 @@ struct FilesView: View {
             let links = urls.filter { !$0.isFileURL }
             guard !files.isEmpty || !links.isEmpty else { return false }
             if !files.isEmpty { share(files) }
-            if !links.isEmpty { Task { for link in links { _ = await model.shareLink(link) } } }
+            if !links.isEmpty { Task { for link in links { _ = await model.shareLink(link, project: area) } } }
             return true
         } isTargeted: { isTargeted = $0 }
         .sheet(isPresented: $showsLinkSheet) {
             LinkSheet { url, title in
-                switch await model.shareLink(url, title: title) {
+                switch await model.shareLink(url, title: title, project: area) {
                 case .success: return nil
                 case .failure(let failure): return failure.message
                 }
@@ -93,10 +105,31 @@ struct FilesView: View {
                 Label("공유가 꺼져 있어 iPhone이 받을 수 없습니다. 공유를 시작하면 이 목록을 다시 보냅니다.", systemImage: "pause.circle")
                     .foregroundStyle(.secondary)
             }
-            ForEach(model.sharedFiles) { file in
-                FileRow(file: file) { fileToRemove = file }
+            ForEach(ResourceDescriptor.areas(model.sharedFiles)) { section in
+                Section(section.title) {
+                    ForEach(section.resources) { file in
+                        FileRow(file: file, destinations: choices.filter { $0?.id != file.project?.id }) { target in
+                            Task { await model.moveSharedFile(file.id, to: target) }
+                        } remove: { fileToRemove = file }
+                    }
+                }
             }
         }
+    }
+
+    /// 고를 수 있는 구역: 연결한 프로젝트, 항목이 남아 있는 구역(연결을 끊은 프로젝트), 공통.
+    private var choices: [ResourceProject?] {
+        Self.areaChoices(connected: projects?.projects ?? [], files: model.sharedFiles, current: area)
+    }
+
+    static func areaChoices(connected: [ConnectedProject], files: [ResourceDescriptor], current: ResourceProject? = nil) -> [ResourceProject?] {
+        var seen = Set<String>()
+        var list: [ResourceProject] = []
+        for project in connected.map(\.resourceArea) + ResourceDescriptor.areas(files).compactMap(\.project) + (current.map { [$0] } ?? [])
+        where seen.insert(project.id).inserted {
+            list.append(project)
+        }
+        return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending } + [nil]
     }
 
     private func share(_ urls: [URL]) {
@@ -104,13 +137,16 @@ struct FilesView: View {
             // 파일 고르기 창이 준 주소는 보안 범위 접근이 필요할 수 있다.
             let scoped = urls.map { ($0, $0.startAccessingSecurityScopedResource()) }
             defer { for (url, started) in scoped where started { url.stopAccessingSecurityScopedResource() } }
-            await model.shareFiles(urls)
+            await model.shareFiles(urls, project: area)
         }
     }
 }
 
 private struct FileRow: View {
     var file: ResourceDescriptor
+    /// 옮길 수 있는 다른 구역. nil은 공통이다.
+    var destinations: [ResourceProject?]
+    var move: (ResourceProject?) -> Void
     var remove: () -> Void
 
     var body: some View {
@@ -153,6 +189,13 @@ private struct FileRow: View {
             Button("SHA-256 복사") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(file.sha256, forType: .string)
+            }
+            if !destinations.isEmpty {
+                Menu("구역 옮기기") {
+                    ForEach(destinations, id: \.self) { target in
+                        Button(target?.name ?? ResourceArea.commonTitle) { move(target) }
+                    }
+                }
             }
             Button("지우기", role: .destructive, action: remove)
         }

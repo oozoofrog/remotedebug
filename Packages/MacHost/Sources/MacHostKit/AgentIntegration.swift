@@ -22,7 +22,7 @@ public struct AgentChannel: Sendable {
     }
 
     /// 앱이 꺼져 있으면 열고, 요청을 쓴 뒤 응답 JSON을 기다린다.
-    public func send(command: String, path: String, scheme: String) async -> Data {
+    public func send(command: String, path: String, scheme: String, project: String = "") async -> Data {
         if !isAppAlive {
             let open = Process()
             open.executableURL = URL(fileURLWithPath: "/usr/bin/open")
@@ -36,7 +36,7 @@ public struct AgentChannel: Sendable {
         let temp = requests.appendingPathComponent("\(id).tmp")
         let response = agentDir.appendingPathComponent("responses/\(id).json")
         do {
-            try Data("\(command)\n\(path)\n\(scheme)\n".utf8).write(to: temp)
+            try Data("\(command)\n\(path)\n\(scheme)\n\(project)\n".utf8).write(to: temp)
             try FileManager.default.moveItem(at: temp, to: requests.appendingPathComponent("\(id).req"))
         } catch {
             return Self.failure("요청을 보내지 못했습니다: \(HostErrorText.message(for: error))")
@@ -56,7 +56,8 @@ public struct AgentChannel: Sendable {
 /// 표준 입출력으로 동작하는 MCP 서버. 한 줄에 JSON-RPC 메시지 하나를 받는다.
 /// 앱 실행 파일을 `--mcp` 인자로 띄우면 이 서버가 돌고, 명령은 실행 중인 앱에 넘긴다.
 public struct AgentMCPServer: Sendable {
-    public typealias Send = @Sendable (_ command: String, _ path: String, _ scheme: String) async -> Data
+    /// `project`는 보낸 파일의 구역(push·link·files). 다른 명령은 빈 글자다.
+    public typealias Send = @Sendable (_ command: String, _ path: String, _ scheme: String, _ project: String) async -> Data
     public static let argument = "--mcp"
     public static let serverName = "remotedebug"
 
@@ -77,7 +78,7 @@ public struct AgentMCPServer: Sendable {
         let root = channel.agentDir.deletingLastPathComponent()
         self.init(deviceLogsDir: root.appendingPathComponent("DeviceLogs", isDirectory: true),
                   crashLogsDir: root.appendingPathComponent("CrashLogs", isDirectory: true)) {
-            await channel.send(command: $0, path: $1, scheme: $2)
+            await channel.send(command: $0, path: $1, scheme: $2, project: $3)
         }
     }
 
@@ -95,20 +96,28 @@ public struct AgentMCPServer: Sendable {
         ],
         [
             "name": "remotedebug_push_file",
-            "description": "Mac의 파일을 페어링한 iPhone의 RemoteDebug 앱으로 보낸다(이미지, JSON, DB, 설정 파일 등). 같은 이름의 이전 파일은 바뀐다. 사용자가 iPhone 앱의 \"Mac에서 받은 파일\"에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다. sharing이 false면 공유를 시작해야 iPhone이 받을 수 있다.",
+            "description": "Mac의 파일을 페어링한 iPhone의 RemoteDebug 앱으로 보낸다(이미지, JSON, DB, 설정 파일 등). 같은 이름의 이전 파일은 바뀐다. project를 주면 iPhone 파일 탭의 그 프로젝트 구역에, 비우면 공통 구역에 넣는다. 사용자가 iPhone 앱의 파일 탭에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다. sharing이 false면 공유를 시작해야 iPhone이 받을 수 있다.",
             "inputSchema": ["type": "object", "properties": [
                 "file_path": ["type": "string", "description": "보낼 파일의 절대 경로(폴더는 압축해서 보낸다, 최대 4GB)"],
+                "project": projectProperty,
             ] as [String: Any], "required": ["file_path"]] as [String: Any],
         ],
         [
             "name": "remotedebug_push_link",
-            "description": "링크를 페어링한 iPhone의 RemoteDebug 앱으로 보낸다. 웹 주소(https://…)나 디버그 중인 앱의 딥 링크(앱스킴://…)를 보내면 사용자가 iPhone에서 눌러 연다. 같은 주소를 다시 보내면 이름이 바뀐다.",
+            "description": "링크를 페어링한 iPhone의 RemoteDebug 앱으로 보낸다. 웹 주소(https://…)나 디버그 중인 앱의 딥 링크(앱스킴://…)를 보내면 사용자가 iPhone에서 눌러 연다. 같은 주소를 다시 보내면 이름이 바뀐다. project를 주면 그 프로젝트 구역에, 비우면 공통 구역에 넣는다.",
             "inputSchema": ["type": "object", "properties": [
                 "url": ["type": "string", "description": "스킴이 있는 절대 주소(8KB 이하)"],
                 "title": ["type": "string", "description": "iPhone 목록에 보일 이름(선택). 비우면 주소에서 만든다"],
+                "project": projectProperty,
             ] as [String: Any], "required": ["url"]] as [String: Any],
         ],
-        tool("remotedebug_files", "iPhone으로 보낸 파일·링크 목록(id, 이름, 크기, SHA-256, 보낸 시각, 링크면 link).", path: false, scheme: false),
+        [
+            "name": "remotedebug_files",
+            "description": "iPhone으로 보낸 파일·링크 목록(id, 이름, 크기, SHA-256, 보낸 시각, 링크면 link, 프로젝트 구역이면 project의 id와 name). project가 없는 항목은 공통 구역이다.",
+            "inputSchema": ["type": "object", "properties": [
+                "project": ["type": "string", "description": "이 구역의 항목만(선택). 프로젝트 이름, 연결한 프로젝트의 .xcodeproj·.xcworkspace 경로, 또는 \"공통\". 비우면 전체"],
+            ] as [String: Any], "required": [String]()] as [String: Any],
+        ],
         tool("remotedebug_schemes", "Xcode 프로젝트를 RemoteDebug에 연결하고 스킴 목록을 돌려준다.", path: true, scheme: false),
         tool("remotedebug_build", "Xcode 프로젝트를 Debug 기기용으로 빌드해 iPhone이 설치할 수 있게 게시한다. 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 설치는 사용자가 iPhone에서 누른다.", path: true, scheme: true),
         [
@@ -127,6 +136,11 @@ public struct AgentMCPServer: Sendable {
                 "contains": ["type": "string", "description": "목록에서 앱·기기·파일 이름에 이 글자가 든 기록만(대소문자 무시)"],
             ] as [String: Any], "required": [String]()] as [String: Any],
         ],
+    ] }
+
+    static var projectProperty: [String: Any] { [
+        "type": "string",
+        "description": "넣을 프로젝트 구역(선택). remotedebug_status의 projects에 있는 프로젝트 이름이나 그 .xcodeproj·.xcworkspace 절대 경로. 비우면 공통 구역. 연결한 프로젝트가 아니면 오류에 쓸 수 있는 이름이 나온다",
     ] }
 
     static func tool(_ name: String, _ description: String, path: Bool, scheme: Bool) -> [String: Any] {
@@ -189,7 +203,7 @@ public struct AgentMCPServer: Sendable {
                 guard let request = arguments["request_id"] as? String, !request.isEmpty, let approve = arguments["approve"] as? Bool else {
                     return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "request_id와 approve가 필요합니다."]])
                 }
-                let data = await send(approve ? "approve" : "deny", request, "")
+                let data = await send(approve ? "approve" : "deny", request, "", "")
                 let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
                 return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
             }
@@ -197,7 +211,7 @@ public struct AgentMCPServer: Sendable {
                 guard let file = arguments["file_path"] as? String, file.hasPrefix("/") else {
                     return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "file_path에 절대 경로가 필요합니다."]])
                 }
-                let data = await send("push", file, "")
+                let data = await send("push", file, "", Self.oneLine(arguments["project"]))
                 let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
                 return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
             }
@@ -205,7 +219,7 @@ public struct AgentMCPServer: Sendable {
                 guard let url = arguments["url"] as? String, !url.isEmpty else {
                     return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "url이 필요합니다."]])
                 }
-                let data = await send("link", url, (arguments["title"] as? String ?? "").replacingOccurrences(of: "\n", with: " "))
+                let data = await send("link", url, Self.oneLine(arguments["title"]), Self.oneLine(arguments["project"]))
                 let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
                 return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
             }
@@ -213,12 +227,18 @@ public struct AgentMCPServer: Sendable {
             guard let command = commands[name] else {
                 return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "Unknown tool: \(name)"]])
             }
-            let data = await send(command, arguments["project_path"] as? String ?? "", arguments["scheme"] as? String ?? "")
+            let data = await send(command, arguments["project_path"] as? String ?? "", arguments["scheme"] as? String ?? "",
+                                  command == "files" ? Self.oneLine(arguments["project"]) : "")
             let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
             return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
         default:
             return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32601, "message": "Method not found: \(method)"]])
         }
+    }
+
+    /// 요청은 줄 단위라 줄바꿈을 빈칸으로 바꾼다.
+    static func oneLine(_ value: Any?) -> String {
+        (value as? String ?? "").replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ")
     }
 
     static func encode(_ object: [String: Any]) -> Data? {
@@ -366,9 +386,9 @@ extension AgentScript {
         - `remotedebug_pair_requests`, `remotedebug_pair_decide`: 허용을 기다리는 요청을 보고 답한다. 사용자가 방금 요청했다고 말했고 노드 이름이 `rd-phone-…`처럼 맞을 때만 허용한다.
         - `remotedebug_device_logs`: iPhone 앱이 보낸 진단 로그. iPhone에서 설치·업데이트·연결이 안 될 때 먼저 본다.
         - `remotedebug_crash_logs`: iPhone이 보낸 크래시 기록과 사람이 앱에서 쓴 피드백(목록의 종류가 `피드백`). `id` 없이 부르면 목록, `id`를 주면 원문. 설치한 앱이 iPhone에서 죽는다고 하면 먼저 본다. 기록이 없으면 사용자에게 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 그 앱의 기록을 열고 공유 버튼으로 RemoteDebug에 넘겨 달라고 한다. RemoteDebug iPhone 앱 자신의 크래시는 앱을 다시 열면 자동으로 들어온다. 앱에 피드백 보내기 기능을 붙여 달라는 요청에는 저장소(https://github.com/oozoofrog/remotedebug)의 Swift 패키지 `RemoteDebugFeedback`(iOS 17 이상)을 앱 대상에 추가하고, 앱 시작 때 `RemoteDebugFeedback.start(.init(macHost:email:publicKeyBase64:))`, 피드백을 띄울 화면에 `.remoteDebugFeedback(isPresented:)`를 넣는다. Mac 주소와 공개키가 든 코드는 Mac 앱 프로젝트 화면의 "크래시·피드백 보내기 추가"에 있고, 받을 메일 주소는 사용자에게 묻는다. 패키지는 글, 화면 사진, 최근 로그를 Mac으로 바로 보내고, 닿지 않으면 메일로 보낸다. 메일에 붙어 온 `.afdiag` 파일은 Mac 앱의 크래시·피드백 화면에서 연다. 원문 파일은 `~/Library/Application Support/RemoteDebug/CrashLogs`에 있다.
-        - `remotedebug_push_file`: `file_path`(절대 경로)의 파일을 iPhone RemoteDebug 앱으로 보낸다. 같은 이름의 이전 파일은 바뀐다. 사용자는 iPhone 앱의 "Mac에서 받은 파일"에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다.
-        - `remotedebug_push_link`: `url`(https://… 또는 앱스킴://… 딥 링크), `title`(선택)을 iPhone으로 보낸다. 사용자가 iPhone 파일 탭의 링크를 눌러 Safari나 디버그 중인 앱으로 연다.
-        - `remotedebug_files`: 보낸 파일·링크 목록.
+        - `remotedebug_push_file`: `file_path`(절대 경로)의 파일을 iPhone RemoteDebug 앱으로 보낸다. 같은 이름의 이전 파일은 바뀐다. `project`(선택)에 연결한 프로젝트의 이름이나 `.xcodeproj`·`.xcworkspace` 경로를 주면 iPhone 파일 탭의 그 프로젝트 구역에, 비우면 공통 구역에 넣는다. 작업 중인 프로젝트의 파일이면 그 프로젝트를 준다. 사용자는 iPhone 앱의 파일 탭에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다.
+        - `remotedebug_push_link`: `url`(https://… 또는 앱스킴://… 딥 링크), `title`(선택), `project`(선택, 위와 같다)를 iPhone으로 보낸다. 사용자가 iPhone 파일 탭의 링크를 눌러 Safari나 디버그 중인 앱으로 연다.
+        - `remotedebug_files`: 보낸 파일·링크 목록. 항목의 `project`가 구역이고 없으면 공통이다. `project`(선택)를 주면 그 구역만 본다.
         - `remotedebug_status`
 
         도구가 보이지 않으면 같은 일을 하는 명령을 쓴다. JSON 한 줄을 출력하고 성공하면 종료 코드 0이다.
@@ -377,9 +397,9 @@ extension AgentScript {
         \(rd) build <프로젝트 폴더> [스킴]
         \(rd) schemes <프로젝트 폴더>
         \(rd) status
-        \(rd) push <파일>
-        \(rd) link <주소> [이름]
-        \(rd) files
+        \(rd) push <파일> [프로젝트]
+        \(rd) link <주소> [이름] [프로젝트]
+        \(rd) files [프로젝트]
         \(rd) unpush <파일 id>
         ```
 

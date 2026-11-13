@@ -194,14 +194,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     }),
                 fileSharing: .init(
                     list: { [weak model] in model?.sharedFiles ?? [] },
-                    share: { [weak model] url in
+                    share: { [weak model] url, project in
                         guard let model else { return .failure(ShareFileFailure("RemoteDebug가 준비되지 않았습니다.")) }
-                        return await model.shareFile(url)
+                        return await model.shareFile(url, project: project)
                     },
                     remove: { [weak model] id in await model?.unshareFile(id) },
-                    shareLink: { [weak model] url, title in
+                    shareLink: { [weak model] url, title, project in
                         guard let model else { return .failure(ShareFileFailure("RemoteDebug가 준비되지 않았습니다.")) }
-                        return await model.shareLink(url, title: title)
+                        return await model.shareLink(url, title: title, project: project)
                     }),
                 importer: { [weak model] url in await model?.importBuild(url) })
             if AgentFeature.isEnabled {

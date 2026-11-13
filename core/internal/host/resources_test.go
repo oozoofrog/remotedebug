@@ -193,3 +193,76 @@ func TestResourceLinks(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestResourceProjectArea(t *testing.T) {
+	h, dir := newResourceTestHost(t, true)
+	req := writeResource(t, dir, "a.txt", "hello")
+	req.Project = &ResourceProject{ID: "0a1b2c3d4e5f", Name: "SampleApp"}
+	id, err := h.PublishResource(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.PublishResource(ResourcePublishRequest{ResourceDescriptor: ResourceDescriptor{Name: "문서", Link: "https://example.com/docs"}}); err != nil {
+		t.Fatal(err)
+	}
+	list := func() map[string]*ResourceProject {
+		w := serve(h, "GET", "/v1/resources")
+		var body struct{ Resources []ResourceDescriptor }
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		out := map[string]*ResourceProject{}
+		for _, r := range body.Resources {
+			out[r.Name] = r.Project
+		}
+		return out
+	}
+	got := list()
+	if p := got["a.txt"]; p == nil || p.ID != "0a1b2c3d4e5f" || p.Name != "SampleApp" {
+		t.Fatalf("project %+v", p)
+	}
+	if got["문서"] != nil {
+		t.Fatalf("common resource has project %+v", got["문서"])
+	}
+	// The common area leaves the key out so older clients see the old shape.
+	if body := serve(h, "GET", "/v1/resources").Body.String(); strings.Count(body, `"project"`) != 1 {
+		t.Fatalf("project key count: %s", body)
+	}
+
+	// Publishing the same id again moves it: to another project, then to common.
+	req.Project = &ResourceProject{ID: "ffffffffffff", Name: "다른 앱"}
+	if id2, err := h.PublishResource(req); err != nil || id2 != id {
+		t.Fatalf("move %q %v", id2, err)
+	}
+	if p := list()["a.txt"]; p == nil || p.Name != "다른 앱" {
+		t.Fatalf("moved %+v", p)
+	}
+	req.Project = nil
+	if _, err := h.PublishResource(req); err != nil {
+		t.Fatal(err)
+	}
+	if p := list()["a.txt"]; p != nil {
+		t.Fatalf("still in project %+v", p)
+	}
+
+	for _, bad := range []ResourceProject{
+		{ID: "", Name: "x"}, {ID: "abc", Name: ""}, {ID: "a/b", Name: "x"}, {ID: "a b", Name: "x"}, {ID: "한글", Name: "x"},
+		{ID: strings.Repeat("a", MaxProjectIDBytes+1), Name: "x"}, {ID: "abc", Name: "a\nb"},
+		{ID: "abc", Name: strings.Repeat("x", MaxProjectNameBytes+1)}, {ID: "abc", Name: "\xff"},
+	} {
+		r := req
+		r.Project = &bad
+		if _, err := h.PublishResource(r); err == nil || !strings.Contains(err.Error(), "bad_request") {
+			t.Fatalf("project %+v: %v", bad, err)
+		}
+		link := ResourcePublishRequest{ResourceDescriptor: ResourceDescriptor{Name: "x", Link: "https://example.com", Project: &bad}}
+		if _, err := h.PublishResource(link); err == nil || !strings.Contains(err.Error(), "bad_request") {
+			t.Fatalf("link project %+v: %v", bad, err)
+		}
+	}
+	edge := req
+	edge.Project = &ResourceProject{ID: strings.Repeat("a", MaxProjectIDBytes), Name: strings.Repeat("x", MaxProjectNameBytes)}
+	if _, err := h.PublishResource(edge); err != nil {
+		t.Fatalf("limits rejected: %v", err)
+	}
+}

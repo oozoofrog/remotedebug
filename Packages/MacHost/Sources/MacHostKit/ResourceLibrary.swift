@@ -6,7 +6,8 @@ import RDModels
 ///
 /// 파일은 `Published/Files/<id>`에 사본으로 두고 목록은 `resources.json`에 저장한다.
 /// 공유 중(`activate` 뒤)이면 넣고 빼는 즉시 코어에 반영하고, 공유를 시작할 때 저장된 파일을 모두 다시 게시한다.
-/// 이름이 같은 파일을 다시 넣으면 이전 것을 바꾼다.
+/// 이름이 같은 파일을 다시 넣으면 이전 것을 바꾼다(구역이 달라도 이름은 하나다. iPhone이 이름으로 저장한다).
+/// 항목마다 프로젝트 구역(`project`)을 함께 저장한다. 없으면 공통이다.
 public actor ResourceLibrary {
     public static let maxFileBytes: Int64 = 4 << 30
     public static let maxCount = 500
@@ -51,9 +52,10 @@ public actor ResourceLibrary {
         isActive = false
     }
 
-    /// 파일을 목록에 넣는다. 같은 이름의 이전 파일은 뺀다.
+    /// 파일을 `project` 구역(nil이면 공통)에 넣는다. 같은 이름의 이전 파일은 뺀다.
     @discardableResult
-    public func add(_ source: URL) async throws -> ResourceDescriptor {
+    public func add(_ source: URL, project: ResourceProject? = nil) async throws -> ResourceDescriptor {
+        let project = Self.cleaned(project)
         let fm = FileManager.default
         let resolved = source.resolvingSymlinksInPath()
         let values = try? resolved.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
@@ -68,7 +70,9 @@ public actor ResourceLibrary {
         try fm.copyItem(at: resolved, to: temp)
         let (size, sha) = try Self.hash(temp)
         let id = ResourceDescriptor.makeID(name: name, sha256: sha)
-        if let existing = resources.first(where: { $0.id == id }) { return existing }
+        if let existing = resources.first(where: { $0.id == id }) {
+            return existing.project == project ? existing : try await move(id: id, to: project)
+        }
         guard resources.count < Self.maxCount || resources.contains(where: { $0.name == name }) else {
             throw ResourceLibraryError.tooMany
         }
@@ -76,7 +80,7 @@ public actor ResourceLibrary {
         let destination = paths.resourceURL(forID: id)
         try? fm.removeItem(at: destination)
         try fm.moveItem(at: temp, to: destination)
-        let descriptor = ResourceDescriptor(id: id, name: name, size: size, sha256: sha, publishedAt: Self.wholeSeconds(now()))
+        let descriptor = ResourceDescriptor(id: id, name: name, size: size, sha256: sha, publishedAt: Self.wholeSeconds(now()), project: project)
         if isActive {
             do {
                 try await host.publishResource(request(descriptor))
@@ -93,18 +97,21 @@ public actor ResourceLibrary {
         return descriptor
     }
 
-    /// 링크를 목록에 넣는다. 같은 주소의 이전 링크는 뺀다. 이름이 없으면 주소에서 만든다.
+    /// 링크를 `project` 구역(nil이면 공통)에 넣는다. 같은 주소의 이전 링크는 뺀다. 이름이 없으면 주소에서 만든다.
     @discardableResult
-    public func addLink(_ url: URL, title: String? = nil) async throws -> ResourceDescriptor {
+    public func addLink(_ url: URL, title: String? = nil, project: ResourceProject? = nil) async throws -> ResourceDescriptor {
+        let project = Self.cleaned(project)
         let link = url.absoluteString
         guard url.scheme?.isEmpty == false, link.utf8.count <= 8 << 10 else { throw ResourceLibraryError.badLink(link) }
         let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let name = Self.safeName(trimmed.isEmpty ? Self.linkName(url) : trimmed)
         let sha = ResourceDescriptor.linkHash(link)
         let id = ResourceDescriptor.makeID(name: name, sha256: sha)
-        if let existing = resources.first(where: { $0.id == id }) { return existing }
+        if let existing = resources.first(where: { $0.id == id }) {
+            return existing.project == project ? existing : try await move(id: id, to: project)
+        }
         guard resources.count < Self.maxCount || resources.contains(where: { $0.link == link }) else { throw ResourceLibraryError.tooMany }
-        let descriptor = ResourceDescriptor(id: id, name: name, size: 0, sha256: sha, publishedAt: Self.wholeSeconds(now()), link: link)
+        let descriptor = ResourceDescriptor(id: id, name: name, size: 0, sha256: sha, publishedAt: Self.wholeSeconds(now()), link: link, project: project)
         if isActive { try await host.publishResource(request(descriptor)) }
         let replaced = resources.filter { $0.link == link && $0.id != id }
         resources.removeAll { $0.id == id || $0.link == link }
@@ -112,6 +119,29 @@ public actor ResourceLibrary {
         try? file.save(resources)
         for old in replaced { await drop(old.id) }
         return descriptor
+    }
+
+    /// 항목을 다른 구역으로 옮긴다(nil이면 공통). 보낸 시각과 목록 순서는 그대로다.
+    @discardableResult
+    public func move(id: String, to project: ResourceProject?) async throws -> ResourceDescriptor {
+        guard let index = resources.firstIndex(where: { $0.id == id }) else { throw ResourceLibraryError.missing }
+        var moved = resources[index]
+        moved.project = Self.cleaned(project)
+        guard moved != resources[index] else { return moved }
+        // 코어는 같은 id를 다시 게시하면 설명만 바꾼다.
+        if isActive { try await host.publishResource(request(moved)) }
+        resources[index] = moved
+        try file.save(resources)
+        return moved
+    }
+
+    /// 코어가 받는 모양으로 맞춘다: 이름의 제어 문자를 빼고 255바이트 안으로 줄인다. 맞출 수 없으면 공통(nil)이다.
+    static func cleaned(_ project: ResourceProject?) -> ResourceProject? {
+        guard var project else { return nil }
+        project.name = String(String.UnicodeScalarView(project.name.unicodeScalars.filter { !CharacterSet.controlCharacters.contains($0) }))
+            .trimmingCharacters(in: .whitespaces)
+        while project.name.utf8.count > ResourceProject.maxNameBytes { project.name.removeLast() }
+        return project.isValid ? project : nil
     }
 
     /// 주소에서 보기 좋은 이름: 호스트와 경로 끝(`example.com – docs`), 호스트가 없으면 스킴.
@@ -178,12 +208,14 @@ public enum ResourceLibraryError: LocalizedError, Equatable {
     case tooLarge(String)
     case tooMany
     case badLink(String)
+    case missing
 
     public var errorDescription: String? {
         switch self {
         case .notAFile(let name): "\(name)은(는) 파일이 아닙니다. 폴더는 압축해서 보내세요."
         case .tooLarge(let name): "\(name)이(가) 4GB보다 큽니다."
         case .tooMany: "파일은 500개까지 보낼 수 있습니다. 쓰지 않는 파일을 지운 뒤 다시 보내세요."
+        case .missing: "보낸 파일 목록에 없는 항목입니다."
         case .badLink(let text): "\(text)은(는) 보낼 수 있는 주소가 아닙니다. https://… 나 앱스킴://… 처럼 스킴이 있는 주소를 넣으세요."
         }
     }

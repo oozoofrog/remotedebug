@@ -133,6 +133,7 @@ private struct ProjectRow: View {
     @State private var scheme = ""
     @State private var showsFeedbackSetup = false
     @State private var feedbackAdded = true
+    @State private var choosingFiles = false
     @Environment(HostModel.self) private var host
 
     private var schemes: [String] { projects.schemes[project.id] ?? [] }
@@ -168,6 +169,7 @@ private struct ProjectRow: View {
                 Menu {
                     Button("에이전트 연결…", action: connectAgents)
                     Button("크래시·피드백 보내기 추가…") { showsFeedbackSetup = true }
+                    Button("파일 보내기…") { choosingFiles = true }
                     Button("스킴 다시 읽기") { Task { await reloadSchemes() } }
                     Button("Finder에서 보기") { NSWorkspace.shared.activateFileViewerSelecting([project.containerURL]) }
                     Divider()
@@ -194,6 +196,16 @@ private struct ProjectRow: View {
         .rdCard()
         .sheet(isPresented: $showsFeedbackSetup, onDismiss: { feedbackAdded = FeedbackSetup.isAdded(to: project) }) {
             FeedbackSetupSheet(project: project, host: host.status?.fqdn ?? "")
+        }
+        .fileImporter(isPresented: $choosingFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+            guard case .success(let urls) = result else { return }
+            Task {
+                // 파일 고르기 창이 준 주소는 보안 범위 접근이 필요할 수 있다.
+                let scoped = urls.map { ($0, $0.startAccessingSecurityScopedResource()) }
+                defer { for (url, started) in scoped where started { url.stopAccessingSecurityScopedResource() } }
+                // 보낸 파일 화면의 이 프로젝트 구역에 들어간다.
+                await host.shareFiles(urls, project: project.resourceArea)
+            }
         }
         .onChange(of: schemes) { pickScheme() }
         .task(id: project.id) {

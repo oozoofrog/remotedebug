@@ -43,7 +43,7 @@ import Testing
         let dir = try TempDir("devlogs-mcp")
         let store = DeviceLogStore(directory: dir.url)
         store.receive(event("d_1", ["앱 시작", "설치 실패: 다운로드할 수 없음", "VPN 상태: 꺼짐"]))
-        let server = AgentMCPServer(deviceLogsDir: dir.url) { _, _, _ in Data() }
+        let server = AgentMCPServer(deviceLogsDir: dir.url) { _, _, _, _ in Data() }
         let reply = try #require(await server.handle(Data(#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"remotedebug_device_logs","arguments":{"lines":2,"contains":"설치"}}}"#.utf8)))
         let text = String(decoding: reply, as: UTF8.self)
         #expect(text.contains("설치 실패"))

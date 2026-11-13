@@ -36,6 +36,37 @@ type ResourceDescriptor struct {
 	// Link makes this a link resource (protocol-addenda H.5): no file bytes;
 	// size is 0 and sha256 is the SHA-256 of the link text.
 	Link string `json:"link,omitempty"`
+	// Project is the project area the resource belongs to (protocol-addenda
+	// H.6). Nil means the common area.
+	Project *ResourceProject `json:"project,omitempty"`
+}
+
+// ResourceProject names a project area. ID is an opaque token chosen by the
+// host app (a short hash, never a path); Name is what the phone shows.
+type ResourceProject struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// Limits for ResourceProject.
+const (
+	MaxProjectIDBytes   = 64
+	MaxProjectNameBytes = 255
+)
+
+// validProject accepts nil (common area) or an id of 1–64 ASCII letters,
+// digits, "_" or "-" with a 1–255 byte UTF-8 name without control characters.
+func validProject(p *ResourceProject) bool {
+	if p == nil {
+		return true
+	}
+	if p.ID == "" || len(p.ID) > MaxProjectIDBytes || p.Name == "" || len(p.Name) > MaxProjectNameBytes || !utf8.ValidString(p.Name) {
+		return false
+	}
+	idOK := !strings.ContainsFunc(p.ID, func(r rune) bool {
+		return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == '-')
+	})
+	return idOK && !strings.ContainsFunc(p.Name, unicode.IsControl)
 }
 
 // MaxLinkBytes bounds ResourceDescriptor.Link.
@@ -80,6 +111,9 @@ func (h *Host) PublishResource(req ResourcePublishRequest) (string, error) {
 	d := req.ResourceDescriptor
 	if !validResourceName(d.Name) {
 		return "", apierr.BadRequest("name은 255바이트 이하의 파일 이름이어야 합니다(/, \\, :, 제어 문자 불가).")
+	}
+	if !validProject(d.Project) {
+		return "", apierr.BadRequest("project는 id(영문자·숫자·_·- 64바이트 이하)와 name(255바이트 이하, 제어 문자 불가)이 있어야 합니다.")
 	}
 	if d.Link != "" {
 		return h.publishLink(d)

@@ -1,4 +1,5 @@
 import Foundation
+import RDModels
 import Synchronization
 import Testing
 @testable import MacHostKit
@@ -253,6 +254,135 @@ struct ProjectsModelTests {
     }
 }
 
+@MainActor
+@Suite("ResourceAreaCommands")
+struct ResourceAreaCommandTests {
+    /// 보낸 항목과 구역을 기억하는 가짜 통로.
+    final class Sent {
+        var files: [ResourceDescriptor] = []
+        func add(_ name: String, link: String? = nil, project: ResourceProject?) -> ResourceDescriptor {
+            let r = ResourceDescriptor(id: ResourceDescriptor.makeID(name: name, sha256: "00"), name: name, size: 1, sha256: "00",
+                                       publishedAt: Date(timeIntervalSince1970: 1_790_000_000), link: link, project: project)
+            files.removeAll { $0.id == r.id }
+            files.insert(r, at: 0)
+            return r
+        }
+    }
+
+    private func make(_ tmp: TempDir, sent: Sent) -> ProjectsModel {
+        ProjectsModel(
+            root: tmp.path("state"), builder: FakeBuilder(), scanner: DerivedDataScanner(root: tmp.path("DerivedData")),
+            fileSharing: .init(
+                list: { sent.files },
+                share: { url, project in .success(sent.add(url.lastPathComponent, project: project)) },
+                remove: { id in sent.files.removeAll { $0.id == id } },
+                shareLink: { url, title, project in .success(sent.add(title ?? "링크", link: url.absoluteString, project: project)) })
+        ) { _ in nil }
+    }
+
+    private func project(_ tmp: TempDir, _ name: String, in folder: String? = nil) throws -> URL {
+        let container = tmp.path("src/\(folder ?? name)/\(name).xcodeproj")
+        try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
+        return container.standardizedFileURL
+    }
+
+    @Test func pushLinkAndFilesResolveTheProjectArea() async throws {
+        let tmp = try TempDir("area-commands")
+        let sent = Sent()
+        let model = make(tmp, sent: sent)
+        let app = try #require(await model.connect(try project(tmp, "SampleApp")))
+        let tool = try #require(await model.connect(try project(tmp, "Tool")))
+        let area = app.resourceArea
+        // id는 에이전트 요청 화면이 쓰는 프로젝트 id와 같은 규칙이고 경로가 들어 있지 않다.
+        #expect(area.id == AgentDesk.Project(name: app.name, folder: app.folder).id)
+        #expect(area.name == "SampleApp" && !area.id.contains("/"))
+
+        // 이름(대소문자 무시), 프로젝트 파일 경로, 폴더 경로로 찾는다. 비우면 공통이다.
+        #expect(await model.handleAgentRequest("push\n/f/a.png\n\nsampleapp\n").file?.project == area)
+        #expect(await model.handleAgentRequest("push\n/f/b.png\n\n\(app.container)\n").file?.project == area)
+        #expect(await model.handleAgentRequest("push\n/f/c.png\n\n\(tool.folder.path)\n").file?.project == tool.resourceArea)
+        #expect(await model.handleAgentRequest("link\nhttps://example.com/docs\n문서\nTool\n").file?.project == tool.resourceArea)
+        let common = await model.handleAgentRequest("push\n/f/d.png\n\n")
+        #expect(common.ok && common.file?.project == nil)
+        #expect(await model.handleAgentRequest("link\nhttps://example.com\n\n공통\n").file?.project == nil)
+
+        // 없는 프로젝트는 보내지 않고, 쓸 수 있는 이름을 알려 준다.
+        let count = sent.files.count
+        for request in ["push\n/f/e.png\n\nNope\n", "link\nhttps://example.com/x\n\nNope\n", "files\n\n\nNope\n"] {
+            let missing = await model.handleAgentRequest(request)
+            #expect(!missing.ok)
+            let text = try #require(missing.error)
+            #expect(text.contains("Nope") && text.contains("SampleApp") && text.contains("Tool") && text.contains("공통"), "\(text)")
+        }
+        let badPath = await model.handleAgentRequest("push\n/f/e.png\n\n\(tmp.path("src/Else/Else.xcodeproj").path)\n")
+        #expect(!badPath.ok && badPath.error?.contains("SampleApp, Tool") == true)
+        #expect(sent.files.count == count)
+
+        // files는 구역을 함께 돌려주고 project로 거른다.
+        #expect(await model.handleAgentRequest("files\n\n\n").files?.count == 6)
+        #expect(await model.handleAgentRequest("files\n\n\nSampleApp\n").files?.map(\.name) == ["b.png", "a.png"])
+        #expect(await model.handleAgentRequest("files\n\n\n\(tool.container)\n").files?.map(\.name) == ["문서", "c.png"])
+        #expect(await model.handleAgentRequest("files\n\n\n공통\n").files?.map(\.name) == ["링크", "d.png"])
+        let response = await model.handleAgentRequest("files\n\n\nSampleApp\n")
+        let json = String(decoding: try JSONEncoder().encode(response), as: UTF8.self)
+        #expect(json.contains(#""project":{"id":"\#(area.id)","name":"SampleApp"}"#) || json.contains(#""project":{"name":"SampleApp","id":"\#(area.id)"}"#))
+        #expect(!json.contains(app.folder.path))
+
+        // 연결을 끊어도 그 구역의 항목은 저장된 이름으로 찾는다. 새로 넣을 수는 없다.
+        model.remove(app)
+        #expect(await model.handleAgentRequest("files\n\n\nSampleApp\n").files?.map(\.name) == ["b.png", "a.png"])
+        #expect(await !model.handleAgentRequest("push\n/f/f.png\n\nSampleApp\n").ok)
+    }
+
+    @Test func sameNameNeedsThePathAndNoProjectsSaysSo() async throws {
+        let tmp = try TempDir("area-ambiguous")
+        let sent = Sent()
+        let model = make(tmp, sent: sent)
+        let none = await model.handleAgentRequest("push\n/f/a.png\n\nApp\n")
+        #expect(!none.ok && none.error?.contains("연결한 프로젝트가 없습니다") == true)
+
+        let first = try #require(await model.connect(try project(tmp, "App", in: "one")))
+        let second = try #require(await model.connect(try project(tmp, "App", in: "two")))
+        #expect(first.resourceArea.id != second.resourceArea.id)
+        let ambiguous = await model.handleAgentRequest("push\n/f/a.png\n\nApp\n")
+        #expect(!ambiguous.ok && ambiguous.error?.contains(first.container) == true && ambiguous.error?.contains(second.container) == true)
+        #expect(await model.handleAgentRequest("push\n/f/a.png\n\n\(second.container)\n").file?.project == second.resourceArea)
+    }
+
+    @Test func scriptPassesTheProjectAsTheFourthLine() async throws {
+        let tmp = try TempDir("area-script")
+        let model = make(tmp, sent: Sent())
+        model.installAgentScript(bundleID: "com.example.none")
+        func run(_ arguments: [String]) async throws -> String {
+            let process = Process()
+            process.executableURL = model.agentScript
+            process.arguments = arguments
+            process.standardOutput = Pipe()
+            try process.run()
+            // 요청 파일을 읽고 응답을 써 준다.
+            var request = ""
+            let deadline = Date().addingTimeInterval(30)
+            while process.isRunning, Date() < deadline {
+                for item in (try? FileManager.default.contentsOfDirectory(at: model.requestsDir, includingPropertiesForKeys: nil)) ?? [] where item.pathExtension == "req" {
+                    request = try String(contentsOf: item, encoding: .utf8)
+                    try FileManager.default.removeItem(at: item)
+                    try Data(#"{"ok":true}"#.utf8).write(to: model.responsesDir.appendingPathComponent(item.deletingPathExtension().lastPathComponent + ".json"))
+                }
+                try await Task.sleep(for: .milliseconds(50))
+            }
+            if process.isRunning { process.terminate() }
+            process.waitUntilExit()
+            return request
+        }
+        #expect(try await run(["push", "/f/a.png", "Sample App"]) == "push\n/f/a.png\n\nSample App\n")
+        #expect(try await run(["push", "/f/a.png"]) == "push\n/f/a.png\n\n\n")
+        #expect(try await run(["link", "https://example.com", "문서", "Tool"]) == "link\nhttps://example.com\n문서\nTool\n")
+        #expect(try await run(["files", "Tool"]) == "files\n\n\nTool\n")
+        #expect(try await run(["files"]) == "files\n\n\n\n")
+        #expect(try await run(["build", "/p", "App"]) == "build\n/p\nApp\n\n")
+    }
+}
+
 @Suite("AgentIntegration")
 struct AgentIntegrationTests {
     private func object(_ data: Data?) throws -> [String: Any] {
@@ -263,8 +393,8 @@ struct AgentIntegrationTests {
 
     @Test func mcpServerAnswersInitializeListAndCall() async throws {
         let calls = Mutex<[String]>([])
-        let server = AgentMCPServer { command, path, scheme in
-            calls.withLock { $0.append("\(command)|\(path)|\(scheme)") }
+        let server = AgentMCPServer { command, path, scheme, project in
+            calls.withLock { $0.append("\(command)|\(path)|\(scheme)" + (project.isEmpty ? "" : "|\(project)")) }
             return Data((command == "build" ? #"{"ok":true,"report":{"ok":true}}"# : #"{"ok":false,"error":"x"}"#).utf8)
         }
         let initialized = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26"}}"#.utf8)))
@@ -282,6 +412,19 @@ struct AgentIntegrationTests {
         let failed = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"remotedebug_status"}}"#.utf8)))
         #expect((failed["result"] as? [String: Any])?["isError"] as? Bool == true)
         #expect(calls.withLock { $0 } == ["build|/p|App", "status||"])
+
+        // 구역(project)은 넷째 값으로 넘긴다. 줄바꿈은 빈칸으로 바꾼다.
+        calls.withLock { $0.removeAll() }
+        _ = await server.handle(Data(#"{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"remotedebug_push_file","arguments":{"file_path":"/f/a.png","project":"Sample\nApp"}}}"#.utf8))
+        _ = await server.handle(Data(#"{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"remotedebug_push_link","arguments":{"url":"https://example.com","title":"문서","project":"/p/App.xcodeproj"}}}"#.utf8))
+        _ = await server.handle(Data(#"{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"remotedebug_push_link","arguments":{"url":"https://example.com"}}}"#.utf8))
+        _ = await server.handle(Data(#"{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"remotedebug_files","arguments":{"project":"공통"}}}"#.utf8))
+        #expect(calls.withLock { $0 } == ["push|/f/a.png||Sample App", "link|https://example.com|문서|/p/App.xcodeproj", "link|https://example.com|", "files|||공통"])
+        for name in ["remotedebug_push_file", "remotedebug_push_link", "remotedebug_files"] {
+            let schema = tools.first { $0["name"] as? String == name }?["inputSchema"] as? [String: Any]
+            #expect((schema?["properties"] as? [String: Any])?["project"] != nil, "\(name)")
+            #expect((schema?["required"] as? [String])?.contains("project") == false, "\(name)")
+        }
 
         let unknown = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":4,"method":"nope"}"#.utf8)))
         #expect(unknown["error"] != nil)

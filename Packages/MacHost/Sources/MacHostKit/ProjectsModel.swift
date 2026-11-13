@@ -114,22 +114,23 @@ public final class ProjectsModel {
     /// 에이전트가 iPhone에 파일을 보내는 통로.
     public struct FileSharing: Sendable {
         public var list: @MainActor () -> [ResourceDescriptor]
-        /// 실패하면 안내 문구.
-        public var share: @MainActor (URL) async -> Result<ResourceDescriptor, ShareFileFailure>
+        /// 둘째 값은 넣을 구역(nil이면 공통). 실패하면 안내 문구.
+        public var share: @MainActor (URL, ResourceProject?) async -> Result<ResourceDescriptor, ShareFileFailure>
         public var remove: @MainActor (String) async -> Void
-        public var shareLink: @MainActor (URL, String?) async -> Result<ResourceDescriptor, ShareFileFailure>
+        /// 주소, 이름(선택), 구역(nil이면 공통).
+        public var shareLink: @MainActor (URL, String?, ResourceProject?) async -> Result<ResourceDescriptor, ShareFileFailure>
 
         public init(list: @escaping @MainActor () -> [ResourceDescriptor],
-                    share: @escaping @MainActor (URL) async -> Result<ResourceDescriptor, ShareFileFailure>,
+                    share: @escaping @MainActor (URL, ResourceProject?) async -> Result<ResourceDescriptor, ShareFileFailure>,
                     remove: @escaping @MainActor (String) async -> Void,
-                    shareLink: @escaping @MainActor (URL, String?) async -> Result<ResourceDescriptor, ShareFileFailure> = { _, _ in .failure(ShareFileFailure("링크를 보낼 수 없습니다.")) }) {
+                    shareLink: @escaping @MainActor (URL, String?, ResourceProject?) async -> Result<ResourceDescriptor, ShareFileFailure> = { _, _, _ in .failure(ShareFileFailure("링크를 보낼 수 없습니다.")) }) {
             self.list = list
             self.share = share
             self.remove = remove
             self.shareLink = shareLink
         }
 
-        public static let unavailable = FileSharing(list: { [] }, share: { _ in .failure(ShareFileFailure("파일을 보낼 수 없습니다.")) }, remove: { _ in })
+        public static let unavailable = FileSharing(list: { [] }, share: { _, _ in .failure(ShareFileFailure("파일을 보낼 수 없습니다.")) }, remove: { _ in })
     }
 
     public typealias Importer = @MainActor (URL) async -> ImportOutcome?
@@ -548,12 +549,50 @@ public final class ProjectsModel {
         }
     }
 
-    /// 요청은 줄 단위다: 명령, 경로, 스킴.
+    /// 에이전트가 넘긴 `project` 글자를 구역으로 바꾼다. 비었거나 "공통"이면 공통(nil)이다.
+    /// 연결한 프로젝트의 이름(대소문자 무시), `.xcodeproj`·`.xcworkspace` 경로, 프로젝트 폴더 경로와 맞춘다.
+    func resourceArea(named text: String) -> Result<ResourceProject?, ShareFileFailure> {
+        let text = text.trimmingCharacters(in: .whitespaces)
+        if text.isEmpty || text == ResourceArea.commonTitle { return .success(nil) }
+        let available = projects.isEmpty
+            ? "연결한 프로젝트가 없습니다. project를 비우면 공통 구역에 넣습니다."
+            : "쓸 수 있는 프로젝트: \(projects.map(\.name).joined(separator: ", ")). project를 비우면 공통 구역에 넣습니다."
+        if text.hasPrefix("/") {
+            let path = URL(fileURLWithPath: text).standardizedFileURL.path
+            if let found = projects.first(where: { $0.containerURL.standardizedFileURL.path == path })
+                ?? projects.first(where: { $0.folder.standardizedFileURL.path == path }) {
+                return .success(found.resourceArea)
+            }
+            return .failure(ShareFileFailure("연결한 프로젝트의 경로가 아닙니다: \(text). \(available)"))
+        }
+        let named = projects.filter { $0.name.compare(text, options: .caseInsensitive) == .orderedSame }
+        switch named.count {
+        case 1: return .success(named[0].resourceArea)
+        case 0: return .failure(ShareFileFailure("연결한 프로젝트에 없는 이름입니다: \(text). \(available)"))
+        default: return .failure(ShareFileFailure("이름이 \(text)인 프로젝트가 여러 개입니다. .xcodeproj나 .xcworkspace 경로로 정해 주세요: \(named.map(\.container).joined(separator: ", "))"))
+        }
+    }
+
+    /// `files`의 구역 거르기. 연결을 끊은 프로젝트의 구역은 항목에 저장된 이름으로 찾는다.
+    func resources(_ list: [ResourceDescriptor], inArea text: String) -> Result<[ResourceDescriptor], ShareFileFailure> {
+        let text = text.trimmingCharacters(in: .whitespaces)
+        if text.isEmpty { return .success(list) }
+        switch resourceArea(named: text) {
+        case .success(let area):
+            return .success(list.filter { $0.project?.id == area?.id })
+        case .failure(let failure):
+            let stored = list.filter { $0.project?.name.compare(text, options: .caseInsensitive) == .orderedSame }
+            return stored.isEmpty ? .failure(failure) : .success(stored)
+        }
+    }
+
+    /// 요청은 줄 단위다: 명령, 경로, 스킴, 구역(push·link·files의 project).
     func handleAgentRequest(_ text: String) async -> AgentResponse {
         let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let command = lines.first ?? ""
         let path = lines.count > 1 ? lines[1] : ""
         let scheme = lines.count > 2 ? lines[2] : ""
+        let area = lines.count > 3 ? lines[3] : ""
         load()
         switch command {
         case "status", "projects":
@@ -584,7 +623,12 @@ public final class ProjectsModel {
         case "push":
             // 둘째 줄이 보낼 파일 경로다.
             guard !path.isEmpty else { return AgentResponse(ok: false, error: "보낼 파일 경로가 필요합니다.") }
-            switch await fileSharing.share(URL(fileURLWithPath: path)) {
+            let project: ResourceProject?
+            switch resourceArea(named: area) {
+            case .success(let found): project = found
+            case .failure(let failure): return AgentResponse(ok: false, error: failure.message)
+            }
+            switch await fileSharing.share(URL(fileURLWithPath: path), project) {
             case .success(let file):
                 let host = hostStatus()
                 return AgentResponse(ok: true, sharing: host.sharing, file: file)
@@ -596,14 +640,22 @@ public final class ProjectsModel {
             guard let url = URL(string: path.trimmingCharacters(in: .whitespaces)), url.scheme?.isEmpty == false else {
                 return AgentResponse(ok: false, error: "스킴이 있는 주소가 필요합니다(https://…, 앱스킴://…).")
             }
-            switch await fileSharing.shareLink(url, scheme.isEmpty ? nil : scheme) {
+            let project: ResourceProject?
+            switch resourceArea(named: area) {
+            case .success(let found): project = found
+            case .failure(let failure): return AgentResponse(ok: false, error: failure.message)
+            }
+            switch await fileSharing.shareLink(url, scheme.isEmpty ? nil : scheme, project) {
             case .success(let file):
                 return AgentResponse(ok: true, sharing: hostStatus().sharing, file: file)
             case .failure(let failure):
                 return AgentResponse(ok: false, error: failure.message)
             }
         case "files":
-            return AgentResponse(ok: true, sharing: hostStatus().sharing, files: fileSharing.list())
+            switch resources(fileSharing.list(), inArea: area) {
+            case .success(let files): return AgentResponse(ok: true, sharing: hostStatus().sharing, files: files)
+            case .failure(let failure): return AgentResponse(ok: false, error: failure.message)
+            }
         case "unpush":
             guard !path.isEmpty else { return AgentResponse(ok: false, error: "파일 id가 필요합니다.") }
             guard fileSharing.list().contains(where: { $0.id == path }) else {
@@ -673,13 +725,20 @@ enum AgentScript {
         """
         #!/bin/sh
         # RemoteDebug Mac 앱에 명령을 보낸다. 앱이 이 파일을 실행할 때마다 새로 쓴다.
-        # 사용법: rd status | pair | requests | approve <요청 id> | deny <요청 id> | push <파일> | link <주소> [이름] | files | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]
+        # 사용법: rd status | pair | requests | approve <요청 id> | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]
         dir=\(quoted(agentDir))
         bundle=\(quoted(bundleID))
-        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | approve <요청 id> | deny <요청 id> | push <파일> | link <주소> [이름] | files | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]" >&2; exit 2; }
+        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | approve <요청 id> | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]" >&2; exit 2; }
         cmd=$1
         path=${2:-}
         scheme=${3:-}
+        # 구역(프로젝트 이름이나 경로): push는 셋째, link는 넷째, files는 둘째 인자다. 비우면 push·link는 공통, files는 전체다.
+        project=
+        case "$cmd" in
+          push) project=$scheme; scheme= ;;
+          link) project=${4:-} ;;
+          files) project=$path; path= ;;
+        esac
         # 경로를 받는 명령만 상대 경로를 절대 경로로 바꾼다(id·주소는 그대로).
         case "$cmd" in
           push|connect|schemes|build) case "$path" in ""|/*) ;; *) path="$PWD/$path" ;; esac ;;
@@ -692,7 +751,7 @@ enum AgentScript {
         fi
         alive || { echo '{"ok":false,"error":"RemoteDebug 앱이 실행 중이 아닙니다. 앱을 열고 다시 시도하세요."}'; exit 1; }
         id="$(date +%s)-$$"
-        printf '%s\\n%s\\n%s\\n' "$cmd" "$path" "$scheme" > "$dir/requests/$id.tmp" && mv "$dir/requests/$id.tmp" "$dir/requests/$id.req" || exit 1
+        printf '%s\\n%s\\n%s\\n%s\\n' "$cmd" "$path" "$scheme" "$project" > "$dir/requests/$id.tmp" && mv "$dir/requests/$id.tmp" "$dir/requests/$id.req" || exit 1
         res="$dir/responses/$id.json"
         while [ ! -f "$res" ]; do
           alive || { echo '{"ok":false,"error":"응답을 기다리는 중에 RemoteDebug 앱이 종료됐습니다."}'; exit 1; }
@@ -717,16 +776,17 @@ enum AgentScript {
         \(rd) build \(project) <스킴>     # 스킴을 정해서 빌드
         \(rd) schemes \(project)          # 스킴 목록
         \(rd) status                      # 공유 중인지, 설치 페이지 주소, 연결한 프로젝트
-        \(rd) push <파일>                 # 파일을 페어링한 iPhone의 RemoteDebug 앱으로 보낸다
-        \(rd) link <주소> [이름]           # 링크(https://…, 앱스킴://…)를 iPhone으로 보낸다
-        \(rd) files                       # 보낸 파일·링크 목록
+        \(rd) push <파일> \(project)     # 파일을 iPhone RemoteDebug 앱의 이 프로젝트 구역으로 보낸다(프로젝트를 빼면 공통 구역)
+        \(rd) link <주소> <이름> \(project)  # 링크(https://…, 앱스킴://…)를 이 프로젝트 구역으로 보낸다(이름은 ''로 비울 수 있다)
+        \(rd) files \(project)           # 이 프로젝트 구역에 보낸 파일·링크(프로젝트를 빼면 전체)
         ```
 
         - `build`는 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 실패하면 `error`와 `report.logTail`에 컴파일 오류가, `report.logPath`에 전체 로그 경로가 있다.
         - `report.published`가 게시된 빌드다. 비어 있고 `ok`가 true면 결과가 전과 같아 다시 게시하지 않은 것이다.
         - Mac은 게시까지만 한다. 설치는 페어링한 iPhone의 RemoteDebug 앱이나 설치 페이지(`installPage`)에서 사용자가 누른다.
         - `sharing`이 false면 iPhone이 빌드를 받을 수 없다. 사용자에게 RemoteDebug 앱에서 공유를 시작하라고 알린다.
-        - `push`는 같은 이름의 이전 파일을 바꾼다. 사용자는 iPhone RemoteDebug 앱의 "Mac에서 받은 파일"에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다.
+        - 보낸 파일·링크는 프로젝트 구역으로 나뉜다. 프로젝트는 연결한 프로젝트의 이름이나 `.xcodeproj`·`.xcworkspace` 경로로 정한다. 연결한 프로젝트가 아니면 `error`에 쓸 수 있는 이름이 나온다. `files`의 항목에 `project`가 없으면 공통 구역이다.
+        - `push`는 같은 이름의 이전 파일을 바꾼다(구역이 달라도 이름은 하나다). 사용자는 iPhone RemoteDebug 앱의 "Mac에서 받은 파일"에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다.
         - 서명 오류(프로비저닝 프로필, 기기 미등록)는 이 명령으로 고칠 수 없다. Xcode에서 한 번 기기용으로 빌드하라고 사용자에게 알린다.
         """
     }

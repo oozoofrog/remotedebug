@@ -49,7 +49,7 @@ import Testing
         model.handle(decoded)
         let item = try #require(model.crashLogs.items.first)
 
-        let server = AgentMCPServer(crashLogsDir: dir.url.appendingPathComponent("CrashLogs")) { _, _, _ in Data() }
+        let server = AgentMCPServer(crashLogsDir: dir.url.appendingPathComponent("CrashLogs")) { _, _, _, _ in Data() }
         let list = try #require(await server.handle(Data(#"{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"remotedebug_crash_logs","arguments":{}}}"#.utf8)))
         #expect(String(decoding: list, as: UTF8.self).contains(item.id))
         let one = try #require(await server.handle(Data(#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"remotedebug_crash_logs","arguments":{"id":"\#(item.id)"}}}"#.utf8)))

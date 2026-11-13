@@ -162,6 +162,7 @@ struct FileDetailView: View {
             }
             if let resource = item.resource {
                 LabeledContent("Mac에서 보낸 시각", value: resource.publishedAt.formatted(date: .abbreviated, time: .shortened))
+                if let project = resource.project { LabeledContent("구역", value: project.name) }
             }
             if let received = item.received {
                 LabeledContent("이 iPhone에 저장", value: received.modifiedAt?.formatted(date: .abbreviated, time: .shortened) ?? "알 수 없음")

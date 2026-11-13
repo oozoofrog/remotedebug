@@ -68,40 +68,48 @@ struct FilesScreen: View {
                             }
                         }
                     }
-                    let links = state.resources.filter(\.isLink)
-                    if !links.isEmpty {
-                        Section("링크") {
-                            ForEach(links) { link in
-                                NavigationLink(value: FileItem.Route.link(link.id)) { LinkRow(resource: link) }
-                                    .swipeActions {
-                                        if let url = link.link.flatMap(URL.init(string:)) {
-                                            Button("열기") { openURL(url) }.tint(PhoneTheme.tint)
-                                        }
-                                    }
+                    let areas = ResourceDescriptor.areas(state.resources)
+                    if areas.contains(where: { $0.project != nil }) {
+                        // 프로젝트 구역이 있으면 구역마다 한 칸(링크 먼저, 그다음 파일). 받는 중인 파일은 위 칸에 있다.
+                        let sections = areas.compactMap { area -> AreaRows? in
+                            let ids = Set(area.resources.map(\.id))
+                            let rows = AreaRows(area: area, links: area.resources.filter(\.isLink),
+                                                files: items.filter { !$0.isDownloading && ids.contains($0.resource?.id ?? "") })
+                            return rows.links.isEmpty && rows.files.isEmpty ? nil : rows
+                        }
+                        ForEach(sections) { section in
+                            Section {
+                                ForEach(section.links) { linkRow($0) }
+                                ForEach(section.files) { fileRow($0) }
+                            } header: {
+                                Text(section.area.title)
+                            } footer: {
+                                if state.tunnel != .connected, section.id == sections.last?.id {
+                                    Text("받으려면 RemoteDebug VPN을 켜야 합니다.")
+                                }
                             }
                         }
-                    }
-                    let fromMac = items.filter { $0.resource != nil && !$0.isDownloading }
-                    Section {
-                        if fromMac.isEmpty && downloading.isEmpty {
-                            Text("Mac 앱의 보낸 파일 화면에 파일을 끌어 놓으면 여기에 나타납니다.")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                    } else {
+                        let links = state.resources.filter(\.isLink)
+                        if !links.isEmpty {
+                            Section("링크") {
+                                ForEach(links) { linkRow($0) }
+                            }
                         }
-                        ForEach(fromMac) { item in
-                            NavigationLink(value: FileItem.Route.file(item.id)) { FileListRow(item: item) }
-                                .swipeActions {
-                                    if item.received == nil {
-                                        Button("받기") { if let r = item.resource { actions.downloadFile(r) } }
-                                            .tint(PhoneTheme.tint)
-                                    }
-                                }
-                        }
-                    } header: {
-                        Text("Mac에서 보낸 파일")
-                    } footer: {
-                        if state.tunnel != .connected {
-                            Text("받으려면 RemoteDebug VPN을 켜야 합니다.")
+                        let fromMac = items.filter { $0.resource != nil && !$0.isDownloading }
+                        Section {
+                            if fromMac.isEmpty && downloading.isEmpty {
+                                Text("Mac 앱의 보낸 파일 화면에 파일을 끌어 놓으면 여기에 나타납니다.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            ForEach(fromMac) { fileRow($0) }
+                        } header: {
+                            Text("Mac에서 보낸 파일")
+                        } footer: {
+                            if state.tunnel != .connected {
+                                Text("받으려면 RemoteDebug VPN을 켜야 합니다.")
+                            }
                         }
                     }
                 }
@@ -154,6 +162,35 @@ struct FilesScreen: View {
                 }
             }
         }
+    }
+}
+
+/// 구역 한 칸에 보일 줄.
+private struct AreaRows: Identifiable {
+    var area: ResourceArea
+    var links: [ResourceDescriptor]
+    var files: [FileItem]
+    var id: String { area.id }
+}
+
+extension FilesScreen {
+    private func linkRow(_ link: ResourceDescriptor) -> some View {
+        NavigationLink(value: FileItem.Route.link(link.id)) { LinkRow(resource: link) }
+            .swipeActions {
+                if let url = link.link.flatMap(URL.init(string:)) {
+                    Button("열기") { openURL(url) }.tint(PhoneTheme.tint)
+                }
+            }
+    }
+
+    private func fileRow(_ item: FileItem) -> some View {
+        NavigationLink(value: FileItem.Route.file(item.id)) { FileListRow(item: item) }
+            .swipeActions {
+                if item.received == nil {
+                    Button("받기") { if let r = item.resource { actions.downloadFile(r) } }
+                        .tint(PhoneTheme.tint)
+                }
+            }
     }
 }
 

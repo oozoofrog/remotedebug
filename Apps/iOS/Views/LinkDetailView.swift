@@ -85,6 +85,7 @@ struct LinkDetailView: View {
 
             Section("정보") {
                 LabeledContent("Mac에서 보낸 시각", value: resource.publishedAt.formatted(date: .abbreviated, time: .shortened))
+                if let project = resource.project { LabeledContent("구역", value: project.name) }
                 LabeledContent("주소 길이", value: "\((resource.link ?? "").count)자")
                 LabeledContent("링크 id") { Text(resource.id).font(.caption.monospaced()).textSelection(.enabled) }
             }

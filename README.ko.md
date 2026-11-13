@@ -22,9 +22,10 @@ Mac 앱의 **에이전트에 설치…**는 Claude Code와 Codex에 MCP 서버 `
 | `remotedebug_pair_decide` | 요청을 허용하거나 거부한다(`request_id`, `approve`) |
 | `remotedebug_device_logs` | iPhone 앱이 보낸 진단 로그(앱 시작, VPN, 페어링, 빌드 목록, 설치, 업데이트) |
 | `remotedebug_crash_logs` | iPhone이 보낸 크래시 기록 목록과 원문 |
-| `remotedebug_push_file`, `remotedebug_push_link`, `remotedebug_files` | 페어링한 iPhone에 파일·링크를 보내고, 보낸 목록을 본다 |
+| `remotedebug_push_file`, `remotedebug_push_link` | 페어링한 iPhone에 파일(`file_path`)이나 링크(`url`, 선택 `title`)를 보낸다. 선택 `project`(연결한 프로젝트의 이름이나 `.xcodeproj`·`.xcworkspace` 경로)를 주면 그 프로젝트 구역에, 비우면 공통 구역에 넣는다 |
+| `remotedebug_files` | 보낸 목록을 구역과 함께 본다. 선택 `project`로 한 구역만 본다 |
 
-MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 명령을 쓴다(`rd status`, `rd build <프로젝트> [스킴]`, `rd pair`, `rd requests`, `rd approve <id>`, `rd deny <id>`, `rd push <파일>`, `rd link <주소>`).
+MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 명령을 쓴다(`rd status`, `rd build <프로젝트> [스킴]`, `rd pair`, `rd requests`, `rd approve <id>`, `rd deny <id>`, `rd push <파일> [프로젝트]`, `rd link <주소> [이름] [프로젝트]`, `rd files [프로젝트]`).
 
 에이전트가 지킬 것:
 
@@ -48,7 +49,7 @@ MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 
 - **iPhone 앱 자체 설치**: Mac의 **iPhone 앱 설치…**가 이 저장소의 iPhone 앱을 사용자의 서명 팀으로 빌드해 케이블로 연결한 iPhone에 설치한다([설정 문서](docs/setup.md#mac-앱으로-iphone-앱-설치)).
 - **iPhone 앱 업데이트**: RemoteDebug 앱은 자기 VPN으로는 스스로 업데이트하지 못한다. 설치 중에 iOS가 터널을 멈추기 때문이다. 대신 Mac이 공식 Tailscale 앱을 거치는 업데이트 페이지를 내준다([설정 문서](docs/setup.md#iphone-앱-업데이트)).
 - **페어링**: Mac 앱의 QR을 찍고 Mac에서 허용한다. 선택 기능으로 Tailscale OAuth 클라이언트를 넣으면 QR에 1회용 Tailscale 키가 들어가 iPhone이 로그인 없이 연결된다([설정 문서](docs/setup.md#qr-한-번으로-연결tailscale-oauth-클라이언트)). iPhone이 Mac과 다른 tailnet에 로그인했으면 앱이 알려 주고 **다른 계정으로 로그인**을 제안한다([설정 문서](docs/setup.md#mac과-다른-계정으로-로그인했을-때)).
-- **파일과 링크**: Mac의 **보낸 파일** 화면에 파일을 끌어 놓거나 에이전트가 보내면, iPhone이 백그라운드에서 받아 파일 앱이나 공유 시트로 넘긴다([설정 문서](docs/setup.md#mac에서-iphone으로-파일-보내기)).
+- **파일과 링크**: Mac의 **보낸 파일** 화면에 파일을 끌어 놓거나 에이전트가 보내면, iPhone이 백그라운드에서 받아 파일 앱이나 공유 시트로 넘긴다. 연결한 프로젝트마다 구역을 나눠 보낼 수 있고(나머지는 공통 구역), 두 앱 모두 구역별로 보여 준다([설정 문서](docs/setup.md#mac에서-iphone으로-파일-보내기)).
 - **진단 로그**: iPhone 앱이 로그를 쌓아 Mac에 보내고, Mac의 **iPhone 로그** 화면에서 본다.
 - **크래시 기록**: iPhone 앱이 비정상 종료되면 다음 실행 때 기록을 Mac에 보낸다. 다른 앱의 기록은 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 열어 공유로 RemoteDebug에 넘긴다. iPhone 앱의 설정과 Mac의 **크래시** 화면에서 보고 공유한다.
 - **설치된 버전**: iPhone 빌드 목록에 그 앱이 지금 어떤 버전으로 설치돼 있는지 보인다(iOS 비공개 API를 써서 읽지 못하는 기기에서는 보이지 않는다).

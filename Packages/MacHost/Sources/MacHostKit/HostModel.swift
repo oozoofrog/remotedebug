@@ -1087,22 +1087,23 @@ public final class HostModel {
     // MARK: 보내는 파일
 
     /// 파일을 iPhone에 보낼 목록에 넣는다. 실패한 파일은 `lastError`에 남긴다.
-    public func shareFiles(_ urls: [URL]) async {
+    public func shareFiles(_ urls: [URL], project: ResourceProject? = nil) async {
         var failures: [String] = []
         for url in urls {
-            if case .failure(let failure) = await shareFile(url) { failures.append(failure.message) }
+            if case .failure(let failure) = await shareFile(url, project: project) { failures.append(failure.message) }
         }
         if !failures.isEmpty { lastError = failures.joined(separator: "\n") }
     }
 
     /// 파일 하나를 보낸다. 에이전트 명령도 이것을 쓴다.
-    public func shareFile(_ url: URL) async -> Result<ResourceDescriptor, ShareFileFailure> {
+    /// `project`가 nil이면 공통 구역이다.
+    public func shareFile(_ url: URL, project: ResourceProject? = nil) async -> Result<ResourceDescriptor, ShareFileFailure> {
         guard !isShutDown else { return .failure(ShareFileFailure("RemoteDebug가 종료 중입니다.")) }
         await load()
         filesInProgress += 1
         defer { filesInProgress -= 1 }
         do {
-            let descriptor = try await fileLibrary.add(url)
+            let descriptor = try await fileLibrary.add(url, project: project)
             await refreshLibrary()
             return .success(descriptor)
         } catch {
@@ -1112,17 +1113,27 @@ public final class HostModel {
     }
 
     /// 링크를 보낸다. 에이전트 명령도 이것을 쓴다.
-    public func shareLink(_ url: URL, title: String? = nil) async -> Result<ResourceDescriptor, ShareFileFailure> {
+    public func shareLink(_ url: URL, title: String? = nil, project: ResourceProject? = nil) async -> Result<ResourceDescriptor, ShareFileFailure> {
         guard !isShutDown else { return .failure(ShareFileFailure("RemoteDebug가 종료 중입니다.")) }
         await load()
         do {
-            let descriptor = try await fileLibrary.addLink(url, title: title)
+            let descriptor = try await fileLibrary.addLink(url, title: title, project: project)
             await refreshLibrary()
             return .success(descriptor)
         } catch {
             await refreshLibrary()
             return .failure(ShareFileFailure("링크를 보내지 못했습니다: \(Self.message(for: error))"))
         }
+    }
+
+    /// 보낸 항목을 다른 구역으로 옮긴다(nil이면 공통).
+    public func moveSharedFile(_ id: String, to project: ResourceProject?) async {
+        do {
+            try await fileLibrary.move(id: id, to: project)
+        } catch {
+            lastError = "구역을 옮기지 못했습니다: \(Self.message(for: error))"
+        }
+        await refreshLibrary()
     }
 
     public func unshareFile(_ id: String) async {

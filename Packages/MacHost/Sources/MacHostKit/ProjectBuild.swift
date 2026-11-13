@@ -1,4 +1,5 @@
 import Foundation
+import RDModels
 
 /// 연결한 Xcode 프로젝트. `container`는 `.xcodeproj`나 `.xcworkspace`의 경로다.
 public struct ConnectedProject: Codable, Sendable, Hashable, Identifiable {
@@ -12,6 +13,8 @@ public struct ConnectedProject: Codable, Sendable, Hashable, Identifiable {
     public var name: String { containerURL.deletingPathExtension().lastPathComponent }
     /// 프로젝트 파일이 든 폴더.
     public var folder: URL { containerURL.deletingLastPathComponent() }
+    /// 보낸 파일의 구역으로 쓰는 값. id는 폴더 경로의 짧은 해시라 경로가 드러나지 않는다.
+    public var resourceArea: ResourceProject { ResourceProject(name: name, folder: folder) }
 
     public init(container: String, scheme: String? = nil, addedAt: Date) {
         self.container = container

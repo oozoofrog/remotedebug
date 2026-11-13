@@ -22,9 +22,10 @@ The Mac app's **에이전트에 설치…** (Install for agents) adds an MCP ser
 | `remotedebug_pair_decide` | Approve or deny a request (`request_id`, `approve`) |
 | `remotedebug_device_logs` | Diagnostic logs the iPhone app sent (app start, VPN, pairing, build list, install, update) |
 | `remotedebug_crash_logs` | Crash reports the iPhone sent: the list, or one report's text |
-| `remotedebug_push_file`, `remotedebug_push_link`, `remotedebug_files` | Send a file or link to the paired iPhone, list what was sent |
+| `remotedebug_push_file`, `remotedebug_push_link` | Send a file (`file_path`) or link (`url`, optional `title`) to the paired iPhone. Optional `project` (a connected project's name or its `.xcodeproj`/`.xcworkspace` path) puts it in that project's area; without it the item goes to the common area |
+| `remotedebug_files` | List what was sent, each item with its project area. Optional `project` filters by area |
 
-Without MCP, the same commands go through `~/Library/Application Support/RemoteDebug/agent/rd` (`rd status`, `rd build <project> [scheme]`, `rd pair`, `rd requests`, `rd approve <id>`, `rd deny <id>`, `rd push <file>`, `rd link <url>`).
+Without MCP, the same commands go through `~/Library/Application Support/RemoteDebug/agent/rd` (`rd status`, `rd build <project> [scheme]`, `rd pair`, `rd requests`, `rd approve <id>`, `rd deny <id>`, `rd push <file> [project]`, `rd link <url> [title] [project]`, `rd files [project]`).
 
 Rules for agents:
 
@@ -48,7 +49,7 @@ Rules for agents:
 - **Install the iPhone app itself**: **iPhone 앱 설치…** (Install iPhone app) on the Mac builds the iPhone app from this repository with your signing team and installs it on a cabled iPhone ([setup](docs/setup.md#mac-앱으로-iphone-앱-설치)).
 - **Updating the iPhone app**: the RemoteDebug app cannot update itself over its own VPN; iOS stops the tunnel during the install. The Mac serves an update page through the official Tailscale app instead ([setup](docs/setup.md#iphone-앱-업데이트)).
 - **Pairing**: scan the QR code in the Mac app and approve the request on the Mac. With an optional Tailscale OAuth client, the QR code also carries a one-time Tailscale key so the iPhone joins without logging in ([setup](docs/setup.md#qr-한-번으로-연결tailscale-oauth-클라이언트)). If the iPhone is logged in to a different tailnet than the Mac, the app says so and offers **다른 계정으로 로그인** (log in with another account) ([setup](docs/setup.md#mac과-다른-계정으로-로그인했을-때)).
-- **Files and links**: drop a file on the Mac's **보낸 파일** (Sent files) screen or push one from an agent; the iPhone receives it in the background and hands it to the Files app or the share sheet ([setup](docs/setup.md#mac에서-iphone으로-파일-보내기)).
+- **Files and links**: drop a file on the Mac's **보낸 파일** (Sent files) screen or push one from an agent; the iPhone receives it in the background and hands it to the Files app or the share sheet. Items can be divided into per-project areas (one for each connected project, plus a common area), and both apps list them by area ([setup](docs/setup.md#mac에서-iphone으로-파일-보내기)).
 - **Diagnostic logs**: the iPhone app keeps a log, sends it to the Mac, and the Mac shows it on **iPhone 로그** (iPhone logs).
 - **Crash reports**: when the iPhone app crashes, it sends the report to the Mac the next time it runs. For other apps, open the report under iPhone Settings > Privacy & Security > Analytics & Improvements > Analytics Data and share it to RemoteDebug. Both the iPhone app's settings and the Mac's **크래시** (Crashes) screen show and share them.
 - **Installed version**: the iPhone build list shows which version of each app is installed now. This uses a private iOS API, so nothing is shown on devices where it returns no value.
