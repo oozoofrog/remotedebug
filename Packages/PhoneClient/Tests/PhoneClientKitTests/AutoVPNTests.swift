@@ -249,4 +249,67 @@ import Testing
         #expect(h.transport.count("POST", createPath) == 0)
         #expect(h.opener.opened.isEmpty)
     }
+
+    /// 설치 전에 앱이 모델을 거치지 않고 이 앱의 VPN을 켠 상태를 만든다(구성이 없어 자동으로 켤 수 없던 경우).
+    private func harnessAfterInstallerConnected(offDelay: TimeInterval = 30) async -> Harness {
+        let h = harness(configuration: .missing, offDelay: offDelay)
+        await h.model.restore()
+        #expect(h.tunnel.autoStartCount == 0)
+        h.tunnel.autoStartConfiguration = .ready
+        h.tunnel.set(.connected)
+        return h
+    }
+
+    @Test func vpnStartedForAnInstallTurnsOffAfterTheInstallEnds() async throws {
+        let h = await harnessAfterInstallerConnected()
+        h.transport.on("POST", createPath, .json(Examples.sessionCreated, status: 201))
+        h.opener.holds = true
+        h.model.noteAutoStartedVPN()
+        #expect(h.model.vpnAutoStarted)
+        h.model.install(try Examples.buildDescriptor())
+        await h.waitUntil { h.opener.isWaiting }
+        // 설치가 진행되는 동안은 가상 시계로 30초를 훨씬 넘겨도 끄지 않는다.
+        let start = h.clock.now
+        await h.waitUntil { h.clock.now.timeIntervalSince(start) >= 300 }
+        #expect(h.tunnel.disconnectCount == 0)
+        #expect(h.model.vpnAutoStarted)
+
+        h.opener.release(false)
+        await h.model.waitForBackgroundWork()
+        await h.waitUntil { h.tunnel.disconnectCount == 1 }
+        #expect(h.tunnel.disconnectCount == 1)
+        #expect(h.model.tunnel == .off)
+        #expect(!h.model.vpnAutoStarted)
+        #expect(h.tunnel.autoStartCount == 0)
+    }
+
+    @Test func vpnTakenOverForAnInstallStaysOn() async throws {
+        let h = await harnessAfterInstallerConnected()
+        h.transport.on("POST", createPath, .json(Examples.sessionCreated, status: 201))
+        // 짝 앱의 VPN을 넘겨받은 경우에는 앱이 사용자가 켠 VPN으로 알린다.
+        h.model.noteManualVPNChange()
+        h.model.install(try Examples.buildDescriptor())
+        await h.model.waitForBackgroundWork()
+        for _ in 0..<2_000 { await Task.yield() }
+        #expect(h.tunnel.disconnectCount == 0)
+        #expect(!h.model.vpnAutoStarted)
+    }
+
+    @Test func manualChangeAfterAnInstallStartedVPNKeepsItOn() async {
+        let h = await harnessAfterInstallerConnected()
+        h.model.noteAutoStartedVPN()
+        h.model.noteManualVPNChange()
+        for _ in 0..<2_000 { await Task.yield() }
+        #expect(h.tunnel.disconnectCount == 0)
+        #expect(!h.model.vpnAutoStarted)
+    }
+
+    @Test func installStartedVPNHeldByAnotherAppIsForgotten() async {
+        let h = await harnessAfterInstallerConnected()
+        h.tunnel.holder = .pairedApp
+        h.model.noteAutoStartedVPN()
+        await h.waitUntil { !h.model.vpnAutoStarted }
+        #expect(!h.model.vpnAutoStarted)
+        #expect(h.tunnel.disconnectCount == 0)
+    }
 }

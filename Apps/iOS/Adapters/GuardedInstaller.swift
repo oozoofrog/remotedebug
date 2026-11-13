@@ -35,13 +35,16 @@ final class GuardedInstaller {
             return
         }
         preparations[build.id] = .working(holder == .none ? "이 앱의 VPN을 켜는 중" : "VPN을 이 앱으로 옮기는 중")
-        Task { await takeOverThenInstall(build, model: model) }
+        Task { await takeOverThenInstall(build, model: model, startedFromOff: holder == .none) }
     }
 
-    private func takeOverThenInstall(_ build: BuildDescriptor, model: ClientModel) async {
+    /// - Parameter startedFromOff: 설치를 누를 때 어느 앱의 VPN도 켜져 있지 않았다.
+    private func takeOverThenInstall(_ build: BuildDescriptor, model: ClientModel, startedFromOff: Bool) async {
         let id = build.id
-        model.log(.info, "install", "\(build.displayName) 설치 전에 VPN을 이 앱의 터널로 옮김")
-        // 설치 때문에 넘겨받은 VPN은 자동으로 끄지 않는다.
+        model.log(.info, "install", startedFromOff
+            ? "\(build.displayName) 설치 전에 이 앱의 VPN을 켬"
+            : "\(build.displayName) 설치 전에 VPN을 이 앱의 터널로 옮김")
+        // 다른 앱에서 넘겨받은 VPN은 원래 켜져 있던 것이므로 자동으로 끄지 않는다.
         model.noteManualVPNChange()
         do {
             try await tunnel.connectOwn()
@@ -51,7 +54,10 @@ final class GuardedInstaller {
             return
         }
         preparations[id] = .working("VPN이 연결되기를 기다리는 중")
-        guard await tunnel.waitUntilOwnTunnelSettles() else {
+        let settled = await tunnel.waitUntilOwnTunnelSettles()
+        // 꺼져 있던 VPN을 설치 때문에 켰으면 자동으로 켠 것으로 본다. 설치가 끝난 뒤 쓸 일이 없으면 꺼진다.
+        if startedFromOff { model.noteAutoStartedVPN() }
+        guard settled else {
             model.log(.warning, "install", "이 앱의 VPN이 연결되지 않아 설치를 시작하지 않음")
             if case .needsLogin = tunnel.state {
                 preparations[id] = .failed("Tailscale 로그인이 필요합니다. 로그인한 뒤 다시 설치하세요.")

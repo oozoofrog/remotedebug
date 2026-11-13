@@ -1285,6 +1285,13 @@ public final class ClientModel {
         vpnAutoStarted = false
     }
 
+    /// 모델을 거치지 않고 켠 이 앱의 VPN을 자동으로 켠 것으로 본다(어느 VPN도 꺼져 있을 때 설치 때문에 켠 경우).
+    /// Mac이 필요한 일이 없어지면 자동으로 켠 VPN과 같은 규칙으로 끈다.
+    public func noteAutoStartedVPN() {
+        vpnAutoStarted = true
+        startIdleWatch()
+    }
+
     // MARK: VPN 자동 켜기·끄기 (docs/protocol-addenda.md N)
 
     /// 같은 네트워크에서 직접 닿을 수 있거나, VPN이 연결돼 있거나, 꺼져 있어도 Mac이 필요할 때 자동으로 켤 수 있다.
