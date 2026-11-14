@@ -1,0 +1,48 @@
+{
+  "decisions": {},
+  "history": [
+    {
+      "action": "start",
+      "previous_decisions": {},
+      "previous_tasks": {
+        "structure": {
+          "attempts": 0,
+          "evidence": [],
+          "status": "pending",
+          "verified_revision": null
+        }
+      },
+      "task": "structure",
+      "timestamp": "2026-11-14T12:13:55.187615+00:00"
+    }
+  ],
+  "plan_sha256": "f87e7753e6da265468bea9c61d6fda03f625425a7cb4514bd8c250e3cdfa8cc1",
+  "project_root": "/Volumes/eyedisk/develop/oozoofrog/remotedebug",
+  "question_usage": {
+    "questions": 0,
+    "rounds": 0
+  },
+  "run_id": "localization-5lang",
+  "schema_version": 1,
+  "tasks": {
+    "structure": {
+      "attempts": 1,
+      "evidence": [],
+      "running_revision": "7984900",
+      "status": "running",
+      "verified_revision": null
+    },
+    "translate": {
+      "attempts": 0,
+      "evidence": [],
+      "status": "pending",
+      "verified_revision": null
+    },
+    "verify": {
+      "attempts": 0,
+      "evidence": [],
+      "status": "pending",
+      "verified_revision": null
+    }
+  }
+}
