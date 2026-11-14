@@ -31,17 +31,24 @@ struct BuildsView: View {
     @State private var expandedApps: Set<String> = []
 
     var body: some View {
-        VStack(spacing: 0) {
-            OverviewHero()
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, 6)
-            SetupChecklistCard(showImporter: showImporter)
+        Group {
             if Self.showsEmptyState(model: model, pendingCount: importQueue.pending.count) {
-                emptyState
-                    .frame(maxHeight: .infinity)
+                // 시작하기 카드와 빈 상태 안내를 합치면 창보다 클 수 있다. 넘치면 스크롤하고, 남으면 안내를 가운데에 둔다.
+                GeometryReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            header
+                            emptyState
+                                .frame(maxHeight: .infinity)
+                        }
+                        .frame(minHeight: proxy.size.height)
+                    }
+                }
             } else {
-                list
+                VStack(spacing: 0) {
+                    header
+                    list
+                }
             }
         }
         .navigationTitle("빌드")
@@ -91,6 +98,14 @@ struct BuildsView: View {
     /// 보여 줄 빌드·거부·대기·감시 폴더 문제가 하나도 없다.
     static func showsEmptyState(model: HostModel, pendingCount: Int) -> Bool {
         model.builds.isEmpty && model.rejected.isEmpty && pendingCount == 0 && model.watchProblem == nil
+    }
+
+    @ViewBuilder private var header: some View {
+        OverviewHero()
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
+        SetupChecklistCard(showImporter: showImporter)
     }
 
     private var emptyState: some View {
