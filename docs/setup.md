@@ -221,7 +221,7 @@ remotedebug/scripts/install-phone.sh
 
 확인한 것: 새로 복제한 저장소에서 팀·기기를 인자로 주고 iPhone 14 Pro(iOS 27.2)에 설치. 다른 계정, 처음 등록하는 기기, 릴리스 주소에서 코어 내려받기는 확인하지 않음.
 
-App Sandbox 안에서 도는 Mac 앱(Mac App Store판)은 `xcodebuild`를 실행하지 못한다. 그 앱의 **iPhone 앱 설치…**는 이 명령을 안내하고, **프로젝트** 화면은 나오지 않는다.
+App Sandbox 안에서 도는 Mac 앱(Mac App Store판)은 `xcodebuild`를 실행하지 못한다. 그 앱의 **iPhone 앱 설치…**는 이 명령을 안내한다. **프로젝트** 화면에서는 프로젝트 폴더를 등록하면 Xcode에서 한 최근 Debug 기기용 빌드를 찾아 게시한다(빌드는 Xcode에서 한다). 빌드를 프로젝트 폴더 안 `Build/Products`에서 먼저 찾고, Xcode의 DerivedData에 두는 프로젝트는 **빌드 폴더 허용…**으로 그 폴더를 한 번 허용해야 찾는다. 폴더 감시는 없다.
 
 ### Mac 앱으로 iPhone 앱 설치
 
