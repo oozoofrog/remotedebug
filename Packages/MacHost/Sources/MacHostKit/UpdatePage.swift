@@ -175,7 +175,7 @@ public final class UpdatePageModel {
         let state = json?["BackendState"] as? String ?? ""
         let dns = ((json?["Self"] as? [String: Any])?["DNSName"] as? String ?? "").trimmingCharacters(in: CharacterSet(charactersIn: "."))
         guard state == "Running", !dns.isEmpty else {
-            tailscale = .notConnected(state.isEmpty ? "응답 없음" : state)
+            tailscale = .notConnected(state.isEmpty ? String(localized: "응답 없음") : state)
             isRouted = false
             return await apply()
         }
@@ -205,7 +205,7 @@ public final class UpdatePageModel {
             return
         }
         if result.status != 0 {
-            lastError = "공식 Tailscale 설정을 바꾸지 못했습니다: \(result.output.trimmingCharacters(in: .whitespacesAndNewlines))"
+            lastError = String(localized: "공식 Tailscale 설정을 바꾸지 못했습니다: \(result.output.trimmingCharacters(in: .whitespacesAndNewlines))")
         }
         await refresh()
     }
@@ -241,7 +241,7 @@ public final class UpdatePageModel {
                 try? file.save(s)
             }
         } catch {
-            lastError = "업데이트 페이지를 열지 못했습니다: \(HostErrorText.message(for: error))"
+            lastError = String(localized: "업데이트 페이지를 열지 못했습니다: \(HostErrorText.message(for: error))")
         }
         pageURL = page != nil && !publicURL.isEmpty ? URL(string: publicURL) : nil
     }

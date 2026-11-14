@@ -57,7 +57,7 @@ struct FileDetailView: View {
                     .font(.headline)
                     .lineLimit(3)
                     .textSelection(.enabled)
-                Text(item.type?.localizedDescription ?? "파일")
+                Text(item.type?.localizedDescription ?? String(localized: "파일"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Text(item.size.formatted(.byteCount(style: .file)))
@@ -110,7 +110,7 @@ struct FileDetailView: View {
         }
     }
 
-    private func downloadButton(title: String) -> some View {
+    private func downloadButton(title: LocalizedStringKey) -> some View {
         Button {
             if let resource = item.resource { actions.downloadFile(resource) }
         } label: {
@@ -152,7 +152,7 @@ struct FileDetailView: View {
 
     private var infoSection: some View {
         Section("정보") {
-            LabeledContent("종류", value: item.type?.localizedDescription ?? "알 수 없음")
+            LabeledContent("종류", value: item.type?.localizedDescription ?? String(localized: "알 수 없음"))
             if let identifier = item.type?.identifier {
                 LabeledContent("형식 식별자") { Text(identifier).font(.caption.monospaced()).textSelection(.enabled) }
             }
@@ -165,8 +165,8 @@ struct FileDetailView: View {
                 if let project = resource.project { LabeledContent("구역", value: project.name) }
             }
             if let received = item.received {
-                LabeledContent("이 iPhone에 저장", value: received.modifiedAt?.formatted(date: .abbreviated, time: .shortened) ?? "알 수 없음")
-                LabeledContent("저장 위치", value: "나의 iPhone › RemoteDebug › \(received.name)")
+                LabeledContent("이 iPhone에 저장", value: received.modifiedAt?.formatted(date: .abbreviated, time: .shortened) ?? String(localized: "알 수 없음"))
+                LabeledContent("저장 위치", value: String(localized: "나의 iPhone › RemoteDebug › \(received.name)"))
             }
             if let sha = item.resource?.sha256 ?? item.received?.sha256 {
                 VStack(alignment: .leading, spacing: 4) {
@@ -193,12 +193,12 @@ struct FileDetailView: View {
 
     private var linksSection: some View {
         Section("복사") {
-            copyButton("이름 복사", item.name)
+            copyButton(String(localized: "이름 복사"), item.name)
             if let sha = item.resource?.sha256 ?? item.received?.sha256 {
-                copyButton("SHA-256 복사", sha)
+                copyButton(String(localized: "SHA-256 복사"), sha)
             }
             if let path = item.received?.url.path {
-                copyButton("iPhone 안 경로 복사", path)
+                copyButton(String(localized: "iPhone 안 경로 복사"), path)
             }
         }
     }
@@ -208,7 +208,7 @@ struct FileDetailView: View {
             UIPasteboard.general.string = value
             copied = title
         } label: {
-            Label(copied == title ? "복사함" : title, systemImage: copied == title ? "checkmark" : "doc.on.doc")
+            Label(copied == title ? String(localized: "복사함") : title, systemImage: copied == title ? "checkmark" : "doc.on.doc")
         }
     }
 }
@@ -345,7 +345,8 @@ private struct MediaPreview: View {
             let asset = AVURLAsset(url: url)
             var parts: [String] = []
             if let duration = try? await asset.load(.duration), duration.seconds.isFinite {
-                parts.append("길이 " + Duration.seconds(duration.seconds).formatted(.time(pattern: duration.seconds >= 3600 ? .hourMinuteSecond : .minuteSecond)))
+                let length = Duration.seconds(duration.seconds).formatted(.time(pattern: duration.seconds >= 3600 ? .hourMinuteSecond : .minuteSecond))
+                parts.append(String(localized: "길이 \(length)"))
             }
             if let track = try? await asset.loadTracks(withMediaType: .video).first,
                let size = try? await track.load(.naturalSize) {
@@ -419,7 +420,7 @@ private struct TextPreview: View {
         .task(id: url) {
             let isJSON = self.isJSON
             let result = await Task.detached { () -> (String, String) in
-                guard let handle = try? FileHandle(forReadingFrom: url) else { return ("읽지 못했습니다.", "") }
+                guard let handle = try? FileHandle(forReadingFrom: url) else { return (String(localized: "읽지 못했습니다."), "") }
                 defer { try? handle.close() }
                 let data = (try? handle.read(upToCount: Self.limit + 1)) ?? Data()
                 let truncated = data.count > Self.limit
@@ -427,11 +428,14 @@ private struct TextPreview: View {
                 if isJSON, !truncated, let object = try? JSONSerialization.jsonObject(with: body, options: [.fragmentsAllowed]),
                    let pretty = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]) {
                     let text = String(decoding: pretty, as: UTF8.self)
-                    return (text, "JSON · \(text.split(separator: "\n").count)줄(정리해서 보임)")
+                    let count = String(text.split(separator: "\n").count)
+                    return (text, String(localized: "JSON · \(count)줄(정리해서 보임)"))
                 }
                 let text = String(decoding: body, as: UTF8.self)
-                let lines = text.split(separator: "\n", omittingEmptySubsequences: false).count
-                return (text, truncated ? "앞 64KB만 보임 · \(lines)줄" : "\(lines)줄" + (isJSON ? " · JSON 형식이 아님" : ""))
+                let lines = String(text.split(separator: "\n", omittingEmptySubsequences: false).count)
+                let summary = truncated ? String(localized: "앞 64KB만 보임 · \(lines)줄")
+                    : isJSON ? String(localized: "\(lines)줄 · JSON 형식이 아님") : String(localized: "\(lines)줄")
+                return (text, summary)
             }.value
             text = result.0
             summary = result.1.isEmpty ? nil : result.1

@@ -142,7 +142,7 @@ final class VPNServices {
     func openStore(_ action: AppPair.Action = .open, returning: Bool = false) async {
         guard let url = AppPair.url(toOther: action, returning: returning) else { return }
         if await !opener.open(url) {
-            notice = "RemoteDebug 앱을 열지 못했습니다. 설치돼 있는지 확인하세요."
+            notice = String(localized: "RemoteDebug 앱을 열지 못했습니다. 설치돼 있는지 확인하세요.")
         }
     }
 
@@ -153,11 +153,11 @@ final class VPNServices {
         case .open:
             return
         case .connect:
-            working = "VPN을 켜는 중…"
+            working = String(localized: "VPN을 켜는 중…")
             await connect()
             await tunnel.waitUntilOwnTunnelSettles()
         case .disconnect:
-            working = "VPN을 끄는 중…"
+            working = String(localized: "VPN을 끄는 중…")
             await disconnect()
             await tunnel.waitUntilStopped()
         }
@@ -311,30 +311,30 @@ struct VPNScreen: View {
 
     private var title: String {
         if !ownActive, tunnel.externalVPNActive {
-            return tunnel.pairedAppOwnsVPN ? "RemoteDebug 앱이 VPN을 켜 두었습니다" : "다른 앱의 VPN이 켜져 있습니다"
+            return tunnel.pairedAppOwnsVPN ? String(localized: "RemoteDebug 앱이 VPN을 켜 두었습니다") : String(localized: "다른 앱의 VPN이 켜져 있습니다")
         }
         if services.model.isAutoStartingVPN, tunnel.state == .off || tunnel.state == .connecting {
             return VPNStatusText.autoStarting
         }
         switch tunnel.state {
-        case .off: return services.model.isDirectConnected ? VPNStatusText.direct : "꺼짐"
-        case .connecting: return "연결하는 중"
-        case .disconnecting: return "끄는 중"
+        case .off: return services.model.isDirectConnected ? VPNStatusText.direct : String(localized: "꺼짐")
+        case .connecting: return String(localized: "연결하는 중")
+        case .disconnecting: return String(localized: "끄는 중")
         case .connected: return VPNStatusText.connected(holder: tunnel.vpnHolder, path: tunnel.peerPath)
-        case .needsLogin: return "로그인이 필요합니다"
-        case .failed: return "연결하지 못했습니다"
+        case .needsLogin: return String(localized: "로그인이 필요합니다")
+        case .failed: return String(localized: "연결하지 못했습니다")
         }
     }
 
     private var detail: String? {
         if !ownActive, tunnel.externalVPNActive {
-            return tunnel.pairedAppOwnsVPN ? "지금 연결은 RemoteDebug 앱의 터널입니다. RemoteDebug를 설치할 때 이 앱의 터널로 옮깁니다."
-                : "tailnet 주소를 가진 다른 VPN입니다."
+            return tunnel.pairedAppOwnsVPN ? String(localized: "지금 연결은 RemoteDebug 앱의 터널입니다. RemoteDebug를 설치할 때 이 앱의 터널로 옮깁니다.")
+                : String(localized: "tailnet 주소를 가진 다른 VPN입니다.")
         }
         if case .failed(let message) = tunnel.state { return message }
         if let message = tunnel.disconnectMessage { return message }
         if services.model.vpnAutoStarted, tunnel.state == .connected {
-            return "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다."
+            return String(localized: "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다.")
         }
         if services.model.isDirectConnected {
             if tunnel.state == .off { return VPNStatusText.directDetail }

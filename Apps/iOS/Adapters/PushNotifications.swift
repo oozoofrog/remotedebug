@@ -89,9 +89,9 @@ final class PushNotifications: NSObject {
             UNNotificationCategory(identifier: id.rawValue, actions: actions, intentIdentifiers: [], options: [])
         }
         UNUserNotificationCenter.current().setNotificationCategories([
-            category(.build, [action(.install, "설치"), action(.show, "빌드 목록 보기")]),
-            category(.link, [action(.openLink, "링크 열기"), action(.show, "파일 목록 보기")]),
-            category(.file, [action(.download, "받기"), action(.show, "파일 목록 보기")]),
+            category(.build, [action(.install, String(localized: "설치")), action(.show, String(localized: "빌드 목록 보기"))]),
+            category(.link, [action(.openLink, String(localized: "링크 열기")), action(.show, String(localized: "파일 목록 보기"))]),
+            category(.file, [action(.download, String(localized: "받기")), action(.show, String(localized: "파일 목록 보기"))]),
         ])
     }
 

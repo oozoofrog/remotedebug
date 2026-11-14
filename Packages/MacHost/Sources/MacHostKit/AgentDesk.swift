@@ -11,17 +11,17 @@ public enum AgentAccess: String, Codable, Sendable, Hashable, CaseIterable, Iden
 
     public var title: String {
         switch self {
-        case .readOnly: "읽기만"
-        case .edit: "프로젝트 파일 수정"
-        case .full: "모든 권한"
+        case .readOnly: String(localized: "읽기만")
+        case .edit: String(localized: "프로젝트 파일 수정")
+        case .full: String(localized: "모든 권한")
         }
     }
 
     public var detail: String {
         switch self {
-        case .readOnly: "코드를 읽고 답하거나 계획을 세운다. 파일을 바꾸지 않는다."
-        case .edit: "프로젝트 폴더의 파일을 고친다. 그 밖의 명령은 에이전트 설정에서 허용한 것만 실행한다."
-        case .full: "확인 없이 모든 명령을 실행한다. 페어링한 iPhone을 가진 사람이 이 Mac에서 무엇이든 할 수 있다."
+        case .readOnly: String(localized: "코드를 읽고 답하거나 계획을 세운다. 파일을 바꾸지 않는다.")
+        case .edit: String(localized: "프로젝트 폴더의 파일을 고친다. 그 밖의 명령은 에이전트 설정에서 허용한 것만 실행한다.")
+        case .full: String(localized: "확인 없이 모든 명령을 실행한다. 페어링한 iPhone을 가진 사람이 이 Mac에서 무엇이든 할 수 있다.")
         }
     }
 
@@ -103,7 +103,7 @@ public enum AgentOutputParser {
                     guard let text = block["text"] as? String, !text.isEmpty else { return nil }
                     return .text(text)
                 case "tool_use":
-                    return .tool(toolSummary(name: block["name"] as? String ?? "도구", input: block["input"] as? [String: Any] ?? [:]))
+                    return .tool(toolSummary(name: block["name"] as? String ?? String(localized: "도구"), input: block["input"] as? [String: Any] ?? [:]))
                 default:
                     return nil
                 }
@@ -132,16 +132,16 @@ public enum AgentOutputParser {
                 return [.text(text)]
             case "command_execution":
                 guard type == "item.started", let command = item["command"] as? String else { return [] }
-                return [.tool(clip("명령: \(command)"))]
+                return [.tool(clip(String(localized: "명령: \(command)")))]
             case "file_change":
                 guard type == "item.completed" else { return [] }
                 let paths = (item["changes"] as? [[String: Any]] ?? []).compactMap { $0["path"] as? String }
-                return [.tool(clip("파일 수정: \(paths.joined(separator: ", "))"))]
+                return [.tool(clip(String(localized: "파일 수정: \(paths.joined(separator: ", "))")))]
             default:
                 return []
             }
         case "turn.failed":
-            let message = (object["error"] as? [String: Any])?["message"] as? String ?? "에이전트가 실패했습니다."
+            let message = (object["error"] as? [String: Any])?["message"] as? String ?? String(localized: "에이전트가 실패했습니다.")
             return [.result(message, failed: true)]
         default:
             return []
@@ -341,7 +341,7 @@ public final class AgentDesk {
                 guard !job.state.isFinished else { return job }
                 var job = job
                 job.state = .failed
-                job.output = "RemoteDebug 앱이 종료되어 중단됐습니다."
+                job.output = String(localized: "RemoteDebug 앱이 종료되어 중단됐습니다.")
                 job.finishedAt = now()
                 return job
             }
@@ -412,25 +412,25 @@ public final class AgentDesk {
 
     private func accept(id: String, text: String, project: String, agent: String, continues: String, origin: String) -> Result<AgentJob, Failure> {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return .failure(Failure(message: "요청 내용이 비어 있습니다.")) }
-        guard text.utf8.count <= AgentSubmission.maxTextBytes else { return .failure(Failure(message: "요청이 너무 깁니다(최대 16KB).")) }
-        guard !jobs.contains(where: { $0.id == id }) else { return .failure(Failure(message: "이미 받은 요청입니다.")) }
+        guard !text.isEmpty else { return .failure(Failure(message: String(localized: "요청 내용이 비어 있습니다."))) }
+        guard text.utf8.count <= AgentSubmission.maxTextBytes else { return .failure(Failure(message: String(localized: "요청이 너무 깁니다(최대 16KB)."))) }
+        guard !jobs.contains(where: { $0.id == id }) else { return .failure(Failure(message: String(localized: "이미 받은 요청입니다."))) }
         var projectID = project
         var tool = AgentTool(rawValue: agent) ?? tools.first
         var session = ""
         if !continues.isEmpty {
             guard let previous = jobs.first(where: { $0.id == continues }), previous.canContinue else {
-                return .failure(Failure(message: "이어 갈 대화를 찾지 못했습니다. 새 요청으로 보내세요."))
+                return .failure(Failure(message: String(localized: "이어 갈 대화를 찾지 못했습니다. 새 요청으로 보내세요.")))
             }
             projectID = previous.project
             tool = previous.agent
             session = previous.session
         }
         guard let target = projects.first(where: { $0.id == projectID }) else {
-            return .failure(Failure(message: "프로젝트를 찾지 못했습니다. Mac 앱의 프로젝트 화면에서 연결했는지 확인하세요."))
+            return .failure(Failure(message: String(localized: "프로젝트를 찾지 못했습니다. Mac 앱의 프로젝트 화면에서 연결했는지 확인하세요.")))
         }
-        guard let tool else { return .failure(Failure(message: "이 Mac에서 claude나 codex 명령을 찾지 못했습니다.")) }
-        guard tools.contains(tool) else { return .failure(Failure(message: "이 Mac에서 \(tool.rawValue) 명령을 찾지 못했습니다.")) }
+        guard let tool else { return .failure(Failure(message: String(localized: "이 Mac에서 claude나 codex 명령을 찾지 못했습니다."))) }
+        guard tools.contains(tool) else { return .failure(Failure(message: String(localized: "이 Mac에서 \(tool.rawValue) 명령을 찾지 못했습니다."))) }
         let job = AgentJob(id: id, text: text, project: target.id, projectName: target.name, agent: tool, origin: origin,
                            createdAt: now(), session: session, continues: continues)
         insert(job)
@@ -453,7 +453,7 @@ public final class AgentDesk {
         running.removeValue(forKey: id)?.cancel()
         jobs[index].state = .cancelled
         jobs[index].finishedAt = now()
-        jobs[index].output = "요청을 멈췄습니다."
+        jobs[index].output = String(localized: "요청을 멈췄습니다.")
         save()
         schedulePublish()
         pump()
@@ -480,7 +480,7 @@ public final class AgentDesk {
         var busy = Set(jobs.filter { $0.state == .running }.map(\.project))
         for job in jobs.reversed() where job.state == .queued && !busy.contains(job.project) {
             guard let target = projects.first(where: { $0.id == job.project }) else {
-                finish(job.id, state: .failed, output: "프로젝트 연결이 해제됐습니다.")
+                finish(job.id, state: .failed, output: String(localized: "프로젝트 연결이 해제됐습니다."))
                 continue
             }
             busy.insert(job.project)
@@ -524,7 +524,7 @@ public final class AgentDesk {
                         self.finish(id, state: .done, output: lastText)
                     } else {
                         let reason = [answer?.text ?? "", errorTail, noise.joined(separator: "\n")].first { !$0.isEmpty }
-                        self.finish(id, state: .failed, output: reason ?? "에이전트가 답 없이 끝났습니다(종료 코드 \(code)).")
+                        self.finish(id, state: .failed, output: reason ?? String(localized: "에이전트가 답 없이 끝났습니다(종료 코드 \(String(code)))."))
                     }
                     self.pump()
                 }
@@ -550,7 +550,7 @@ public final class AgentDesk {
             guard !job.state.isFinished else { return }
             job.state = state
             job.finishedAt = now()
-            job.output = output.count > Self.outputLimit ? output.prefix(Self.outputLimit) + "\n…(뒷부분 생략)" : output
+            job.output = output.count > Self.outputLimit ? String(localized: "\(String(output.prefix(Self.outputLimit)))\n…(뒷부분 생략)") : output
         }
         save()
     }

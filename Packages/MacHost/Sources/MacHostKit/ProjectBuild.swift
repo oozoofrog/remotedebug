@@ -103,7 +103,7 @@ public struct XcodeBuildTool: ProjectBuilding {
         let status = try await Self.run(executable, ["-list", "-json"] + Self.containerArguments(container),
                                         cwd: container.deletingLastPathComponent(), stdout: pipe, stderr: FileHandle.nullDevice)
         guard status.code == 0 else {
-            throw ProjectBuildFailure(message: "스킴 목록을 읽지 못했습니다(xcodebuild 종료 코드 \(status.code)).")
+            throw ProjectBuildFailure(message: String(localized: "스킴 목록을 읽지 못했습니다(xcodebuild 종료 코드 \(String(status.code)))."))
         }
         return try Self.parseSchemes(status.output)
     }
@@ -111,7 +111,7 @@ public struct XcodeBuildTool: ProjectBuilding {
     /// `xcodebuild -list -json` 출력에서 스킴 이름을 꺼낸다.
     public static func parseSchemes(_ data: Data) throws -> [String] {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw ProjectBuildFailure(message: "스킴 목록을 해석하지 못했습니다.")
+            throw ProjectBuildFailure(message: String(localized: "스킴 목록을 해석하지 못했습니다."))
         }
         let body = (object["workspace"] ?? object["project"]) as? [String: Any]
         return body?["schemes"] as? [String] ?? []
@@ -126,7 +126,7 @@ public struct XcodeBuildTool: ProjectBuilding {
                                         cwd: container.deletingLastPathComponent(), stdout: handle, stderr: handle)
         guard status.code == 0 else {
             let text = (try? String(contentsOf: log, encoding: .utf8)) ?? ""
-            throw ProjectBuildFailure(message: "빌드에 실패했습니다(xcodebuild 종료 코드 \(status.code)).", logTail: Self.failureTail(text))
+            throw ProjectBuildFailure(message: String(localized: "빌드에 실패했습니다(xcodebuild 종료 코드 \(String(status.code)))."), logTail: Self.failureTail(text))
         }
     }
 
@@ -137,7 +137,7 @@ public struct XcodeBuildTool: ProjectBuilding {
         let status = try await Self.run(executable, arguments + ["-showBuildSettings", "-json"],
                                         cwd: container.deletingLastPathComponent(), stdout: pipe, stderr: FileHandle.nullDevice)
         guard status.code == 0 else {
-            throw ProjectBuildFailure(message: "빌드 결과 위치를 읽지 못했습니다(xcodebuild 종료 코드 \(status.code)).")
+            throw ProjectBuildFailure(message: String(localized: "빌드 결과 위치를 읽지 못했습니다(xcodebuild 종료 코드 \(String(status.code)))."))
         }
         return Self.parseProducts(status.output)
     }

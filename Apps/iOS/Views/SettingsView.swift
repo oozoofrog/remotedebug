@@ -149,10 +149,11 @@ struct SettingsView: View {
         } header: {
             Text("VPN 자동 연결")
         } footer: {
-            Text((state.canSetOnDemand || onDemand ? "" : "이 앱의 VPN을 한 번 켠 뒤에 설정할 수 있습니다. ")
-                + "꺼 두어도 이 앱을 쓰는 동안에는 Mac이 필요할 때 VPN을 자동으로 켜고, 쓰지 않으면 30초 뒤에 끕니다. "
-                + "이 설정을 켜면 iOS가 페어링한 Mac 주소로 가는 연결을 볼 때 VPN을 켭니다. 그래서 VPN을 직접 꺼도 iOS가 다시 켭니다. "
-                + "실기기에서 확인하지 않은 기능입니다.")
+            if state.canSetOnDemand || onDemand {
+                Text("꺼 두어도 이 앱을 쓰는 동안에는 Mac이 필요할 때 VPN을 자동으로 켜고, 쓰지 않으면 30초 뒤에 끕니다. 이 설정을 켜면 iOS가 페어링한 Mac 주소로 가는 연결을 볼 때 VPN을 켭니다. 그래서 VPN을 직접 꺼도 iOS가 다시 켭니다. 실기기에서 확인하지 않은 기능입니다.")
+            } else {
+                Text("이 앱의 VPN을 한 번 켠 뒤에 설정할 수 있습니다. 꺼 두어도 이 앱을 쓰는 동안에는 Mac이 필요할 때 VPN을 자동으로 켜고, 쓰지 않으면 30초 뒤에 끕니다. 이 설정을 켜면 iOS가 페어링한 Mac 주소로 가는 연결을 볼 때 VPN을 켭니다. 그래서 VPN을 직접 꺼도 iOS가 다시 켭니다. 실기기에서 확인하지 않은 기능입니다.")
+            }
         }
     }
 
@@ -199,7 +200,7 @@ struct SettingsView: View {
     private var appSection: some View {
         Section {
             LabeledContent("버전", value: state.appVersion)
-            LabeledContent("처음 실행", value: state.installedAt?.formatted(date: .abbreviated, time: .standard) ?? "알 수 없음")
+            LabeledContent("처음 실행", value: state.installedAt?.formatted(date: .abbreviated, time: .standard) ?? String(localized: "알 수 없음"))
             Button {
                 Task { updaterOpenFailed = await !actions.openUpdaterApp() }
             } label: {
@@ -243,8 +244,8 @@ struct SettingsView: View {
                         }
                     }
                     if let tunnel = status.tunnel {
-                        LabeledContent("피어", value: "\(tunnel.peerCount)개")
-                        LabeledContent("경로", value: "\(tunnel.routes.count)개")
+                        LabeledContent("피어", value: String(localized: "\(String(tunnel.peerCount))개"))
+                        LabeledContent("경로", value: String(localized: "\(String(tunnel.routes.count))개"))
                         LabeledContent("MTU", value: "\(tunnel.mtu)")
                     }
                     LabeledContent("코어 메모리(RSS)", value: Self.mib(status.rssMiB))
@@ -314,10 +315,10 @@ struct SettingsView: View {
 
     static func phaseLabel(_ phase: TunnelExtensionPhase) -> String {
         switch phase {
-        case .starting: "시작 중"
-        case .running: "실행 중"
-        case .stopping: "멈추는 중"
-        case .failed: "실패"
+        case .starting: String(localized: "시작 중")
+        case .running: String(localized: "실행 중")
+        case .stopping: String(localized: "멈추는 중")
+        case .failed: String(localized: "실패")
         }
     }
 }

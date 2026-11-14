@@ -112,14 +112,14 @@ public final class ZipWriter {
             var storedCRC = CRC32()
             while remaining > 0 {
                 guard let chunk = try reader.read(upToCount: Int(min(UInt64(Self.chunkSize), remaining))), !chunk.isEmpty else {
-                    throw ZipError.io("\(name): 읽는 동안 파일이 줄었습니다")
+                    throw ZipError.io(String(localized: "\(name): 읽는 동안 파일이 줄었습니다"))
                 }
                 remaining -= UInt64(chunk.count)
                 storedCRC.update(chunk)
                 try write(chunk)
             }
             // 두 번 읽는 사이에 내용이 바뀌면 헤더의 CRC와 저장한 바이트가 어긋난다. 조용히 넘어가지 않는다.
-            guard storedCRC.value == crc.value else { throw ZipError.io("\(name): 읽는 동안 파일 내용이 바뀌었습니다") }
+            guard storedCRC.value == crc.value else { throw ZipError.io(String(localized: "\(name): 읽는 동안 파일 내용이 바뀌었습니다")) }
             do { try handle.truncate(atOffset: position) } catch { throw ZipError.io("\(error)") }
             record.method = 0
             record.compressedSize = UInt32(total)

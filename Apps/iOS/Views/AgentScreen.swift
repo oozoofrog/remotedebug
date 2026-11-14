@@ -185,11 +185,11 @@ struct AgentScreen: View {
 extension AgentJob.State {
     var label: String {
         switch self {
-        case .queued: "대기 중"
-        case .running: "실행 중"
-        case .done: "완료"
-        case .failed: "실패"
-        case .cancelled: "멈춤"
+        case .queued: String(localized: "대기 중")
+        case .running: String(localized: "실행 중")
+        case .done: String(localized: "완료")
+        case .failed: String(localized: "실패")
+        case .cancelled: String(localized: "멈춤")
         }
     }
 }

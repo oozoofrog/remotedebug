@@ -242,7 +242,7 @@ struct PublishedBuildRow: View {
                     ForEach(older) { old in
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text("\(old.descriptor.version) (\(old.descriptor.buildNumber))")
-                            Text("게시 " + old.descriptor.publishedAt.formatted(date: .abbreviated, time: .shortened))
+                            Text("게시 \(old.descriptor.publishedAt.formatted(date: .abbreviated, time: .shortened))")
                                 .foregroundStyle(.secondary)
                             Spacer()
                             Button("게시 취소") { unpublish(old) }
@@ -273,7 +273,7 @@ struct PublishedBuildRow: View {
                     .textSelection(.enabled)
                 HStack(spacing: 6) {
                     Chip(text: Self.evidence(d), symbol: "ladybug.fill", color: RDTheme.tint)
-                    Chip(text: "게시 " + d.publishedAt.formatted(.relative(presentation: .named)), symbol: "clock")
+                    Chip(text: String(localized: "게시 \(d.publishedAt.formatted(.relative(presentation: .named)))"), symbol: "clock")
                         .help(d.publishedAt.formatted(date: .abbreviated, time: .shortened))
                 }
                 HStack(spacing: 6) {
@@ -290,9 +290,9 @@ struct PublishedBuildRow: View {
 
     static func evidence(_ d: BuildDescriptor) -> String {
         switch d.configurationEvidence {
-        case .path: "\(d.configuration) · \(d.configuration)-iphoneos 폴더"
-        case .debugDylib: "\(d.configuration) · debug.dylib 있음"
-        case .userConfirmed: "\(d.configuration) · 직접 확인"
+        case .path: String(localized: "\(d.configuration) · \(d.configuration)-iphoneos 폴더")
+        case .debugDylib: String(localized: "\(d.configuration) · debug.dylib 있음")
+        case .userConfirmed: String(localized: "\(d.configuration) · 직접 확인")
         }
     }
 }
@@ -348,7 +348,7 @@ struct RejectedBuildRow: View {
     }
 
     static func accessibilityText(_ item: RejectedBuild) -> String {
-        "거부됨: \(item.fileName). \(item.messages.joined(separator: " "))"
+        String(localized: "거부됨: \(item.fileName). \(item.messages.joined(separator: " "))")
     }
 }
 

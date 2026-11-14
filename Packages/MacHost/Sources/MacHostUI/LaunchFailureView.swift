@@ -11,17 +11,17 @@ public enum LaunchFailure: Sendable, Hashable {
 
     var title: String {
         switch self {
-        case .storageUnavailable: "저장 폴더를 열 수 없음"
-        case .alreadyRunning: "RemoteDebug가 이미 실행 중"
+        case .storageUnavailable: String(localized: "저장 폴더를 열 수 없음")
+        case .alreadyRunning: String(localized: "RemoteDebug가 이미 실행 중")
         }
     }
 
     var message: String {
         switch self {
         case .storageUnavailable(let detail):
-            "Application Support 폴더를 열지 못했습니다: \(detail) 디스크 공간과 폴더 권한을 확인한 뒤 RemoteDebug를 다시 실행하세요."
+            String(localized: "Application Support 폴더를 열지 못했습니다: \(detail) 디스크 공간과 폴더 권한을 확인한 뒤 RemoteDebug를 다시 실행하세요.")
         case .alreadyRunning:
-            "이미 실행 중인 RemoteDebug가 같은 폴더를 쓰고 있습니다. 실행 중인 앱을 쓰거나, 그 앱을 종료한 뒤 다시 실행하세요."
+            String(localized: "이미 실행 중인 RemoteDebug가 같은 폴더를 쓰고 있습니다. 실행 중인 앱을 쓰거나, 그 앱을 종료한 뒤 다시 실행하세요.")
         }
     }
 }

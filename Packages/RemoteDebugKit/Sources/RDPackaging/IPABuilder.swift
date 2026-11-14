@@ -17,7 +17,7 @@ public enum IPABuilder {
         let appURL = appURL.standardizedFileURL.resolvingSymlinksInPath()
         var isDir: ObjCBool = false
         guard fm.fileExists(atPath: appURL.path, isDirectory: &isDir), isDir.boolValue, appURL.pathExtension == "app" else {
-            throw ZipError.io("\(appURL.lastPathComponent)은(는) .app 폴더가 아닙니다")
+            throw ZipError.io(String(localized: "\(appURL.lastPathComponent)은(는) .app 폴더가 아닙니다"))
         }
         let ipaURL = ipaURL.standardizedFileURL
         try checkDestination(ipaURL)
@@ -161,7 +161,7 @@ public enum IPABuilder {
                 let size = (attrs[.size] as? NSNumber)?.int64Value ?? 0
                 items.append(Item(url: url, name: entryName, kind: .file, mode: permissions(attrs, default: 0o644), modified: modified, size: size))
             } else {
-                throw ZipError.io("지원하지 않는 파일 종류: \(entryName)")
+                throw ZipError.io(String(localized: "지원하지 않는 파일 종류: \(entryName)"))
             }
         }
         return items

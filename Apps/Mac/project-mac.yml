@@ -10,6 +10,11 @@ targets:
       - path: Apps/Mac
         excludes:
           - "project-*.yml"
+      # 앱과 패키지(MacHostKit, MacHostUI …)의 문자열. 패키지 코드도 Bundle.main에서 찾는다.
+      - path: Localization/Localizable.xcstrings
+        buildPhase: resources
+      - path: Localization/InfoPlist/RemoteDebugMac/InfoPlist.xcstrings
+        buildPhase: resources
     entitlements:
       path: Apps/Mac/RemoteDebugMac.entitlements
       # App Sandbox를 쓰지 않는다. 연결한 프로젝트를 xcodebuild로 빌드하고 Xcode의 DerivedData를 읽어야 한다.
@@ -18,6 +23,8 @@ targets:
       path: Apps/Mac/Info.plist
       properties:
         CFBundleDisplayName: RemoteDebug
+        # 지원하지 않는 언어(ko, en, ja, zh-Hans, zh-Hant 밖)로 설정한 Mac은 영어로 보인다.
+        CFBundleDevelopmentRegion: en
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.developer-tools
@@ -90,5 +97,7 @@ schemes:
       config: Debug
     test:
       config: Debug
+      # 테스트는 한국어 원문과 비교한다.
+      language: ko
       targets:
         - RemoteDebugMacTests

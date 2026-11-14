@@ -144,12 +144,12 @@ public enum PairingLinkError: Error, Equatable, Sendable {
 
     public var userMessage: String {
         switch self {
-        case .notPairingLink: "RemoteDebug 페어링 링크가 아닙니다. Mac에 표시된 QR 코드나 링크를 사용하세요."
-        case .missingHost: "링크에 Mac 주소가 없습니다. Mac에 표시된 링크를 다시 복사하세요."
-        case .invalidCodeLength: "페어링 코드는 8자입니다. Mac에 표시된 코드를 다시 확인하세요."
-        case .invalidCodeCharacters: "페어링 코드에 쓰지 않는 글자가 들어 있습니다. Mac에 표시된 코드를 다시 확인하세요."
-        case .hostNotAllowed: "Mac 주소는 .ts.net으로 끝나는 이름이어야 합니다. Mac에 표시된 링크나 주소를 사용하세요."
-        case .invalidAuthKey: "링크의 Tailscale 키가 올바르지 않습니다. Mac에서 새 QR 코드를 여세요."
+        case .notPairingLink: String(localized: "RemoteDebug 페어링 링크가 아닙니다. Mac에 표시된 QR 코드나 링크를 사용하세요.")
+        case .missingHost: String(localized: "링크에 Mac 주소가 없습니다. Mac에 표시된 링크를 다시 복사하세요.")
+        case .invalidCodeLength: String(localized: "페어링 코드는 8자입니다. Mac에 표시된 코드를 다시 확인하세요.")
+        case .invalidCodeCharacters: String(localized: "페어링 코드에 쓰지 않는 글자가 들어 있습니다. Mac에 표시된 코드를 다시 확인하세요.")
+        case .hostNotAllowed: String(localized: "Mac 주소는 .ts.net으로 끝나는 이름이어야 합니다. Mac에 표시된 링크나 주소를 사용하세요.")
+        case .invalidAuthKey: String(localized: "링크의 Tailscale 키가 올바르지 않습니다. Mac에서 새 QR 코드를 여세요.")
         }
     }
 }

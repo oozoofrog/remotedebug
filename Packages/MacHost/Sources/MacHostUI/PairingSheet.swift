@@ -191,10 +191,10 @@ private struct CodePanel: View {
 struct BrowserInstallPanel: View {
     let link: URL
 
-    static let heading = "앱 없이 Safari로 설치"
-    static let copyTitle = "링크 복사"
-    static let copyAnnouncement = "설치 페이지 링크를 복사했습니다."
-    static let facts = "iPhone의 Tailscale 앱이 이 Mac과 같은 tailnet에 로그인되어 있고 VPN이 켜져 있어야 열립니다. 링크에는 위와 같은 코드가 들어 있습니다. 요청이 오면 이 Mac에서 허용하거나 거부하세요."
+    static let heading = String(localized: "앱 없이 Safari로 설치")
+    static let copyTitle = String(localized: "링크 복사")
+    static let copyAnnouncement = String(localized: "설치 페이지 링크를 복사했습니다.")
+    static let facts = String(localized: "iPhone의 Tailscale 앱이 이 Mac과 같은 tailnet에 로그인되어 있고 VPN이 켜져 있어야 열립니다. 링크에는 위와 같은 코드가 들어 있습니다. 요청이 오면 이 Mac에서 허용하거나 거부하세요.")
 
     var body: some View {
         HStack(alignment: .top, spacing: 20) {
@@ -244,18 +244,25 @@ struct PairingResult: Sendable, Hashable {
         let name = PairRequestRow.displayName(request)
         switch outcome ?? (request.expiresAt <= now ? .expired : nil) {
         case .allowed:
-            return PairingResult(text: "\(name)\(Korean.objectParticle(after: name)) 허용 목록에 추가했습니다.",
+            let text = Korean.endsWithConsonant(name)
+                ? String(localized: "\(name)을 허용 목록에 추가했습니다.") : String(localized: "\(name)를 허용 목록에 추가했습니다.")
+            return PairingResult(text: text,
                                  symbol: "checkmark.circle.fill", succeeded: true)
         case .denied:
-            let keeps = alreadyAllowed ? " 이미 허용한 기기라 기존 접근은 그대로입니다. 접근을 끊으려면 기기 목록에서 제거하세요." : ""
-            return PairingResult(text: "\(name)의 페어링 요청을 거부했습니다.\(keeps)", symbol: "xmark.circle")
+            let text = alreadyAllowed
+                ? String(localized: "\(name)의 페어링 요청을 거부했습니다. 이미 허용한 기기라 기존 접근은 그대로입니다. 접근을 끊으려면 기기 목록에서 제거하세요.")
+                : String(localized: "\(name)의 페어링 요청을 거부했습니다.")
+            return PairingResult(text: text, symbol: "xmark.circle")
         case .expired:
-            return PairingResult(text: "요청이 만료됐습니다. 새 코드를 만들어 iPhone에서 다시 요청하세요.", symbol: "clock.badge.xmark")
+            return PairingResult(text: String(localized: "요청이 만료됐습니다. 새 코드를 만들어 iPhone에서 다시 요청하세요."), symbol: "clock.badge.xmark")
         case .notAdded:
-            return PairingResult(text: "제어 서버가 바뀌어 \(name)\(Korean.objectParticle(after: name)) 추가하지 않았습니다. 지금 서버에서 새 코드로 다시 페어링하세요.",
+            let text = Korean.endsWithConsonant(name)
+                ? String(localized: "제어 서버가 바뀌어 \(name)을 추가하지 않았습니다. 지금 서버에서 새 코드로 다시 페어링하세요.")
+                : String(localized: "제어 서버가 바뀌어 \(name)를 추가하지 않았습니다. 지금 서버에서 새 코드로 다시 페어링하세요.")
+            return PairingResult(text: text,
                                  symbol: "exclamationmark.triangle")
         case nil:
-            return PairingResult(text: "요청이 끝났지만 기기가 추가되지 않았습니다. 새 코드로 다시 시도하세요.", symbol: "exclamationmark.triangle")
+            return PairingResult(text: String(localized: "요청이 끝났지만 기기가 추가되지 않았습니다. 새 코드로 다시 시도하세요."), symbol: "exclamationmark.triangle")
         }
     }
 }

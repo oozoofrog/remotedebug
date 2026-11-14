@@ -34,8 +34,8 @@ final class TunnelController: TunnelControlling {
         var errorDescription: String? {
             switch self {
             case .unavailable: TunnelStateMapping.simulatorUnavailableMessage
-            case .notPrepared: "VPN 구성이 없습니다."
-            case .notSelected: "iOS 설정에서 다른 VPN이 선택돼 있습니다."
+            case .notPrepared: String(localized: "VPN 구성이 없습니다.")
+            case .notSelected: String(localized: "iOS 설정에서 다른 VPN이 선택돼 있습니다.")
             }
         }
     }

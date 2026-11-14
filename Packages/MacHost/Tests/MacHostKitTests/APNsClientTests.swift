@@ -111,6 +111,45 @@ struct APNsClientTests {
         #expect((body["aps"] as? [String: Any])?["category"] == nil)
     }
 
+    /// 키가 있으면 alert에 title-loc-key·loc-key·loc-args를 넣고, 대체 문구 title·body도 그대로 둔다.
+    @Test func payloadCarriesLocalizationKeysBesideTheFallback() throws {
+        func alert(_ n: APNsNotification) throws -> [String: Any] {
+            let aps = try #require(try jsonDict(n.payload())["aps"] as? [String: Any])
+            return try #require(aps["alert"] as? [String: Any])
+        }
+        let several = try #require(PushPlanner.resourceNotification([pushFile("r_1", name: "a.txt"), pushFile("r_2", name: "b.txt")], hideNames: false))
+        let counted = try alert(several)
+        #expect(counted["title"] as? String == "새 파일")
+        #expect(counted["body"] as? String == "파일 2개")
+        #expect(counted["title-loc-key"] as? String == "새 파일")
+        #expect(counted["loc-key"] as? String == "파일 %@개")
+        #expect(counted["loc-args"] as? [String] == ["2"])
+
+        let build = try alert(PushPlanner.buildNotification(pushBuild("b_1")))
+        #expect(build["title-loc-key"] as? String == "새 빌드")
+        #expect(build["body"] as? String == "Sample 1.0 (1)")
+        #expect(build["loc-key"] == nil)
+        #expect(build["loc-args"] == nil)
+
+        let test = try alert(PushPlanner.test)
+        #expect(test["title"] as? String == "RemoteDebug")
+        #expect(test["title-loc-key"] == nil)
+        #expect(test["loc-key"] as? String == "시험 알림입니다")
+        #expect(test["loc-args"] == nil)
+
+        let plain = try alert(APNsNotification(title: "t", body: "b", kind: .build))
+        #expect(Set(plain.keys) == ["title", "body"])
+
+        let hidden = PushPlanner.notifications(for: { var b = PushBatch(); b.add(.init(builds: [pushBuild("b_1")], resources: [pushFile("r_1", name: "secret.txt")])); return b }(),
+                                               hideNames: true)
+        for n in hidden {
+            let a = try alert(n)
+            let text = a.values.map { "\($0)" }.joined(separator: " ")
+            #expect(!text.contains("Sample") && !text.contains("secret.txt") && !text.contains("1.0"))
+            #expect(a["loc-args"] == nil)
+        }
+    }
+
     /// 항목 하나를 가리키는 알림에만 동작 버튼 분류가 붙는다.
     @Test func payloadCarriesTheCategoryOnlyWithAnID() throws {
         func category(_ n: APNsNotification) throws -> String? {

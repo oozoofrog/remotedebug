@@ -49,27 +49,31 @@ public struct PhoneAppInstallError: Error, Equatable, Sendable {
         let lower = output.lowercased()
         let rules: [(needles: [String], message: String)] = [
             (["no accounts", "no account for team", "sign in with your apple id", "not signed in"],
-             "Xcode에 이 팀의 Apple 계정이 없습니다. Xcode > Settings > Accounts에서 계정을 추가한 뒤 다시 설치하세요."),
+             String(localized: "Xcode에 이 팀의 Apple 계정이 없습니다. Xcode > Settings > Accounts에서 계정을 추가한 뒤 다시 설치하세요.")),
             (["personal development team", "does not support the network extensions capability", "network extensions capability"],
-             "이 팀으로는 VPN(Network Extension) 권한을 쓸 수 없습니다. 개인(무료) 팀은 지원하지 않으니 유료 Apple Developer Program 팀을 고르세요."),
+             String(localized: "이 팀으로는 VPN(Network Extension) 권한을 쓸 수 없습니다. 개인(무료) 팀은 지원하지 않으니 유료 Apple Developer Program 팀을 고르세요.")),
             (["failed registering bundle identifier", "cannot be registered to your development team"],
-             "이 번들 ID를 이 팀에서 쓸 수 없습니다. '번들 ID 앞부분'을 이 팀만 쓰는 값(예: dev.<팀 ID 소문자>)으로 바꾸세요."),
+             String(localized: "이 번들 ID를 이 팀에서 쓸 수 없습니다. '번들 ID 앞부분'을 이 팀만 쓰는 값(예: dev.<팀 ID 소문자>)으로 바꾸세요.")),
             (["developer mode", "developermode"],
-             "iPhone의 개발자 모드가 꺼져 있습니다. 설정 > 개인정보 보호 및 보안 > 개발자 모드를 켜고 iPhone을 다시 시작하세요."),
+             String(localized: "iPhone의 개발자 모드가 꺼져 있습니다. 설정 > 개인정보 보호 및 보안 > 개발자 모드를 켜고 iPhone을 다시 시작하세요.")),
             (["device is locked", "passcode", "locked"],
-             "iPhone이 잠겨 있습니다. 잠금을 풀고 다시 설치하세요."),
+             String(localized: "iPhone이 잠겨 있습니다. 잠금을 풀고 다시 설치하세요.")),
             (["no profiles for", "requires a provisioning profile", "provisioning profile"],
-             "프로비저닝 프로파일을 만들지 못했습니다. Xcode > Settings > Accounts에서 팀을 고르고 'Download Manual Profiles'를 누른 뒤 다시 설치하세요."),
+             String(localized: "프로비저닝 프로파일을 만들지 못했습니다. Xcode > Settings > Accounts에서 팀을 고르고 'Download Manual Profiles'를 누른 뒤 다시 설치하세요.")),
             (["unable to find a destination", "could not locate device", "device is not connected"],
-             "iPhone에 닿지 못했습니다. 케이블로 연결하고 잠금을 푼 뒤 '이 컴퓨터를 신뢰'를 허용하세요."),
+             String(localized: "iPhone에 닿지 못했습니다. 케이블로 연결하고 잠금을 푼 뒤 '이 컴퓨터를 신뢰'를 허용하세요.")),
             (["rdcore.xcframework"],
-             "Go 코어(RDCore.xcframework)가 없습니다. 저장소에서 scripts/build-core.sh를 먼저 실행하세요."),
+             String(localized: "Go 코어(RDCore.xcframework)가 없습니다. 저장소에서 scripts/build-core.sh를 먼저 실행하세요.")),
         ]
         for rule in rules where rule.needles.contains(where: { lower.contains($0) }) {
             return PhoneAppInstallError(rule.message)
         }
         let lastError = output.split(separator: "\n").last { $0.contains("error:") || $0.contains("Error") }
-        return PhoneAppInstallError("\(step)에 실패했습니다." + (lastError.map { " \($0.trimmingCharacters(in: .whitespaces))" } ?? " 기록을 확인하세요."))
+        if let lastError {
+            let line = lastError.trimmingCharacters(in: .whitespaces)
+            return PhoneAppInstallError(String(localized: "\(step)에 실패했습니다. \(line)"))
+        }
+        return PhoneAppInstallError(String(localized: "\(step)에 실패했습니다. 기록을 확인하세요."))
     }
 }
 
@@ -158,11 +162,11 @@ public struct PhoneAppTools: PhoneAppTooling {
     public func build(source: URL, team: String, bundlePrefix: String, device: String, log: URL) async throws(PhoneAppInstallError) -> URL {
         let arguments = Self.buildArguments(source: source, team: team, bundlePrefix: bundlePrefix, device: device)
         let built = await Self.run("/usr/bin/xcodebuild", arguments + ["build"], log: log, cwd: source)
-        guard built.code == 0 else { throw PhoneAppInstallError.explain(built.output, step: "iPhone 앱 빌드") }
+        guard built.code == 0 else { throw PhoneAppInstallError.explain(built.output, step: String(localized: "iPhone 앱 빌드")) }
         // 빌드 위치는 Xcode 설정(사용자 지정 위치 포함)을 따르므로 xcodebuild에게 묻는다.
         let settings = await Self.run("/usr/bin/xcodebuild", arguments + ["-showBuildSettings", "-json"], log: nil, cwd: source)
         guard let app = Self.productPath(settingsJSON: settings.output) else {
-            throw PhoneAppInstallError("빌드한 앱을 찾지 못했습니다. 기록을 확인하세요.")
+            throw PhoneAppInstallError(String(localized: "빌드한 앱을 찾지 못했습니다. 기록을 확인하세요."))
         }
         return app
     }
@@ -183,7 +187,7 @@ public struct PhoneAppTools: PhoneAppTooling {
 
     public func install(app: URL, device: String, log: URL) async throws(PhoneAppInstallError) {
         let result = await Self.run("/usr/bin/xcrun", ["devicectl", "device", "install", "app", "--device", device, app.path], log: log)
-        guard result.code == 0 else { throw PhoneAppInstallError.explain(result.output, step: "iPhone에 설치") }
+        guard result.code == 0 else { throw PhoneAppInstallError.explain(result.output, step: String(localized: "iPhone에 설치")) }
     }
 
     public func launch(bundleID: String, device: String, log: URL) async {

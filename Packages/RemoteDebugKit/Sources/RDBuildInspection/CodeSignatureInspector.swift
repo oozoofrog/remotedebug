@@ -44,7 +44,7 @@ public enum CodeSignatureInspector {
         var staticCode: SecStaticCode?
         let created = SecStaticCodeCreateWithPath(url as CFURL, SecCSFlags(), &staticCode)
         guard created == errSecSuccess, let code = staticCode else {
-            throw InspectionError.unreadable("서명을 읽을 수 없습니다(\(message(for: created)))")
+            throw InspectionError.unreadable(String(localized: "서명을 읽을 수 없습니다(\(message(for: created)))"))
         }
 
         let flags = SecCSFlags(rawValue: UInt32(kSecCSStrictValidate | kSecCSCheckNestedCode | kSecCSCheckAllArchitectures))

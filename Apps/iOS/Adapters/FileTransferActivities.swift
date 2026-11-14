@@ -35,7 +35,7 @@ final class FileTransferActivities {
             startedAt[id] = nil
             var state = activity.content.state
             state.phase = .failed
-            state.message = "앱이 다시 시작되어 받기가 끊겼습니다. 다시 받으세요."
+            state.message = String(localized: "앱이 다시 시작되어 받기가 끊겼습니다. 다시 받으세요.")
             Task { await activity.end(ActivityContent(state: state, staleDate: nil), dismissalPolicy: .after(.now + 5 * 60)) }
         }
     }

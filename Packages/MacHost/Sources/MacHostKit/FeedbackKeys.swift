@@ -12,9 +12,9 @@ public enum FeedbackEnvelope {
 
         public var message: String {
             switch self {
-            case .malformed: "RemoteDebug 피드백 진단 파일이 아닙니다."
-            case .unknownKey: "이 Mac에 이 파일을 열 키가 없습니다. 키를 만든 Mac에서 여세요."
-            case .damaged: "파일이 바뀌었거나 손상돼 열 수 없습니다."
+            case .malformed: String(localized: "RemoteDebug 피드백 진단 파일이 아닙니다.")
+            case .unknownKey: String(localized: "이 Mac에 이 파일을 열 키가 없습니다. 키를 만든 Mac에서 여세요.")
+            case .damaged: String(localized: "파일이 바뀌었거나 손상돼 열 수 없습니다.")
             }
         }
     }

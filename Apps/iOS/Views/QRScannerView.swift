@@ -47,7 +47,7 @@ struct QRScannerSheet: View {
                 .ignoresSafeArea(edges: .bottom)
                 .accessibilityLabel("카메라 미리보기")
 
-                Text(message ?? "Mac 앱에 표시된 페어링 QR 코드를 화면에 비추세요.")
+                Text(message ?? String(localized: "Mac 앱에 표시된 페어링 QR 코드를 화면에 비추세요."))
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
                     .padding(12)

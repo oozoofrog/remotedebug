@@ -72,7 +72,7 @@ public enum InspectionError: Error, CustomStringConvertible, Equatable {
 
     public var description: String {
         switch self {
-        case .unreadable(let m): "읽을 수 없음: \(m)"
+        case .unreadable(let m): String(localized: "읽을 수 없음: \(m)")
         }
     }
 }

@@ -18,10 +18,10 @@ public enum APNsKeyFailure: Error, Equatable, Sendable {
 
     public var message: String {
         switch self {
-        case .notP256Key: "APNs 인증 키(.p8) 파일이 아닙니다. Apple Developer의 Keys에서 받은 AuthKey_….p8 파일을 고르세요."
-        case .badKeyID: "Key ID는 영문 대문자와 숫자 10자입니다."
-        case .badTeamID: "Team ID는 영문 대문자와 숫자 10자입니다."
-        case .missingKey: "키 파일을 먼저 고르세요."
+        case .notP256Key: String(localized: "APNs 인증 키(.p8) 파일이 아닙니다. Apple Developer의 Keys에서 받은 AuthKey_….p8 파일을 고르세요.")
+        case .badKeyID: String(localized: "Key ID는 영문 대문자와 숫자 10자입니다.")
+        case .badTeamID: String(localized: "Team ID는 영문 대문자와 숫자 10자입니다.")
+        case .missingKey: String(localized: "키 파일을 먼저 고르세요.")
         }
     }
 }

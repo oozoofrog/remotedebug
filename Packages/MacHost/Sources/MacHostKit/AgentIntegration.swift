@@ -320,22 +320,22 @@ public struct AgentInstaller: Sendable {
             try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             try Data(AgentScript.globalSkill(script: scriptPath).utf8).write(to: file, options: [.atomic])
         } catch {
-            return Outcome(ok: false, message: "스킬 파일을 쓰지 못했습니다: \(HostErrorText.message(for: error))")
+            return Outcome(ok: false, message: String(localized: "스킬 파일을 쓰지 못했습니다: \(HostErrorText.message(for: error))"))
         }
         guard await shell("command -v \(target.cli)").code == 0 else {
-            return Outcome(ok: false, message: "스킬은 설치했습니다(\(file.path)). \(target.cli) 명령을 찾지 못해 MCP 서버는 등록하지 못했습니다.")
+            return Outcome(ok: false, message: String(localized: "스킬은 설치했습니다(\(file.path)). \(target.cli) 명령을 찾지 못해 MCP 서버는 등록하지 못했습니다."))
         }
         let result = await shell(registerCommand(target))
         guard result.code == 0 else {
-            return Outcome(ok: false, message: "스킬은 설치했습니다. MCP 서버 등록에 실패했습니다: \(result.output.suffix(300))")
+            return Outcome(ok: false, message: String(localized: "스킬은 설치했습니다. MCP 서버 등록에 실패했습니다: \(String(result.output.suffix(300)))"))
         }
-        return Outcome(ok: true, message: "스킬과 MCP 서버를 설치했습니다. 새로 여는 \(target.title) 세션부터 쓸 수 있습니다.")
+        return Outcome(ok: true, message: String(localized: "스킬과 MCP 서버를 설치했습니다. 새로 여는 \(target.title) 세션부터 쓸 수 있습니다."))
     }
 
     public func uninstall(_ target: Target) async -> Outcome {
         try? FileManager.default.removeItem(at: skillFile(target).deletingLastPathComponent())
         _ = await shell(unregisterCommand(target))
-        return Outcome(ok: true, message: "\(target.title)에서 스킬과 MCP 서버를 제거했습니다.")
+        return Outcome(ok: true, message: String(localized: "\(target.title)에서 스킬과 MCP 서버를 제거했습니다."))
     }
 
     /// 사용자의 로그인 셸 설정(PATH)을 읽어 실행한다. 앱은 터미널의 PATH를 물려받지 않는다.

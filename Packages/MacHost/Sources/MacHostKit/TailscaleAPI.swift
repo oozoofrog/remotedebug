@@ -46,13 +46,13 @@ public struct TailscaleAPI: Sendable {
 
         public var message: String {
             switch self {
-            case .badClient: "클라이언트 ID와 비밀값(tskey-client-…)을 확인하세요. 관리 콘솔에서 OAuth 클라이언트를 만들 때 한 번만 보여 줍니다."
-            case .badTags: "태그는 tag:rd-phone처럼 tag:로 시작하고 영문 소문자·숫자·하이픈만 씁니다. 여러 개면 쉼표로 나눕니다."
-            case .unauthorized: "Tailscale이 OAuth 클라이언트를 받지 않았습니다. 클라이언트가 지워졌거나 비밀값이 틀렸을 수 있습니다."
-            case .forbidden: "이 OAuth 클라이언트로는 인증 키를 만들 수 없습니다. 클라이언트에 Auth Keys 쓰기 권한(auth_keys)과 입력한 태그가 있는지 확인하세요."
-            case .http(let status): "Tailscale API가 오류를 돌려줬습니다(HTTP \(status)). 태그가 클라이언트에 준 태그와 같은지 확인하세요."
-            case .invalidResponse: "Tailscale API의 응답을 읽지 못했습니다."
-            case .network: "Tailscale API에 연결하지 못했습니다. 인터넷 연결을 확인하세요."
+            case .badClient: String(localized: "클라이언트 ID와 비밀값(tskey-client-…)을 확인하세요. 관리 콘솔에서 OAuth 클라이언트를 만들 때 한 번만 보여 줍니다.")
+            case .badTags: String(localized: "태그는 tag:rd-phone처럼 tag:로 시작하고 영문 소문자·숫자·하이픈만 씁니다. 여러 개면 쉼표로 나눕니다.")
+            case .unauthorized: String(localized: "Tailscale이 OAuth 클라이언트를 받지 않았습니다. 클라이언트가 지워졌거나 비밀값이 틀렸을 수 있습니다.")
+            case .forbidden: String(localized: "이 OAuth 클라이언트로는 인증 키를 만들 수 없습니다. 클라이언트에 Auth Keys 쓰기 권한(auth_keys)과 입력한 태그가 있는지 확인하세요.")
+            case .http(let status): String(localized: "Tailscale API가 오류를 돌려줬습니다(HTTP \(String(status))). 태그가 클라이언트에 준 태그와 같은지 확인하세요.")
+            case .invalidResponse: String(localized: "Tailscale API의 응답을 읽지 못했습니다.")
+            case .network: String(localized: "Tailscale API에 연결하지 못했습니다. 인터넷 연결을 확인하세요.")
             }
         }
     }

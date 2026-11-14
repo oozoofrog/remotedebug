@@ -56,14 +56,29 @@ public enum PushPlanner {
     /// 마지막 변화 뒤 이만큼 조용하면 보낸다.
     public static let quietPeriod: Duration = .seconds(5)
 
-    public static let test = APNsNotification(title: "RemoteDebug", body: "시험 알림입니다", kind: .test)
+    /// 알림 문구 키(docs/protocol-addenda.md P.5). iPhone은 자기 언어로 이 키를 찾아 보이고, 못 찾으면 title·body를 그대로 보인다.
+    /// 키마다 아래에서 같은 글자의 `String(localized:)`로 대체 문구를 만들므로 문자열 추출이 키를 카탈로그에 넣는다.
+    enum Key {
+        static let newBuildTitle = "새 빌드"
+        static let newFileTitle = "새 파일"
+        static let newLinkTitle = "새 링크"
+        static let newBuildsHidden = "새 빌드가 있습니다"
+        static let newFilesHidden = "새 파일이 있습니다"
+        static let test = "시험 알림입니다"
+        static let fileCount = "파일 %@개"
+        static let linkCount = "링크 %@개"
+    }
+
+    public static let test = APNsNotification(title: "RemoteDebug", body: String(localized: "시험 알림입니다"), kind: .test,
+                                              bodyLocKey: Key.test)
 
     /// 묶음을 보낼 알림으로 바꾼다. 빌드는 앱마다 하나(이름을 숨기면 하나로 합친다), 파일·링크는 하나.
     public static func notifications(for batch: PushBatch, hideNames: Bool) -> [APNsNotification] {
         var list: [APNsNotification] = []
         if !batch.builds.isEmpty {
             if hideNames {
-                list.append(APNsNotification(title: "RemoteDebug", body: "새 빌드가 있습니다", kind: .build))
+                list.append(APNsNotification(title: "RemoteDebug", body: String(localized: "새 빌드가 있습니다"), kind: .build,
+                                             bodyLocKey: Key.newBuildsHidden))
             } else {
                 list += batch.builds.values.sorted { ($0.publishedAt, $0.bundleId) < ($1.publishedAt, $1.bundleId) }.map(buildNotification)
             }
@@ -73,17 +88,27 @@ public enum PushPlanner {
     }
 
     public static func buildNotification(_ build: BuildDescriptor) -> APNsNotification {
-        APNsNotification(title: "새 빌드", body: "\(build.displayName) \(build.version) (\(build.buildNumber))", kind: .build, id: build.id, category: .build)
+        APNsNotification(title: String(localized: "새 빌드"), body: "\(build.displayName) \(build.version) (\(build.buildNumber))", kind: .build,
+                         id: build.id, category: .build, titleLocKey: Key.newBuildTitle)
     }
 
     public static func resourceNotification(_ items: [ResourceDescriptor], hideNames: Bool) -> APNsNotification? {
         guard let first = items.first else { return nil }
-        if hideNames { return APNsNotification(title: "RemoteDebug", body: "새 파일이 있습니다", kind: .resource) }
-        let allLinks = items.allSatisfy(\.isLink)
-        if items.count == 1 {
-            return APNsNotification(title: allLinks ? "새 링크" : "새 파일", body: first.name, kind: .resource, id: first.id,
-                                    category: first.isLink ? .link : .file)
+        if hideNames {
+            return APNsNotification(title: "RemoteDebug", body: String(localized: "새 파일이 있습니다"), kind: .resource,
+                                    bodyLocKey: Key.newFilesHidden)
         }
-        return APNsNotification(title: allLinks ? "새 링크" : "새 파일", body: allLinks ? "링크 \(items.count)개" : "파일 \(items.count)개", kind: .resource)
+        let allLinks = items.allSatisfy(\.isLink)
+        let title = allLinks ? String(localized: "새 링크") : String(localized: "새 파일")
+        let titleKey = allLinks ? Key.newLinkTitle : Key.newFileTitle
+        if items.count == 1 {
+            return APNsNotification(title: title, body: first.name, kind: .resource, id: first.id,
+                                    category: first.isLink ? .link : .file, titleLocKey: titleKey)
+        }
+        // 개수는 문자열로 넘긴다(loc-args는 문자열만, 자릿수 묶음 없이).
+        let count = String(items.count)
+        let body = allLinks ? String(localized: "링크 \(count)개") : String(localized: "파일 \(count)개")
+        return APNsNotification(title: title, body: body, kind: .resource, titleLocKey: titleKey,
+                                bodyLocKey: allLinks ? Key.linkCount : Key.fileCount, bodyLocArgs: [count])
     }
 }

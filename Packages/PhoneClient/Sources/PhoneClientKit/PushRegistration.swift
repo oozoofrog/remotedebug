@@ -112,10 +112,10 @@ public enum PushStatus: Equatable, Sendable {
 
     public var label: String {
         switch self {
-        case .off: "꺼짐"
-        case .registered: "Mac에 등록됨"
-        case .pending: "연결되면 등록"
-        case .unsupported: "이 Mac은 알림을 지원하지 않음"
+        case .off: String(localized: "꺼짐")
+        case .registered: String(localized: "Mac에 등록됨")
+        case .pending: String(localized: "연결되면 등록")
+        case .unsupported: String(localized: "이 Mac은 알림을 지원하지 않음")
         }
     }
 }

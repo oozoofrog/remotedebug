@@ -122,15 +122,15 @@ struct VPNCard: View {
     }
 
     private var statusLabel: String {
-        if !state.tunnelAvailable { return "사용할 수 없음" }
+        if !state.tunnelAvailable { return String(localized: "사용할 수 없음") }
         if isAutoStarting { return VPNStatusText.autoStarting }
         switch state.tunnel {
-        case .off: return state.directConnected ? VPNStatusText.direct : "꺼짐"
-        case .connecting: return "연결 중"
-        case .disconnecting: return "끄는 중"
-        case .needsLogin: return "로그인 필요"
+        case .off: return state.directConnected ? VPNStatusText.direct : String(localized: "꺼짐")
+        case .connecting: return String(localized: "연결 중")
+        case .disconnecting: return String(localized: "끄는 중")
+        case .needsLogin: return String(localized: "로그인 필요")
         case .connected: return VPNStatusText.connected(holder: state.vpnPair.owner, path: state.peerPath)
-        case .failed: return "오류"
+        case .failed: return String(localized: "오류")
         }
     }
 
@@ -139,12 +139,12 @@ struct VPNCard: View {
         case .off:
             state.directConnected ? VPNStatusText.directDetail
                 : state.vpnAutoStartReady
-                ? "Mac에 연결할 때 자동으로 켜고, 쓰지 않으면 30초 뒤에 끕니다."
-                : "Mac과 통신하려면 VPN이 켜져 있어야 합니다. 여기서 한 번 켜 두면 다음부터는 필요할 때 자동으로 켭니다."
+                ? String(localized: "Mac에 연결할 때 자동으로 켜고, 쓰지 않으면 30초 뒤에 끕니다.")
+                : String(localized: "Mac과 통신하려면 VPN이 켜져 있어야 합니다. 여기서 한 번 켜 두면 다음부터는 필요할 때 자동으로 켭니다.")
         case .connecting, .disconnecting: nil
-        case .needsLogin(let url): url == nil ? "tailnet 로그인 주소를 받는 중입니다." : "tailnet에 로그인해야 합니다. 로그인하면 자동으로 연결됩니다."
+        case .needsLogin(let url): url == nil ? String(localized: "tailnet 로그인 주소를 받는 중입니다.") : String(localized: "tailnet에 로그인해야 합니다. 로그인하면 자동으로 연결됩니다.")
         case .connected:
-            state.vpnAutoStarted ? "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다."
+            state.vpnAutoStarted ? String(localized: "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다.")
                 : state.directConnected ? VPNStatusText.directWithVPNDetail : nil
         case .failed(let message): message
         }

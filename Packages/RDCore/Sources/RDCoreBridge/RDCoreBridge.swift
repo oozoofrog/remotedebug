@@ -198,7 +198,7 @@ private enum RDCall {
     /// 코어가 할당한 문자열을 복사하고 해제한다. 오류 JSON이면 던진다.
     static func consume(_ pointer: UnsafeMutablePointer<CChar>?) throws -> Data {
         guard let pointer else {
-            throw RDCoreError(code: "internal", message: "코어가 응답하지 않았습니다.")
+            throw RDCoreError(code: "internal", message: String(localized: "코어가 응답하지 않았습니다."))
         }
         defer { rd_free(pointer) }
         let data = Data(bytes: pointer, count: strlen(pointer))

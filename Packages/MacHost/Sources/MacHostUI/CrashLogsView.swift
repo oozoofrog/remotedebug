@@ -62,7 +62,7 @@ struct CrashLogsView: View {
                 Button {
                     let panel = NSOpenPanel()
                     panel.allowsMultipleSelection = true
-                    panel.message = "피드백 메일에 붙어 온 암호화된 진단 파일(.afdiag)을 고르세요."
+                    panel.message = String(localized: "피드백 메일에 붙어 온 암호화된 진단 파일(.afdiag)을 고르세요.")
                     if panel.runModal() == .OK { importDiagnostics(panel.urls) }
                 } label: {
                     Label("암호화된 진단 열기…", systemImage: "lock.open")
@@ -145,7 +145,7 @@ private struct CrashText: View {
                         .frame(maxHeight: 420)
                         .accessibilityLabel("피드백에 붙은 화면 사진")
                 }
-                Text(text ?? "기록 파일을 읽을 수 없습니다.")
+                Text(text ?? String(localized: "기록 파일을 읽을 수 없습니다."))
                     .font(.callout.monospaced())
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .topLeading)

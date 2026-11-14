@@ -33,7 +33,7 @@ struct PhoneHero: View {
                 Text("RemoteDebug")
                     .font(.title2.weight(.bold))
                     .foregroundStyle(.white)
-                Label(hostName ?? "페어링한 Mac 없음", systemImage: hostName == nil ? "desktopcomputer.trianglebadge.exclamationmark" : "desktopcomputer")
+                Label(hostName ?? String(localized: "페어링한 Mac 없음"), systemImage: hostName == nil ? "desktopcomputer.trianglebadge.exclamationmark" : "desktopcomputer")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.8))
                     .lineLimit(1)

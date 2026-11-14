@@ -36,7 +36,7 @@ struct CrashSection: View {
                     CrashDetailView(item: item, actions: actions)
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(item.kind == .feedback ? "피드백 · \(item.title)" : item.title).font(.body)
+                        Text(item.kind == .feedback ? String(localized: "피드백 · \(item.title)") : item.title).font(.body)
                         Text("\(item.crashedAt.formatted(date: .abbreviated, time: .standard)) · \(item.appVersion)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -128,7 +128,7 @@ struct CrashDetailView: View {
 
     var body: some View {
         ScrollView {
-            Text(text ?? "기록 파일을 읽을 수 없습니다.")
+            Text(text ?? String(localized: "기록 파일을 읽을 수 없습니다."))
                 .font(.caption.monospaced())
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)

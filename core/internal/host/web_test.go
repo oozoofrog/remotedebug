@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -363,6 +364,177 @@ func TestPageWiring(t *testing.T) {
 		}
 		if strings.Contains(tag, "aria-live") || strings.Contains(tag, "role=") {
 			t.Errorf("#%s must be announced by focus alone: %s", id, tag)
+		}
+	}
+}
+
+// pageStringTable reads the translation table between the RD-STRINGS markers in logic.js. The text from the first
+// "{" to the last "}" of the block is strict JSON: language -> Korean source text -> translation ("" = not yet).
+func pageStringTable(t *testing.T) map[string]map[string]string {
+	t.Helper()
+	js := string(pageFiles["/assets/logic.js"].body)
+	m := regexp.MustCompile(`(?s)RD-STRINGS-BEGIN[^\n]*\n(.*?)\n[^\n]*RD-STRINGS-END`).FindStringSubmatch(js)
+	if m == nil {
+		t.Fatal("logic.js has no RD-STRINGS block")
+	}
+	block := m[1]
+	start, end := strings.Index(block, "{"), strings.LastIndex(block, "}")
+	if start < 0 || end < start {
+		t.Fatal("RD-STRINGS block has no JSON object")
+	}
+	dec := json.NewDecoder(strings.NewReader(block[start : end+1]))
+	dec.DisallowUnknownFields()
+	var table map[string]map[string]string
+	if err := dec.Decode(&table); err != nil {
+		t.Fatalf("RD-STRINGS block is not strict JSON: %v", err)
+	}
+	return table
+}
+
+// jsStringLiterals returns the double-quoted string literals of a script outside comments, each with a flag telling
+// whether it is the first argument of a t(...) call. Single-quoted and template literals are skipped whole.
+func jsStringLiterals(t *testing.T, name, src string) (lits []string, tCall []bool) {
+	t.Helper()
+	tPrefix := regexp.MustCompile(`\bt\(\s*$`)
+	for i := 0; i < len(src); {
+		switch {
+		case strings.HasPrefix(src[i:], "//"):
+			if j := strings.IndexByte(src[i:], '\n'); j >= 0 {
+				i += j
+			} else {
+				i = len(src)
+			}
+		case strings.HasPrefix(src[i:], "/*"):
+			j := strings.Index(src[i+2:], "*/")
+			if j < 0 {
+				t.Fatalf("%s: unterminated comment", name)
+			}
+			i += j + 4
+		case src[i] == '"' || src[i] == '\'' || src[i] == '`':
+			q := src[i]
+			j := i + 1
+			for j < len(src) && src[j] != q {
+				if src[j] == '\\' {
+					j++
+				} else if src[j] == '\n' && q != '`' {
+					t.Fatalf("%s: unterminated string at byte %d", name, i)
+				}
+				j++
+			}
+			if j >= len(src) {
+				t.Fatalf("%s: unterminated string at byte %d", name, i)
+			}
+			if q == '"' {
+				v, err := strconv.Unquote(src[i : j+1])
+				if err != nil {
+					t.Fatalf("%s: string %s: %v", name, src[i:j+1], err)
+				}
+				lits = append(lits, v)
+				tCall = append(tCall, tPrefix.MatchString(src[:i]))
+			}
+			i = j + 1
+		default:
+			i++
+		}
+	}
+	return lits, tCall
+}
+
+var hangul = regexp.MustCompile(`[가-힣]`)
+
+// pageTextKeys collects every Korean source text the page can show: Korean text and attribute values of index.html
+// (outside noscript, which only shows when scripts do not run), every Korean string literal in install.js and
+// logic.js (outside comments and the table), and every literal passed to t(...).
+func pageTextKeys(t *testing.T) map[string]string {
+	t.Helper()
+	keys := map[string]string{}
+	html := string(pageFiles["/"].body)
+	html = regexp.MustCompile(`(?s)<noscript>.*?</noscript>`).ReplaceAllString(html, "")
+	for _, m := range regexp.MustCompile(`>([^<]*)<`).FindAllStringSubmatch(html, -1) {
+		if v := strings.TrimSpace(m[1]); hangul.MatchString(v) {
+			keys[v] = "index.html"
+		}
+	}
+	for _, m := range regexp.MustCompile(`\s([a-z-]+)="([^"]*)"`).FindAllStringSubmatch(html, -1) {
+		if hangul.MatchString(m[2]) {
+			switch m[1] {
+			case "aria-label", "placeholder", "title", "alt":
+				keys[strings.TrimSpace(m[2])] = "index.html " + m[1]
+			default:
+				t.Errorf("index.html: Korean text in attribute %s is not translated at start: %q", m[1], m[2])
+			}
+		}
+	}
+	for _, name := range []string{"/assets/logic.js", "/assets/install.js"} {
+		src := string(pageFiles[name].body)
+		if name == "/assets/logic.js" {
+			src = regexp.MustCompile(`(?s)// RD-STRINGS-BEGIN.*?// RD-STRINGS-END`).ReplaceAllString(src, "")
+		}
+		lits, tCall := jsStringLiterals(t, name, src)
+		for i, v := range lits {
+			if hangul.MatchString(v) || tCall[i] {
+				keys[v] = name
+			}
+		}
+	}
+	return keys
+}
+
+var placeholderPattern = regexp.MustCompile(`\{([A-Za-z0-9_]+)\}`)
+
+func placeholderSet(s string) string {
+	var names []string
+	for _, m := range placeholderPattern.FindAllStringSubmatch(s, -1) {
+		names = append(names, m[1])
+	}
+	sort.Strings(names)
+	return strings.Join(names, ",")
+}
+
+// TestPageStringTableComplete: the table has exactly the four translation languages with the same keys, every text the
+// page shows has a slot in each of them, no slot is left over, and a translation uses the same placeholders as its source.
+func TestPageStringTableComplete(t *testing.T) {
+	table := pageStringTable(t)
+	langs := []string{"en", "ja", "zh-Hans", "zh-Hant"}
+	if len(table) != len(langs) {
+		t.Errorf("table languages %d, want %v", len(table), langs)
+	}
+	used := pageTextKeys(t)
+	if len(used) < 50 {
+		t.Fatalf("found only %d page texts; the extraction no longer matches the sources", len(used))
+	}
+	filled := 0
+	for _, lang := range langs {
+		slots, ok := table[lang]
+		if !ok {
+			t.Errorf("table has no %s object", lang)
+			continue
+		}
+		for key, file := range used {
+			if _, ok := slots[key]; !ok {
+				t.Errorf("%s: %q (%s) has no slot", lang, key, file)
+			}
+		}
+		for key, value := range slots {
+			if _, ok := used[key]; !ok {
+				t.Errorf("%s: slot %q is not used by index.html, install.js or logic.js", lang, key)
+			}
+			if value != "" {
+				filled++
+				if placeholderSet(value) != placeholderSet(key) {
+					t.Errorf("%s: %q -> %q: placeholders differ", lang, key, value)
+				}
+			}
+		}
+	}
+	if len(table["en"]) == 0 || filled == 0 {
+		t.Errorf("table is empty or has no translation at all (%d filled)", filled)
+	}
+	// The Korean defaults stay in the sources (docs and scripts/check-docs.sh quote them).
+	html := string(pageFiles["/"].body)
+	for _, want := range []string{`<html lang="ko">`, "<title>RemoteDebug 빌드 설치</title>", "페어링 요청", "남은 시간"} {
+		if !strings.Contains(html, want) {
+			t.Errorf("index.html lacks the Korean default %q", want)
 		}
 	}
 }

@@ -49,7 +49,7 @@ struct FilesView: View {
                 if choices.count > 1 {
                     Picker("넣을 구역", selection: $area) {
                         ForEach(choices, id: \.self) { choice in
-                            Text(choice?.name ?? ResourceArea.commonTitle).tag(choice)
+                            Text(choice?.name ?? ResourceArea.shownCommonTitle).tag(choice)
                         }
                     }
                     .help("새로 보내는 파일과 링크가 들어갈 구역")
@@ -193,7 +193,7 @@ private struct FileRow: View {
             if !destinations.isEmpty {
                 Menu("구역 옮기기") {
                     ForEach(destinations, id: \.self) { target in
-                        Button(target?.name ?? ResourceArea.commonTitle) { move(target) }
+                        Button(target?.name ?? ResourceArea.shownCommonTitle) { move(target) }
                     }
                 }
             }
@@ -252,4 +252,9 @@ private struct LinkSheet: View {
             }
         }
     }
+}
+
+extension ResourceArea {
+    /// 화면에 보일 공통 구역 이름. `commonTitle`("공통")은 에이전트 입력과 비교하는 값이라 그대로 두고, 보일 때만 번역한다.
+    static var shownCommonTitle: String { String(localized: "공통") }
 }

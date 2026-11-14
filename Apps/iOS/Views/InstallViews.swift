@@ -39,8 +39,8 @@ struct BuildRow: View {
     }
 
     private var installTitle: String {
-        guard installed != nil else { return "설치" }
-        return isInstalledBuild ? "다시 설치" : (isOlder ? "설치" : "업데이트")
+        guard installed != nil else { return String(localized: "설치") }
+        return isInstalledBuild ? String(localized: "다시 설치") : (isOlder ? String(localized: "설치") : String(localized: "업데이트"))
     }
 
     private var published: String { build.publishedAt.formatted(date: .abbreviated, time: .shortened) }
@@ -193,7 +193,7 @@ struct InstallStatusView: View {
         }
     }
 
-    private func progressLine(_ text: String) -> some View {
+    private func progressLine(_ text: LocalizedStringKey) -> some View {
         HStack(spacing: 8) {
             ProgressView().controlSize(.small)
             Text(text)

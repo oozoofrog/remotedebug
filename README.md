@@ -39,6 +39,7 @@ Rules for agents:
 - Requirements: Apple silicon Mac, Xcode, Go, XcodeGen. Run `scripts/build-core.sh` before building the apps; it builds the Go core into `Packages/RDCore/RDCore.xcframework`.
 - Tests: `swift test --package-path Packages/PhoneClient`, `swift test --package-path Packages/RemoteDebugKit`, `RD_TEST_TMPDIR=<writable folder> swift test --package-path Packages/MacHost`, `scripts/go.sh test -race -count=1 ./...`. More in [setup](docs/setup.md#명령줄-빌드와-시험).
 - `scripts/check-docs.sh` must pass after editing `README.md` or `docs/`.
+- After changing user-visible text, run `scripts/sync-strings.sh` to update the keys of `Localization/Localizable.xcstrings`, then `python3 -I scripts/check_strings.py` to check the translations ([localization](docs/architecture.md#현지화)).
 - When documents disagree, follow `docs/tunnel.md`, then `docs/protocol-addenda.md`, then `docs/protocol.md` (details below).
 - The iPhone bundle IDs start with `RD_BUNDLE_PREFIX` from `Config/Signing.xcconfig`. The tunnel extension ID is always the app ID plus `.Tunnel`.
 

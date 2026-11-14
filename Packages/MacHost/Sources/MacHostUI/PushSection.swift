@@ -13,13 +13,13 @@ struct PushSection: View {
     @State private var teamIDDraft = ""
     @State private var readError: String?
 
-    static let title = "iPhone 알림"
-    static let chooseKeyTitle = "키 파일 고르기…"
-    static let saveTitle = "저장"
-    static let clearTitle = "키 지우기"
-    static let testTitle = "시험 알림 보내기"
-    static let hideNamesTitle = "알림에 이름을 넣지 않기"
-    static let lastDeliveryTitle = "마지막 전송"
+    static let title = String(localized: "iPhone 알림")
+    static let chooseKeyTitle = String(localized: "키 파일 고르기…")
+    static let saveTitle = String(localized: "저장")
+    static let clearTitle = String(localized: "키 지우기")
+    static let testTitle = String(localized: "시험 알림 보내기")
+    static let hideNamesTitle = String(localized: "알림에 이름을 넣지 않기")
+    static let lastDeliveryTitle = String(localized: "마지막 전송")
 
     var body: some View {
         if let push {
@@ -103,7 +103,7 @@ struct PushSection: View {
 
     private func keyFileLabel(_ push: PushModel) -> String {
         if keyDraft != nil { return keyFileName }
-        return push.hasKey ? "키체인에 저장됨" : "없음"
+        return push.hasKey ? String(localized: "키체인에 저장됨") : String(localized: "없음")
     }
 
     private func chooseKey() {
@@ -114,7 +114,7 @@ struct PushSection: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         readError = nil
         guard let text = try? String(contentsOf: url, encoding: .utf8) else {
-            readError = "\(url.lastPathComponent)을(를) 읽지 못했습니다."
+            readError = String(localized: "\(url.lastPathComponent)을(를) 읽지 못했습니다.")
             return
         }
         keyDraft = text

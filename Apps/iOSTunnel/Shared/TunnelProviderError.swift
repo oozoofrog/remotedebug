@@ -18,12 +18,12 @@ enum TunnelProviderError: Int, CaseIterable, Sendable {
     /// 코드별 기본 안내. `coreStart`는 코어 메시지를 덧붙인다.
     var message: String {
         switch self {
-        case .missingConfiguration: "VPN 구성을 읽지 못했습니다. 앱에서 VPN을 다시 켜세요."
-        case .placeholderFailed: "VPN 네트워크 설정을 적용하지 못했습니다. VPN을 다시 켜세요."
-        case .utunNotFound: "VPN 장치(utun)를 찾지 못했습니다. VPN을 다시 켜세요."
-        case .coreStart: "tailnet 연결을 시작하지 못했습니다. VPN을 다시 켜세요."
-        case .engineStopped: TunnelEngineMessages.tunDeviceClosed + " 앱에서 VPN을 다시 켜세요."
-        case .stoppedDuringStart: "VPN을 켜는 중에 꺼졌습니다. 필요하면 VPN을 다시 켜세요."
+        case .missingConfiguration: String(localized: "VPN 구성을 읽지 못했습니다. 앱에서 VPN을 다시 켜세요.")
+        case .placeholderFailed: String(localized: "VPN 네트워크 설정을 적용하지 못했습니다. VPN을 다시 켜세요.")
+        case .utunNotFound: String(localized: "VPN 장치(utun)를 찾지 못했습니다. VPN을 다시 켜세요.")
+        case .coreStart: String(localized: "tailnet 연결을 시작하지 못했습니다. VPN을 다시 켜세요.")
+        case .engineStopped: String(localized: "TUN 장치가 닫혔습니다. 앱에서 VPN을 다시 켜세요.")
+        case .stoppedDuringStart: String(localized: "VPN을 켜는 중에 꺼졌습니다. 필요하면 VPN을 다시 켜세요.")
         }
     }
 
@@ -31,7 +31,7 @@ enum TunnelProviderError: Int, CaseIterable, Sendable {
     func nsError(detail: String? = nil) -> NSError {
         var text = message
         if self == .coreStart, let detail = detail?.trimmingCharacters(in: .whitespacesAndNewlines), !detail.isEmpty {
-            text = "tailnet 연결을 시작하지 못했습니다: \(TunnelSecretRedactor.redact(detail))"
+            text = String(localized: "tailnet 연결을 시작하지 못했습니다: \(TunnelSecretRedactor.redact(detail))")
         }
         return NSError(domain: Self.domain, code: rawValue, userInfo: [NSLocalizedDescriptionKey: text])
     }
@@ -67,7 +67,7 @@ enum TunnelProviderError: Int, CaseIterable, Sendable {
 /// 문자열에 섞인 Tailscale 인증 키(`tskey-…`)를 가린다. 확장은 키를 보관하지 않지만
 /// 코어 오류 메시지에 키가 들어 있을 수 있으므로 앱으로 보내는 글자에는 늘 이것을 거친다.
 enum TunnelSecretRedactor {
-    static let placeholder = "[인증 키 가림]"
+    static let placeholder = String(localized: "[인증 키 가림]")
 
     static func redact(_ text: String) -> String {
         guard text.range(of: "tskey", options: .caseInsensitive) != nil else { return text }

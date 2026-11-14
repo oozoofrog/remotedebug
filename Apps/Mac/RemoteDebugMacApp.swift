@@ -89,7 +89,7 @@ private struct MenuBarContent: View {
             do {
                 if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             } catch {
-                model?.lastError = "로그인 항목을 바꾸지 못했습니다: \(HostErrorText.message(for: error))"
+                model?.lastError = String(localized: "로그인 항목을 바꾸지 못했습니다: \(HostErrorText.message(for: error))")
             }
             opensAtLogin = SMAppService.mainApp.status == .enabled
         }))
@@ -201,24 +201,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                              updatePage: updatePage?.pageURL?.absoluteString)
                 },
                 openPairing: { [weak model] in
-                    guard let model else { return .failure(.init("RemoteDebug가 준비되지 않았습니다.")) }
+                    guard let model else { return .failure(.init(String(localized: "RemoteDebug가 준비되지 않았습니다."))) }
                     return await model.openPairingForAgent()
                 },
                 pairingRequests: .init(
                     list: { [weak model] in model?.pairRequestsForAgent ?? [] },
                     decide: { [weak model] id, allow in
-                        guard let model else { return "RemoteDebug가 준비되지 않았습니다." }
+                        guard let model else { return String(localized: "RemoteDebug가 준비되지 않았습니다.") }
                         return await model.decideForAgent(id, allow: allow)
                     }),
                 fileSharing: .init(
                     list: { [weak model] in model?.sharedFiles ?? [] },
                     share: { [weak model] url, project in
-                        guard let model else { return .failure(ShareFileFailure("RemoteDebug가 준비되지 않았습니다.")) }
+                        guard let model else { return .failure(ShareFileFailure(String(localized: "RemoteDebug가 준비되지 않았습니다."))) }
                         return await model.shareFile(url, project: project)
                     },
                     remove: { [weak model] id in await model?.unshareFile(id) },
                     shareLink: { [weak model] url, title, project in
-                        guard let model else { return .failure(ShareFileFailure("RemoteDebug가 준비되지 않았습니다.")) }
+                        guard let model else { return .failure(ShareFileFailure(String(localized: "RemoteDebug가 준비되지 않았습니다."))) }
                         return await model.shareLink(url, title: title, project: project)
                     }),
                 importer: { [weak model] url in await model?.importBuild(url) })
@@ -320,16 +320,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         center.setNotificationCategories([UNNotificationCategory(
             identifier: Self.suggestionCategory,
             actions: [
-                UNNotificationAction(identifier: Self.registerAction, title: "등록"),
-                UNNotificationAction(identifier: Self.dismissAction, title: "등록하지 않음"),
+                UNNotificationAction(identifier: Self.registerAction, title: String(localized: "등록")),
+                UNNotificationAction(identifier: Self.dismissAction, title: String(localized: "등록하지 않음")),
             ],
             intentIdentifiers: [])])
         projects.onSuggestion = { suggestion in
             Task {
                 guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true else { return }
                 let content = UNMutableNotificationContent()
-                content.title = "\(suggestion.name)을(를) RemoteDebug에 등록할까요?"
-                content.body = "Xcode에서 기기용 Debug 빌드를 시작했습니다. 등록하면 빌드할 때마다 iPhone에 게시합니다."
+                content.title = String(localized: "\(suggestion.name)을(를) RemoteDebug에 등록할까요?")
+                content.body = String(localized: "Xcode에서 기기용 Debug 빌드를 시작했습니다. 등록하면 빌드할 때마다 iPhone에 게시합니다.")
                 content.categoryIdentifier = Self.suggestionCategory
                 content.userInfo = ["container": suggestion.container]
                 try? await center.add(UNNotificationRequest(identifier: suggestion.container, content: content, trigger: nil))

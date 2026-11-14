@@ -14,8 +14,8 @@ public final class StateDirLock: @unchecked Sendable {
 
         public var errorDescription: String? {
             switch self {
-            case .held: "이미 실행 중인 RemoteDebug가 같은 폴더를 쓰고 있습니다."
-            case .io(let detail): "저장 폴더를 잠그지 못했습니다: \(detail)"
+            case .held: String(localized: "이미 실행 중인 RemoteDebug가 같은 폴더를 쓰고 있습니다.")
+            case .io(let detail): String(localized: "저장 폴더를 잠그지 못했습니다: \(detail)")
             }
         }
     }

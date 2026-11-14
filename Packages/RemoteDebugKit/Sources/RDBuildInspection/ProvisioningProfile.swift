@@ -43,9 +43,9 @@ public struct ProvisioningProfile: Sendable, Hashable {
 
         public var description: String {
             switch self {
-            case .cms(let s): "CMS 해독 실패(\(s))"
-            case .notAPlist: "프로필 내용이 plist가 아닙니다"
-            case .missing(let k): "프로필에 \(k) 키가 없습니다"
+            case .cms(let s): String(localized: "CMS 해독 실패(\(String(s)))")
+            case .notAPlist: String(localized: "프로필 내용이 plist가 아닙니다")
+            case .missing(let k): String(localized: "프로필에 \(k) 키가 없습니다")
             }
         }
     }

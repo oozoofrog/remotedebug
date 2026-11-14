@@ -34,7 +34,7 @@ final class GuardedInstaller {
             model.install(build)
             return
         }
-        preparations[build.id] = .working(holder == .none ? "이 앱의 VPN을 켜는 중" : "VPN을 이 앱으로 옮기는 중")
+        preparations[build.id] = .working(holder == .none ? String(localized: "이 앱의 VPN을 켜는 중") : String(localized: "VPN을 이 앱으로 옮기는 중"))
         Task { await takeOverThenInstall(build, model: model, startedFromOff: holder == .none) }
     }
 
@@ -50,10 +50,10 @@ final class GuardedInstaller {
             try await tunnel.connectOwn()
         } catch {
             model.log(.error, "install", "VPN 옮기기 실패: \(error.localizedDescription)")
-            preparations[id] = .failed("VPN을 이 앱으로 옮기지 못했습니다. \(error.localizedDescription)")
+            preparations[id] = .failed(String(localized: "VPN을 이 앱으로 옮기지 못했습니다. \(error.localizedDescription)"))
             return
         }
-        preparations[id] = .working("VPN이 연결되기를 기다리는 중")
+        preparations[id] = .working(String(localized: "VPN이 연결되기를 기다리는 중"))
         let settled = await tunnel.waitUntilOwnTunnelSettles()
         if tunnel.takeoverRestartsUsed > 0 || tunnel.lastTakeoverDrop != nil {
             model.log(.info, "install", "VPN을 옮기는 중 iOS가 연결을 끊어 \(tunnel.takeoverRestartsUsed)번 다시 켬(끊김: \(tunnel.lastTakeoverDrop ?? "오류 없음"))")
@@ -63,9 +63,9 @@ final class GuardedInstaller {
         guard settled else {
             model.log(.warning, "install", "이 앱의 VPN이 연결되지 않아 설치를 시작하지 않음")
             if case .needsLogin = tunnel.state {
-                preparations[id] = .failed("Tailscale 로그인이 필요합니다. 로그인한 뒤 다시 설치하세요.")
+                preparations[id] = .failed(String(localized: "Tailscale 로그인이 필요합니다. 로그인한 뒤 다시 설치하세요."))
             } else {
-                preparations[id] = .failed("VPN이 연결되지 않아 설치를 시작하지 못했습니다. VPN 상태를 확인한 뒤 다시 설치하세요.")
+                preparations[id] = .failed(String(localized: "VPN이 연결되지 않아 설치를 시작하지 못했습니다. VPN 상태를 확인한 뒤 다시 설치하세요."))
             }
             return
         }

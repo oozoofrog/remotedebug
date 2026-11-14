@@ -107,9 +107,9 @@ private struct PhaseIcon: View {
 
 private func percentText(_ state: FileTransferAttributes.ContentState) -> String {
     switch state.phase {
-    case .received: "완료"
-    case .failed: "실패"
-    case .cancelled: "취소"
+    case .received: String(localized: "완료")
+    case .failed: String(localized: "실패")
+    case .cancelled: String(localized: "취소")
     case .receiving: "\(Int(state.fraction * 100))%"
     }
 }
@@ -117,9 +117,9 @@ private func percentText(_ state: FileTransferAttributes.ContentState) -> String
 private func detailText(_ state: FileTransferAttributes.ContentState) -> String {
     let bytes = "\(state.received.formatted(.byteCount(style: .file))) / \(state.total.formatted(.byteCount(style: .file)))"
     switch state.phase {
-    case .receiving: return "Mac에서 받는 중 · \(bytes)"
-    case .received: return "받음 · 파일 앱의 RemoteDebug 폴더"
-    case .failed: return state.message ?? "받지 못했습니다"
-    case .cancelled: return "받기를 취소했습니다 · \(bytes)"
+    case .receiving: return String(localized: "Mac에서 받는 중 · \(bytes)")
+    case .received: return String(localized: "받음 · 파일 앱의 RemoteDebug 폴더")
+    case .failed: return state.message ?? String(localized: "받지 못했습니다")
+    case .cancelled: return String(localized: "받기를 취소했습니다 · \(bytes)")
     }
 }

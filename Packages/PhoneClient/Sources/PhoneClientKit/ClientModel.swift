@@ -37,10 +37,10 @@ public enum InstallState: Equatable, Sendable {
 
     /// 앱이 실행되지 않을 때 보여 줄 개발자 모드 안내.
     public static let developerModeHint =
-        "앱이 실행되지 않으면 설정 > 개인정보 보호 및 보안 > 개발자 모드가 켜져 있는지 확인하세요."
+        String(localized: "앱이 실행되지 않으면 설정 > 개인정보 보호 및 보안 > 개발자 모드가 켜져 있는지 확인하세요.")
     public static let completedMessage =
-        "Mac이 빌드를 모두 보냈습니다. 설치 진행은 홈 화면의 앱 아이콘에서 확인하세요. " + developerModeHint
-    public static let expiredMessage = "설치 세션이 만료되었습니다. 다시 설치하세요."
+        String(localized: "Mac이 빌드를 모두 보냈습니다. 설치 진행은 홈 화면의 앱 아이콘에서 확인하세요. \(developerModeHint)")
+    public static let expiredMessage = String(localized: "설치 세션이 만료되었습니다. 다시 설치하세요.")
 
     public var isInProgress: Bool {
         switch self {
@@ -769,7 +769,7 @@ public final class ClientModel {
                     self.notifyTransfer(resource, .received, received: resource.size)
                 } catch {
                     try? FileManager.default.removeItem(at: temp)
-                    let message = "iPhone에 저장하지 못했습니다. 저장 공간을 확인하세요."
+                    let message = String(localized: "iPhone에 저장하지 못했습니다. 저장 공간을 확인하세요.")
                     self.fileDownloads[resource.id] = .failed(message)
                     self.log(.error, "files", "파일 저장 실패: \(resource.name) \(error)")
                     self.notifyTransfer(resource, .failed(message))
@@ -877,7 +877,7 @@ public final class ClientModel {
         do {
             try receivedStore.delete(name)
         } catch {
-            lastError = "파일을 지우지 못했습니다."
+            lastError = String(localized: "파일을 지우지 못했습니다.")
         }
         reloadReceivedFiles()
     }
@@ -1755,7 +1755,7 @@ public final class ClientModel {
 
     // MARK: 에이전트 요청
 
-    public static let agentUnsupportedMessage = "Mac의 RemoteDebug 앱이 에이전트 요청을 지원하지 않습니다. Mac 앱을 업데이트하세요."
+    public static let agentUnsupportedMessage = String(localized: "Mac의 RemoteDebug 앱이 에이전트 요청을 지원하지 않습니다. Mac 앱을 업데이트하세요.")
 
     /// Mac의 에이전트 상태(받는지, 프로젝트, 최근 요청)를 다시 받는다. VPN이 연결돼 있을 때만 한다.
     public func refreshAgent() async {
@@ -1778,13 +1778,13 @@ public final class ClientModel {
 
     /// 요청을 Mac의 에이전트에 보낸다. 실패하면 안내 문구를 돌려준다.
     public func sendAgentRequest(_ submission: AgentSubmission) async -> String? {
-        guard let current = host, let api = makeAPI(current.fqdn) else { return "페어링한 Mac이 없습니다." }
-        guard tunnel == .connected else { return "VPN을 켠 뒤 다시 보내세요." }
+        guard let current = host, let api = makeAPI(current.fqdn) else { return String(localized: "페어링한 Mac이 없습니다.") }
+        guard tunnel == .connected else { return String(localized: "VPN을 켠 뒤 다시 보내세요.") }
         do {
             let id = try await api.submitAgentRequest(submission)
             log(.info, "agent", "에이전트 요청 \(id) 보냄")
         } catch let error as HostAPIError where error.code == "agent_disabled" {
-            return "Mac이 iPhone의 요청을 받지 않습니다. Mac 앱의 에이전트 화면에서 켜세요."
+            return String(localized: "Mac이 iPhone의 요청을 받지 않습니다. Mac 앱의 에이전트 화면에서 켜세요.")
         } catch let error as HostAPIError where error.code == "not_found" {
             return Self.agentUnsupportedMessage
         } catch {
@@ -1835,33 +1835,33 @@ public final class ClientModel {
 
     // MARK: 안내 문구
 
-    public nonisolated static let tunnelOffMessage = "VPN이 꺼져 있어 Mac에 연결할 수 없습니다. VPN을 켜세요."
-    public nonisolated static let tunnelConnectingMessage = "VPN을 연결하는 중입니다. 연결되면 이어서 진행합니다."
-    public nonisolated static let tunnelNeedsLoginMessage = "tailnet 로그인이 필요합니다. 로그인한 뒤 VPN을 켜세요."
-    public nonisolated static let tunnelFailedMessage = "VPN 연결에 실패했습니다. ‘다시 연결’을 누르세요."
+    public nonisolated static let tunnelOffMessage = String(localized: "VPN이 꺼져 있어 Mac에 연결할 수 없습니다. VPN을 켜세요.")
+    public nonisolated static let tunnelConnectingMessage = String(localized: "VPN을 연결하는 중입니다. 연결되면 이어서 진행합니다.")
+    public nonisolated static let tunnelNeedsLoginMessage = String(localized: "tailnet 로그인이 필요합니다. 로그인한 뒤 VPN을 켜세요.")
+    public nonisolated static let tunnelFailedMessage = String(localized: "VPN 연결에 실패했습니다. ‘다시 연결’을 누르세요.")
     public nonisolated static let tunnelMessages: Set<String> = [tunnelOffMessage, tunnelConnectingMessage, tunnelNeedsLoginMessage, tunnelFailedMessage]
-    public nonisolated static let tunnelPrepareFailedMessage = "VPN 구성을 저장하지 못했습니다. VPN을 다시 켜고 'VPN 구성 추가' 알림이 뜨면 허용을 누르세요."
-    public nonisolated static let vpnNotConnectedMessage = "VPN이 연결되지 않았습니다. VPN 상태를 확인한 뒤 다시 시도하세요."
-    public nonisolated static let vpnLoginBeforeRetryMessage = "tailnet 로그인이 필요합니다. 로그인한 뒤 다시 시도하세요."
+    public nonisolated static let tunnelPrepareFailedMessage = String(localized: "VPN 구성을 저장하지 못했습니다. VPN을 다시 켜고 'VPN 구성 추가' 알림이 뜨면 허용을 누르세요.")
+    public nonisolated static let vpnNotConnectedMessage = String(localized: "VPN이 연결되지 않았습니다. VPN 상태를 확인한 뒤 다시 시도하세요.")
+    public nonisolated static let vpnLoginBeforeRetryMessage = String(localized: "tailnet 로그인이 필요합니다. 로그인한 뒤 다시 시도하세요.")
 
     /// 설치·파일 받기를 시작하려다 VPN이 연결되지 않았을 때의 안내.
     public nonisolated static func vpnNotConnectedMessage(for state: TunnelState) -> String {
         state.isNeedsLogin ? vpnLoginBeforeRetryMessage : vpnNotConnectedMessage
     }
 
-    public nonisolated static let tunnelConnectFailedMessage = "VPN을 켜지 못했습니다. 잠시 뒤 VPN을 다시 켜세요."
-    public nonisolated static let pairingDeniedMessage = "Mac에서 페어링을 거절했습니다. 다시 하려면 Mac에서 새 코드를 여세요."
-    public nonisolated static let pairingExpiredMessage = "페어링 요청이 만료되었습니다. Mac에서 새 코드를 열고 다시 시도하세요."
-    public nonisolated static let pairedAddressMismatchMessage = "승인한 Mac의 주소가 링크와 다릅니다. Mac에 표시된 링크로 다시 페어링하세요."
-    public nonisolated static let saveFailedMessage = "페어링 정보를 저장하지 못했습니다. 앱을 다시 열면 다시 페어링해야 합니다."
-    public nonisolated static let hostChangedMessage = "이 주소의 Mac이 페어링한 Mac과 다릅니다. 다시 페어링하세요."
-    public nonisolated static let openFailedMessage = "설치 창을 열지 못했습니다. 설치를 다시 누르세요."
-    public nonisolated static let reopenFailedMessage = "설치 창을 다시 열지 못했습니다. 설치를 취소한 뒤 다시 설치하세요."
-    public nonisolated static let untrustedInstallURLMessage = "설치 주소가 페어링한 Mac을 가리키지 않아 열지 않았습니다. iPhone 앱과 Mac 앱을 최신 버전으로 맞추세요."
+    public nonisolated static let tunnelConnectFailedMessage = String(localized: "VPN을 켜지 못했습니다. 잠시 뒤 VPN을 다시 켜세요.")
+    public nonisolated static let pairingDeniedMessage = String(localized: "Mac에서 페어링을 거절했습니다. 다시 하려면 Mac에서 새 코드를 여세요.")
+    public nonisolated static let pairingExpiredMessage = String(localized: "페어링 요청이 만료되었습니다. Mac에서 새 코드를 열고 다시 시도하세요.")
+    public nonisolated static let pairedAddressMismatchMessage = String(localized: "승인한 Mac의 주소가 링크와 다릅니다. Mac에 표시된 링크로 다시 페어링하세요.")
+    public nonisolated static let saveFailedMessage = String(localized: "페어링 정보를 저장하지 못했습니다. 앱을 다시 열면 다시 페어링해야 합니다.")
+    public nonisolated static let hostChangedMessage = String(localized: "이 주소의 Mac이 페어링한 Mac과 다릅니다. 다시 페어링하세요.")
+    public nonisolated static let openFailedMessage = String(localized: "설치 창을 열지 못했습니다. 설치를 다시 누르세요.")
+    public nonisolated static let reopenFailedMessage = String(localized: "설치 창을 다시 열지 못했습니다. 설치를 취소한 뒤 다시 설치하세요.")
+    public nonisolated static let untrustedInstallURLMessage = String(localized: "설치 주소가 페어링한 Mac을 가리키지 않아 열지 않았습니다. iPhone 앱과 Mac 앱을 최신 버전으로 맞추세요.")
     public nonisolated static let sessionExpiredMessage = InstallState.expiredMessage
-    public nonisolated static let sessionFailedMessage = "Mac에서 설치를 중단했습니다. Mac에서 빌드를 내렸거나 이 기기의 페어링이 해제되었을 수 있습니다. 빌드 목록을 새로고침하세요."
-    public nonisolated static let installTimeoutMessage = "제한 시간 안에 전송이 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요."
-    public nonisolated static let createSessionTimeoutMessage = "Mac이 빌드를 확인하는 동안 응답 시간이 지났습니다. 잠시 뒤 다시 설치하세요."
+    public nonisolated static let sessionFailedMessage = String(localized: "Mac에서 설치를 중단했습니다. Mac에서 빌드를 내렸거나 이 기기의 페어링이 해제되었을 수 있습니다. 빌드 목록을 새로고침하세요.")
+    public nonisolated static let installTimeoutMessage = String(localized: "제한 시간 안에 전송이 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요.")
+    public nonisolated static let createSessionTimeoutMessage = String(localized: "Mac이 빌드를 확인하는 동안 응답 시간이 지났습니다. 잠시 뒤 다시 설치하세요.")
 
     public nonisolated static func tunnelMessage(for state: TunnelState) -> String {
         switch state {

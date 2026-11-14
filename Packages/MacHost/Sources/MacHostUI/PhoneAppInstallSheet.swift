@@ -19,7 +19,7 @@ struct PhoneAppInstallSheet: View {
             Form {
                 LabeledContent("소스") {
                     HStack {
-                        Text(installer.sourceRoot?.path ?? "선택하지 않음")
+                        Text(installer.sourceRoot?.path ?? String(localized: "선택하지 않음"))
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .foregroundStyle(installer.hasSource ? .primary : .secondary)

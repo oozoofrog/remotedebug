@@ -1,0 +1,5 @@
+# Keys that scripts/sync-strings.sh adds to Localizable.xcstrings with extractionState "manual".
+# List here a user-visible String(localized:) key that the Debug builds of the sync do not compile
+# (for example behind `#if targetEnvironment(simulator)` or the `#else` of `#if DEBUG`), one key per line,
+# exactly as the compiler would write it (%@ for a String interpolation, %lld for an Int).
+# Lines starting with # are comments. The list is empty: no such string exists today.

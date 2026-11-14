@@ -19,6 +19,11 @@ targets:
       - path: Apps/iOSTunnel/Shared
       # 라이브 액티비티 형식(위젯 확장과 같이 쓴다).
       - path: Apps/iOSWidgets/Shared
+      # 앱과 패키지(PhoneClientKit, RDModels)의 문자열. 확장도 같은 카탈로그를 자기 번들에 넣는다.
+      - path: Localization/Localizable.xcstrings
+        buildPhase: resources
+      - path: Localization/InfoPlist/RemoteDebugPhone/InfoPlist.xcstrings
+        buildPhase: resources
     entitlements:
       path: Apps/iOS/RemoteDebugPhone.entitlements
       properties:
@@ -32,6 +37,8 @@ targets:
       path: Apps/iOS/Info.plist
       properties:
         CFBundleDisplayName: RemoteDebug
+        # 지원하지 않는 언어로 설정한 기기는 영어로 보인다.
+        CFBundleDevelopmentRegion: en
         # 두 앱과 두 터널 확장이 함께 쓰는 저장소(SharedContainer).
         RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -97,6 +104,10 @@ targets:
       Release: Config/Signing.xcconfig
     sources:
       - path: Apps/iOSTunnel
+      - path: Localization/Localizable.xcstrings
+        buildPhase: resources
+      - path: Localization/InfoPlist/RemoteDebugTunnel/InfoPlist.xcstrings
+        buildPhase: resources
     entitlements:
       path: Apps/iOSTunnel/RemoteDebugTunnel.entitlements
       properties:
@@ -108,6 +119,8 @@ targets:
       path: Apps/iOSTunnel/Info.plist
       properties:
         CFBundleDisplayName: RemoteDebug 터널
+        # 지원하지 않는 언어로 설정한 기기는 영어로 보인다.
+        CFBundleDevelopmentRegion: en
         RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -137,10 +150,16 @@ targets:
       - path: Apps/iOSWidgets
         excludes:
           - Info.plist
+      - path: Localization/Localizable.xcstrings
+        buildPhase: resources
+      - path: Localization/InfoPlist/RemoteDebugWidgets/InfoPlist.xcstrings
+        buildPhase: resources
     info:
       path: Apps/iOSWidgets/Info.plist
       properties:
         CFBundleDisplayName: RemoteDebug 위젯
+        # 지원하지 않는 언어로 설정한 기기는 영어로 보인다.
+        CFBundleDevelopmentRegion: en
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
@@ -176,6 +195,10 @@ targets:
       # 빌드 한 줄과 설치 진행(두 앱이 같은 화면을 쓴다).
       - path: Apps/iOS/Views/InstallViews.swift
       - path: Apps/iOS/Views/PhoneTheme.swift
+      - path: Localization/Localizable.xcstrings
+        buildPhase: resources
+      - path: Localization/InfoPlist/RemoteDebugVPN/InfoPlist.xcstrings
+        buildPhase: resources
     entitlements:
       path: Apps/iOSVPN/RemoteDebugVPN.entitlements
       properties:
@@ -187,6 +210,8 @@ targets:
       path: Apps/iOSVPN/Info.plist
       properties:
         CFBundleDisplayName: RD 업데이트
+        # 지원하지 않는 언어로 설정한 기기는 영어로 보인다.
+        CFBundleDevelopmentRegion: en
         RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
         # 같은 Wi-Fi의 Mac에 VPN 없이 연결한다(docs/protocol-addenda.md O).
         NSLocalNetworkUsageDescription: 같은 Wi-Fi에 있는 페어링한 Mac을 찾아 VPN 없이 연결합니다.
@@ -233,6 +258,10 @@ targets:
         excludes:
           - Info.plist
           - "*.entitlements"
+      - path: Localization/Localizable.xcstrings
+        buildPhase: resources
+      - path: Localization/InfoPlist/RemoteDebugVPNTunnel/InfoPlist.xcstrings
+        buildPhase: resources
     entitlements:
       path: Apps/iOSVPN/RemoteDebugVPNTunnel.entitlements
       properties:
@@ -244,6 +273,8 @@ targets:
       path: Apps/iOSVPN/TunnelInfo.plist
       properties:
         CFBundleDisplayName: RD 업데이트 터널
+        # 지원하지 않는 언어로 설정한 기기는 영어로 보인다.
+        CFBundleDevelopmentRegion: en
         RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -292,5 +323,7 @@ schemes:
       config: Debug
     test:
       config: Debug
+      # 테스트는 한국어 원문과 비교한다.
+      language: ko
       targets:
         - RemoteDebugPhoneTests

@@ -46,18 +46,19 @@
     var name = L.buildSummary(build, 0).name;
     var nodes = [];
     if (!st) {
-      nodes.push(button(doc, "설치", "primary", name + " 설치", function () { handlers.install(build); }));
+      nodes.push(button(doc, L.t("설치"), "primary", L.t("{name} 설치", { name: name }), function () { handlers.install(build); }));
     } else if (st.kind === "preparing") {
       nodes.push(spinnerLine(doc, L.messages.preparing));
     } else if (st.kind === "waiting") {
-      var label = st.opened ? "다시 열기" : "설치 창 열기";
-      var a = el(doc, "a", { className: "button primary", text: label, attrs: { href: st.href, "aria-label": name + " " + label, "data-primary": "1" } });
+      var label = st.opened ? L.t("다시 열기") : L.t("설치 창 열기");
+      var readName = st.opened ? L.t("{name} 다시 열기", { name: name }) : L.t("{name} 설치 창 열기", { name: name });
+      var a = el(doc, "a", { className: "button primary", text: label, attrs: { href: st.href, "aria-label": readName, "data-primary": "1" } });
       a.addEventListener("click", function () { handlers.open(build, a); });
       nodes.push(a);
       nodes.push(el(doc, "p", { className: "hint", text: L.messages.waitingForInstaller }));
-      nodes.push(button(doc, "취소", "secondary", name + " 설치 취소", function () { handlers.cancel(build); }));
+      nodes.push(button(doc, L.t("취소"), "secondary", L.t("{name} 설치 취소", { name: name }), function () { handlers.cancel(build); }));
     } else if (st.kind === "transferring") {
-      var bar = el(doc, "progress", { attrs: { "aria-label": "전송" } });
+      var bar = el(doc, "progress", { attrs: { "aria-label": L.t("전송") } });
       if (st.size > 0) {
         bar.max = st.size;
         bar.value = Math.min(st.bytesServed, st.size);
@@ -68,12 +69,12 @@
       nodes.push(el(doc, "p", { className: "ok", text: "✓ " + L.messages.completedTitle }));
       nodes.push(el(doc, "p", { text: L.messages.completedSent }));
       nodes.push(el(doc, "p", { className: "hint", text: L.messages.developerModeHint }));
-      nodes.push(button(doc, "확인", "secondary", null, function () { handlers.clear(build); }));
+      nodes.push(button(doc, L.t("확인"), "secondary", null, function () { handlers.clear(build); }));
     } else {
       nodes.push(el(doc, "p", { className: st.kind === "expired" ? "warn" : "error", text: st.message }));
       nodes.push(el(doc, "div", { className: "actions" }, [
-        button(doc, "다시 설치", "primary", name + " 다시 설치", function () { handlers.install(build); }),
-        button(doc, "닫기", "secondary", null, function () { handlers.clear(build); })
+        button(doc, L.t("다시 설치"), "primary", L.t("{name} 다시 설치", { name: name }), function () { handlers.install(build); }),
+        button(doc, L.t("닫기"), "secondary", null, function () { handlers.clear(build); })
       ]));
     }
     return nodes;
@@ -92,7 +93,47 @@
     ]);
   }
 
-  root.RDPage = Object.freeze({ el: el, installArea: installArea, buildItem: buildItem });
+  // MARK: 정적 문구
+
+  var LOCALIZED_ATTRIBUTES = ["aria-label", "placeholder", "title", "alt"];
+  var SKIPPED_TAGS = { SCRIPT: true, STYLE: true, NOSCRIPT: true, TEMPLATE: true };
+
+  // index.html에 한국어로 적힌 글자와 속성 중 표에 있는 것을 지금 언어로 바꾼다. 앞뒤 공백은 그대로 둔다.
+  // noscript 안의 글자는 스크립트가 돌지 않을 때만 보이므로 바꾸지 않는다(한국어로 남는다).
+  function localize(node) {
+    if (!node) return;
+    if (node.nodeType === 3) {
+      var raw = String(node.nodeValue == null ? "" : node.nodeValue);
+      var core = raw.trim();
+      if (core && L.hasText(core)) {
+        var start = raw.indexOf(core);
+        node.nodeValue = raw.slice(0, start) + L.t(core) + raw.slice(start + core.length);
+      }
+      return;
+    }
+    if (node.nodeType !== 1 && node.nodeType !== 9) return;
+    if (node.nodeType === 1) {
+      if (SKIPPED_TAGS[String(node.tagName).toUpperCase()]) return;
+      for (var a = 0; a < LOCALIZED_ATTRIBUTES.length; a++) {
+        var v = node.getAttribute(LOCALIZED_ATTRIBUTES[a]);
+        if (v != null && L.hasText(v.trim())) node.setAttribute(LOCALIZED_ATTRIBUTES[a], L.t(v.trim()));
+      }
+    }
+    var kids = node.childNodes || [];
+    for (var i = 0; i < kids.length; i++) localize(kids[i]);
+  }
+
+  // 브라우저의 선호 언어로 화면 언어를 정한다. 고른 언어 코드를 돌려준다.
+  function chooseLanguage(nav) {
+    var list = null;
+    if (nav) {
+      if (nav.languages && nav.languages.length) list = nav.languages;
+      else if (nav.language) list = [nav.language];
+    }
+    return L.setLanguage(L.pickLanguage(list));
+  }
+
+  root.RDPage = Object.freeze({ el: el, installArea: installArea, buildItem: buildItem, localize: localize, chooseLanguage: chooseLanguage });
 
   if (root.RD_NO_AUTOSTART || typeof root.document === "undefined" || typeof root.fetch !== "function") return;
 
@@ -196,12 +237,12 @@
     app.refreshing = true;
     var btn = $("refresh");
     btn.disabled = true;
-    btn.textContent = "받는 중";
+    btn.textContent = L.t("받는 중");
     if (initial) show("loading", false);
     api("GET", "/v1/builds").then(function (r) {
       app.refreshing = false;
       btn.disabled = false;
-      btn.textContent = "새로고침";
+      btn.textContent = L.t("새로고침");
       if (r.ok && Array.isArray(r.data.builds)) {
         app.builds = r.data.builds.filter(function (b) { return b && L.isSafeID(b.id); });
         app.loadedAt = new Date();
@@ -221,7 +262,7 @@
       var msg = L.messageForError(r.status, code);
       if (app.loadedAt) {
         var re = $("refresh-error");
-        re.textContent = "목록을 새로 받지 못했습니다. 아래는 이전 목록입니다. " + msg;
+        re.textContent = L.t("목록을 새로 받지 못했습니다. 아래는 이전 목록입니다. {message}", { message: msg });
         re.hidden = false;
         re.focus();
       } else {
@@ -254,7 +295,7 @@
       app.keys[b.id] = renderKey(app.installs[b.id]);
     }
     $("empty").hidden = app.builds.length !== 0;
-    $("loaded-at").textContent = app.loadedAt ? L.clockText(app.loadedAt) + "에 받은 목록" : "";
+    $("loaded-at").textContent = app.loadedAt ? L.t("{time}에 받은 목록", { time: L.clockText(app.loadedAt) }) : "";
     if (focusedId) focusInstall(focusedId);
   }
 
@@ -329,8 +370,8 @@
       var st = L.installReducer(app.installs[build.id] || null, { type: "opened" });
       app.installs[build.id] = st;
       app.keys[build.id] = renderKey(st);
-      anchor.textContent = "다시 열기";
-      anchor.setAttribute("aria-label", L.buildSummary(build, 0).name + " 다시 열기");
+      anchor.textContent = L.t("다시 열기");
+      anchor.setAttribute("aria-label", L.t("{name} 다시 열기", { name: L.buildSummary(build, 0).name }));
     },
     cancel: function (build) {
       clearTimeout(app.pollers[build.id]);
@@ -456,10 +497,10 @@
     setCodeError("");
     var submit = $("pair-submit");
     submit.disabled = true;
-    submit.textContent = "페어링 요청을 보내는 중";
+    submit.textContent = L.t("페어링 요청을 보내는 중");
     api("POST", "/v1/pair/request", req.body).then(function (r) {
       submit.disabled = false;
-      submit.textContent = "페어링 요청";
+      submit.textContent = L.t("페어링 요청");
       if (!r.ok || !L.isSafeID(r.data.requestId)) {
         var code = r.ok ? "invalid_response" : r.code;
         var msg = L.messageForError(r.status, code);
@@ -481,7 +522,7 @@
   function startWaiting(p, firstState) {
     app.pairing = p;
     storeSave(p);
-    $("waiting-text").textContent = "Mac 앱에서 ‘" + p.deviceName + "’의 페어링 요청을 승인하세요.";
+    $("waiting-text").textContent = L.t("Mac 앱에서 ‘{name}’의 페어링 요청을 승인하세요.", { name: p.deviceName });
     updateCountdown();
     clearInterval(app.countdownTimer);
     app.countdownTimer = setInterval(updateCountdown, 1000);
@@ -592,6 +633,12 @@
   }
 
   function start() {
+    var lang = chooseLanguage(root.navigator);
+    if (doc.documentElement) {
+      doc.documentElement.lang = lang;
+      localize(doc.documentElement);
+    }
+
     var hostLine = $("host-line");
     hostLine.textContent = root.location.hostname;
 

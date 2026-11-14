@@ -23,7 +23,7 @@ final class RawDeflateStream {
         let op = direction == .encode ? COMPRESSION_STREAM_ENCODE : COMPRESSION_STREAM_DECODE
         guard compression_stream_init(&stream, op, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK else {
             out.deallocate()
-            throw ZipError.io("compression_stream_init 실패")
+            throw ZipError.io(String(localized: "compression_stream_init 실패"))
         }
     }
 
@@ -50,17 +50,17 @@ final class RawDeflateStream {
                 finished = true
                 if direction == .decode, stream.src_size != 0 {
                     // 스트림 뒤에 남는 바이트: 무시하지 않고 오류로 본다.
-                    throw ZipError.corrupt("DEFLATE 스트림 뒤에 추가 데이터가 있습니다")
+                    throw ZipError.corrupt(String(localized: "DEFLATE 스트림 뒤에 추가 데이터가 있습니다"))
                 }
                 return
             case COMPRESSION_STATUS_OK:
                 if finalize {
-                    if produced == 0 && stream.src_size == 0 { throw ZipError.corrupt("DEFLATE 스트림이 중간에 끝났습니다") }
+                    if produced == 0 && stream.src_size == 0 { throw ZipError.corrupt(String(localized: "DEFLATE 스트림이 중간에 끝났습니다")) }
                     continue
                 }
                 if stream.src_size == 0 && stream.dst_size > 0 { return }
             default:
-                throw ZipError.corrupt("DEFLATE 처리 오류")
+                throw ZipError.corrupt(String(localized: "DEFLATE 처리 오류"))
             }
         }
     }

@@ -212,11 +212,11 @@ public enum ResourceLibraryError: LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .notAFile(let name): "\(name)은(는) 파일이 아닙니다. 폴더는 압축해서 보내세요."
-        case .tooLarge(let name): "\(name)이(가) 4GB보다 큽니다."
-        case .tooMany: "파일은 500개까지 보낼 수 있습니다. 쓰지 않는 파일을 지운 뒤 다시 보내세요."
-        case .missing: "보낸 파일 목록에 없는 항목입니다."
-        case .badLink(let text): "\(text)은(는) 보낼 수 있는 주소가 아닙니다. https://… 나 앱스킴://… 처럼 스킴이 있는 주소를 넣으세요."
+        case .notAFile(let name): String(localized: "\(name)은(는) 파일이 아닙니다. 폴더는 압축해서 보내세요.")
+        case .tooLarge(let name): String(localized: "\(name)이(가) 4GB보다 큽니다.")
+        case .tooMany: String(localized: "파일은 500개까지 보낼 수 있습니다. 쓰지 않는 파일을 지운 뒤 다시 보내세요.")
+        case .missing: String(localized: "보낸 파일 목록에 없는 항목입니다.")
+        case .badLink(let text): String(localized: "\(text)은(는) 보낼 수 있는 주소가 아닙니다. https://… 나 앱스킴://… 처럼 스킴이 있는 주소를 넣으세요.")
         }
     }
 }

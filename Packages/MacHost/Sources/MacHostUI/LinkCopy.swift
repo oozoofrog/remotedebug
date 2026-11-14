@@ -42,7 +42,7 @@ struct CopyLinkButton: View {
     var iconOnly = false
     @State private var copiedAt: Date?
 
-    static let copiedTitle = "복사됨"
+    static let copiedTitle = String(localized: "복사됨")
 
     var body: some View {
         Button {

@@ -19,9 +19,364 @@
   var CLIENT_VERSION = "web-1";
   var TOKEN_LENGTH = 43;
 
+  // MARK: 언어
+
+  // 페이지가 보여 줄 수 있는 한국어 원문마다 en·ja·zh-Hans·zh-Hant 번역 칸이 있다. 아래 표는 그대로 JSON이다
+  // (scripts/check_strings.py가 읽는다). ""은 아직 번역하지 않은 것이고, 그 글자는 영어, 그다음 한국어 원문으로 보인다.
+  // {name} 꼴의 자리표시는 번역에서도 같은 것을 써야 한다.
+  // RD-STRINGS-BEGIN
+  var STRINGS = {
+    "en": {
+      "RemoteDebug 빌드 설치": "Install RemoteDebug Build",
+      "빌드 목록을 받는 중": "Downloading build list",
+      "Mac에 연결하는 중": "Connecting to Mac",
+      "빌드 목록을 받지 못했습니다": "Couldn't download the build list",
+      "다시 시도": "Try Again",
+      "Mac 페어링": "Mac Pairing",
+      "Mac 앱의 페어링 화면에 표시된 코드를 입력하세요. Mac에서 승인하면 빌드 목록이 열립니다.": "Enter the code shown on the Mac app's Pairing screen. Once you approve it on the Mac, the build list opens.",
+      "페어링 코드": "Pairing code",
+      "기기 이름": "Device Name",
+      "Mac의 승인 화면에 이 이름이 표시됩니다.": "This name is shown on the Mac's approval screen.",
+      "페어링 요청": "Pairing request",
+      "Mac의 승인을 기다리는 중": "Waiting for approval on the Mac",
+      "남은 시간": "Time Remaining",
+      "페어링 취소": "Cancel Pairing",
+      "빌드": "Builds",
+      "새로고침": "Refresh",
+      "공유 중인 빌드가 없습니다": "No builds are being shared",
+      "Mac 앱에서 빌드를 공유한 뒤 새로고침하세요.": "Share builds in the Mac app, then reload.",
+      "이 페이지와 설치는 iPhone의 Tailscale VPN이 켜져 있어야 동작합니다.": "This page and installation work only while Tailscale VPN is on on the iPhone.",
+      "이 iPhone은 Mac에서 승인되지 않았습니다. 다시 페어링하세요.": "This iPhone hasn't been approved on the Mac. Pair again.",
+      "페어링 코드가 맞지 않거나 만료되었습니다. Mac에 표시된 코드를 확인하고 다시 입력하세요.": "The pairing code is incorrect or expired. Check the code shown on the Mac and enter it again.",
+      "코드를 너무 많이 틀렸습니다. Mac에서 새 페어링 코드를 연 뒤 다시 시도하세요.": "Too many wrong codes. Open a new pairing code on the Mac and try again.",
+      "설치 세션을 확인할 수 없습니다. 다시 설치하세요.": "Couldn't verify the install session. Install again.",
+      "설치 세션이 만료되었습니다. 다시 설치하세요.": "The install session expired. Install again.",
+      "Mac에 이 빌드가 없습니다. 목록을 새로고침하세요.": "This build isn't on the Mac. Refresh the list.",
+      "Mac에서 빌드가 바뀌었습니다. 목록을 새로고침하세요.": "The build changed on the Mac. Refresh the list.",
+      "디버그 빌드가 아니라서 설치할 수 없습니다. Mac에서 Debug 빌드를 게시하세요.": "This isn't a Debug build, so it can't be installed. Publish a Debug build from the Mac.",
+      "Mac 앱이 이 요청을 처리하지 못했습니다. Mac 앱을 최신 버전으로 업데이트한 뒤 이 페이지를 새로고침하세요.": "The Mac app couldn't handle this request. Update the Mac app to the latest version, then reload this page.",
+      "Mac 앱에서 오류가 났습니다. 잠시 뒤 다시 시도하세요.": "An error occurred in the Mac app. Try again in a moment.",
+      "Mac에 연결할 수 없습니다. iPhone의 VPN이 켜져 있는지, Mac 앱이 공유 중인지 확인하세요.": "Can't connect to the Mac. Check that VPN is on in iPhone and that the Mac app is sharing.",
+      "Mac 앱과 통신 규약 버전이 다릅니다. Mac 앱을 최신 버전으로 업데이트한 뒤 이 페이지를 새로고침하세요.": "The protocol version differs from the Mac app. Update the Mac app to the latest version, then reload this page.",
+      "Mac에서 알 수 없는 응답을 받았습니다. 잠시 뒤 다시 시도하세요.": "Received an unknown response from the Mac. Try again in a moment.",
+      "페어링 코드는 8자입니다. Mac에 표시된 코드를 다시 확인하세요.": "The pairing code is 8 characters. Check the code shown on the Mac again.",
+      "페어링 코드에 쓰지 않는 글자가 들어 있습니다. Mac에 표시된 코드를 다시 확인하세요.": "The pairing code contains characters that aren't used. Check the code shown on the Mac again.",
+      "Mac에서 페어링을 거절했습니다. 다시 하려면 Mac에서 새 코드를 여세요.": "The Mac declined pairing. To try again, open a new code on the Mac.",
+      "페어링 요청이 만료되었습니다. Mac에서 새 코드를 열고 다시 시도하세요.": "The pairing request expired. Open a new code on the Mac and try again.",
+      "설치 주소가 이 페이지를 연 주소와 달라 열지 않았습니다. Mac 앱 네트워크 화면의 ‘설치 페이지’ 주소로 이 페이지를 다시 연 뒤 설치하세요. 그래도 같으면 Mac 앱을 최신 버전으로 업데이트하세요.": "The install URL differs from the address that opened this page, so it wasn't opened. Reopen this page using the ‘Install Page’ address on the Mac app's Network screen, then install. If it's still the same, update the Mac app to the latest version.",
+      "Mac에서 설치를 중단했습니다. Mac에서 빌드를 내렸거나 이 기기의 페어링이 해제되었을 수 있습니다. 빌드 목록을 새로고침하세요.": "The Mac stopped the installation. The build may have been taken down on the Mac, or this device may have been unpaired. Refresh the build list.",
+      "제한 시간 안에 전송이 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요.": "Couldn't confirm that the transfer finished in time. Check on the Home Screen whether the app was installed, and install again if not.",
+      "Mac이 빌드를 확인하는 동안 응답 시간이 지났습니다. 잠시 뒤 다시 설치하세요.": "The response timed out while the Mac was checking the build. Install again in a moment.",
+      "앱이 실행되지 않으면 설정 > 개인정보 보호 및 보안 > 개발자 모드가 켜져 있는지 확인하세요.": "If the app doesn't launch, check that Settings > Privacy & Security > Developer Mode is on.",
+      "Mac이 빌드를 모두 보냈습니다. 설치 진행은 홈 화면의 앱 아이콘에서 확인하세요.": "The Mac has sent the whole build. Check installation progress on the app icon on the Home Screen.",
+      "Mac이 빌드를 확인하는 중": "The Mac is checking the build",
+      "설치 창에서 ‘설치’를 누르세요": "Tap ‘Install’ in the install window",
+      "전송 완료": "Transfer complete",
+      "남은 시간 {minutes}분 {seconds}초": "{minutes}m {seconds}s remaining",
+      "{count}바이트": "{count} bytes",
+      "버전 {version} ({build}) · {size}": "Version {version} ({build}) · {size}",
+      "{year}. {month}. {day}.": "{month}/{day}/{year}",
+      "프로비저닝 프로파일이 {date}에 만료되었습니다. 설치해도 실행되지 않을 수 있습니다.": "The provisioning profile expired on {date}. It might not run if installed.",
+      "전송 중 {sent} / {total}": "Sending {sent} / {total}",
+      "전송 중 {sent}": "Sending {sent}",
+      "설치": "Install",
+      "{name} 설치": "Install {name}",
+      "다시 열기": "Reopen",
+      "설치 창 열기": "Open Install Window",
+      "{name} 다시 열기": "Reopen {name}",
+      "{name} 설치 창 열기": "Open {name} Install Window",
+      "취소": "Cancel",
+      "{name} 설치 취소": "Cancel {name} Install",
+      "전송": "Send",
+      "확인": "OK",
+      "다시 설치": "Install Again",
+      "{name} 다시 설치": "Reinstall {name}",
+      "닫기": "Close",
+      "받는 중": "Downloading",
+      "목록을 새로 받지 못했습니다. 아래는 이전 목록입니다. {message}": "Couldn't refresh the list. The previous list is shown below. {message}",
+      "{time}에 받은 목록": "List downloaded at {time}",
+      "페어링 요청을 보내는 중": "Sending pairing request",
+      "Mac 앱에서 ‘{name}’의 페어링 요청을 승인하세요.": "Approve the pairing request from ‘{name}’ in the Mac app."
+    },
+    "ja": {
+      "RemoteDebug 빌드 설치": "RemoteDebugビルドをインストール",
+      "빌드 목록을 받는 중": "ビルドリストを取得中",
+      "Mac에 연결하는 중": "Macに接続中",
+      "빌드 목록을 받지 못했습니다": "ビルドリストを取得できませんでした",
+      "다시 시도": "やり直す",
+      "Mac 페어링": "Macのペアリング",
+      "Mac 앱의 페어링 화면에 표시된 코드를 입력하세요. Mac에서 승인하면 빌드 목록이 열립니다.": "Macアプリのペアリング画面に表示されているコードを入力してください。Macで承認すると、ビルド一覧が開きます。",
+      "페어링 코드": "ペアリングコード",
+      "기기 이름": "デバイス名",
+      "Mac의 승인 화면에 이 이름이 표시됩니다.": "Macの承認画面にこの名前が表示されます。",
+      "페어링 요청": "ペアリングリクエスト",
+      "Mac의 승인을 기다리는 중": "Macの承認を待っています",
+      "남은 시간": "残り時間",
+      "페어링 취소": "ペアリングをキャンセル",
+      "빌드": "ビルド",
+      "새로고침": "更新",
+      "공유 중인 빌드가 없습니다": "共有中のビルドはありません",
+      "Mac 앱에서 빌드를 공유한 뒤 새로고침하세요.": "Macアプリでビルドを共有してから、再読み込みしてください。",
+      "이 페이지와 설치는 iPhone의 Tailscale VPN이 켜져 있어야 동작합니다.": "このページとインストールは、iPhone の Tailscale VPN がオンの場合のみ動作します。",
+      "이 iPhone은 Mac에서 승인되지 않았습니다. 다시 페어링하세요.": "この iPhone は Mac で承認されていません。もう一度ペアリングしてください。",
+      "페어링 코드가 맞지 않거나 만료되었습니다. Mac에 표시된 코드를 확인하고 다시 입력하세요.": "ペアリングコードが正しくないか、有効期限が切れています。Mac に表示されているコードを確認して、もう一度入力してください。",
+      "코드를 너무 많이 틀렸습니다. Mac에서 새 페어링 코드를 연 뒤 다시 시도하세요.": "コードを何度も間違えました。Mac で新しいペアリングコードを開いてから、やり直してください。",
+      "설치 세션을 확인할 수 없습니다. 다시 설치하세요.": "インストールセッションを確認できません。もう一度インストールしてください。",
+      "설치 세션이 만료되었습니다. 다시 설치하세요.": "インストールセッションの有効期限が切れました。もう一度インストールしてください。",
+      "Mac에 이 빌드가 없습니다. 목록을 새로고침하세요.": "Macにこのビルドがありません。一覧を再読み込みしてください。",
+      "Mac에서 빌드가 바뀌었습니다. 목록을 새로고침하세요.": "Mac上でビルドが変更されました。一覧を再読み込みしてください。",
+      "디버그 빌드가 아니라서 설치할 수 없습니다. Mac에서 Debug 빌드를 게시하세요.": "Debugビルドではないため、インストールできません。MacでDebugビルドを公開してください。",
+      "Mac 앱이 이 요청을 처리하지 못했습니다. Mac 앱을 최신 버전으로 업데이트한 뒤 이 페이지를 새로고침하세요.": "Macアプリがこのリクエストを処理できませんでした。Macアプリを最新バージョンにアップデートしてから、このページを再読み込みしてください。",
+      "Mac 앱에서 오류가 났습니다. 잠시 뒤 다시 시도하세요.": "Macアプリでエラーが発生しました。しばらくしてからやり直してください。",
+      "Mac에 연결할 수 없습니다. iPhone의 VPN이 켜져 있는지, Mac 앱이 공유 중인지 확인하세요.": "Macに接続できません。iPhoneのVPNがオンになっているか、Macアプリが共有中かを確認してください。",
+      "Mac 앱과 통신 규약 버전이 다릅니다. Mac 앱을 최신 버전으로 업데이트한 뒤 이 페이지를 새로고침하세요.": "Macアプリと通信プロトコルのバージョンが異なります。Macアプリを最新バージョンにアップデートしてから、このページを再読み込みしてください。",
+      "Mac에서 알 수 없는 응답을 받았습니다. 잠시 뒤 다시 시도하세요.": "Macから不明な応答を受け取りました。しばらくしてからやり直してください。",
+      "페어링 코드는 8자입니다. Mac에 표시된 코드를 다시 확인하세요.": "ペアリングコードは 8 文字です。Mac に表示されているコードをもう一度確認してください。",
+      "페어링 코드에 쓰지 않는 글자가 들어 있습니다. Mac에 표시된 코드를 다시 확인하세요.": "ペアリングコードに使用できない文字が含まれています。Mac に表示されているコードをもう一度確認してください。",
+      "Mac에서 페어링을 거절했습니다. 다시 하려면 Mac에서 새 코드를 여세요.": "Macでペアリングが拒否されました。やり直すには、Macで新しいコードを開いてください。",
+      "페어링 요청이 만료되었습니다. Mac에서 새 코드를 열고 다시 시도하세요.": "ペアリングリクエストの有効期限が切れました。Mac で新しいコードを開いて、やり直してください。",
+      "설치 주소가 이 페이지를 연 주소와 달라 열지 않았습니다. Mac 앱 네트워크 화면의 ‘설치 페이지’ 주소로 이 페이지를 다시 연 뒤 설치하세요. 그래도 같으면 Mac 앱을 최신 버전으로 업데이트하세요.": "インストール用アドレスがこのページを開いたアドレスと異なるため、開きませんでした。Mac App のネットワーク画面にある「インストールページ」のアドレスでこのページを開き直してから、インストールしてください。それでも同じ場合は、Mac App を最新バージョンにアップデートしてください。",
+      "Mac에서 설치를 중단했습니다. Mac에서 빌드를 내렸거나 이 기기의 페어링이 해제되었을 수 있습니다. 빌드 목록을 새로고침하세요.": "Macでインストールが中断されました。Macでビルドが取り下げられたか、このデバイスのペアリングが解除された可能性があります。ビルド一覧を再読み込みしてください。",
+      "제한 시간 안에 전송이 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요.": "制限時間内に送信が完了したか確認できませんでした。ホーム画面で App がインストールされているか確認し、ない場合はもう一度インストールしてください。",
+      "Mac이 빌드를 확인하는 동안 응답 시간이 지났습니다. 잠시 뒤 다시 설치하세요.": "Macがビルドを確認している間に応答時間が過ぎました。しばらくしてからもう一度インストールしてください。",
+      "앱이 실행되지 않으면 설정 > 개인정보 보호 및 보안 > 개발자 모드가 켜져 있는지 확인하세요.": "App が起動しない場合は、「設定」>「プライバシーとセキュリティ」で「デベロッパモード」がオンになっているか確認してください。",
+      "Mac이 빌드를 모두 보냈습니다. 설치 진행은 홈 화면의 앱 아이콘에서 확인하세요.": "Macがビルドをすべて送信しました。インストールの進行状況は、ホーム画面のアプリアイコンで確認してください。",
+      "Mac이 빌드를 확인하는 중": "Macがビルドを確認中",
+      "설치 창에서 ‘설치’를 누르세요": "インストールウインドウで「インストール」をタップしてください",
+      "전송 완료": "送信完了",
+      "남은 시간 {minutes}분 {seconds}초": "残り時間 {minutes}分{seconds}秒",
+      "{count}바이트": "{count}バイト",
+      "버전 {version} ({build}) · {size}": "バージョン {version} ({build}) · {size}",
+      "{year}. {month}. {day}.": "{year}年{month}月{day}日",
+      "프로비저닝 프로파일이 {date}에 만료되었습니다. 설치해도 실행되지 않을 수 있습니다.": "プロビジョニングプロファイルの有効期限が {date} に切れました。インストールしても起動しない場合があります。",
+      "전송 중 {sent} / {total}": "送信中 {sent} / {total}",
+      "전송 중 {sent}": "送信中 {sent}",
+      "설치": "インストール",
+      "{name} 설치": "{name}をインストール",
+      "다시 열기": "もう一度開く",
+      "설치 창 열기": "インストールウインドウを開く",
+      "{name} 다시 열기": "{name}をもう一度開く",
+      "{name} 설치 창 열기": "{name}のインストールウインドウを開く",
+      "취소": "キャンセル",
+      "{name} 설치 취소": "{name}のインストールをキャンセル",
+      "전송": "送信",
+      "확인": "OK",
+      "다시 설치": "再インストール",
+      "{name} 다시 설치": "{name}を再インストール",
+      "닫기": "閉じる",
+      "받는 중": "ダウンロード中",
+      "목록을 새로 받지 못했습니다. 아래는 이전 목록입니다. {message}": "リストを更新できませんでした。以前のリストを表示しています。{message}",
+      "{time}에 받은 목록": "{time}に受信した一覧",
+      "페어링 요청을 보내는 중": "ペアリングリクエストを送信中",
+      "Mac 앱에서 ‘{name}’의 페어링 요청을 승인하세요.": "Macアプリで「{name}」のペアリングリクエストを承認してください。"
+    },
+    "zh-Hans": {
+      "RemoteDebug 빌드 설치": "安装 RemoteDebug 构建",
+      "빌드 목록을 받는 중": "正在下载构建列表",
+      "Mac에 연결하는 중": "正在连接 Mac",
+      "빌드 목록을 받지 못했습니다": "无法下载构建列表",
+      "다시 시도": "重试",
+      "Mac 페어링": "Mac 配对",
+      "Mac 앱의 페어링 화면에 표시된 코드를 입력하세요. Mac에서 승인하면 빌드 목록이 열립니다.": "输入 Mac App 配对界面中显示的代码。在 Mac 上批准后，将打开构建列表。",
+      "페어링 코드": "配对代码",
+      "기기 이름": "设备名称",
+      "Mac의 승인 화면에 이 이름이 표시됩니다.": "此名称会显示在 Mac 的批准界面中。",
+      "페어링 요청": "配对请求",
+      "Mac의 승인을 기다리는 중": "正在等待 Mac 批准",
+      "남은 시간": "剩余时间",
+      "페어링 취소": "取消配对",
+      "빌드": "构建",
+      "새로고침": "刷新",
+      "공유 중인 빌드가 없습니다": "没有正在共享的构建",
+      "Mac 앱에서 빌드를 공유한 뒤 새로고침하세요.": "请在 Mac App 中共享构建后刷新。",
+      "이 페이지와 설치는 iPhone의 Tailscale VPN이 켜져 있어야 동작합니다.": "此页面和安装需要 iPhone 上的 Tailscale VPN 处于打开状态才能运行。",
+      "이 iPhone은 Mac에서 승인되지 않았습니다. 다시 페어링하세요.": "这台 iPhone 尚未获得 Mac 的批准。请重新配对。",
+      "페어링 코드가 맞지 않거나 만료되었습니다. Mac에 표시된 코드를 확인하고 다시 입력하세요.": "配对代码不正确或已过期。请核对 Mac 上显示的代码后重新输入。",
+      "코드를 너무 많이 틀렸습니다. Mac에서 새 페어링 코드를 연 뒤 다시 시도하세요.": "代码输入错误次数过多。请在 Mac 上打开新的配对代码后重试。",
+      "설치 세션을 확인할 수 없습니다. 다시 설치하세요.": "无法确认安装会话。请重新安装。",
+      "설치 세션이 만료되었습니다. 다시 설치하세요.": "安装会话已过期。请重新安装。",
+      "Mac에 이 빌드가 없습니다. 목록을 새로고침하세요.": "Mac 上没有此构建。请刷新列表。",
+      "Mac에서 빌드가 바뀌었습니다. 목록을 새로고침하세요.": "Mac 上的构建已变化。请刷新列表。",
+      "디버그 빌드가 아니라서 설치할 수 없습니다. Mac에서 Debug 빌드를 게시하세요.": "不是 Debug 构建，无法安装。请在 Mac 上发布 Debug 构建。",
+      "Mac 앱이 이 요청을 처리하지 못했습니다. Mac 앱을 최신 버전으로 업데이트한 뒤 이 페이지를 새로고침하세요.": "Mac App 无法处理此请求。请将 Mac App 更新到最新版本，然后刷新此页面。",
+      "Mac 앱에서 오류가 났습니다. 잠시 뒤 다시 시도하세요.": "Mac App 出错。请稍后重试。",
+      "Mac에 연결할 수 없습니다. iPhone의 VPN이 켜져 있는지, Mac 앱이 공유 중인지 확인하세요.": "无法连接 Mac。请确认 iPhone 的 VPN 已打开，且 Mac App 正在共享。",
+      "Mac 앱과 통신 규약 버전이 다릅니다. Mac 앱을 최신 버전으로 업데이트한 뒤 이 페이지를 새로고침하세요.": "与 Mac App 的通信协议版本不同。请将 Mac App 更新到最新版本，然后刷新此页面。",
+      "Mac에서 알 수 없는 응답을 받았습니다. 잠시 뒤 다시 시도하세요.": "从 Mac 收到未知响应。请稍后重试。",
+      "페어링 코드는 8자입니다. Mac에 표시된 코드를 다시 확인하세요.": "配对代码为 8 位。请再次核对 Mac 上显示的代码。",
+      "페어링 코드에 쓰지 않는 글자가 들어 있습니다. Mac에 표시된 코드를 다시 확인하세요.": "配对代码中含有不使用的字符。请再次核对 Mac 上显示的代码。",
+      "Mac에서 페어링을 거절했습니다. 다시 하려면 Mac에서 새 코드를 여세요.": "Mac 拒绝了配对。要重试，请在 Mac 上打开新代码。",
+      "페어링 요청이 만료되었습니다. Mac에서 새 코드를 열고 다시 시도하세요.": "配对请求已过期。请在 Mac 上打开新代码后重试。",
+      "설치 주소가 이 페이지를 연 주소와 달라 열지 않았습니다. Mac 앱 네트워크 화면의 ‘설치 페이지’ 주소로 이 페이지를 다시 연 뒤 설치하세요. 그래도 같으면 Mac 앱을 최신 버전으로 업데이트하세요.": "安装地址与打开此页面的地址不一致，因此未打开。请通过 Mac App 网络屏幕中的“安装页面”地址重新打开此页面，然后再安装。若仍不一致，请将 Mac App 更新到最新版本。",
+      "Mac에서 설치를 중단했습니다. Mac에서 빌드를 내렸거나 이 기기의 페어링이 해제되었을 수 있습니다. 빌드 목록을 새로고침하세요.": "Mac 中止了安装。可能是 Mac 已撤下该构建，或此设备的配对已解除。请刷新构建列表。",
+      "제한 시간 안에 전송이 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요.": "无法确认传输是否在限定时间内完成。请在主屏幕上确认 App 是否已安装，如果没有，请重新安装。",
+      "Mac이 빌드를 확인하는 동안 응답 시간이 지났습니다. 잠시 뒤 다시 설치하세요.": "Mac 确认构建时响应超时。请稍后重新安装。",
+      "앱이 실행되지 않으면 설정 > 개인정보 보호 및 보안 > 개발자 모드가 켜져 있는지 확인하세요.": "如果 App 无法运行，请确认已打开“设置”>“隐私与安全性”>“开发者模式”。",
+      "Mac이 빌드를 모두 보냈습니다. 설치 진행은 홈 화면의 앱 아이콘에서 확인하세요.": "Mac 已发送全部构建。请在主屏幕的 App 图标上查看安装进度。",
+      "Mac이 빌드를 확인하는 중": "Mac 正在确认构建",
+      "설치 창에서 ‘설치’를 누르세요": "请在安装窗口中点按“安装”",
+      "전송 완료": "发送完成",
+      "남은 시간 {minutes}분 {seconds}초": "剩余时间 {minutes} 分 {seconds} 秒",
+      "{count}바이트": "{count} 字节",
+      "버전 {version} ({build}) · {size}": "版本 {version}（{build}）· {size}",
+      "{year}. {month}. {day}.": "{year}年{month}月{day}日",
+      "프로비저닝 프로파일이 {date}에 만료되었습니다. 설치해도 실행되지 않을 수 있습니다.": "描述文件已于 {date} 到期。安装后可能无法运行。",
+      "전송 중 {sent} / {total}": "正在发送 {sent} / {total}",
+      "전송 중 {sent}": "正在发送 {sent}",
+      "설치": "安装",
+      "{name} 설치": "安装 {name}",
+      "다시 열기": "重新打开",
+      "설치 창 열기": "打开安装窗口",
+      "{name} 다시 열기": "重新打开 {name}",
+      "{name} 설치 창 열기": "打开 {name} 的安装窗口",
+      "취소": "取消",
+      "{name} 설치 취소": "取消安装 {name}",
+      "전송": "发送",
+      "확인": "好",
+      "다시 설치": "重新安装",
+      "{name} 다시 설치": "重新安装 {name}",
+      "닫기": "关闭",
+      "받는 중": "正在下载",
+      "목록을 새로 받지 못했습니다. 아래는 이전 목록입니다. {message}": "未能重新下载列表。以下为之前的列表。{message}",
+      "{time}에 받은 목록": "{time} 收到的列表",
+      "페어링 요청을 보내는 중": "正在发送配对请求",
+      "Mac 앱에서 ‘{name}’의 페어링 요청을 승인하세요.": "请在 Mac App 上批准“{name}”的配对请求。"
+    },
+    "zh-Hant": {
+      "RemoteDebug 빌드 설치": "安裝 RemoteDebug 建置",
+      "빌드 목록을 받는 중": "正在下載建置列表",
+      "Mac에 연결하는 중": "正在連線到 Mac",
+      "빌드 목록을 받지 못했습니다": "無法下載建置列表",
+      "다시 시도": "重試",
+      "Mac 페어링": "Mac 配對",
+      "Mac 앱의 페어링 화면에 표시된 코드를 입력하세요. Mac에서 승인하면 빌드 목록이 열립니다.": "請輸入 Mac App 配對畫面中顯示的代碼。在 Mac 上核准後，就會開啟建置列表。",
+      "페어링 코드": "配對代碼",
+      "기기 이름": "裝置名稱",
+      "Mac의 승인 화면에 이 이름이 표시됩니다.": "這個名稱會顯示在 Mac 的核准畫面上。",
+      "페어링 요청": "配對請求",
+      "Mac의 승인을 기다리는 중": "正在等待 Mac 核准",
+      "남은 시간": "剩餘時間",
+      "페어링 취소": "取消配對",
+      "빌드": "建置",
+      "새로고침": "重新整理",
+      "공유 중인 빌드가 없습니다": "沒有共享中的建置",
+      "Mac 앱에서 빌드를 공유한 뒤 새로고침하세요.": "請在 Mac App 中共享建置後重新整理。",
+      "이 페이지와 설치는 iPhone의 Tailscale VPN이 켜져 있어야 동작합니다.": "必須開啟 iPhone 的 Tailscale VPN,此頁面與安裝才能運作。",
+      "이 iPhone은 Mac에서 승인되지 않았습니다. 다시 페어링하세요.": "此 iPhone 尚未獲得 Mac 核准。請重新配對。",
+      "페어링 코드가 맞지 않거나 만료되었습니다. Mac에 표시된 코드를 확인하고 다시 입력하세요.": "配對代碼不正確或已過期。請確認 Mac 上顯示的代碼後重新輸入。",
+      "코드를 너무 많이 틀렸습니다. Mac에서 새 페어링 코드를 연 뒤 다시 시도하세요.": "輸入錯誤的代碼次數過多。請在 Mac 上開啟新的配對代碼後再試一次。",
+      "설치 세션을 확인할 수 없습니다. 다시 설치하세요.": "無法確認安裝工作階段。請重新安裝。",
+      "설치 세션이 만료되었습니다. 다시 설치하세요.": "安裝工作階段已過期。請重新安裝。",
+      "Mac에 이 빌드가 없습니다. 목록을 새로고침하세요.": "Mac 上沒有這個建置。請重新整理列表。",
+      "Mac에서 빌드가 바뀌었습니다. 목록을 새로고침하세요.": "Mac 上的建置已變更。請重新整理列表。",
+      "디버그 빌드가 아니라서 설치할 수 없습니다. Mac에서 Debug 빌드를 게시하세요.": "不是 Debug 建置，無法安裝。請在 Mac 上發布 Debug 建置。",
+      "Mac 앱이 이 요청을 처리하지 못했습니다. Mac 앱을 최신 버전으로 업데이트한 뒤 이 페이지를 새로고침하세요.": "Mac App 無法處理這項要求。請將 Mac App 更新至最新版本後，重新整理此頁面。",
+      "Mac 앱에서 오류가 났습니다. 잠시 뒤 다시 시도하세요.": "Mac App 發生錯誤。請稍後再試一次。",
+      "Mac에 연결할 수 없습니다. iPhone의 VPN이 켜져 있는지, Mac 앱이 공유 중인지 확인하세요.": "無法連線到 Mac。請確認 iPhone 的 VPN 已開啟，且 Mac App 正在共享。",
+      "Mac 앱과 통신 규약 버전이 다릅니다. Mac 앱을 최신 버전으로 업데이트한 뒤 이 페이지를 새로고침하세요.": "與 Mac App 的通訊協定版本不同。請將 Mac App 更新至最新版本後，重新整理此頁面。",
+      "Mac에서 알 수 없는 응답을 받았습니다. 잠시 뒤 다시 시도하세요.": "收到 Mac 傳來的未知回應。請稍後再試一次。",
+      "페어링 코드는 8자입니다. Mac에 표시된 코드를 다시 확인하세요.": "配對代碼為 8 個字元。請再次確認 Mac 上顯示的代碼。",
+      "페어링 코드에 쓰지 않는 글자가 들어 있습니다. Mac에 표시된 코드를 다시 확인하세요.": "配對代碼包含不使用的字元。請再次確認 Mac 上顯示的代碼。",
+      "Mac에서 페어링을 거절했습니다. 다시 하려면 Mac에서 새 코드를 여세요.": "Mac 已拒絕配對。若要重試，請在 Mac 上開啟新的代碼。",
+      "페어링 요청이 만료되었습니다. Mac에서 새 코드를 열고 다시 시도하세요.": "配對請求已過期。請在 Mac 上開啟新代碼後再試一次。",
+      "설치 주소가 이 페이지를 연 주소와 달라 열지 않았습니다. Mac 앱 네트워크 화면의 ‘설치 페이지’ 주소로 이 페이지를 다시 연 뒤 설치하세요. 그래도 같으면 Mac 앱을 최신 버전으로 업데이트하세요.": "安裝位址與開啟此頁面的位址不同，因此未開啟。請使用 Mac App 網路畫面中的「安裝頁面」位址重新開啟此頁面，再進行安裝。若仍相同，請將 Mac App 更新至最新版本。",
+      "Mac에서 설치를 중단했습니다. Mac에서 빌드를 내렸거나 이 기기의 페어링이 해제되었을 수 있습니다. 빌드 목록을 새로고침하세요.": "Mac 已中止安裝。可能是 Mac 上已移除建置，或這部裝置的配對已解除。請重新整理建置列表。",
+      "제한 시간 안에 전송이 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요.": "無法確認是否已在時限內完成傳送。請在主畫面確認 App 是否已安裝，若沒有請重新安裝。",
+      "Mac이 빌드를 확인하는 동안 응답 시간이 지났습니다. 잠시 뒤 다시 설치하세요.": "Mac 確認建置時已逾時。請稍後再安裝一次。",
+      "앱이 실행되지 않으면 설정 > 개인정보 보호 및 보안 > 개발자 모드가 켜져 있는지 확인하세요.": "若 App 無法執行，請確認「設定」>「隱私權與安全性」>「開發者模式」是否已開啟。",
+      "Mac이 빌드를 모두 보냈습니다. 설치 진행은 홈 화면의 앱 아이콘에서 확인하세요.": "Mac 已傳送所有建置。請在主畫面的 App 圖示查看安裝進度。",
+      "Mac이 빌드를 확인하는 중": "Mac 正在確認建置",
+      "설치 창에서 ‘설치’를 누르세요": "請在安裝視窗中點一下「安裝」",
+      "전송 완료": "傳送完成",
+      "남은 시간 {minutes}분 {seconds}초": "剩餘時間 {minutes} 分 {seconds} 秒",
+      "{count}바이트": "{count} 位元組",
+      "버전 {version} ({build}) · {size}": "版本 {version} ({build}) · {size}",
+      "{year}. {month}. {day}.": "{year}/{month}/{day}",
+      "프로비저닝 프로파일이 {date}에 만료되었습니다. 설치해도 실행되지 않을 수 있습니다.": "佈建描述檔已於 {date} 過期。即使安裝也可能無法執行。",
+      "전송 중 {sent} / {total}": "傳送中 {sent} / {total}",
+      "전송 중 {sent}": "傳送中 {sent}",
+      "설치": "安裝",
+      "{name} 설치": "安裝 {name}",
+      "다시 열기": "重新開啟",
+      "설치 창 열기": "打開安裝視窗",
+      "{name} 다시 열기": "重新開啟 {name}",
+      "{name} 설치 창 열기": "開啟 {name} 安裝視窗",
+      "취소": "取消",
+      "{name} 설치 취소": "取消安裝 {name}",
+      "전송": "傳送",
+      "확인": "好",
+      "다시 설치": "重新安裝",
+      "{name} 다시 설치": "重新安裝 {name}",
+      "닫기": "關閉",
+      "받는 중": "下載中",
+      "목록을 새로 받지 못했습니다. 아래는 이전 목록입니다. {message}": "無法重新下載列表。以下為先前的列表。{message}",
+      "{time}에 받은 목록": "{time} 接收的列表",
+      "페어링 요청을 보내는 중": "正在傳送配對請求",
+      "Mac 앱에서 ‘{name}’의 페어링 요청을 승인하세요.": "請在 Mac App 中核准「{name}」的配對要求。"
+    }
+  };
+  // RD-STRINGS-END
+
+  var LANGUAGES = ["ko", "en", "ja", "zh-Hans", "zh-Hant"];
+  var language = "ko";
+
+  // 브라우저의 선호 언어 목록에서 앞쪽부터 처음으로 맞는 언어를 고른다. 맞는 것이 없으면 영어,
+  // 목록이 없거나 비었으면(navigator가 없는 환경) 한국어.
+  function pickLanguage(list) {
+    if (list == null || typeof list.length !== "number" || list.length === 0) return "ko";
+    for (var i = 0; i < list.length; i++) {
+      var parts = String(list[i] == null ? "" : list[i]).trim().toLowerCase().split(/[-_]/);
+      switch (parts[0]) {
+        case "ko": return "ko";
+        case "en": return "en";
+        case "ja": return "ja";
+        case "zh":
+          var rest = parts.slice(1);
+          if (rest.indexOf("hant") >= 0) return "zh-Hant";
+          if (rest.indexOf("hans") >= 0) return "zh-Hans";
+          if (rest.indexOf("tw") >= 0 || rest.indexOf("hk") >= 0 || rest.indexOf("mo") >= 0) return "zh-Hant";
+          return "zh-Hans";
+      }
+    }
+    return "en";
+  }
+
+  // 화면 글자의 언어를 바꾼다. 모르는 값이면 그대로 둔다. 지금 언어를 돌려준다.
+  function setLanguage(code) {
+    if (LANGUAGES.indexOf(code) >= 0) language = code;
+    return language;
+  }
+
+  function getLanguage() {
+    return language;
+  }
+
+  function lookup(lang, key) {
+    var table = STRINGS[lang];
+    if (!table || !Object.prototype.hasOwnProperty.call(table, key)) return "";
+    var v = table[key];
+    return typeof v === "string" ? v : "";
+  }
+
+  // 표에 있는 원문인지.
+  function hasText(key) {
+    return Object.prototype.hasOwnProperty.call(STRINGS.en, key);
+  }
+
+  // 원문(한국어)을 지금 언어로 바꾸고 {name} 자리에 params 값을 넣는다. 번역이 없으면 영어, 그다음 원문.
+  function t(key, params) {
+    var text = String(key);
+    if (language !== "ko") text = lookup(language, text) || lookup("en", text) || text;
+    if (!params) return text;
+    return text.replace(/\{([A-Za-z0-9_]+)\}/g, function (whole, name) {
+      return Object.prototype.hasOwnProperty.call(params, name) ? String(params[name]) : whole;
+    });
+  }
+
   // MARK: 안내 문구
 
-  var messages = Object.freeze({
+  // 키별 한국어 원문. RDLogic.messages는 읽을 때마다 지금 언어로 바꿔 준다.
+  var messageText = Object.freeze({
     // HostAPIError.userMessage
     not_paired: "이 iPhone은 Mac에서 승인되지 않았습니다. 다시 페어링하세요.",
     pair_code_invalid: "페어링 코드가 맞지 않거나 만료되었습니다. Mac에 표시된 코드를 확인하고 다시 입력하세요.",
@@ -57,6 +412,14 @@
     waitingForInstaller: "설치 창에서 ‘설치’를 누르세요",
     completedTitle: "전송 완료"
   });
+
+  var messages = (function () {
+    var out = {};
+    Object.keys(messageText).forEach(function (k) {
+      Object.defineProperty(out, k, { enumerable: true, get: function () { return t(messageText[k]); } });
+    });
+    return Object.freeze(out);
+  })();
 
   // MARK: 페어링 코드 (PairingCode.parse)
 
@@ -323,7 +686,7 @@
     var s = Math.max(0, Math.ceil(ms / 1000));
     var m = Math.floor(s / 60);
     var r = s % 60;
-    return { text: m + ":" + (r < 10 ? "0" : "") + r, label: "남은 시간 " + m + "분 " + r + "초", low: s <= 30 };
+    return { text: m + ":" + (r < 10 ? "0" : "") + r, label: t("남은 시간 {minutes}분 {seconds}초", { minutes: m, seconds: r }), low: s <= 30 };
   }
 
   // MARK: 표시
@@ -331,7 +694,7 @@
   // ByteCountFormatter(.file)처럼 1000 단위로 적는다.
   function formatSize(bytes) {
     var b = typeof bytes === "number" && isFinite(bytes) && bytes > 0 ? bytes : 0;
-    if (b < 1000) return b + "바이트";
+    if (b < 1000) return t("{count}바이트", { count: b });
     if (b < 1000 * 1000) return Math.round(b / 1000) + " KB";
     if (b < 1000 * 1000 * 1000) return (b / 1e6).toFixed(1) + " MB";
     return (b / 1e9).toFixed(2) + " GB";
@@ -354,15 +717,15 @@
     var name = String(b.displayName || b.bundleId || "");
     var summary = {
       name: name,
-      detail: "버전 " + String(b.version || "") + " (" + String(b.buildNumber || "") + ") · " + formatSize(ipa.size),
+      detail: t("버전 {version} ({build}) · {size}", { version: String(b.version || ""), build: String(b.buildNumber || ""), size: formatSize(ipa.size) }),
       bundleId: String(b.bundleId || ""),
       warning: null
     };
     var expires = typeof signing.profileExpires === "string" ? Date.parse(signing.profileExpires) : NaN;
     if (!isNaN(expires) && expires < nowMs) {
       var d = new Date(expires);
-      var day = d.getUTCFullYear() + ". " + (d.getUTCMonth() + 1) + ". " + d.getUTCDate() + ".";
-      summary.warning = "프로비저닝 프로파일이 " + day + "에 만료되었습니다. 설치해도 실행되지 않을 수 있습니다.";
+      var day = t("{year}. {month}. {day}.", { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() });
+      summary.warning = t("프로비저닝 프로파일이 {date}에 만료되었습니다. 설치해도 실행되지 않을 수 있습니다.", { date: day });
     }
     return summary;
   }
@@ -376,9 +739,9 @@
         return messages.waitingForInstaller;
       case "downloading":
         if (typeof s.size === "number" && s.size > 0) {
-          return "전송 중 " + formatSize(s.bytesServed) + " / " + formatSize(s.size);
+          return t("전송 중 {sent} / {total}", { sent: formatSize(s.bytesServed), total: formatSize(s.size) });
         }
-        return "전송 중 " + formatSize(s.bytesServed);
+        return t("전송 중 {sent}", { sent: formatSize(s.bytesServed) });
       case "completed":
         return messages.completedSent + " " + messages.developerModeHint;
       case "expired":
@@ -482,7 +845,13 @@
     CREATE_SESSION_TIMEOUT_MS: CREATE_SESSION_TIMEOUT_MS,
     MAX_DEVICE_NAME_BYTES: MAX_DEVICE_NAME_BYTES,
     DEFAULT_DEVICE_NAME: DEFAULT_DEVICE_NAME,
+    LANGUAGES: Object.freeze(LANGUAGES.slice()),
     messages: messages,
+    pickLanguage: pickLanguage,
+    setLanguage: setLanguage,
+    getLanguage: getLanguage,
+    hasText: hasText,
+    t: t,
     normalizeCode: normalizeCode,
     isValidCode: isValidCode,
     displayCode: displayCode,

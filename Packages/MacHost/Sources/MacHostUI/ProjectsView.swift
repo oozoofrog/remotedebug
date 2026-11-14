@@ -119,8 +119,8 @@ struct ProjectsView: View {
     private func connectAgents(_ project: ConnectedProject) {
         let written = projects.connectAgents(for: project)
         guard !written.isEmpty else { return }
-        agentNotice = written.map(\.path).joined(separator: "\n")
-            + "\n\n이 프로젝트에서 Claude나 Codex가 RemoteDebug로 빌드·게시할 수 있습니다."
+        let paths = written.map(\.path).joined(separator: "\n")
+        agentNotice = String(localized: "\(paths)\n\n이 프로젝트에서 Claude나 Codex가 RemoteDebug로 빌드·게시할 수 있습니다.")
     }
 }
 
@@ -223,7 +223,7 @@ private struct ProjectRow: View {
         } else if let report = projects.reports[project.id] {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(report.published, id: \.buildId) { item in
-                    Chip(text: "\(item.name) \(item.version) (\(item.buildNumber)) 게시됨", symbol: "checkmark.circle.fill", color: .green)
+                    Chip(text: String(localized: "\(item.name) \(item.version) (\(item.buildNumber)) 게시됨"), symbol: "checkmark.circle.fill", color: .green)
                 }
                 if let message = report.message {
                     Label(message, systemImage: report.ok ? "info.circle" : "exclamationmark.triangle.fill")
@@ -262,9 +262,9 @@ private struct ProjectRow: View {
 
     static func text(for phase: ProjectsModel.Phase) -> String {
         switch phase {
-        case .loadingSchemes: "스킴을 읽는 중"
-        case .building(let scheme): "\(scheme) 스킴을 Debug 기기용으로 빌드하는 중"
-        case .importing: "빌드를 검사하고 게시하는 중"
+        case .loadingSchemes: String(localized: "스킴을 읽는 중")
+        case .building(let scheme): String(localized: "\(scheme) 스킴을 Debug 기기용으로 빌드하는 중")
+        case .importing: String(localized: "빌드를 검사하고 게시하는 중")
         }
     }
 }

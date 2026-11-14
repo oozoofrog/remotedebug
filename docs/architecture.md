@@ -91,3 +91,38 @@ public enum OTAManifest { public static func make(bundleId: String, version: Str
 - Go·SwiftPM·스크립트는 `scripts/go.sh`, `eyebuild swift` 등으로 실행해 캐시를 `/Volumes/eyedisk/build/remotedebug/` 아래에 둔다.
 - 가짜 tailnet(`testcontrol`)으로 E2E를 돌린다. 사용자 tailnet은 허가 전까지 건드리지 않는다.
 - 실기기 검증 절차는 `docs/device-test.md`에 둔다.
+
+## 현지화
+
+Mac 앱, iPhone 앱 두 개(RemoteDebugPhone, RemoteDebugVPN), 위젯·터널 확장, 설치 웹 페이지는 한국어(ko, 원문), 영어(en), 일본어(ja), 중국어 간체(zh-Hans), 중국어 번체(zh-Hant)로 보인다. 다른 언어로 설정한 기기는 영어로 보인다.
+
+### 문자열 쓰는 법
+
+- 한국어 원문이 그대로 키다. 소스에 한국어를 쓰고, 번역은 `Localization/Localizable.xcstrings`(원문 언어 ko) 하나에 모은다.
+- 이 카탈로그를 앱·확장 대상 여섯 개(RemoteDebugMac, RemoteDebugPhone, RemoteDebugTunnel, RemoteDebugWidgets, RemoteDebugVPN, RemoteDebugVPNTunnel)의 리소스로 넣는다. 패키지 코드(MacHostKit, MacHostUI, PhoneClientKit, RDModels …)도 `Bundle.main`에서 찾으므로 패키지에는 카탈로그나 `bundle: .module`을 두지 않는다.
+- SwiftUI의 `Text("…")`, `Button("…")`, `Label("…", …)`, `.navigationTitle("…")` 같은 리터럴은 그대로 번역된다.
+- `String`으로 만들어 나중에 보이는 문구(모델의 오류 문구, enum의 이름·설명, 알림·경고 문구, AppKit·UIKit 제목, 접근성 이름)는 만드는 곳에서 `String(localized: "…")`로 쓴다. `Text(문자열 변수)`는 번역하지 않는다.
+- 보간: `String` 값은 `%@`, `Int`는 `%lld`(자릿수 구분이 붙는다), `Double`은 `%lf`가 된다. 포트·연도·빌드 번호·크기·날짜처럼 모양이 정해진 값은 `String(port)`처럼 먼저 문자열로 만든다. `+`로 이은 조각은 키가 되지 못하므로 문장 하나를 보간으로 쓴다.
+- 번역하지 않는 것: 로그, 진단 파일, 프로토콜·JSON 값, 식별자, 키체인·UserDefaults 키, 오류 코드, 코드가 비교하는 문자열, 미리보기 전용 코드.
+- 표시 이름과 권한 문구(`CFBundleDisplayName`, `NSLocalNetworkUsageDescription`, `NSCameraUsageDescription`), 문서 종류 이름은 대상마다 `Localization/InfoPlist/<대상>/InfoPlist.xcstrings`에 있다. `Apps/*/project-*.yml`의 Info.plist 값을 바꾸면 그 카탈로그의 ko 값도 같이 바꾼다.
+- `swift test`에는 카탈로그가 없어 `String(localized:)`가 한국어 원문을 돌려준다. 시험은 한국어 원문과 비교하고, 스킴 RemoteDebugMac·RemoteDebugPhone의 시험 언어도 ko다.
+
+### 키 맞추기와 번역 검사
+
+- `scripts/sync-strings.sh`: 세 스킴(RemoteDebugMac, RemoteDebugPhone, RemoteDebugVPN)을 `SWIFT_EMIT_LOC_STRINGS=YES`, 서명 없이 빌드해 컴파일러가 뽑은 키(`.stringsdata`)를 `xcrun xcstringstool sync` 한 번으로 카탈로그에 합친다. 화면 문구를 바꾼 뒤 실행한다. 새 키가 들어오고, 코드에서 사라진 키는 번역이 없으면 지워지며 번역이 있으면 `stale`로 남는다. 번역은 지우지 않는다. 다시 실행해도 결과가 같다.
+- Xcode에서 빌드할 때는 문자열을 뽑지 않는다(`project.yml`의 `SWIFT_EMIT_LOC_STRINGS: NO`). 대상마다 카탈로그를 고치면 다른 플랫폼에서만 쓰는 키가 `stale`이 되기 때문이다. 번역은 Xcode의 카탈로그 편집기에서 넣어도 된다.
+- Debug 빌드가 컴파일하지 않는 분기(`#if targetEnvironment(simulator)`, `#if DEBUG`의 `#else`)의 문구는 `Localization/manual-keys.txt`에 적는다. 스크립트가 `extractionState: manual`로 넣고, sync는 이 키를 건드리지 않는다.
+- `python3 -I scripts/check_strings.py`: 모든 카탈로그와 웹 페이지 번역표에서 en, ja, zh-Hans, zh-Hant 번역이 빠졌거나 형식 지정자(`%@`, `%lld`, 웹은 `{이름}`)가 원문과 다르면 종료 코드 1이다. `shouldTranslate: false`인 키는 검사하지 않는다.
+- `python3 -I scripts/audit_strings.py --stringsdata-root <빌드 폴더> <소스 폴더…>`: 소스의 한국어 리터럴 가운데 키로 뽑히지 않은 것을 보인다. 로그 줄은 빼고 본다.
+
+### 언어 고르기
+
+- 앱: 각 번들의 `CFBundleDevelopmentRegion`이 en이다. 기기 언어 목록에서 앞쪽부터 ko, en, ja, zh-Hans, zh-Hant 중 하나를 찾고, 없으면 en을 쓴다. 고른 언어에 번역이 없는 키는 한국어 원문으로 보인다.
+- 설치 웹 페이지: `core/internal/host/web/logic.js`의 `// RD-STRINGS-BEGIN`과 `// RD-STRINGS-END` 사이가 번역표(JSON, 언어별로 같은 키, 빈 값은 아직 번역하지 않음)다. `RDLogic.pickLanguage`가 `navigator.languages`를 앞부터 보고 `ko*`는 ko, `en*`은 en, `ja*`는 ja, 스크립트 Hant나 지역 TW·HK·MO의 `zh`는 zh-Hant, 나머지 `zh*`는 zh-Hans를 고르며, 맞는 것이 없으면 en이다. 문구는 고른 언어, en, 한국어 원문 순서로 찾는다. HTML의 기본 문구는 한국어다.
+
+### 아직 번역하지 않는 것
+
+- Go 코어가 돌려주는 API 오류 문구(한국어)는 그대로 보인다.
+- `Packages/RemoteDebugFeedback`(다른 앱에 넣는 패키지)와 `rdvalidate` CLI는 현지화하지 않았다.
+- 코딩 에이전트용 문구(MCP 도구 설명, `rd` 명령의 응답, 에이전트 지침 파일)는 한국어로 둔다.
+- 알림은 Mac이 `title-loc-key`·`loc-key`·`loc-args`를 함께 보내 iPhone의 언어로 보인다([`docs/protocol-addenda.md`](protocol-addenda.md) P).

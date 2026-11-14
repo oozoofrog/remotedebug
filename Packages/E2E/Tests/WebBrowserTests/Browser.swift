@@ -74,6 +74,8 @@ final class Browser: NSObject, WKNavigationDelegate {
         // 화면에 보이지 않는 창이어도 타이머(1초 폴링·남은 시간)를 늦추지 않는다.
         configuration.preferences.inactiveSchedulingPolicy = .none
         let content = WKUserContentController()
+        // 페이지는 브라우저의 선호 언어로 글자를 바꾼다. 이 시험은 한국어 문구를 비교하므로 Mac의 언어 설정과 상관없이 한국어로 고정한다.
+        content.addUserScript(WKUserScript(source: Self.koreanLanguageScript, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
         content.addUserScript(WKUserScript(source: Self.recorderScript, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
         content.add(trampoline, contentWorld: .page, name: "rdRecorder")
         configuration.userContentController = content
@@ -248,6 +250,16 @@ final class Browser: NSObject, WKNavigationDelegate {
     func fetches(_ method: String, _ path: (String) -> Bool) -> [Fetch] {
         fetches.filter { $0.method == method && path($0.path) }
     }
+
+    /// 사용자 스크립트. navigator.languages·language를 한국어로 둔다(페이지의 언어 고르기가 한국어를 고른다).
+    static let koreanLanguageScript = #"""
+    (function () {
+      try {
+        Object.defineProperty(navigator, "languages", { configurable: true, get: function () { return ["ko-KR"]; } });
+        Object.defineProperty(navigator, "language", { configurable: true, get: function () { return "ko-KR"; } });
+      } catch (e) {}
+    })();
+    """#
 
     /// 사용자 스크립트. 페이지 세계에서 문서보다 먼저 돈다(페이지의 CSP는 사용자 스크립트를 막지 않는다).
     static let recorderScript = #"""

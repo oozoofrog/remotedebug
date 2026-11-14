@@ -22,8 +22,8 @@ struct NetworkView: View {
 
     /// 인증 키 입력란 옆의 버튼 이름.
     static func keyFieldActionTitle(_ model: HostModel, draft: String) -> String {
-        if !model.isRunning && !model.isStarting { return "공유 시작" }
-        return draft.isEmpty ? "공유 다시 시작" : "인증 키로 다시 시작"
+        if !model.isRunning && !model.isStarting { return String(localized: "공유 시작") }
+        return draft.isEmpty ? String(localized: "공유 다시 시작") : String(localized: "인증 키로 다시 시작")
     }
 
     private var showsKeyField: Bool { Self.showsKeyField(model) }
@@ -31,19 +31,19 @@ struct NetworkView: View {
     /// "설치 페이지" 줄에 보일 주소(코드 없음). 페어링할 수 없으면 nil("아직 없음").
     static func installPageAddress(_ model: HostModel) -> URL? { model.installPageURL }
 
-    static let copyAddressTitle = "설치 페이지 주소 복사"
-    static let copyAddressAnnouncement = "설치 페이지 주소를 복사했습니다."
+    static let copyAddressTitle = String(localized: "설치 페이지 주소 복사")
+    static let copyAddressAnnouncement = String(localized: "설치 페이지 주소를 복사했습니다.")
 
     private var isStopped: Bool { !model.isRunning && !model.isStarting }
 
-    static let directFooter = "같은 Wi-Fi의 페어링한 iPhone이 VPN 없이 빌드 목록·파일·로그를 주고받습니다. 같은 네트워크의 다른 기기도 이 포트에 접속할 수는 있지만, 페어링한 iPhone의 토큰이 없으면 아무것도 받지 못합니다. 앱 설치는 계속 VPN으로 합니다."
+    static let directFooter = String(localized: "같은 Wi-Fi의 페어링한 iPhone이 VPN 없이 빌드 목록·파일·로그를 주고받습니다. 같은 네트워크의 다른 기기도 이 포트에 접속할 수는 있지만, 페어링한 iPhone의 토큰이 없으면 아무것도 받지 못합니다. 앱 설치는 계속 VPN으로 합니다.")
 
     /// "직접 연결" 줄의 상태 문구.
     static func directStatusText(_ model: HostModel) -> String {
-        guard model.directEnabled else { return "꺼짐" }
-        guard model.isRunning else { return "공유를 시작하면 켜집니다" }
-        guard let direct = model.status?.direct else { return "여는 중" }
-        return direct.listening ? "켜짐 · 포트 \(direct.port)" : "포트를 열지 못했습니다"
+        guard model.directEnabled else { return String(localized: "꺼짐") }
+        guard model.isRunning else { return String(localized: "공유를 시작하면 켜집니다") }
+        guard let direct = model.status?.direct else { return String(localized: "여는 중") }
+        return direct.listening ? String(localized: "켜짐 · 포트 \(String(direct.port))") : String(localized: "포트를 열지 못했습니다")
     }
 
     var body: some View {

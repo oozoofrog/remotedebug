@@ -98,7 +98,7 @@ struct DevicesView: View {
                 Label("iPhone 페어링…", systemImage: "qrcode")
             }
             .disabled(!Self.pairingEntryEnabled(model))
-            .help(pairingReason ?? "페어링 코드를 만듭니다")
+            .help(pairingReason ?? String(localized: "페어링 코드를 만듭니다"))
         }
         .confirmationDialog(
             "기기를 제거할까요?",
@@ -124,7 +124,7 @@ struct DeviceRow: View {
 
     /// 알림 등록 상태 문구.
     static func pushLabel(_ device: DeviceEntry) -> String {
-        device.isPushRegistered ? "알림 등록됨" : "알림 없음"
+        device.isPushRegistered ? String(localized: "알림 등록됨") : String(localized: "알림 없음")
     }
     /// 이 기기까지 가는 경로. 최근에 주고받은 것이 없으면 `nil`.
     var path: PeerPath?
@@ -212,13 +212,16 @@ struct PairRequestRow: View {
     /// 요청한 기기 이름. 비어 있으면 `이름 없는 기기`.
     /// 값만 다루는 함수라 메인 액터에 묶지 않는다(View 구조체의 격리를 물려받지 않게 한다).
     nonisolated static func displayName(_ r: PairRequestEvent) -> String {
-        r.deviceName.isEmpty ? "이름 없는 기기" : r.deviceName
+        r.deviceName.isEmpty ? String(localized: "이름 없는 기기") : r.deviceName
     }
 
     nonisolated static func sentence(_ r: PairRequestEvent) -> String {
         let name = displayName(r)
         let node = r.nodeName.isEmpty ? "" : "(\(r.nodeName))"
-        return "‘\(name)’\(node)\(Korean.subjectParticle(after: name)) 페어링을 요청했습니다"
+        // 조사(이/가)는 한국어 문장에서만 고른다. 다른 언어는 두 키를 같은 문장으로 옮긴다.
+        return Korean.endsWithConsonant(name)
+            ? String(localized: "‘\(name)’\(node)이 페어링을 요청했습니다")
+            : String(localized: "‘\(name)’\(node)가 페어링을 요청했습니다")
     }
 }
 

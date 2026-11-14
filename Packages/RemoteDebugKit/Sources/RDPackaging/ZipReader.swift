@@ -75,17 +75,17 @@ public final class ZipReader {
             let cdSize = UInt64(e.u32(12))
             let cdOffset = UInt64(e.u32(16))
             if total == 0xFFFF || cdSize == 0xFFFF_FFFF || cdOffset == 0xFFFF_FFFF { throw ZipError.unsupported("ZIP64") }
-            guard cdOffset + cdSize <= fileSize else { throw ZipError.corrupt("중앙 디렉터리 범위 오류") }
+            guard cdOffset + cdSize <= fileSize else { throw ZipError.corrupt(String(localized: "중앙 디렉터리 범위 오류")) }
 
             try handle.seek(toOffset: cdOffset)
             let cd = try handle.read(upToCount: Int(cdSize)) ?? Data()
-            guard cd.count == Int(cdSize) else { throw ZipError.corrupt("중앙 디렉터리가 잘렸습니다") }
+            guard cd.count == Int(cdSize) else { throw ZipError.corrupt(String(localized: "중앙 디렉터리가 잘렸습니다")) }
 
             var list: [ZipEntry] = []
             var nameBytes: [Data] = []
             var p = 0
             for _ in 0..<total {
-                guard p + 46 <= cd.count, cd.u32(p) == 0x0201_4B50 else { throw ZipError.corrupt("중앙 디렉터리 항목 서명 오류") }
+                guard p + 46 <= cd.count, cd.u32(p) == 0x0201_4B50 else { throw ZipError.corrupt(String(localized: "중앙 디렉터리 항목 서명 오류")) }
                 let madeBy = cd.u16(p + 4)
                 let flags = cd.u16(p + 8)
                 let method = cd.u16(p + 10)
@@ -97,12 +97,12 @@ public final class ZipReader {
                 let nlen = Int(cd.u16(p + 28)), xlen = Int(cd.u16(p + 30)), clen = Int(cd.u16(p + 32))
                 let ext = cd.u32(p + 38)
                 let off = cd.u32(p + 42)
-                guard p + 46 + nlen + xlen + clen <= cd.count else { throw ZipError.corrupt("항목이 잘렸습니다") }
-                if flags & 0x1 != 0 { throw ZipError.unsupported("암호화") }
+                guard p + 46 + nlen + xlen + clen <= cd.count else { throw ZipError.corrupt(String(localized: "항목이 잘렸습니다")) }
+                if flags & 0x1 != 0 { throw ZipError.unsupported(String(localized: "암호화")) }
                 if csize == 0xFFFF_FFFF || usize == 0xFFFF_FFFF || off == 0xFFFF_FFFF { throw ZipError.unsupported("ZIP64") }
                 let rawName = cd.subdata(in: (p + 46)..<(p + 46 + nlen))
                 guard let name = String(data: rawName, encoding: .utf8) else {
-                    throw ZipError.invalidName("UTF-8이 아닌 이름")
+                    throw ZipError.invalidName(String(localized: "UTF-8이 아닌 이름"))
                 }
                 list.append(ZipEntry(
                     name: name, method: method, crc32: crc,
@@ -118,22 +118,22 @@ public final class ZipReader {
             var ranges: [(start: UInt64, end: UInt64, name: String)] = []
             ranges.reserveCapacity(list.count)
             for (i, entry) in list.enumerated() {
-                guard entry.localHeaderOffset + 30 <= cdOffset else { throw ZipError.corrupt("로컬 헤더 범위 오류: \(entry.name)") }
+                guard entry.localHeaderOffset + 30 <= cdOffset else { throw ZipError.corrupt(String(localized: "로컬 헤더 범위 오류: \(entry.name)")) }
                 try handle.seek(toOffset: entry.localHeaderOffset)
                 guard let header = try handle.read(upToCount: 30), header.count == 30, header.u32(0) == 0x0403_4B50 else {
-                    throw ZipError.corrupt("로컬 헤더 오류: \(entry.name)")
+                    throw ZipError.corrupt(String(localized: "로컬 헤더 오류: \(entry.name)"))
                 }
                 let lnlen = UInt64(header.u16(26)), lxlen = UInt64(header.u16(28))
                 let dataStart = entry.localHeaderOffset + 30 + lnlen + lxlen
                 let end = dataStart + entry.compressedSize
-                guard end <= cdOffset, end <= fileSize else { throw ZipError.corrupt("데이터 범위 오류: \(entry.name)") }
+                guard end <= cdOffset, end <= fileSize else { throw ZipError.corrupt(String(localized: "데이터 범위 오류: \(entry.name)")) }
                 let localName = try handle.read(upToCount: Int(lnlen)) ?? Data()
-                guard localName == nameBytes[i] else { throw ZipError.corrupt("로컬 헤더 이름이 중앙 디렉터리와 다릅니다: \(entry.name)") }
+                guard localName == nameBytes[i] else { throw ZipError.corrupt(String(localized: "로컬 헤더 이름이 중앙 디렉터리와 다릅니다: \(entry.name)")) }
                 ranges.append((entry.localHeaderOffset, end, entry.name))
             }
             ranges.sort { $0.start < $1.start }
             for i in ranges.indices.dropFirst() where ranges[i].start < ranges[i - 1].end {
-                throw ZipError.corrupt("항목 데이터가 겹칩니다: \(ranges[i].name)")
+                throw ZipError.corrupt(String(localized: "항목 데이터가 겹칩니다: \(ranges[i].name)"))
             }
             entries = list
         } catch let e as ZipError { throw e } catch { throw ZipError.io("\(error)") }
@@ -180,17 +180,17 @@ public final class ZipReader {
 
     /// 항목 데이터를 풀면서 `sink`로 넘기고 CRC·크기를 검증한다.
     public func stream(_ entry: ZipEntry, sink: (UnsafeRawBufferPointer) throws -> Void) throws {
-        guard entry.method == 0 || entry.method == 8 else { throw ZipError.unsupported("압축 방식 \(entry.method)") }
+        guard entry.method == 0 || entry.method == 8 else { throw ZipError.unsupported(String(localized: "압축 방식 \(String(entry.method))")) }
         let handle: FileHandle
         do { handle = try FileHandle(forReadingFrom: url) } catch { throw ZipError.io("\(error)") }
         defer { try? handle.close() }
         do {
             try handle.seek(toOffset: entry.localHeaderOffset)
             guard let header = try handle.read(upToCount: 30), header.count == 30, header.u32(0) == 0x0403_4B50 else {
-                throw ZipError.corrupt("로컬 헤더 오류: \(entry.name)")
+                throw ZipError.corrupt(String(localized: "로컬 헤더 오류: \(entry.name)"))
             }
             let dataStart = entry.localHeaderOffset + 30 + UInt64(header.u16(26)) + UInt64(header.u16(28))
-            guard dataStart + entry.compressedSize <= fileSize else { throw ZipError.corrupt("데이터 범위 오류: \(entry.name)") }
+            guard dataStart + entry.compressedSize <= fileSize else { throw ZipError.corrupt(String(localized: "데이터 범위 오류: \(entry.name)")) }
             try handle.seek(toOffset: dataStart)
 
             var crc = CRC32()
@@ -204,29 +204,29 @@ public final class ZipReader {
 
             var remaining = entry.compressedSize
             if entry.method == 0 {
-                guard entry.compressedSize == entry.uncompressedSize else { throw ZipError.corrupt("stored 크기 불일치: \(entry.name)") }
+                guard entry.compressedSize == entry.uncompressedSize else { throw ZipError.corrupt(String(localized: "stored 크기 불일치: \(entry.name)")) }
                 while remaining > 0 {
                     guard let chunk = try handle.read(upToCount: Int(min(UInt64(ZipWriter.chunkSize), remaining))), !chunk.isEmpty else {
-                        throw ZipError.corrupt("데이터가 잘렸습니다: \(entry.name)")
+                        throw ZipError.corrupt(String(localized: "데이터가 잘렸습니다: \(entry.name)"))
                     }
                     remaining -= UInt64(chunk.count)
                     try chunk.withUnsafeBytes { try emit($0) }
                 }
             } else {
                 let inflater = try RawDeflateStream(.decode)
-                if remaining == 0 { throw ZipError.corrupt("빈 DEFLATE 데이터: \(entry.name)") }
+                if remaining == 0 { throw ZipError.corrupt(String(localized: "빈 DEFLATE 데이터: \(entry.name)")) }
                 while remaining > 0 {
                     guard let chunk = try handle.read(upToCount: Int(min(UInt64(ZipWriter.chunkSize), remaining))), !chunk.isEmpty else {
-                        throw ZipError.corrupt("데이터가 잘렸습니다: \(entry.name)")
+                        throw ZipError.corrupt(String(localized: "데이터가 잘렸습니다: \(entry.name)"))
                     }
                     remaining -= UInt64(chunk.count)
                     try chunk.withUnsafeBytes { buf in
                         try inflater.process(buf, finalize: remaining == 0, sink: emit)
                     }
                 }
-                if !inflater.isFinished { throw ZipError.corrupt("DEFLATE가 끝나지 않았습니다: \(entry.name)") }
+                if !inflater.isFinished { throw ZipError.corrupt(String(localized: "DEFLATE가 끝나지 않았습니다: \(entry.name)")) }
             }
-            guard produced == entry.uncompressedSize else { throw ZipError.corrupt("크기 불일치: \(entry.name)") }
+            guard produced == entry.uncompressedSize else { throw ZipError.corrupt(String(localized: "크기 불일치: \(entry.name)")) }
             guard crc.value == entry.crc32 else { throw ZipError.crcMismatch(entry.name) }
         } catch let e as ZipError { throw e } catch let e as CancellationError { throw e } catch { throw ZipError.io("\(error)") }
     }
@@ -282,7 +282,7 @@ public final class ZipReader {
         let linkPaths = Set(selected.filter { $0.0.isSymlink }.map { $0.1.joined(separator: "/") })
         for (entry, comps) in selected where comps.count > 1 {
             for k in 1..<comps.count where linkPaths.contains(comps[0..<k].joined(separator: "/")) {
-                throw ZipError.unsafePath("\(entry.name) (심볼릭 링크를 거치는 경로)")
+                throw ZipError.unsafePath(String(localized: "\(entry.name) (심볼릭 링크를 거치는 경로)"))
             }
         }
         var links: [(entry: ZipEntry, comps: [String], target: String)] = []
@@ -290,7 +290,7 @@ public final class ZipReader {
             try control.check()
             let target = try data(for: entry, limit: 4096)
             guard let targetString = String(data: target, encoding: .utf8), !targetString.isEmpty, !targetString.contains("\0") else {
-                throw ZipError.unsafePath("\(entry.name) → (잘못된 심볼릭 링크 대상)")
+                throw ZipError.unsafePath(String(localized: "\(entry.name) → (잘못된 심볼릭 링크 대상)"))
             }
             try Self.validateSymlinkLexically(target: targetString, components: comps, entryName: entry.name)
             links.append((entry, comps, targetString))
@@ -350,7 +350,7 @@ public final class ZipReader {
                 }
             }
             if deferred.count == pending.count {
-                throw ZipError.unsafePath("\(deferred[0].entry.name) → 존재하지 않는 경로를 거치는 링크")
+                throw ZipError.unsafePath(String(localized: "\(deferred[0].entry.name) → 존재하지 않는 경로를 거치는 링크"))
             }
             pending = deferred
         }
@@ -409,12 +409,12 @@ public final class ZipReader {
     /// 쓰기 전 빠른 검사: 링크가 놓인 폴더 기준으로 글자 그대로 풀어 루트 밖으로 나가는지 본다.
     /// 앞선 링크를 거치는 사슬은 `resolveLink`가 실제 트리에서 다시 확인한다.
     private static func validateSymlinkLexically(target: String, components: [String], entryName: String) throws {
-        if target.hasPrefix("/") { throw ZipError.unsafePath("\(entryName) → 절대 경로 링크") }
+        if target.hasPrefix("/") { throw ZipError.unsafePath(String(localized: "\(entryName) → 절대 경로 링크")) }
         var depth = components.count - 1
         for part in target.split(separator: "/", omittingEmptySubsequences: true) {
             if part == ".." {
                 depth -= 1
-                if depth < 0 { throw ZipError.unsafePath("\(entryName) → 루트 밖을 가리키는 링크") }
+                if depth < 0 { throw ZipError.unsafePath(String(localized: "\(entryName) → 루트 밖을 가리키는 링크")) }
             } else if part != "." {
                 depth += 1
             }
@@ -433,13 +433,13 @@ public final class ZipReader {
         func parts(_ s: String) -> [String] {
             s.split(separator: "/", omittingEmptySubsequences: true).map(String.init).filter { $0 != "." }
         }
-        if target.hasPrefix("/") { throw ZipError.unsafePath("\(entryName) → 절대 경로 링크") }
+        if target.hasPrefix("/") { throw ZipError.unsafePath(String(localized: "\(entryName) → 절대 경로 링크")) }
         var stack = parent
         var pending = Array(parts(target).reversed())
         var hops = 0
         while let part = pending.popLast() {
             if part == ".." {
-                guard !stack.isEmpty else { throw ZipError.unsafePath("\(entryName) → 루트 밖을 가리키는 링크") }
+                guard !stack.isEmpty else { throw ZipError.unsafePath(String(localized: "\(entryName) → 루트 밖을 가리키는 링크")) }
                 stack.removeLast()
                 continue
             }
@@ -450,17 +450,17 @@ public final class ZipReader {
                 continue
             case S_IFLNK?:
                 hops += 1
-                guard hops <= 40 else { throw ZipError.unsafePath("\(entryName) → 링크가 너무 깊거나 순환합니다") }
+                guard hops <= 40 else { throw ZipError.unsafePath(String(localized: "\(entryName) → 링크가 너무 깊거나 순환합니다")) }
                 let dest: String
                 do { dest = try FileManager.default.destinationOfSymbolicLink(atPath: path.path) } catch { throw ZipError.io("\(error)") }
-                if dest.hasPrefix("/") { throw ZipError.unsafePath("\(entryName) → 절대 경로 링크를 거칩니다") }
+                if dest.hasPrefix("/") { throw ZipError.unsafePath(String(localized: "\(entryName) → 절대 경로 링크를 거칩니다")) }
                 stack.removeLast()
                 pending.append(contentsOf: parts(dest).reversed())
             case nil:
                 return pending.isEmpty ? .inside : .dangling
             default:
                 if pending.isEmpty { return .inside }
-                throw ZipError.unsafePath("\(entryName) → 파일을 폴더처럼 거치는 링크")
+                throw ZipError.unsafePath(String(localized: "\(entryName) → 파일을 폴더처럼 거치는 링크"))
             }
         }
         return .inside

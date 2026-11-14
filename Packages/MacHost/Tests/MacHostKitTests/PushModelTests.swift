@@ -191,7 +191,11 @@ struct PushModelTests {
         await h.push.waitForDelivery()
         #expect(h.transport.requests.count == 1)
         let body = try jsonDict(h.transport.requests.first?.httpBody)
-        #expect((body["aps"] as? [String: Any])?["alert"] as? [String: String] == ["title": "새 파일", "body": "파일 3개"])
+        let alert = (body["aps"] as? [String: Any])?["alert"] as? [String: Any]
+        #expect(alert?["title"] as? String == "새 파일")
+        #expect(alert?["body"] as? String == "파일 3개")
+        #expect(alert?["loc-key"] as? String == "파일 %@개")
+        #expect(alert?["loc-args"] as? [String] == ["3"])
         #expect(body["rd"] as? [String: String] == ["kind": "resource"])
         await h.model.shutdown()
     }

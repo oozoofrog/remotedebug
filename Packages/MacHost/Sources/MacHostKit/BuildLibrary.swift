@@ -106,12 +106,12 @@ public enum BuildLibraryError: Error, LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .unsupportedFile(let name): "\(name): .app 폴더나 .ipa 파일만 가져올 수 있습니다."
-        case .changedDuringImport(let name): "\(name): 가져오는 동안 파일이 바뀌었습니다. 빌드가 끝난 뒤 다시 가져오세요."
-        case .changedSinceConfirmation(let name): "\(name): 확인한 뒤 내용이 바뀌어 가져오지 않았습니다. 다시 가져와 새 내용을 확인하세요."
-        case .publishFailed(let message): "게시하지 못했습니다: \(message)"
-        case .unknownBuild(let id): "\(id): 목록에 없는 빌드입니다."
-        case .notLoaded: "저장된 빌드 목록을 읽지 못해 가져오지 않았습니다. 목록 파일을 복구한 뒤 다시 가져오세요."
+        case .unsupportedFile(let name): String(localized: "\(name): .app 폴더나 .ipa 파일만 가져올 수 있습니다.")
+        case .changedDuringImport(let name): String(localized: "\(name): 가져오는 동안 파일이 바뀌었습니다. 빌드가 끝난 뒤 다시 가져오세요.")
+        case .changedSinceConfirmation(let name): String(localized: "\(name): 확인한 뒤 내용이 바뀌어 가져오지 않았습니다. 다시 가져와 새 내용을 확인하세요.")
+        case .publishFailed(let message): String(localized: "게시하지 못했습니다: \(message)")
+        case .unknownBuild(let id): String(localized: "\(id): 목록에 없는 빌드입니다.")
+        case .notLoaded: String(localized: "저장된 빌드 목록을 읽지 못해 가져오지 않았습니다. 목록 파일을 복구한 뒤 다시 가져오세요.")
         }
     }
 }

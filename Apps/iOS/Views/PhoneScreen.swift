@@ -129,9 +129,9 @@ struct PhoneScreen: View {
 
     private func replacementMessage(newHost: String) -> String {
         if let current = state.host {
-            return "\(newHost)에 페어링을 요청합니다. 새 Mac이 승인하기 전까지는 지금 Mac(\(current.hostName))을 계속 사용합니다."
+            return String(localized: "\(newHost)에 페어링을 요청합니다. 새 Mac이 승인하기 전까지는 지금 Mac(\(current.hostName))을 계속 사용합니다.")
         }
-        return "진행 중인 페어링을 멈추고 \(newHost)에 페어링을 요청합니다."
+        return String(localized: "진행 중인 페어링을 멈추고 \(newHost)에 페어링을 요청합니다.")
     }
 }
 
@@ -249,7 +249,7 @@ struct VPNPairSection: View {
         .disabled(working)
     }
 
-    private func button(_ title: String, _ symbol: String, _ action: @escaping @MainActor () async -> Void) -> some View {
+    private func button(_ title: LocalizedStringKey, _ symbol: String, _ action: @escaping @MainActor () async -> Void) -> some View {
         Button {
             working = true
             Task {
@@ -263,10 +263,10 @@ struct VPNPairSection: View {
 
     private var title: String {
         switch pair.owner {
-        case .pairedApp: return "업데이트 앱이 VPN을 켜 두었습니다"
-        case .thisApp: return pair.installed == nil ? (pair.present ? "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 설치됨" : "이 앱이 VPN을 켜 두었습니다") : "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 \(version)"
-        case .other: return "다른 앱의 VPN이 켜져 있습니다"
-        case .none: return pair.installed == nil ? (pair.present ? "업데이트 앱 설치됨" : "업데이트 앱이 설치되어 있지 않습니다") : "업데이트 앱 \(version) 설치됨"
+        case .pairedApp: return String(localized: "업데이트 앱이 VPN을 켜 두었습니다")
+        case .thisApp: return pair.installed == nil ? (pair.present ? String(localized: "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 설치됨") : String(localized: "이 앱이 VPN을 켜 두었습니다")) : String(localized: "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 \(version)")
+        case .other: return String(localized: "다른 앱의 VPN이 켜져 있습니다")
+        case .none: return pair.installed == nil ? (pair.present ? String(localized: "업데이트 앱 설치됨") : String(localized: "업데이트 앱이 설치되어 있지 않습니다")) : String(localized: "업데이트 앱 \(version) 설치됨")
         }
     }
 
@@ -277,9 +277,9 @@ struct VPNPairSection: View {
     private var footer: String {
         if !updaterAvailable {
             return pair.published == nil
-                ? "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. Mac에서 RemoteDebugVPN 스킴을 게시하면 아래 RD 업데이트 빌드 칸에서 설치할 수 있습니다."
-                : "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 아래 RD 업데이트 빌드 칸에서 설치하세요."
+                ? String(localized: "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. Mac에서 RemoteDebugVPN 스킴을 게시하면 아래 RD 업데이트 빌드 칸에서 설치할 수 있습니다.")
+                : String(localized: "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 아래 RD 업데이트 빌드 칸에서 설치하세요.")
         }
-        return "RemoteDebug의 새 빌드는 업데이트 앱에서, 업데이트 앱의 새 빌드는 아래 빌드 목록에서 설치합니다. 두 앱은 같은 tailnet 기기로 연결하고, 한 번에 한 앱만 VPN을 켭니다."
+        return String(localized: "RemoteDebug의 새 빌드는 업데이트 앱에서, 업데이트 앱의 새 빌드는 아래 빌드 목록에서 설치합니다. 두 앱은 같은 tailnet 기기로 연결하고, 한 번에 한 앱만 VPN을 켭니다.")
     }
 }

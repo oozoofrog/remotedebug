@@ -273,8 +273,8 @@ public struct PeerPath: Codable, Sendable, Hashable {
 
     /// 화면에 보여 줄 경로 이름.
     public var label: String {
-        if !direct { return "중계 서버 경유" }
-        return isLocalNetwork ? "직접 연결(같은 네트워크)" : "직접 연결"
+        if !direct { return String(localized: "중계 서버 경유") }
+        return isLocalNetwork ? String(localized: "직접 연결(같은 네트워크)") : String(localized: "직접 연결")
     }
 
     /// `주소:포트`의 주소가 사설(10/8, 172.16/12, 192.168/16)·링크 로컬(169.254/16, fe80::/10)·고유 로컬(fc00::/7)인가.

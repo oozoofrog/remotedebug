@@ -35,8 +35,8 @@ public final class PushModel {
 
     /// 시험 알림 단추를 끈 이유. 보낼 수 있으면 nil.
     public var testUnavailableReason: String? {
-        if !isConfigured { return "키를 저장해야 보낼 수 있습니다." }
-        if recipients.isEmpty { return "알림을 켠 iPhone이 없습니다. iPhone 설정 화면에서 ‘새 빌드·파일 알림’을 켜세요." }
+        if !isConfigured { return String(localized: "키를 저장해야 보낼 수 있습니다.") }
+        if recipients.isEmpty { return String(localized: "알림을 켠 iPhone이 없습니다. iPhone 설정 화면에서 ‘새 빌드·파일 알림’을 켜세요.") }
         return nil
     }
 
@@ -101,7 +101,7 @@ public final class PushModel {
                 do {
                     try keys.save(pem.trimmingCharacters(in: .whitespacesAndNewlines))
                 } catch {
-                    setupError = "키를 키체인에 저장하지 못했습니다: \(HostErrorText.message(for: error))"
+                    setupError = String(localized: "키를 키체인에 저장하지 못했습니다: \(HostErrorText.message(for: error))")
                     return false
                 }
             }
@@ -216,22 +216,35 @@ public final class PushModel {
                     removed += 1
                     deviceFailed = true
                 case .rejected(let status, let reason):
-                    failures.append("\(device.name): APNs가 거절했습니다(\(status)\(reason.isEmpty ? "" : " \(reason)"))")
+                    let code = String(status)
+                    failures.append(reason.isEmpty ? String(localized: "\(device.name): APNs가 거절했습니다(\(code))")
+                                                   : String(localized: "\(device.name): APNs가 거절했습니다(\(code) \(reason))"))
                     deviceFailed = true
                 case .networkFailure(let message):
-                    failures.append("\(device.name): APNs에 닿지 못했습니다(\(message))")
+                    failures.append(String(localized: "\(device.name): APNs에 닿지 못했습니다(\(message))"))
                     deviceFailed = true
                 }
                 if deviceFailed { break }
             }
             if !deviceFailed { sent += 1 }
         }
-        let title = notifications.count == 1 ? "‘\(notifications[0].body)’ 알림" : "알림 \(notifications.count)개"
         var parts: [String] = []
-        if sent > 0 { parts.append("\(title)을 \(sent)대에 보냈습니다.") }
-        if removed > 0 { parts.append("토큰이 더는 유효하지 않은 기기 \(removed)대의 알림 등록을 지웠습니다. 그 iPhone에서 알림을 다시 켜세요.") }
+        if sent > 0 {
+            let sentCount = String(sent)
+            if notifications.count == 1 {
+                let body = notifications[0].body
+                parts.append(String(localized: "‘\(body)’ 알림을 \(sentCount)대에 보냈습니다."))
+            } else {
+                let count = String(notifications.count)
+                parts.append(String(localized: "알림 \(count)개을 \(sentCount)대에 보냈습니다."))
+            }
+        }
+        if removed > 0 {
+            let removedCount = String(removed)
+            parts.append(String(localized: "토큰이 더는 유효하지 않은 기기 \(removedCount)대의 알림 등록을 지웠습니다. 그 iPhone에서 알림을 다시 켜세요."))
+        }
         parts += failures
-        if stopped { parts.append("보내는 중에 키 설정이 바뀌어 나머지 기기에는 보내지 않았습니다.") }
+        if stopped { parts.append(String(localized: "보내는 중에 키 설정이 바뀌어 나머지 기기에는 보내지 않았습니다.")) }
         lastDelivery = Delivery(date: now(), text: parts.joined(separator: " "), failed: sent < targets.count)
     }
 }

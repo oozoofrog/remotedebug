@@ -141,9 +141,9 @@ struct RootView: View {
     private func importCrash(_ url: URL) async -> String? {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let data = try? Data(contentsOf: url) else { return "\(url.lastPathComponent) 파일을 읽을 수 없습니다." }
-        guard data.count <= CrashReport.maxTextBytes else { return "\(url.lastPathComponent)은 너무 큽니다(1.5MB까지)." }
-        guard let text = String(data: data, encoding: .utf8), !text.isEmpty else { return "\(url.lastPathComponent)은 글자로 된 크래시 파일이 아닙니다." }
+        guard let data = try? Data(contentsOf: url) else { return String(localized: "\(url.lastPathComponent) 파일을 읽을 수 없습니다.") }
+        guard data.count <= CrashReport.maxTextBytes else { return String(localized: "\(url.lastPathComponent)은 너무 큽니다(1.5MB까지).") }
+        guard let text = String(data: data, encoding: .utf8), !text.isEmpty else { return String(localized: "\(url.lastPathComponent)은 글자로 된 크래시 파일이 아닙니다.") }
         let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date()
         await model.addCrash(CrashReport.ips(name: url.lastPathComponent, text: text, fallbackDate: modified))
         return nil
@@ -227,8 +227,8 @@ struct RootView: View {
                 Task {
                     let error = await importCrash(url)
                     crashNotice = error ?? (model.crashBook.unsent.isEmpty
-                        ? "크래시 기록을 Mac에 보냈습니다."
-                        : "크래시 기록을 받았습니다. Mac과 연결되면 보냅니다.")
+                        ? String(localized: "크래시 기록을 Mac에 보냈습니다.")
+                        : String(localized: "크래시 기록을 받았습니다. Mac과 연결되면 보냅니다."))
                 }
             } else if let request = AppPair.request(from: url) {
                 Task { await handleVPNRequest(request.action, returning: request.returning) }
@@ -253,7 +253,7 @@ struct RootView: View {
         let settings = SettingsViewState(
                 host: model.host,
                 nodeHostname: tunnel.settings.hostname,
-                vpnStatusLabel: tunnel.isAvailable ? TunnelStateMapping.label(tunnel.vpnStatus) : "사용할 수 없음",
+                vpnStatusLabel: tunnel.isAvailable ? TunnelStateMapping.label(tunnel.vpnStatus) : String(localized: "사용할 수 없음"),
                 reply: tunnel.lastReply,
                 disconnectMessage: tunnel.disconnectMessage,
                 controlURL: tunnel.settings.controlURL,
@@ -290,7 +290,7 @@ struct RootView: View {
                     } catch {
                         tunnel.settings.onDemand = previous
                         model.log(.warning, "vpn", "주문형 연결 설정 저장 실패: \(error.localizedDescription)")
-                        return "설정을 저장하지 못했습니다. \(error.localizedDescription)"
+                        return String(localized: "설정을 저장하지 못했습니다. \(error.localizedDescription)")
                     }
                 },
                 openUpdaterApp: { await openUpdater(.open, returning: false) },

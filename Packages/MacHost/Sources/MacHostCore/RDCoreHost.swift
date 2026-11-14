@@ -53,7 +53,7 @@ public final class RDCoreHost: HostCore, @unchecked Sendable {
         let data = try encode(config)
         try await onQueue { [self] in
             if lock.withLock({ node != nil }) {
-                throw APIErrorBody(code: "invalid_config", message: "코어가 이미 실행 중입니다.")
+                throw APIErrorBody(code: "invalid_config", message: String(localized: "코어가 이미 실행 중입니다."))
             }
             let started = try RDNode.start(config: data)
             lock.withLock { node = started }
@@ -216,7 +216,7 @@ public final class RDCoreHost: HostCore, @unchecked Sendable {
     private func call(_ body: @escaping @Sendable (RDNode) throws -> Data) async throws -> Data {
         try await onQueue { [self] in
             guard let node = lock.withLock({ node }) else {
-                throw APIErrorBody(code: "not_running", message: "공유가 꺼져 있습니다.")
+                throw APIErrorBody(code: "not_running", message: String(localized: "공유가 꺼져 있습니다."))
             }
             return try body(node)
         }
@@ -240,7 +240,7 @@ public final class RDCoreHost: HostCore, @unchecked Sendable {
         do {
             return try RDJSON.encoder().encode(value)
         } catch {
-            throw APIErrorBody(code: "bad_request", message: "코어에 보낼 값을 만들지 못했습니다.")
+            throw APIErrorBody(code: "bad_request", message: String(localized: "코어에 보낼 값을 만들지 못했습니다."))
         }
     }
 
@@ -248,7 +248,7 @@ public final class RDCoreHost: HostCore, @unchecked Sendable {
         do {
             return try RDJSON.decoder().decode(type, from: data)
         } catch {
-            throw APIErrorBody(code: "internal", message: "코어 응답을 읽지 못했습니다.")
+            throw APIErrorBody(code: "internal", message: String(localized: "코어 응답을 읽지 못했습니다."))
         }
     }
 }

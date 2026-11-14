@@ -10,31 +10,57 @@ public struct APNsNotification: Sendable, Hashable {
         case test
     }
 
+    /// 키를 못 찾을 때 보이는 제목. Mac의 언어로 만든다.
     public var title: String
+    /// 키를 못 찾을 때 보이는 본문.
     public var body: String
+    /// iPhone 앱의 문자열 카탈로그에서 찾을 제목 키(`title-loc-key`). 제목이 "RemoteDebug"면 없다.
+    public var titleLocKey: String?
+    /// 본문 키(`loc-key`). 본문이 이름이거나 "이름 버전 (빌드)"면 없다.
+    public var bodyLocKey: String?
+    /// 본문 키의 `%@` 자리에 들어갈 값(`loc-args`). 문자열만.
+    public var bodyLocArgs: [String]
     public var kind: Kind
     /// 빌드 id 또는 리소스 id. 여러 항목을 묶었거나 이름을 숨기면 없다.
     public var id: String?
     /// iPhone이 동작 버튼을 고르는 분류. `id`가 있을 때만 넣는다.
     public var category: PushCategory?
 
-    public init(title: String, body: String, kind: Kind, id: String? = nil, category: PushCategory? = nil) {
+    public init(title: String, body: String, kind: Kind, id: String? = nil, category: PushCategory? = nil,
+                titleLocKey: String? = nil, bodyLocKey: String? = nil, bodyLocArgs: [String] = []) {
         self.title = title
         self.body = body
+        self.titleLocKey = titleLocKey
+        self.bodyLocKey = bodyLocKey
+        self.bodyLocArgs = bodyLocArgs
         self.kind = kind
         self.id = id
         self.category = id == nil ? nil : category
     }
 
-    /// `{"aps":{"alert":{"title","body"},"category","sound":"default"},"rd":{"kind","id"}}`
+    /// `{"aps":{"alert":{"title","body","title-loc-key","loc-key","loc-args"},"category","sound":"default"},"rd":{"kind","id"}}`
+    /// 키가 없거나 인자가 비었으면 그 필드를 뺀다.
     public func payload() -> Data {
-        struct Alert: Encodable { var title: String; var body: String }
+        struct Alert: Encodable {
+            var title: String
+            var body: String
+            var titleLocKey: String?
+            var locKey: String?
+            var locArgs: [String]?
+            enum CodingKeys: String, CodingKey {
+                case title, body
+                case titleLocKey = "title-loc-key"
+                case locKey = "loc-key"
+                case locArgs = "loc-args"
+            }
+        }
         struct APS: Encodable { var alert: Alert; var category: String?; var sound = "default" }
         struct RD: Encodable { var kind: String; var id: String? }
         struct Payload: Encodable { var aps: APS; var rd: RD }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        let value = Payload(aps: APS(alert: Alert(title: title, body: body), category: category?.rawValue), rd: RD(kind: kind.rawValue, id: id))
+        let value = Payload(aps: APS(alert: Alert(title: title, body: body, titleLocKey: titleLocKey, locKey: bodyLocKey,
+                                                           locArgs: bodyLocArgs.isEmpty ? nil : bodyLocArgs), category: category?.rawValue), rd: RD(kind: kind.rawValue, id: id))
         return (try? encoder.encode(value)) ?? Data()
     }
 }

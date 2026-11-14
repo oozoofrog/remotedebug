@@ -93,16 +93,16 @@ public enum BuildInspector {
 
     private static func stageIPA(_ ipaURL: URL, workDirectory: URL, control: OperationControl) throws -> Staged {
         let reader: ZipReader
-        do { reader = try ZipReader(url: ipaURL) } catch { throw InspectionError.unreadable("IPA를 열 수 없습니다(\(error))") }
+        do { reader = try ZipReader(url: ipaURL) } catch { throw InspectionError.unreadable(String(localized: "IPA를 열 수 없습니다(\(String(describing: error)))")) }
 
         var appNames = Set<String>()
         for entry in reader.entries {
             let comps: [String]
-            do { comps = try ZipReader.safeComponents(entry.name) } catch { throw InspectionError.unreadable("IPA에 안전하지 않은 경로가 있습니다") }
+            do { comps = try ZipReader.safeComponents(entry.name) } catch { throw InspectionError.unreadable(String(localized: "IPA에 안전하지 않은 경로가 있습니다")) }
             if comps.count >= 2, comps[0] == "Payload", comps[1].hasSuffix(".app") { appNames.insert(comps[1]) }
         }
         guard appNames.count == 1, let appName = appNames.first else {
-            throw InspectionError.unreadable("Payload/ 아래에 .app이 정확히 하나여야 합니다(\(appNames.count)개)")
+            throw InspectionError.unreadable(String(localized: "Payload/ 아래에 .app이 정확히 하나여야 합니다(\(String(appNames.count))개)"))
         }
 
         let root = workDirectory.appendingPathComponent("rd-ipa-\(UUID().uuidString)", isDirectory: true)
@@ -111,7 +111,7 @@ public enum BuildInspector {
         } catch {
             try? ZipReader.removeTree(at: root)
             if error is CancellationError { throw error }
-            throw InspectionError.unreadable("IPA를 풀 수 없습니다(\(error))")
+            throw InspectionError.unreadable(String(localized: "IPA를 풀 수 없습니다(\(String(describing: error)))"))
         }
         return Staged(root: root, appURL: root.appendingPathComponent("Payload").appendingPathComponent(appName, isDirectory: true))
     }
@@ -128,7 +128,7 @@ public enum BuildInspector {
             return result
         } catch {
             var r = result
-            r.warnings.append("풀어 낸 임시 폴더를 지우지 못했습니다(\(root.lastPathComponent)): \(error)")
+            r.warnings.append(String(localized: "풀어 낸 임시 폴더를 지우지 못했습니다(\(root.lastPathComponent)): \(String(describing: error))"))
             return r
         }
     }
@@ -163,12 +163,12 @@ public enum BuildInspector {
         let fm = FileManager.default
         var isDir: ObjCBool = false
         guard fm.fileExists(atPath: appURL.path, isDirectory: &isDir), isDir.boolValue else {
-            throw InspectionError.unreadable("\(appURL.lastPathComponent)은(는) 폴더가 아닙니다")
+            throw InspectionError.unreadable(String(localized: "\(appURL.lastPathComponent)은(는) 폴더가 아닙니다"))
         }
         let infoURL = appURL.appendingPathComponent("Info.plist")
         guard let infoData = try? Data(contentsOf: infoURL),
               let info = (try? PropertyListSerialization.propertyList(from: infoData, options: [], format: nil)) as? [String: Any] else {
-            throw InspectionError.unreadable("Info.plist를 읽을 수 없습니다")
+            throw InspectionError.unreadable(String(localized: "Info.plist를 읽을 수 없습니다"))
         }
 
         let profile: ProfileState
@@ -238,7 +238,7 @@ public enum BuildInspector {
             if p.expirationDate <= options.now {
                 reasons.append(Rejection(code: .profileExpired, detail: "프로필이 만료됐습니다"))
             } else if p.expirationDate.timeIntervalSince(options.now) < 7 * 86_400 {
-                warnings.append("프로필이 7일 안에 만료됩니다")
+                warnings.append(String(localized: "프로필이 7일 안에 만료됩니다"))
             }
         }
 

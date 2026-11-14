@@ -860,13 +860,24 @@ Mac 앱이 `https://api.sandbox.push.apple.com/3/device/<token>`으로 HTTP/2 PO
 ### P.5 페이로드
 
 ```json
-{"aps": {"alert": {"title": "새 빌드", "body": "예시 앱 1.0 (35)"}, "category": "rd.build", "sound": "default"}, "rd": {"kind": "build", "id": "b_0123abcd"}}
+{"aps": {"alert": {"title": "새 빌드", "body": "예시 앱 1.0 (35)", "title-loc-key": "새 빌드"}, "category": "rd.build", "sound": "default"}, "rd": {"kind": "build", "id": "b_0123abcd"}}
+```
+
+여러 파일을 묶은 알림:
+
+```json
+{"aps": {"alert": {"title": "새 파일", "body": "파일 3개", "title-loc-key": "새 파일", "loc-key": "파일 %@개", "loc-args": ["3"]}, "sound": "default"}, "rd": {"kind": "resource"}}
 ```
 
 - `rd.kind`: `build`, `resource`, `test`. `rd.id`는 선택이다(빌드 id 또는 리소스 id). 여러 항목을 묶었거나 "알림에 이름을 넣지 않기"가 켜져 있으면 `id`를 넣지 않는다.
 - `aps.category`는 `rd.id`가 있을 때만 넣는다: 빌드 `rd.build`, 링크 `rd.link`, 파일 `rd.file`. iPhone 앱은 분류마다 동작 버튼을 단다. `rd.build`는 **설치**(`rd.install`), `rd.link`는 **링크 열기**(`rd.open`), `rd.file`은 **받기**(`rd.download`)이고, 모두 목록으로만 가는 버튼(`rd.show`)이 함께 있다. 버튼은 앱을 앞으로 가져온 뒤 목록을 새로 받아 `rd.id`의 항목에 그 일을 한다. 항목이 그 사이 빠졌으면 목록만 보인다. 분류를 모르는 이전 앱은 버튼 없이 알림만 보인다.
 - 빌드: 제목 `새 빌드`, 본문 `<앱 이름> <버전> (<빌드 번호>)`. 파일·링크 1개: 제목 `새 파일`·`새 링크`, 본문은 이름. 여러 개: `파일 N개`(모두 링크면 제목 `새 링크`, 본문 `링크 N개`). 시험: 제목 `RemoteDebug`, 본문 `시험 알림입니다`, kind `test`.
-- "알림에 이름을 넣지 않기"가 켜져 있으면 제목 `RemoteDebug`, 본문 `새 빌드가 있습니다` 또는 `새 파일이 있습니다`.
+- "알림에 이름을 넣지 않기"가 켜져 있으면 제목 `RemoteDebug`, 본문 `새 빌드가 있습니다` 또는 `새 파일이 있습니다`. 이때 `id`, 이름, 버전, 개수를 넣지 않고 `loc-args`도 보내지 않는다.
+- 알림은 iPhone의 언어로 보인다. `aps.alert`에 `title`·`body`와 함께 iPhone 앱의 문자열 카탈로그(`Localizable`) 키를 넣는다. iOS는 키를 iPhone 앱 번들에서 찾아 그 언어의 문장을 보인다. 키가 있는데 번역을 찾지 못하면 키 자체(한국어 원문)를 문장으로 써서 `loc-args`를 채워 보인다(예: `파일 3개`). `title`·`body`는 Mac의 언어로 만든 문장이고, 키가 없는 알림(이름이 본문인 경우 등)에서만 그대로 보인다.
+  - `title-loc-key`: `새 빌드`, `새 파일`, `새 링크`. 제목이 `RemoteDebug`면 넣지 않는다.
+  - `loc-key`: `새 빌드가 있습니다`, `새 파일이 있습니다`, `시험 알림입니다`, `파일 %@개`, `링크 %@개`. 본문이 이름이거나 `<앱 이름> <버전> (<빌드 번호>)`면 넣지 않는다.
+  - `loc-args`: `loc-key`의 `%@` 자리에 들어갈 값. 문자열만 넣는다(개수도 `"3"`처럼 문자열, 자릿수 구분 없이). 비어 있으면 넣지 않는다.
+  - 이 키를 모르는 이전 iPhone 앱이나 키의 번역이 아직 없을 때는 한국어 키 문장이 보인다(실제 iPhone에서는 확인하지 않았다).
 
 ### P.6 보내는 때와 묶기
 

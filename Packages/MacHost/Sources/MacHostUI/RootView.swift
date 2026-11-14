@@ -11,15 +11,15 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable 
 
     var title: String {
         switch self {
-        case .builds: "빌드"
-        case .projects: "프로젝트"
-        case .agent: "에이전트"
-        case .files: "보낸 파일"
-        case .devices: "기기"
-        case .network: "네트워크"
-        case .crashes: "크래시·피드백"
-        case .activity: "활동"
-        case .logs: "iPhone 로그"
+        case .builds: String(localized: "빌드")
+        case .projects: String(localized: "프로젝트")
+        case .agent: String(localized: "에이전트")
+        case .files: String(localized: "보낸 파일")
+        case .devices: String(localized: "기기")
+        case .network: String(localized: "네트워크")
+        case .crashes: String(localized: "크래시·피드백")
+        case .activity: String(localized: "활동")
+        case .logs: String(localized: "iPhone 로그")
         }
     }
 
@@ -272,8 +272,8 @@ enum PairRequestAnnouncements {
         let expired = previous.filter { request in
             request.expiresAt <= now && !current.contains { $0.requestId == request.requestId }
         }
-        return arrived.map { "\(PairRequestRow.sentence($0)). 만료되기 전에 기기 화면에서 허용하거나 거부하세요." }
-            + expired.map { "\(PairRequestRow.displayName($0))의 페어링 요청이 만료됐습니다. iPhone에서 다시 요청하세요." }
+        return arrived.map { String(localized: "\(PairRequestRow.sentence($0)). 만료되기 전에 기기 화면에서 허용하거나 거부하세요.") }
+            + expired.map { String(localized: "\(PairRequestRow.displayName($0))의 페어링 요청이 만료됐습니다. iPhone에서 다시 요청하세요.") }
     }
 
     @MainActor
@@ -367,7 +367,7 @@ struct SharingButton: View {
 struct RestartSharingButton: View {
     @Environment(HostModel.self) private var model
     @Environment(AuthKeyDraft.self) private var authKey
-    var title = "공유 다시 시작"
+    var title = String(localized: "공유 다시 시작")
 
     var body: some View {
         Button(title) {
@@ -476,7 +476,7 @@ enum ImportConfirmation {
     }
 
     static func message(_ item: ImportQueue.Pending) -> String {
-        "\(title(item))\n\(item.url.path)\n\n구성을 폴더 이름이나 debug.dylib로 확인할 수 없습니다. Xcode에서 Debug 구성으로 빌드한 것이 맞을 때만 가져오세요."
+        String(localized: "\(title(item))\n\(item.url.path)\n\n구성을 폴더 이름이나 debug.dylib로 확인할 수 없습니다. Xcode에서 Debug 구성으로 빌드한 것이 맞을 때만 가져오세요.")
     }
 
     /// 대화상자가 닫힐 때 SwiftUI가 부르는 setter는 줄을 건드리지 않는다. 답은 버튼이 항목 id로 한다.

@@ -36,13 +36,15 @@ public struct ResourceProject: Codable, Sendable, Hashable, Identifiable {
 
 /// 구역 하나에 든 파일·링크. `project`가 nil이면 공통 구역이다.
 public struct ResourceArea: Sendable, Hashable, Identifiable {
+    /// 공통 구역을 가리키는 이름. 에이전트 입력(MCP `project: "공통"`)과 비교하는 값이라 번역하지 않는다.
     public static let commonTitle = "공통"
 
     public var project: ResourceProject?
     public var resources: [ResourceDescriptor]
 
     public var id: String { project.map { "p:" + $0.id } ?? "common" }
-    public var title: String { project?.name ?? Self.commonTitle }
+    /// 화면에 보일 구역 이름. 공통 구역은 기기 언어로 번역해 보인다.
+    public var title: String { project?.name ?? String(localized: "공통") }
 
     public init(project: ResourceProject?, resources: [ResourceDescriptor]) {
         self.project = project

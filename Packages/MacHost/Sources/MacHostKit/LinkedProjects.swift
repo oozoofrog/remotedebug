@@ -67,7 +67,7 @@ public final class LinkedProjectsModel {
         guard !projects.contains(where: { $0.folder.standardizedFileURL == folder.standardizedFileURL }) else { return }
         open(folder)
         guard !XcodeBuildLocator.containers(in: folder).isEmpty else {
-            lastError = "\(folder.lastPathComponent)에 Xcode 프로젝트(.xcodeproj)나 워크스페이스(.xcworkspace)가 없습니다. 프로젝트 파일이 있는 폴더를 고르세요."
+            lastError = String(localized: "\(folder.lastPathComponent)에 Xcode 프로젝트(.xcodeproj)나 워크스페이스(.xcworkspace)가 없습니다. 프로젝트 파일이 있는 폴더를 고르세요.")
             return
         }
         projects.append(Project(folder: folder))

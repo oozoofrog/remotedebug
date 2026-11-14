@@ -226,15 +226,15 @@ public final class HostModel {
     /// 페어링 코드를 열 수 있는지. iPhone이 이 Mac에 닿을 수 있을 때(Running, MagicDNS 주소, 리스너 열림,
     /// TLS면 인증서 준비)만 연다. 아니면 그 이유와 다음 행동.
     public var pairingAvailability: PairingAvailability {
-        guard isRunning else { return .unavailable("공유가 꺼져 있어 페어링할 수 없습니다. 공유를 시작하세요.") }
+        guard isRunning else { return .unavailable(String(localized: "공유가 꺼져 있어 페어링할 수 없습니다. 공유를 시작하세요.")) }
         if let conflict = deviceScopeConflict { return .unavailable(conflict.message) }
         guard let s = status else { return .unavailable(StatusGuidance.startingGuidance.message) }
         let g = guidance
         if g.kind != .ready { return .unavailable("\(g.title): \(g.message)") }
         if s.fqdn.isEmpty {
-            return .unavailable("이 Mac의 MagicDNS 주소를 아직 받지 못했습니다. Tailscale 관리 콘솔의 DNS 페이지에서 MagicDNS가 켜져 있는지 확인하세요.")
+            return .unavailable(String(localized: "이 Mac의 MagicDNS 주소를 아직 받지 못했습니다. Tailscale 관리 콘솔의 DNS 페이지에서 MagicDNS가 켜져 있는지 확인하세요."))
         }
-        if !s.listening { return .unavailable("이 Mac의 설치 주소가 아직 열리지 않았습니다. 잠시 뒤 다시 시도하세요.") }
+        if !s.listening { return .unavailable(String(localized: "이 Mac의 설치 주소가 아직 열리지 않았습니다. 잠시 뒤 다시 시도하세요.")) }
         return .ready
     }
 
@@ -340,23 +340,23 @@ public final class HostModel {
                 pendingBackupWarning = nil
             } else {
                 let names = unprotected.map(\.path).joined(separator: ", ")
-                pendingBackupWarning = "백업에서 빼지 못했습니다(\(names)). 공유와 가져오기는 그대로 쓸 수 있지만, 이 Mac의 tailnet 노드 키가 Time Machine 백업에 들어갈 수 있습니다. 권한을 확인한 뒤 앱을 다시 실행하세요."
+                pendingBackupWarning = String(localized: "백업에서 빼지 못했습니다(\(names)). 공유와 가져오기는 그대로 쓸 수 있지만, 이 Mac의 tailnet 노드 키가 Time Machine 백업에 들어갈 수 있습니다. 권한을 확인한 뒤 앱을 다시 실행하세요.")
             }
         } catch {
-            noteLibraryLoadFailure("저장 폴더를 준비하지 못했습니다: \(Self.message(for: error)) 게시한 빌드는 그대로 두었습니다. 폴더 권한을 확인한 뒤 공유를 시작하거나 빌드를 다시 가져오세요.")
+            noteLibraryLoadFailure(String(localized: "저장 폴더를 준비하지 못했습니다: \(Self.message(for: error)) 게시한 빌드는 그대로 두었습니다. 폴더 권한을 확인한 뒤 공유를 시작하거나 빌드를 다시 가져오세요."))
             return
         }
         do {
             try await fileLibrary.load()
         } catch {
-            lastError = "보낼 파일 목록(\(paths.resourcesFile.path))을 읽지 못했습니다: \(Self.message(for: error))"
+            lastError = String(localized: "보낼 파일 목록(\(paths.resourcesFile.path))을 읽지 못했습니다: \(Self.message(for: error))")
         }
         do {
             try await library.load()
             libraryLoaded = true
             libraryLoadFailure = nil
         } catch {
-            noteLibraryLoadFailure("저장된 빌드 목록(\(paths.buildsFile.path))을 읽지 못했습니다: \(Self.message(for: error)) 게시한 빌드는 그대로 두었습니다. 파일을 복구한 뒤 공유를 시작하거나 빌드를 다시 가져오세요.")
+            noteLibraryLoadFailure(String(localized: "저장된 빌드 목록(\(paths.buildsFile.path))을 읽지 못했습니다: \(Self.message(for: error)) 게시한 빌드는 그대로 두었습니다. 파일을 복구한 뒤 공유를 시작하거나 빌드를 다시 가져오세요."))
         }
     }
 
@@ -373,7 +373,7 @@ public final class HostModel {
             deviceControlURL = Self.normalizedControlURL(stored?.controlURL ?? "")
             devicesLoaded = true
         } catch {
-            lastError = "저장된 기기 목록(\(paths.devicesFile.path))을 읽지 못했습니다: \(Self.message(for: error)) 파일을 복구한 뒤 공유를 시작하세요."
+            lastError = String(localized: "저장된 기기 목록(\(paths.devicesFile.path))을 읽지 못했습니다: \(Self.message(for: error)) 파일을 복구한 뒤 공유를 시작하세요.")
         }
     }
 
@@ -447,7 +447,7 @@ public final class HostModel {
         do {
             try await core.start(config)
         } catch {
-            if isCurrent(generation) { lastError = "공유를 시작하지 못했습니다: \(Self.message(for: error))" }
+            if isCurrent(generation) { lastError = String(localized: "공유를 시작하지 못했습니다: \(Self.message(for: error))") }
             return
         }
         coreStarted = true
@@ -459,7 +459,7 @@ public final class HostModel {
         do {
             try await pushDevices()
         } catch {
-            if isCurrent(generation) { lastError = "기기 목록을 적용하지 못했습니다: \(Self.message(for: error))" }
+            if isCurrent(generation) { lastError = String(localized: "기기 목록을 적용하지 못했습니다: \(Self.message(for: error))") }
         }
         if let agentBoard { try? await core.setAgentBoard(agentBoard) }
         guard isCurrent(generation) else { return await rollBackStart() }
@@ -470,11 +470,11 @@ public final class HostModel {
         if report.notLoaded { lastError = BuildLibraryError.notLoaded.localizedDescription }
         guard isCurrent(generation), !report.interrupted else { return await rollBackStart() }
         if !report.failed.isEmpty {
-            lastError = "빌드 \(report.failed.count)개를 다시 게시하지 못했습니다(다음 시작 때 다시 시도합니다): \(report.failed[0].message)"
+            lastError = String(localized: "빌드 \(String(report.failed.count))개를 다시 게시하지 못했습니다(다음 시작 때 다시 시도합니다): \(report.failed[0].message)")
         }
         let failedFiles = await fileLibrary.activate()
         if !failedFiles.isEmpty {
-            lastError = "파일 \(failedFiles.count)개를 iPhone에 다시 보내지 못했습니다(다음 시작 때 다시 시도합니다): \(failedFiles.joined(separator: ", "))"
+            lastError = String(localized: "파일 \(String(failedFiles.count))개를 iPhone에 다시 보내지 못했습니다(다음 시작 때 다시 시도합니다): \(failedFiles.joined(separator: ", "))")
         }
         await refreshLibrary()
         await refreshStatus()
@@ -550,14 +550,14 @@ public final class HostModel {
             let s = try await core.status()
             if isRunning { setStatus(s) }
         } catch {
-            lastError = "공유 상태를 읽지 못했습니다: \(Self.message(for: error))"
+            lastError = String(localized: "공유 상태를 읽지 못했습니다: \(Self.message(for: error))")
         }
     }
 
     /// 로그인 페이지(`authURL`)를 기본 브라우저로 연다. https만 연다(루프백 테스트 제어 서버일 때만 http).
     public func openLoginPage() {
         guard let raw = status?.authURL, let url = Self.loginURL(raw, controlURL: controlURL) else {
-            lastError = "열 수 있는 로그인 주소가 아직 없습니다."
+            lastError = String(localized: "열 수 있는 로그인 주소가 아직 없습니다.")
             return
         }
         openURL(url)
@@ -667,7 +667,7 @@ public final class HostModel {
             appendActivity(.pairDecided(e), ActivityText.pairDecided(e, deviceName: name))
         case .deviceAdded(let d):
             guard storeApprovedDevice(d, approvedBy: coreControlURL) else { break }
-            appendActivity(.deviceAdded(d), "\(d.name) 기기를 허용 목록에 추가했습니다.")
+            appendActivity(.deviceAdded(d), String(localized: "\(d.name) 기기를 허용 목록에 추가했습니다."))
         case .deviceUpdated(let d):
             storeDeviceUpdate(d)
         case .denied(let e):
@@ -754,7 +754,7 @@ public final class HostModel {
     /// 페어링 코드를 연다(5분). 이미 열린 코드는 코어가 새 코드로 바꾼다.
     public func beginPairing() async {
         guard isRunning else {
-            lastError = "공유를 시작해야 페어링할 수 있습니다."
+            lastError = String(localized: "공유를 시작해야 페어링할 수 있습니다.")
             return
         }
         if case .unavailable(let reason) = pairingAvailability {
@@ -768,7 +768,7 @@ public final class HostModel {
             pairingState = .open(code)
             await createPairingKey(for: code)
         } catch {
-            notePairingFailure("페어링 코드를 만들지 못했습니다: \(Self.message(for: error))")
+            notePairingFailure(String(localized: "페어링 코드를 만들지 못했습니다: \(Self.message(for: error))"))
         }
     }
 
@@ -824,11 +824,11 @@ public final class HostModel {
             do {
                 let devices = try await tailscaleAPI.devices(token: access.token)
                 guard devices.contains(where: { $0.name == mine }) else {
-                    tokenCheck = TokenCheck(ok: false, message: "이 OAuth 클라이언트의 tailnet에 이 Mac(\(mine))이 없습니다. Mac이 로그인한 tailnet에서 만든 클라이언트를 넣으세요. 저장하지 않았습니다.")
+                    tokenCheck = TokenCheck(ok: false, message: String(localized: "이 OAuth 클라이언트의 tailnet에 이 Mac(\(mine))이 없습니다. Mac이 로그인한 tailnet에서 만든 클라이언트를 넣으세요. 저장하지 않았습니다."))
                     return
                 }
             } catch .forbidden {
-                note = " 기기 읽기 권한이 없어 이 Mac이 같은 tailnet인지는 확인하지 못했습니다."
+                note = String(localized: " 기기 읽기 권한이 없어 이 Mac이 같은 tailnet인지는 확인하지 못했습니다.")
             } catch {
                 tokenCheck = TokenCheck(ok: false, message: error.message)
                 return
@@ -837,13 +837,13 @@ public final class HostModel {
         do {
             try tailscaleClients.save(client)
         } catch {
-            tokenCheck = TokenCheck(ok: false, message: "OAuth 클라이언트를 키체인에 저장하지 못했습니다: \(Self.message(for: error))")
+            tokenCheck = TokenCheck(ok: false, message: String(localized: "OAuth 클라이언트를 키체인에 저장하지 못했습니다: \(Self.message(for: error))"))
             return
         }
         tailscaleAccess = access
         hasTailscaleClient = true
         tailscaleTags = tags
-        tokenCheck = TokenCheck(ok: true, message: "저장했습니다. 이제 페어링 QR에 1회용 Tailscale 키(\(tags.joined(separator: ", ")))가 들어가 iPhone은 로그인 없이 연결됩니다." + note)
+        tokenCheck = TokenCheck(ok: true, message: String(localized: "저장했습니다. 이제 페어링 QR에 1회용 Tailscale 키(\(tags.joined(separator: ", ")))가 들어가 iPhone은 로그인 없이 연결됩니다.") + note)
     }
 
     public func clearTailscaleClient() {
@@ -859,7 +859,7 @@ public final class HostModel {
     public func openPairingForAgent() async -> Result<ProjectsModel.PairingInfo, ProjectsModel.PairingFailure> {
         await beginPairing()
         guard let code = pairingCode else {
-            return .failure(.init(pairingError ?? lastError ?? "페어링 코드를 만들지 못했습니다."))
+            return .failure(.init(pairingError ?? lastError ?? String(localized: "페어링 코드를 만들지 못했습니다.")))
         }
         // 에이전트 응답은 대화 기록에 남으므로 Tailscale 키는 넣지 않는다.
         return .success(.init(code: code.displayCode, link: code.link(fqdn: status?.fqdn ?? "")?.absoluteString,
@@ -877,7 +877,7 @@ public final class HostModel {
     public func decideForAgent(_ requestId: String, allow: Bool) async -> String? {
         if allow { await approve(requestId) } else { await deny(requestId) }
         if let error = pairingError { return error }
-        if pendingPairRequests.contains(where: { $0.requestId == requestId }) { return "요청에 답하지 못했습니다." }
+        if pendingPairRequests.contains(where: { $0.requestId == requestId }) { return String(localized: "요청에 답하지 못했습니다.") }
         return nil
     }
 
@@ -909,13 +909,13 @@ public final class HostModel {
             return
         }
         guard let request = pairRequests.first(where: { $0.requestId == requestId }) else {
-            notePairingFailure("처리할 페어링 요청이 없습니다.")
+            notePairingFailure(String(localized: "처리할 페어링 요청이 없습니다."))
             return
         }
         guard request.expiresAt > now() else {
             pairRequests.removeAll { $0.requestId == requestId }
             pruneExpiredPairRequests()
-            notePairingFailure("페어링 요청이 만료됐습니다. iPhone에서 다시 요청하세요.")
+            notePairingFailure(String(localized: "페어링 요청이 만료됐습니다. iPhone에서 다시 요청하세요."))
             return
         }
         decidingRequestIDs.insert(requestId)
@@ -932,7 +932,7 @@ public final class HostModel {
             if allow, let device, !storeApprovedDevice(device, approvedBy: approvingControlURL) { kind = .notAdded }
             lastPairingOutcome = PairingOutcome(requestId: requestId, kind: kind)
         } catch {
-            notePairingFailure("페어링 요청을 처리하지 못했습니다: \(Self.message(for: error))")
+            notePairingFailure(String(localized: "페어링 요청을 처리하지 못했습니다: \(Self.message(for: error))"))
         }
     }
 
@@ -947,7 +947,7 @@ public final class HostModel {
     @discardableResult
     public func applyControlURL(_ raw: String, forgetOtherServerDevices: Bool) -> Bool {
         guard !isRunning, !isStarting else {
-            lastError = "공유를 중지해야 제어 서버를 바꿀 수 있습니다."
+            lastError = String(localized: "공유를 중지해야 제어 서버를 바꿀 수 있습니다.")
             return false
         }
         let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -990,7 +990,7 @@ public final class HostModel {
                 self.saveDevices()
             }
         } catch {
-            lastError = "기기를 허용 목록에서 빼지 못했습니다. 다시 시도하세요: \(Self.message(for: error))"
+            lastError = String(localized: "기기를 허용 목록에서 빼지 못했습니다. 다시 시도하세요: \(Self.message(for: error))")
         }
     }
 
@@ -1019,7 +1019,7 @@ public final class HostModel {
     private func storeApprovedDevice(_ device: DeviceEntry, approvedBy approving: String?) -> Bool {
         guard let approving, approving == Self.normalizedControlURL(controlURL),
               devices.isEmpty || approving == deviceControlURL else {
-            lastError = "제어 서버가 바뀌어 \(device.name) 기기를 허용 목록에 넣지 않았습니다. 지금 서버에서 다시 페어링하세요."
+            lastError = String(localized: "제어 서버가 바뀌어 \(device.name) 기기를 허용 목록에 넣지 않았습니다. 지금 서버에서 다시 페어링하세요.")
             return false
         }
         deviceControlURL = approving
@@ -1050,7 +1050,7 @@ public final class HostModel {
                 try await self.core.setDevices(self.activeDevices)
             }
         } catch {
-            lastError = "알림 등록을 지운 기기 목록을 적용하지 못했습니다: \(Self.message(for: error))"
+            lastError = String(localized: "알림 등록을 지운 기기 목록을 적용하지 못했습니다: \(Self.message(for: error))")
         }
     }
 
@@ -1068,7 +1068,8 @@ public final class HostModel {
         do {
             try await core.setDirect(on)
         } catch {
-            lastError = "직접 연결을 \(on ? "켜지" : "끄지") 못했습니다: \(Self.message(for: error))"
+            let reason = Self.message(for: error)
+            lastError = on ? String(localized: "직접 연결을 켜지 못했습니다: \(reason)") : String(localized: "직접 연결을 끄지 못했습니다: \(reason)")
         }
         await refreshStatus()
         syncAdvertisement()
@@ -1102,7 +1103,7 @@ public final class HostModel {
         do {
             try deviceStore.save(StoredDeviceList(controlURL: deviceControlURL, devices: devices))
         } catch {
-            lastError = "기기 목록을 저장하지 못했습니다: \(Self.message(for: error))"
+            lastError = String(localized: "기기 목록을 저장하지 못했습니다: \(Self.message(for: error))")
         }
     }
 
@@ -1131,7 +1132,7 @@ public final class HostModel {
         do {
             try await library.unpublish(id: id)
         } catch {
-            lastError = "게시를 취소하지 못했습니다: \(Self.message(for: error))"
+            lastError = String(localized: "게시를 취소하지 못했습니다: \(Self.message(for: error))")
         }
         await refreshLibrary()
     }
@@ -1173,7 +1174,7 @@ public final class HostModel {
     /// 파일 하나를 보낸다. 에이전트 명령도 이것을 쓴다.
     /// `project`가 nil이면 공통 구역이다.
     public func shareFile(_ url: URL, project: ResourceProject? = nil) async -> Result<ResourceDescriptor, ShareFileFailure> {
-        guard !isShutDown else { return .failure(ShareFileFailure("RemoteDebug가 종료 중입니다.")) }
+        guard !isShutDown else { return .failure(ShareFileFailure(String(localized: "RemoteDebug가 종료 중입니다."))) }
         await load()
         filesInProgress += 1
         defer { filesInProgress -= 1 }
@@ -1183,13 +1184,13 @@ public final class HostModel {
             return .success(descriptor)
         } catch {
             await refreshLibrary()
-            return .failure(ShareFileFailure("\(url.lastPathComponent)을(를) 보내지 못했습니다: \(Self.message(for: error))"))
+            return .failure(ShareFileFailure(String(localized: "\(url.lastPathComponent)을(를) 보내지 못했습니다: \(Self.message(for: error))")))
         }
     }
 
     /// 링크를 보낸다. 에이전트 명령도 이것을 쓴다.
     public func shareLink(_ url: URL, title: String? = nil, project: ResourceProject? = nil) async -> Result<ResourceDescriptor, ShareFileFailure> {
-        guard !isShutDown else { return .failure(ShareFileFailure("RemoteDebug가 종료 중입니다.")) }
+        guard !isShutDown else { return .failure(ShareFileFailure(String(localized: "RemoteDebug가 종료 중입니다."))) }
         await load()
         do {
             let descriptor = try await fileLibrary.addLink(url, title: title, project: project)
@@ -1197,7 +1198,7 @@ public final class HostModel {
             return .success(descriptor)
         } catch {
             await refreshLibrary()
-            return .failure(ShareFileFailure("링크를 보내지 못했습니다: \(Self.message(for: error))"))
+            return .failure(ShareFileFailure(String(localized: "링크를 보내지 못했습니다: \(Self.message(for: error))")))
         }
     }
 
@@ -1206,7 +1207,7 @@ public final class HostModel {
         do {
             try await fileLibrary.move(id: id, to: project)
         } catch {
-            lastError = "구역을 옮기지 못했습니다: \(Self.message(for: error))"
+            lastError = String(localized: "구역을 옮기지 못했습니다: \(Self.message(for: error))")
         }
         await refreshLibrary()
     }
@@ -1215,7 +1216,7 @@ public final class HostModel {
         do {
             try await fileLibrary.remove(id: id)
         } catch {
-            lastError = "파일을 지우지 못했습니다: \(Self.message(for: error))"
+            lastError = String(localized: "파일을 지우지 못했습니다: \(Self.message(for: error))")
         }
         await refreshLibrary()
     }
@@ -1228,7 +1229,7 @@ public final class HostModel {
         do {
             try bookmarks.save(url)
         } catch {
-            lastError = "폴더 접근 권한을 저장하지 못했습니다. 다음 실행 때 폴더를 다시 골라야 합니다."
+            lastError = String(localized: "폴더 접근 권한을 저장하지 못했습니다. 다음 실행 때 폴더를 다시 골라야 합니다.")
         }
         await beginWatching(url)
     }
@@ -1236,7 +1237,7 @@ public final class HostModel {
     /// 감시 폴더를 지금 다시 훑는다. 폴더를 읽을 수 없으면 `watchProblem`에 남는다.
     public func rescan() async {
         guard let watcher else {
-            lastError = "감시할 폴더를 먼저 고르세요."
+            lastError = String(localized: "감시할 폴더를 먼저 고르세요.")
             return
         }
         await watcher.rescan()
@@ -1329,10 +1330,10 @@ public struct DeviceScopeConflict: Sendable, Hashable {
     public var savedControlURL: String
     public var deviceCount: Int
 
-    public var savedServerName: String { savedControlURL.isEmpty ? "Tailscale 기본 제어 서버" : savedControlURL }
+    public var savedServerName: String { savedControlURL.isEmpty ? String(localized: "Tailscale 기본 제어 서버") : savedControlURL }
 
     public var message: String {
-        "저장된 기기 \(deviceCount)대는 다른 제어 서버(\(savedServerName))에서 페어링해 지금 서버에서는 허용하지 않습니다. 기기 목록을 지우고 새로 페어링하거나, 제어 서버를 원래대로 되돌리세요."
+        String(localized: "저장된 기기 \(String(deviceCount))대는 다른 제어 서버(\(savedServerName))에서 페어링해 지금 서버에서는 허용하지 않습니다. 기기 목록을 지우고 새로 페어링하거나, 제어 서버를 원래대로 되돌리세요.")
     }
 }
 
@@ -1362,9 +1363,9 @@ public struct WatchProblem: Sendable, Hashable {
     public var path: String
     public var message: String
 
-    static let missingMessage = "감시 폴더를 찾을 수 없습니다. 폴더를 지웠거나 옮겼다면 폴더를 다시 고르세요."
-    static let unreadableMessage = "감시 폴더를 읽을 수 없습니다. 폴더를 다시 골라 접근 권한을 주세요."
-    static let unresolvableMessage = "저장한 감시 폴더를 열 수 없습니다. 폴더를 다시 고르세요."
+    static let missingMessage = String(localized: "감시 폴더를 찾을 수 없습니다. 폴더를 지웠거나 옮겼다면 폴더를 다시 고르세요.")
+    static let unreadableMessage = String(localized: "감시 폴더를 읽을 수 없습니다. 폴더를 다시 골라 접근 권한을 주세요.")
+    static let unresolvableMessage = String(localized: "저장한 감시 폴더를 열 수 없습니다. 폴더를 다시 고르세요.")
 }
 
 public struct ShareFileFailure: Error, Sendable, Hashable {
@@ -1387,7 +1388,7 @@ extension HostModel {
         let keys = feedbackKeys
         // 결과: (푼 내용, 실패 안내). 둘 중 하나만 있다.
         let (opened, failure) = await Task.detached { () -> (Data?, String?) in
-            guard let sealed = try? Data(contentsOf: url) else { return (nil, "\(url.lastPathComponent)을 읽지 못했습니다.") }
+            guard let sealed = try? Data(contentsOf: url) else { return (nil, String(localized: "\(url.lastPathComponent)을 읽지 못했습니다.")) }
             do throws(FeedbackEnvelope.Failure) {
                 return (try FeedbackEnvelope.open(sealed, keys: keys.allKeys()), nil)
             } catch {
@@ -1409,7 +1410,7 @@ extension HostModel {
         }
         let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? Date()
         let name = url.deletingPathExtension().lastPathComponent + ".json"
-        crashLogs.receive(DeviceCrashEvent(deviceId: "", deviceName: "메일 첨부", nodeName: "",
+        crashLogs.receive(DeviceCrashEvent(deviceId: "", deviceName: String(localized: "메일 첨부"), nodeName: "",
                                            report: CrashReport(kind: .feedback, name: name, bundleId: "", appVersion: "", crashedAt: modified, text: text, image: image)))
         return nil
     }

@@ -237,7 +237,7 @@ private struct FileListRow: View {
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("\(item.size.formatted(.byteCount(style: .file))) · \(item.type?.localizedDescription ?? "파일")")
+                    Text("\(item.size.formatted(.byteCount(style: .file))) · \(item.type?.localizedDescription ?? String(localized: "파일"))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

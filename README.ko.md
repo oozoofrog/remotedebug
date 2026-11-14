@@ -39,6 +39,7 @@ MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 
 - 요구 사항: Apple silicon Mac, Xcode, Go, XcodeGen. 앱을 빌드하기 전에 `scripts/build-core.sh`로 Go 코어를 `Packages/RDCore/RDCore.xcframework`로 만든다.
 - 시험: `swift test --package-path Packages/PhoneClient`, `swift test --package-path Packages/RemoteDebugKit`, `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost`, `scripts/go.sh test -race -count=1 ./...`. 나머지는 [설정 문서](docs/setup.md#명령줄-빌드와-시험)에 있다.
 - `README.md`, `README.ko.md`, `docs/`를 고친 뒤에는 `scripts/check-docs.sh`가 통과해야 한다.
+- 화면 문구를 바꾸면 `scripts/sync-strings.sh`로 `Localization/Localizable.xcstrings`의 키를 맞추고 `python3 -I scripts/check_strings.py`로 번역을 확인한다([현지화](docs/architecture.md#현지화)).
 - 문서가 서로 다르면 `docs/tunnel.md`, `docs/protocol-addenda.md`, `docs/protocol.md` 순서로 따른다(아래 자세히).
 - iPhone 번들 ID는 `Config/Signing.xcconfig`의 `RD_BUNDLE_PREFIX`로 시작한다. 터널 확장 ID는 늘 앱 ID에 `.Tunnel`을 붙인 값이다.
 

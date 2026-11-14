@@ -23,9 +23,9 @@ public struct CrashReport: Codable, Sendable, Hashable {
         /// 목록에 보일 종류 이름.
         public var label: String {
             switch self {
-            case .ips: "크래시"
-            case .metrickit: "크래시(MetricKit)"
-            case .feedback: "피드백"
+            case .ips: String(localized: "크래시")
+            case .metrickit: String(localized: "크래시(MetricKit)")
+            case .feedback: String(localized: "피드백")
             }
         }
     }

@@ -74,7 +74,7 @@ struct LinkDetailView: View {
                     Section("쿼리 \(items.count)개") {
                         ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                             LabeledContent(item.name) {
-                                Text(item.value ?? "(값 없음)")
+                                Text(item.value ?? String(localized: "(값 없음)"))
                                     .font(.callout.monospaced())
                                     .textSelection(.enabled)
                             }
@@ -86,7 +86,7 @@ struct LinkDetailView: View {
             Section("정보") {
                 LabeledContent("Mac에서 보낸 시각", value: resource.publishedAt.formatted(date: .abbreviated, time: .shortened))
                 if let project = resource.project { LabeledContent("구역", value: project.name) }
-                LabeledContent("주소 길이", value: "\((resource.link ?? "").count)자")
+                LabeledContent("주소 길이", value: String(localized: "\(String((resource.link ?? "").count))자"))
                 LabeledContent("링크 id") { Text(resource.id).font(.caption.monospaced()).textSelection(.enabled) }
             }
         }
@@ -96,7 +96,7 @@ struct LinkDetailView: View {
     }
 
     @ViewBuilder
-    private func part(_ title: String, _ value: String?) -> some View {
+    private func part(_ title: LocalizedStringKey, _ value: String?) -> some View {
         if let value, !value.isEmpty {
             LabeledContent(title) {
                 Text(value)

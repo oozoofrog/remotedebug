@@ -236,10 +236,10 @@ struct OverviewHero: View {
 
     private var stats: some View {
         HStack(spacing: 10) {
-            Stat(value: model.builds.count, label: "빌드", symbol: "shippingbox.fill")
-            Stat(value: model.devices.count, label: "기기", symbol: "iphone")
+            Stat(value: model.builds.count, label: String(localized: "빌드"), symbol: "shippingbox.fill")
+            Stat(value: model.devices.count, label: String(localized: "기기"), symbol: "iphone")
             if let projects, !HostEdition.isSandboxed {
-                Stat(value: projects.projects.count, label: "프로젝트", symbol: "hammer.fill")
+                Stat(value: projects.projects.count, label: String(localized: "프로젝트"), symbol: "hammer.fill")
             }
         }
     }

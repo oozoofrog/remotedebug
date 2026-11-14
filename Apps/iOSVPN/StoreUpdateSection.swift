@@ -94,7 +94,7 @@ struct StoreUpdateSection: View {
                 .font(.subheadline)
             }
         } else {
-            LabeledContent("설치된 버전", value: services.storeInstalled.map { "\($0.version) (\($0.buildNumber))" } ?? "알 수 없음")
+            LabeledContent("설치된 버전", value: services.storeInstalled.map { "\($0.version) (\($0.buildNumber))" } ?? String(localized: "알 수 없음"))
             Text("Mac에 게시된 RemoteDebug 빌드가 없습니다. Mac에서 RemoteDebugPhone 스킴을 게시한 뒤 새로고침하세요.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)

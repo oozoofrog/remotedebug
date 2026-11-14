@@ -108,7 +108,7 @@ public final class ProjectsModel {
             self.decide = decide
         }
 
-        public static let unavailable = PairingRequests(list: { [] }, decide: { _, _ in "페어링 요청에 답할 수 없습니다." })
+        public static let unavailable = PairingRequests(list: { [] }, decide: { _, _ in String(localized: "페어링 요청에 답할 수 없습니다.") })
     }
 
     /// 에이전트가 iPhone에 파일을 보내는 통로.
@@ -123,14 +123,14 @@ public final class ProjectsModel {
         public init(list: @escaping @MainActor () -> [ResourceDescriptor],
                     share: @escaping @MainActor (URL, ResourceProject?) async -> Result<ResourceDescriptor, ShareFileFailure>,
                     remove: @escaping @MainActor (String) async -> Void,
-                    shareLink: @escaping @MainActor (URL, String?, ResourceProject?) async -> Result<ResourceDescriptor, ShareFileFailure> = { _, _, _ in .failure(ShareFileFailure("링크를 보낼 수 없습니다.")) }) {
+                    shareLink: @escaping @MainActor (URL, String?, ResourceProject?) async -> Result<ResourceDescriptor, ShareFileFailure> = { _, _, _ in .failure(ShareFileFailure(String(localized: "링크를 보낼 수 없습니다."))) }) {
             self.list = list
             self.share = share
             self.remove = remove
             self.shareLink = shareLink
         }
 
-        public static let unavailable = FileSharing(list: { [] }, share: { _, _ in .failure(ShareFileFailure("파일을 보낼 수 없습니다.")) }, remove: { _ in })
+        public static let unavailable = FileSharing(list: { [] }, share: { _, _ in .failure(ShareFileFailure(String(localized: "파일을 보낼 수 없습니다."))) }, remove: { _ in })
     }
 
     public typealias Importer = @MainActor (URL) async -> ImportOutcome?
@@ -181,7 +181,7 @@ public final class ProjectsModel {
         builder: any ProjectBuilding = XcodeBuildTool(),
         scanner: DerivedDataScanner = .fromXcodeSettings(),
         hostStatus: @escaping @MainActor () -> HostStatus = { HostStatus(sharing: false, installPage: nil) },
-        openPairing: @escaping PairingOpener = { .failure(PairingFailure("페어링을 열 수 없습니다.")) },
+        openPairing: @escaping PairingOpener = { .failure(PairingFailure(String(localized: "페어링을 열 수 없습니다."))) },
         pairingRequests: PairingRequests = .unavailable,
         fileSharing: FileSharing = .unavailable,
         now: @escaping @Sendable () -> Date = { Date() },
@@ -209,7 +209,7 @@ public final class ProjectsModel {
         do {
             stored = try file.load() ?? Stored()
         } catch {
-            lastError = "프로젝트 목록을 읽지 못했습니다: \(HostErrorText.message(for: error))"
+            lastError = String(localized: "프로젝트 목록을 읽지 못했습니다: \(HostErrorText.message(for: error))")
         }
         projects = stored.projects
     }
@@ -219,7 +219,7 @@ public final class ProjectsModel {
         do {
             try file.save(stored)
         } catch {
-            lastError = "프로젝트 목록을 저장하지 못했습니다: \(HostErrorText.message(for: error))"
+            lastError = String(localized: "프로젝트 목록을 저장하지 못했습니다: \(HostErrorText.message(for: error))")
         }
     }
 
@@ -230,7 +230,7 @@ public final class ProjectsModel {
     public func connect(_ url: URL) async -> ConnectedProject? {
         load()
         guard let container = await Self.offMain({ ProjectLocator.container(for: url) }) else {
-            lastError = "\(url.lastPathComponent)에서 Xcode 프로젝트(.xcodeproj, .xcworkspace)를 찾지 못했습니다."
+            lastError = String(localized: "\(url.lastPathComponent)에서 Xcode 프로젝트(.xcodeproj, .xcworkspace)를 찾지 못했습니다.")
             return nil
         }
         if let existing = projects.first(where: { $0.container == container.path }) { return existing }
@@ -291,7 +291,7 @@ public final class ProjectsModel {
     @discardableResult
     public func build(_ project: ConnectedProject, scheme: String) async -> Report {
         if phases[project.id] != nil {
-            return Report(ok: false, scheme: scheme, message: "이 프로젝트는 이미 작업 중입니다.")
+            return Report(ok: false, scheme: scheme, message: String(localized: "이 프로젝트는 이미 작업 중입니다."))
         }
         if let index = projects.firstIndex(where: { $0.id == project.id }) {
             projects[index].scheme = scheme
@@ -355,7 +355,7 @@ public final class ProjectsModel {
             case .rejected(let rejected):
                 rejections.append("\(app.lastPathComponent): " + rejected.reasons.map(RejectionText.sentence(for:)).joined(separator: " "))
             case .needsConfirmation:
-                rejections.append("\(app.lastPathComponent): Debug 구성인지 확인할 수 없습니다.")
+                rejections.append(String(localized: "\(app.lastPathComponent): Debug 구성인지 확인할 수 없습니다."))
             }
         }
         if !report.published.isEmpty || !rejections.isEmpty { save() }
@@ -371,9 +371,9 @@ public final class ProjectsModel {
             report.message = rejections.joined(separator: "\n")
         } else if !sawApp {
             report.ok = false
-            report.message = "빌드는 끝났지만 iPhone 앱을 찾지 못했습니다. iPhone 앱을 만드는 스킴인지 확인하세요."
+            report.message = String(localized: "빌드는 끝났지만 iPhone 앱을 찾지 못했습니다. iPhone 앱을 만드는 스킴인지 확인하세요.")
         } else if report.published.isEmpty {
-            report.message = "빌드 결과가 전과 같습니다. 이미 가져온 빌드입니다."
+            report.message = String(localized: "빌드 결과가 전과 같습니다. 이미 가져온 빌드입니다.")
         }
         return report
     }
@@ -524,7 +524,7 @@ public final class ProjectsModel {
             try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: agentScript.path)
             try Data("\(ProcessInfo.processInfo.processIdentifier)\n".utf8).write(to: agentDir.appendingPathComponent("pid"), options: [.atomic])
         } catch {
-            lastError = "에이전트 명령을 준비하지 못했습니다: \(HostErrorText.message(for: error))"
+            lastError = String(localized: "에이전트 명령을 준비하지 못했습니다: \(HostErrorText.message(for: error))")
         }
     }
 
@@ -706,7 +706,7 @@ public final class ProjectsModel {
                 written.append(agents)
             }
         } catch {
-            lastError = "에이전트 안내를 쓰지 못했습니다: \(HostErrorText.message(for: error))"
+            lastError = String(localized: "에이전트 안내를 쓰지 못했습니다: \(HostErrorText.message(for: error))")
         }
         return written
     }

@@ -42,7 +42,9 @@ struct PushPlannerTests {
         var batch = PushBatch()
         batch.add(changes)
         let list = PushPlanner.notifications(for: batch, hideNames: false)
-        #expect(list == [APNsNotification(title: "새 빌드", body: "데모 2.1 (7)", kind: .build, id: "b_2", category: .build)])
+        #expect(list == [APNsNotification(title: "새 빌드", body: "데모 2.1 (7)", kind: .build, id: "b_2", category: .build, titleLocKey: "새 빌드")])
+        #expect(list.first?.bodyLocKey == nil)
+        #expect(list.first?.bodyLocArgs == [])
     }
 
     @Test func consecutiveBuildsOfOneAppKeepTheLatest() {
@@ -61,17 +63,21 @@ struct PushPlannerTests {
         let changes = tracker.observe(builds: [], resources: [pushFile("r_1", name: "a.txt"), pushFile("r_2", name: "b.txt"), pushFile("r_3", name: "c.txt")])
         var batch = PushBatch()
         batch.add(changes)
-        #expect(PushPlanner.notifications(for: batch, hideNames: false) == [APNsNotification(title: "새 파일", body: "파일 3개", kind: .resource)])
+        #expect(PushPlanner.notifications(for: batch, hideNames: false) == [APNsNotification(title: "새 파일", body: "파일 3개", kind: .resource,
+                                                                                             titleLocKey: "새 파일", bodyLocKey: "파일 %@개", bodyLocArgs: ["3"])])
     }
 
     @Test func fileAndLinkWording() {
         let file = pushFile("r_1", name: "a.txt")
         let link = pushFile("r_2", name: "문서", link: "https://example.com/doc")
-        #expect(PushPlanner.resourceNotification([file], hideNames: false) == APNsNotification(title: "새 파일", body: "a.txt", kind: .resource, id: "r_1", category: .file))
-        #expect(PushPlanner.resourceNotification([link], hideNames: false) == APNsNotification(title: "새 링크", body: "문서", kind: .resource, id: "r_2", category: .link))
+        #expect(PushPlanner.resourceNotification([file], hideNames: false) == APNsNotification(title: "새 파일", body: "a.txt", kind: .resource, id: "r_1", category: .file,
+                                                                                                        titleLocKey: "새 파일"))
+        #expect(PushPlanner.resourceNotification([link], hideNames: false) == APNsNotification(title: "새 링크", body: "문서", kind: .resource, id: "r_2", category: .link,
+                                                                                                        titleLocKey: "새 링크"))
         #expect(PushPlanner.resourceNotification([link, pushFile("r_3", name: "b", link: "https://example.com/b")], hideNames: false)
-            == APNsNotification(title: "새 링크", body: "링크 2개", kind: .resource))
-        #expect(PushPlanner.resourceNotification([file, link], hideNames: false) == APNsNotification(title: "새 파일", body: "파일 2개", kind: .resource))
+            == APNsNotification(title: "새 링크", body: "링크 2개", kind: .resource, titleLocKey: "새 링크", bodyLocKey: "링크 %@개", bodyLocArgs: ["2"]))
+        #expect(PushPlanner.resourceNotification([file, link], hideNames: false) == APNsNotification(title: "새 파일", body: "파일 2개", kind: .resource,
+                                                                                                titleLocKey: "새 파일", bodyLocKey: "파일 %@개", bodyLocArgs: ["2"]))
         #expect(PushPlanner.resourceNotification([], hideNames: false) == nil)
     }
 
@@ -80,9 +86,20 @@ struct PushPlannerTests {
         batch.add(.init(builds: [pushBuild("b_1"), pushBuild("b_2", bundleId: "com.example.other")], resources: [pushFile("r_1", name: "secret.txt")]))
         let list = PushPlanner.notifications(for: batch, hideNames: true)
         #expect(list == [
-            APNsNotification(title: "RemoteDebug", body: "새 빌드가 있습니다", kind: .build),
-            APNsNotification(title: "RemoteDebug", body: "새 파일이 있습니다", kind: .resource),
+            APNsNotification(title: "RemoteDebug", body: "새 빌드가 있습니다", kind: .build, bodyLocKey: "새 빌드가 있습니다"),
+            APNsNotification(title: "RemoteDebug", body: "새 파일이 있습니다", kind: .resource, bodyLocKey: "새 파일이 있습니다"),
         ])
+        for n in list {
+            #expect(n.titleLocKey == nil)
+            #expect(n.bodyLocArgs == [])
+            let shown = [n.title, n.body] + n.bodyLocArgs
+            for secret in ["Sample", "1.0", "secret.txt", "com.example"] {
+                #expect(!shown.contains { $0.contains(secret) })
+            }
+        }
+        // 여러 파일이어도 이름을 숨기면 개수도 이름도 넣지 않는다.
+        let many = PushPlanner.resourceNotification([pushFile("r_1", name: "secret.txt"), pushFile("r_2", name: "b.txt")], hideNames: true)
+        #expect(many == APNsNotification(title: "RemoteDebug", body: "새 파일이 있습니다", kind: .resource, bodyLocKey: "새 파일이 있습니다"))
     }
 
     @Test func resentSameFileIsNotNewButChangedContentIs() {
@@ -96,6 +113,7 @@ struct PushPlannerTests {
     }
 
     @Test func testNotificationWording() {
-        #expect(PushPlanner.test == APNsNotification(title: "RemoteDebug", body: "시험 알림입니다", kind: .test))
+        #expect(PushPlanner.test == APNsNotification(title: "RemoteDebug", body: "시험 알림입니다", kind: .test, bodyLocKey: "시험 알림입니다"))
+        #expect(PushPlanner.test.titleLocKey == nil)
     }
 }
