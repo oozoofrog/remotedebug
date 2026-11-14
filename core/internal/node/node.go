@@ -217,6 +217,7 @@ type Node struct {
 	events    *events.Queue
 	host      *host.Host // nil in proxy mode
 	logger    *log.Logger
+	lockDiag  sync.Once // tailnet lock diagnostic, once per start
 	logOut    io.Closer
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -488,6 +489,20 @@ func (n *Node) tsLogf(format string, args ...any) {
 }
 
 // logf writes our own diagnostic messages to logPath and the event queue.
+// logLockStatus writes the tailnet lock state once per start, as booleans and counts only
+// (no keys, hashes or names). It is a diagnostic for comparing with other tailnet clients.
+func (n *Node) logLockStatus(lc *local.Client) {
+	ctx, cancel := context.WithTimeout(n.ctx, 3*time.Second)
+	defer cancel()
+	ls, err := lc.NetworkLockStatus(ctx)
+	if err != nil {
+		n.logf("info", "tailnet lock: status unavailable: %v", err)
+		return
+	}
+	n.logf("info", "tailnet lock: enabled=%t headEmpty=%t nodeKeySigned=%t trustedKeys=%d filteredPeers=%d",
+		ls.Enabled, ls.Head == nil, ls.NodeKeySigned, len(ls.TrustedKeys), len(ls.FilteredPeers))
+}
+
 func (n *Node) logf(level, format string, args ...any) {
 	n.logger.Printf(level+": "+format, args...)
 	n.events.Log(level, format, args...)
@@ -653,6 +668,9 @@ func (n *Node) refresh() {
 			return
 		}
 		paths = pathsToDevices(st, ids)
+		if st.BackendState == "Running" {
+			n.lockDiag.Do(func() { n.logLockStatus(lc) })
+		}
 	}
 	n.mu.Lock()
 	defer n.mu.Unlock()
