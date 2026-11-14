@@ -205,6 +205,24 @@ RD="$HOME/Library/Application Support/RemoteDebug/agent/rd"
 
 ## 첫 실행: iPhone
 
+### 터미널에서 iPhone 앱 설치
+
+`scripts/install-phone.sh`는 iPhone 앱을 자기 개발자 계정으로 빌드해 연결한 iPhone에 설치한다. Xcode와 XcodeGen만 있으면 된다. 코어(`RDCore.xcframework`)가 없으면 최신 릴리스에서 내려받으므로 Go는 필요 없다.
+
+```bash
+git clone https://github.com/oozoofrog/remotedebug.git
+remotedebug/scripts/install-phone.sh
+```
+
+- 서명 팀은 `Config/Signing.local.xcconfig`, 없으면 키체인의 Apple Development 인증서에서 찾는다. 팀이나 iPhone이 여러 개면 목록을 보여 주고 멈춘다. `--team <팀 ID>`, `--device <UDID>`로 고른다.
+- 저장소 설정과 다른 팀이면 번들 ID 앞부분을 `dev.<팀 ID 소문자>`로 쓴다. `--prefix`로 바꾼다.
+- `Config/Signing.local.xcconfig`가 없으면 고른 값으로 만든다.
+- 빌드 산출물은 `RD_BUILD_ROOT`(기본 `~/RemoteDebugBuild`)의 `phone-install`에 둔다.
+
+확인한 것: 새로 복제한 저장소에서 팀·기기를 인자로 주고 iPhone 14 Pro(iOS 27.2)에 설치. 다른 계정, 처음 등록하는 기기, 릴리스 주소에서 코어 내려받기는 확인하지 않음.
+
+App Sandbox 안에서 도는 Mac 앱(Mac App Store판)은 `xcodebuild`를 실행하지 못한다. 그 앱의 **iPhone 앱 설치…**는 이 명령을 안내하고, **프로젝트** 화면은 나오지 않는다.
+
 ### Mac 앱으로 iPhone 앱 설치
 
 Xcode에서 직접 실행하지 않아도 Mac 앱이 iPhone 앱을 빌드해 설치한다. **기기** 화면 도구 막대나 **시작하기** 목록의 **iPhone 앱 설치…**를 누른다. 실기기로는 확인하지 않음.

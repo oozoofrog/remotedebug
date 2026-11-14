@@ -77,7 +77,7 @@ public struct RootView: View {
 
     public var body: some View {
         NavigationSplitView {
-            List(SidebarItem.allCases.filter { $0 != .agent || AgentFeature.isEnabled }, selection: $selection) { item in
+            List(SidebarItem.allCases.filter { ($0 != .agent || AgentFeature.isEnabled) && ($0 != .projects || !HostEdition.isSandboxed) }, selection: $selection) { item in
                 Label(item.title, systemImage: item.symbol)
                     .badge(badge(for: item))
                     .tag(item)
@@ -135,7 +135,9 @@ public struct RootView: View {
             PairingSheet()
         }
         .sheet(isPresented: $showingPhoneInstall) {
-            if let phoneInstaller {
+            if HostEdition.isSandboxed {
+                PhoneAppGuideSheet()
+            } else if let phoneInstaller {
                 PhoneAppInstallSheet().environment(phoneInstaller)
             }
         }
@@ -151,10 +153,10 @@ public struct RootView: View {
         .environment(importQueue)
         .environment(authKey)
         .environment(\.showPairing, PairingPresenter { showingPairing = true })
-        .environment(\.showPhoneInstall, phoneInstaller.map { _ in PhoneAppInstallPresenter { showingPhoneInstall = true } })
+        .environment(\.showPhoneInstall, HostEdition.isSandboxed || phoneInstaller != nil ? PhoneAppInstallPresenter { showingPhoneInstall = true } : nil)
         .environment(\.showNetwork, NetworkPresenter { selection = .network })
         .environment(\.connectProjects, ProjectConnector { urls in
-            guard let projects else { return }
+            guard let projects, !HostEdition.isSandboxed else { return }
             selection = .projects
             Task { for url in urls { await projects.connectAndBuild(url) } }
         })

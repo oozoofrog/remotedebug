@@ -4,7 +4,7 @@
 #           Config/Signing.local.xcconfig의 DEVELOPMENT_TEAM.
 # 사용: scripts/release-mac.sh            서명 → 공증 요청 → 공증된 앱 받기 → zip
 #       scripts/release-mac.sh --no-notarize   서명까지만(공증 없이 확인용)
-# 결과: `eyebuild dir mac-devid`/RemoteDebug-<버전>-<빌드>.zip
+# 결과: `eyebuild dir mac-devid`/RemoteDebug-<버전>-<빌드>.zip, RDCore.xcframework.zip
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NOTARIZE=1
@@ -64,3 +64,9 @@ ZIP="$OUT/RemoteDebug-$VERSION-$BUILD.zip"
 rm -f "$ZIP"
 ditto -c -k --keepParent "$APP" "$ZIP"
 echo "$ZIP"
+
+# scripts/install-phone.sh가 내려받는 코어. 릴리스에 RDCore.xcframework.zip이라는 이름으로 함께 올린다.
+rm -rf "$OUT/RDCore.xcframework" "$OUT/RDCore.xcframework.zip"
+cp -R "$(cd "$ROOT/Packages/RDCore/RDCore.xcframework" && pwd -P)" "$OUT/RDCore.xcframework"
+(cd "$OUT" && ditto -c -k --keepParent RDCore.xcframework RDCore.xcframework.zip && rm -rf RDCore.xcframework)
+echo "$OUT/RDCore.xcframework.zip"
