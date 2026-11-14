@@ -56,7 +56,7 @@ public protocol FeedbackKeyStoring: Sendable {
 public struct KeychainFeedbackKeyStore: FeedbackKeyStoring {
     let service: String
 
-    public init(service: String = "RemoteDebug feedback diagnostics") {
+    public init(service: String = HostEdition.keychainService("RemoteDebug feedback diagnostics")) {
         self.service = service
     }
 

@@ -180,7 +180,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.launch = launch
         super.init()
         if !options.isTesting, case .ready(let model) = launch, let paths {
-            let updatePage = UpdatePageModel(root: paths.root, server: RDCoreUpdatePage())
+            // 샌드박스판은 공식 Tailscale의 실행 파일을 실행하지 않는다(업데이트 페이지 없음).
+            let updatePage: UpdatePageModel? = HostEdition.isSandboxed ? nil : UpdatePageModel(root: paths.root, server: RDCoreUpdatePage())
             self.updatePage = updatePage
             let source = (Bundle.main.object(forInfoDictionaryKey: "RDSourceRoot") as? String).flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
             phoneInstaller = PhoneAppInstaller(root: paths.root, sourceRoot: source)

@@ -48,7 +48,7 @@ public struct KeychainAPNsKeyStore: APNsKeyStoring {
     let service: String
     let account: String
 
-    public init(service: String = "RemoteDebug APNs key", account: String = "p8") {
+    public init(service: String = HostEdition.keychainService("RemoteDebug APNs key"), account: String = "p8") {
         self.service = service
         self.account = account
     }

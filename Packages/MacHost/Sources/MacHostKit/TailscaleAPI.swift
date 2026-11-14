@@ -187,7 +187,7 @@ public struct KeychainTailscaleClientStore: TailscaleClientStoring {
     let service: String
     let account = "tailscale-oauth-client"
 
-    public init(service: String = "com.oozoofrog.RemoteDebug.tailscale") {
+    public init(service: String = HostEdition.keychainService("com.oozoofrog.RemoteDebug.tailscale")) {
         self.service = service
     }
 

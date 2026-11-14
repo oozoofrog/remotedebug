@@ -4,6 +4,11 @@ import Foundation
 /// 프로젝트 빌드와 iPhone 앱 빌드·설치를 화면에서 뺀다.
 public enum HostEdition {
     public static let isSandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+
+    /// 키체인 항목의 서비스 이름. 샌드박스판은 따로 써서 공개판이 저장한 키를 읽지 않는다.
+    public static func keychainService(_ base: String) -> String {
+        isSandboxed ? base + " (App Store)" : base
+    }
 }
 
 /// 샌드박스판에서 iPhone 앱을 설치하는 방법: 사용자가 터미널에서 저장소의 스크립트를 실행한다.

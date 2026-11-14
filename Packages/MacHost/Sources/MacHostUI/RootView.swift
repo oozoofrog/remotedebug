@@ -157,7 +157,19 @@ public struct RootView: View {
         .environment(\.showPhoneInstall, HostEdition.isSandboxed || phoneInstaller != nil ? PhoneAppInstallPresenter { showingPhoneInstall = true } : nil)
         .environment(\.showNetwork, NetworkPresenter { selection = .network })
         .environment(\.connectProjects, ProjectConnector { urls in
-            guard let projects, !HostEdition.isSandboxed else { return }
+            if HostEdition.isSandboxed {
+                // 샌드박스판은 빌드하지 않고 등록만 한다. 프로젝트 파일을 놓았으면 그 폴더를 등록한다.
+                guard let linkedProjects else { return }
+                selection = .projects
+                Task {
+                    for url in urls {
+                        let isContainer = ["xcodeproj", "xcworkspace"].contains(url.pathExtension)
+                        await linkedProjects.add(isContainer ? url.deletingLastPathComponent() : url)
+                    }
+                }
+                return
+            }
+            guard let projects else { return }
             selection = .projects
             Task { for url in urls { await projects.connectAndBuild(url) } }
         })

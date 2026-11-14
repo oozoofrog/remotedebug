@@ -76,9 +76,15 @@ public struct SetupChecklist: Sendable, Hashable {
             }
         case .iphone:
             if isDone { return "iPhone \(devices)대 허용됨" }
-            return "iPhone을 케이블로 연결하고 'iPhone 앱 설치…'로 앱을 설치합니다. 앱에서 VPN을 켜고 이 Mac과 같은 Tailscale 계정으로 로그인한 뒤, 페어링 QR을 찍고 여기서 허용합니다."
+            let install = HostEdition.isSandboxed
+                ? "'iPhone 앱 설치…'의 명령을 터미널에서 실행해 앱을 설치합니다."
+                : "iPhone을 케이블로 연결하고 'iPhone 앱 설치…'로 앱을 설치합니다."
+            return "\(install) 앱에서 VPN을 켜고 이 Mac과 같은 Tailscale 계정으로 로그인한 뒤, 페어링 QR을 찍고 여기서 허용합니다."
         case .build:
             if isDone { return "빌드 \(builds)개 게시됨" }
+            if HostEdition.isSandboxed {
+                return "프로젝트 화면에서 프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 한 최근 Debug 빌드를 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다."
+            }
             return "Xcode 프로젝트 폴더를 이 창에 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다."
         }
     }
