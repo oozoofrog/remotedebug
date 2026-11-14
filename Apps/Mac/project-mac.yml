@@ -22,7 +22,8 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.developer-tools
         # 이 앱을 빌드한 저장소. **iPhone 앱 설치…**가 여기의 RemoteDebug.xcodeproj로 iPhone 앱을 빌드한다.
-        RDSourceRoot: $(SRCROOT)
+        # 배포용 빌드(scripts/release-mac.sh)는 RD_SOURCE_ROOT를 비워 이 Mac의 경로를 넣지 않는다.
+        RDSourceRoot: $(RD_SOURCE_ROOT)
         LSMinimumSystemVersion: "26.0"
         NSUserNotificationAlertStyle: alert
         # 같은 네트워크의 iPhone이 이 Mac을 찾도록 Bonjour로 알린다(docs/protocol-addenda.md O).
@@ -48,6 +49,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         CODE_SIGN_IDENTITY: $(RD_MAC_SIGN_IDENTITY)
         ENABLE_HARDENED_RUNTIME: YES
+        RD_SOURCE_ROOT: $(SRCROOT)
         # RDCore.xcframework는 arm64 전용이다(Apple silicon).
         ARCHS: arm64
         ONLY_ACTIVE_ARCH: YES

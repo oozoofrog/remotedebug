@@ -62,6 +62,16 @@ ACL 태그는 선택 사항이다. `tag:rd-mac`, `tag:rd-phone`을 쓰면 iPhone
 
 Xcode 자동 서명은 연결한 iPhone을 개발자 계정에 등록할 수 있다. 기기 등록도 계정 소유자가 승인해야 한다.
 
+### 다른 Mac에 나눠 줄 Mac 앱(Developer ID)
+
+`scripts/release-mac.sh`는 Mac 앱을 Developer ID로 서명하고 Apple 공증을 받아 zip으로 묶는다. 받은 사람은 경고 없이 열 수 있다. App Sandbox는 쓰지 않는다(Mac App Store에 올릴 때만 필수다).
+
+- Xcode에 로그인한 계정이 Developer ID 인증서를 만들 수 있어야 한다(계정 소유자). 인증서가 없으면 Xcode가 만든다.
+- `Config/Signing.local.xcconfig`에 `DEVELOPMENT_TEAM`이 있어야 한다.
+- 서명에는 계정의 법적 이름과 팀 ID가 들어가고, 앱을 받은 사람이 볼 수 있다.
+- 이 빌드에는 저장소 경로가 들어가지 않는다. **iPhone 앱 설치…**에서 **선택…**으로 저장소 폴더를 골라야 한다.
+- `scripts/release-mac.sh --no-notarize`는 서명까지만 한다.
+
 ## 빌드와 실행
 
 ```sh

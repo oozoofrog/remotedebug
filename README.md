@@ -285,3 +285,7 @@ The script prints its usage in Korean:
 ```
 
 It prints one line per mismatch and exits with code 1 when any of these differ from the repository: paths in code spans and code blocks (except json) under `scripts/`, `docs/`, `Packages/`, `Apps/`, `core/`, `Config/`, `.agent-loop/`, and root files such as `project.yml`; scripts named in the documents; target, scheme, module, and bundle ID names; U items and the on-device items of `docs/tunnel.md`; D items and the run-order table; relative links and `#` heading anchors; screen text written in bold or double quotes in the install web page procedures (`docs/setup.md` web page section, `docs/device-test.md` D14), compared with the page source `core/internal/host/web` and the Mac app source `Packages/MacHost/Sources`. It also fails when a required document, `scripts/check_quotes.py`, or `scripts/check_protocol_examples.py` is missing. Paths in prose outside code spans are not checked. If Apple's original text cannot be downloaded, the quote check only warns.
+
+## License
+
+MIT. See [LICENSE](LICENSE). The Mac and iPhone apps link Tailscale (`tailscale.com`, BSD 3-Clause) and its Go dependencies, which keep their own licenses.

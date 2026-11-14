@@ -285,3 +285,7 @@ RemoteDebugFeedback.start(.init(
 ```
 
 다음이 저장소와 다르면 어긋난 곳마다 한 줄을 출력하고 종료 코드 1로 끝난다: 코드 조각과 코드 블록(json 제외)의 경로(`scripts/`, `docs/`, `Packages/`, `Apps/`, `core/`, `Config/`, `.agent-loop/` 아래와 `project.yml` 같은 루트 파일), 문서에 적은 스크립트, 대상·스킴·모듈·번들 ID 이름, U 항목과 `docs/tunnel.md`의 실기기 항목, D 항목과 실행 순서 표, 상대 링크와 `#` 제목 앵커, 설치 웹 페이지 절차(`docs/setup.md`의 웹 페이지 절, `docs/device-test.md`의 D14)에 굵은 글씨나 큰따옴표로 적은 화면 문구(페이지 소스 `core/internal/host/web`, Mac 앱 소스 `Packages/MacHost/Sources`와 글자 그대로 비교). 필요한 문서나 `scripts/check_quotes.py`, `scripts/check_protocol_examples.py`가 없어도 실패한다. 코드 조각 밖 본문의 경로는 검사하지 않는다. Apple 원문을 받지 못하면 인용 검사는 경고만 남긴다.
+
+## 라이선스
+
+MIT. [LICENSE](LICENSE)를 본다. Mac·iPhone 앱에 들어가는 Tailscale(`tailscale.com`, BSD 3-Clause)과 그 Go 의존성은 각자의 라이선스를 따른다.
