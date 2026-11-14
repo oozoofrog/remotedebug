@@ -29,19 +29,19 @@ public final class LinkedProjectsModel {
 
     static let projectsKey = "RemoteDebug.linkedProjects"
     static let derivedDataKey = "RemoteDebug.derivedDataBookmark"
-    static let publishedKey = "RemoteDebug.linkedProjects.published"
+    static let publishedKey = "RemoteDebug.linkedProjects.publishedAt"
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let importer: @MainActor (URL) async -> Void
     @ObservationIgnored private var access: [SecurityScopedAccess] = []
-    /// 이미 게시한 빌드(앱 경로 → 수정 시각). 같은 빌드를 다시 가져오지 않는다.
-    @ObservationIgnored private var published: [String: Date]
+    /// 이미 게시한 빌드(앱 경로 → 수정 시각, 1970년부터의 초). 같은 빌드를 다시 가져오지 않는다.
+    @ObservationIgnored private var published: [String: Double]
     @ObservationIgnored private var polling: Task<Void, Never>?
 
     public init(defaults: UserDefaults = .standard, importer: @escaping @MainActor (URL) async -> Void) {
         self.defaults = defaults
         self.importer = importer
-        self.published = (defaults.dictionary(forKey: Self.publishedKey) as? [String: Date]) ?? [:]
+        self.published = (defaults.dictionary(forKey: Self.publishedKey) as? [String: Double]) ?? [:]
         for data in defaults.array(forKey: Self.projectsKey) as? [Data] ?? [] {
             if let url = Self.resolve(data) { open(url); projects.append(Project(folder: url)) }
         }
@@ -98,8 +98,11 @@ public final class LinkedProjectsModel {
             guard index < projects.count, projects[index].folder == folder else { return }
             projects[index].hasContainer = hasContainer
             projects[index].builds = builds
-            for build in builds where published[build.app.path] != build.modified {
-                published[build.app.path] = build.modified
+            for build in builds {
+                // 저장했다 읽은 시각은 끝자리가 달라질 수 있어 1초 안이면 같은 빌드로 본다.
+                let stamp = build.modified.timeIntervalSince1970
+                if let old = published[build.app.path], abs(old - stamp) < 1 { continue }
+                published[build.app.path] = stamp
                 defaults.set(published, forKey: Self.publishedKey)
                 await importer(build.app)
             }
