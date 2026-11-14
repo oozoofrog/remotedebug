@@ -232,6 +232,13 @@ struct RootView: View {
                         : String(localized: "크래시 기록을 받았습니다. Mac과 연결되면 보냅니다."))
                 }
             } else if let request = AppPair.request(from: url) {
+                #if RD_SWIFTAIL_TUNNEL
+                // 시험 빌드: `…?action=connect&engine=swiftail`(또는 `go`)로 터널 구현을 고른다.
+                if let engine = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "engine" })?.value {
+                    SharedContainer.defaults.set(engine == "swiftail", forKey: TunnelEngineChoice.swiftailKey)
+                    model.log(.info, "vpn", "터널 구현: \(engine == "swiftail" ? "Swiftail" : "Go")")
+                }
+                #endif
                 Task { await handleVPNRequest(request.action, returning: request.returning) }
             } else {
                 model.handle(url: url)

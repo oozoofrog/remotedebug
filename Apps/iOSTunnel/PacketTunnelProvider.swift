@@ -19,7 +19,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
     private let coreQueue = DispatchQueue(label: "com.oozoofrog.app.RemoteDebugPhone.Tunnel.core")
     private let pathQueue = DispatchQueue(label: "com.oozoofrog.app.RemoteDebugPhone.Tunnel.path")
     private let runtime = TunnelRuntime()
-    private let lifecycle = TunnelLifecycle<RDNode>()
+    private let lifecycle = TunnelLifecycle<any TunnelEngine>()
     private let applier: SerialApplier<TunnelSettingsPlan>
 
     override init() {
@@ -86,10 +86,19 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         guard lifecycle.isCurrent(generation) else { throw stoppedDuringStart() }
         logger.log("utun 확인: \(found.interfaceName, privacy: .public) fd=\(found.fd)")
 
-        let node: RDNode
+        let node: any TunnelEngine
         do {
             node = try await onCoreQueue { [lifecycle, logger] in
-                try lifecycle.startNode(generation: generation, start: {
+                try lifecycle.startNode(generation: generation, start: { () throws -> any TunnelEngine in
+                    #if RD_SWIFTAIL_TUNNEL
+                    if TunnelEngineChoice.usesSwiftail {
+                        logger.log("Swiftail로 터널을 시작합니다")
+                        return try SwiftailTunnelEngine(
+                            stateDirectory: try Self.prepareStateDirectory(name: TunnelStorage.swiftailStateName),
+                            hostname: config.hostname, controlURL: config.controlURL, authKey: authKey,
+                            utunFd: found.fd, mtu: Self.mtu, logger: logger)
+                    }
+                    #endif
                     let stateDir = try Self.prepareStateDirectory()
                     let coreConfig = CoreConfig(
                         mode: .tunnel,
@@ -103,14 +112,14 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
                         mtu: Self.mtu,
                         appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
                     )
-                    return try RDNode.start(config: RDJSON.encoder().encode(coreConfig))
+                    return try GoTunnelEngine(config: coreConfig, logger: logger)
                 }, stop: { started in
                     // 시작하는 동안 종료 요청이 왔다. 방금 만든 노드를 같은 큐에서 멈춘다.
                     logger.log("시작 중 종료 요청을 받아 새 노드를 멈춥니다")
                     Self.stopNode(started, logger: logger)
                 })
             }
-        } catch TunnelLifecycle<RDNode>.LifecycleError.stoppedDuringStart {
+        } catch TunnelLifecycle<any TunnelEngine>.LifecycleError.stoppedDuringStart {
             throw stoppedDuringStart()
         } catch let error as RDCoreError {
             logger.error("코어 시작 실패: \(error.code, privacy: .public)")
@@ -147,8 +156,8 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         }
     }
 
-    private static func stopNode(_ node: RDNode, logger: Logger) {
-        do { try node.stop() } catch { logger.error("rd_stop 실패: \(String(describing: error), privacy: .public)") }
+    private static func stopNode(_ node: any TunnelEngine, logger: Logger) {
+        node.stop()
     }
 
     // MARK: 앱 메시지
@@ -160,7 +169,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         switch request.cmd {
         case .status:
             notePathPeer(request.peer)
-            return try? statusReply().encoded()
+            return try? await statusReply().encoded()
         }
     }
 
@@ -174,10 +183,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         }
     }
 
-    private func statusReply() -> TunnelStatusReply {
+    private func statusReply() async -> TunnelStatusReply {
         var status = runtime.lastStatus
-        if let node = lifecycle.currentNode, let data = try? node.status(),
-           let fresh = try? RDJSON.decoder().decode(CoreStatus.self, from: data) {
+        if let node = lifecycle.currentNode, let fresh = await node.status() {
             status = fresh
             runtime.setStatus(fresh)
         }
@@ -191,27 +199,19 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
 
     // MARK: 이벤트
 
-    private func startEventLoop(_ node: RDNode, generation: Int) {
-        // RDNode.events()는 rd_next_event를 전용 스레드에서 돈다.
+    private func startEventLoop(_ node: any TunnelEngine, generation: Int) {
         let stream = node.events()
         let task = Task.detached { [weak self] in
-            for await data in stream {
+            for await event in stream {
                 guard let self else { return }
-                self.handleEvent(data)
+                self.handleEvent(event)
             }
         }
         // 그사이 종료 요청이 왔으면 바로 끊는다.
         if !lifecycle.attach(generation: generation, cleanup: { task.cancel() }) { task.cancel() }
     }
 
-    private func handleEvent(_ data: Data) {
-        let event: CoreEvent
-        do {
-            event = try RDJSON.decoder().decode(CoreEvent.self, from: data)
-        } catch {
-            logger.error("이벤트를 읽지 못했습니다")
-            return
-        }
+    private func handleEvent(_ event: CoreEvent) {
         switch event {
         case .networkSettings(let settings):
             let plan = SettingsTranslator.translate(settings)
@@ -261,7 +261,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
 
     // MARK: 기본 인터페이스
 
-    private func startPathMonitor(_ node: RDNode, generation: Int) {
+    private func startPathMonitor(_ node: any TunnelEngine, generation: Int) {
         let monitor = NWPathMonitor()
         monitor.pathUpdateHandler = { [weak self] path in
             self?.pathChanged(path, node: node)
@@ -273,23 +273,22 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         if !lifecycle.attach(generation: generation, cleanup: { monitor.cancel() }) { monitor.cancel() }
     }
 
-    private func pathChanged(_ path: NWPath, node: RDNode) {
-        guard path.status == .satisfied, let name = Self.defaultInterfaceName(path) else { return }
-        guard runtime.updateDefaultInterface(name) else { return }
+    private func pathChanged(_ path: NWPath, node: any TunnelEngine) {
+        guard path.status == .satisfied, let interface = Self.defaultInterface(path) else { return }
         do {
-            try node.setDefaultInterface(name)
-            logger.log("기본 인터페이스: \(name, privacy: .public)")
+            // 같은 인터페이스를 다시 알릴지는 구현이 정한다(Go는 이름이 바뀔 때만, Swiftail은 매번).
+            try node.setDefaultInterface(interface)
         } catch {
             logger.error("기본 인터페이스 알림 실패: \(String(describing: error), privacy: .public)")
         }
     }
 
     /// 만족된 경로의 첫 물리 인터페이스(터널 자신 `utun*`·`ipsec*`·루프백 제외).
-    static func defaultInterfaceName(_ path: NWPath) -> String? {
+    static func defaultInterface(_ path: NWPath) -> NWInterface? {
         path.availableInterfaces.first { interface in
             interface.type != .loopback && interface.type != .other
                 && !interface.name.hasPrefix("utun") && !interface.name.hasPrefix("ipsec")
-        }?.name
+        }
     }
 
     // MARK: 도움
@@ -318,17 +317,17 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
 
     /// 확장 컨테이너의 `Library/Application Support/RemoteDebug/tailscale`(첫 잠금 해제 후 접근 가능, 백업 제외).
     /// 두 앱이 같은 tailnet 기기로 보이도록 App Group 컨테이너를 쓴다. 예전 위치의 상태는 처음 한 번 옮긴다.
-    static func prepareStateDirectory() throws -> URL {
+    static func prepareStateDirectory(name: String = TunnelStorage.goStateName) throws -> URL {
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
         guard let shared = SharedContainer.groupSupportDirectory() else {
-            return try TunnelStorage.prepareStateDirectory(in: support)
+            return try TunnelStorage.prepareStateDirectory(in: support, name: name)
         }
         if AppPair.currentAppID.hasSuffix(AppPair.storeSuffix) {
             // 예전 기기 정보는 RemoteDebug 앱의 확장 컨테이너에만 있다.
             SharedContainer.migrateState(from: support, to: shared)
             SharedContainer.defaults.set(true, forKey: SharedContainer.storeMigratedKey)
         }
-        return try TunnelStorage.prepareStateDirectory(in: shared)
+        return try TunnelStorage.prepareStateDirectory(in: shared, name: name)
     }
 
     static func logFileURL() throws -> URL {
@@ -347,7 +346,6 @@ private final class TunnelRuntime: @unchecked Sendable {
     private let lock = NSLock()
     private var _status: CoreStatus?
     private var _lastError: String?
-    private var _defaultInterface: String?
     private var _engineDead = false
     private var _pathPeer: String?
 
@@ -364,7 +362,6 @@ private final class TunnelRuntime: @unchecked Sendable {
         locked {
             _status = nil
             _lastError = nil
-            _defaultInterface = nil
             _engineDead = false
             _pathPeer = nil
         }
@@ -383,15 +380,6 @@ private final class TunnelRuntime: @unchecked Sendable {
 
     func setStatus(_ status: CoreStatus) { locked { _status = status } }
     func setLastError(_ message: String?) { locked { _lastError = message } }
-
-    /// 이름이 바뀌었으면 기억하고 `true`.
-    func updateDefaultInterface(_ name: String) -> Bool {
-        locked {
-            guard _defaultInterface != name else { return false }
-            _defaultInterface = name
-            return true
-        }
-    }
 
     /// 처음 표시하면 `true`.
     func markEngineDead() -> Bool {

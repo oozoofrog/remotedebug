@@ -1,0 +1,29 @@
+# 시험 빌드: iPhone 터널 확장에 Swiftail(Swift로 쓴 tailnet 노드)을 함께 넣는다.
+# 이 저장소 옆 폴더(../Swiftail)에 Swiftail 패키지가 있어야 한다. 일반 빌드는 project.yml을 그대로 쓴다.
+#   xcodegen generate --spec project-swiftail.yml
+# 설정 > 진단의 "Swiftail 터널(시험)"을 켜고 VPN을 다시 켜면 Swiftail로 뜬다. 끄면 Go 코어로 돌아간다.
+include:
+  - path: project.yml
+packages:
+  Swiftail:
+    path: ../Swiftail
+targets:
+  RemoteDebugPhone:
+    settings:
+      base:
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) RD_SWIFTAIL_TUNNEL
+  RemoteDebugTunnel:
+    settings:
+      base:
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) RD_SWIFTAIL_TUNNEL
+    dependencies:
+      - package: Swiftail
+        product: Swiftail
+      - package: Swiftail
+        product: SwiftailBase
+      - package: Swiftail
+        product: SwiftailControl
+      - package: Swiftail
+        product: SwiftailEngine
+      - package: Swiftail
+        product: SwiftailMagicsock

@@ -14,15 +14,22 @@ enum TunnelStorage {
     /// - Parameter base: 확장 컨테이너의 `Library/Application Support`.
     /// 저장된 Tailscale 상태(로그인)를 지운다. 다음 시작은 새 노드로 로그인한다.
     static func resetStateDirectory(in base: URL) throws {
-        let dir = base.appendingPathComponent("RemoteDebug", isDirectory: true).appendingPathComponent("tailscale", isDirectory: true)
-        if FileManager.default.fileExists(atPath: dir.path) {
-            try FileManager.default.removeItem(at: dir)
+        // Go 코어의 상태와, 시험 빌드에서 Swiftail이 따로 쓰는 상태를 함께 지운다.
+        for name in [goStateName, swiftailStateName] {
+            let dir = base.appendingPathComponent("RemoteDebug", isDirectory: true).appendingPathComponent(name, isDirectory: true)
+            if FileManager.default.fileExists(atPath: dir.path) {
+                try FileManager.default.removeItem(at: dir)
+            }
         }
     }
 
-    static func prepareStateDirectory(in base: URL) throws -> URL {
+    static let goStateName = "tailscale"
+    /// Swiftail은 Go의 상태 파일을 읽지 않는다. 폴더를 나눠 두면 Go 터널로 되돌렸을 때 기존 로그인이 그대로다.
+    static let swiftailStateName = "swiftail"
+
+    static func prepareStateDirectory(in base: URL, name: String = goStateName) throws -> URL {
         let parent = base.appendingPathComponent("RemoteDebug", isDirectory: true)
-        let dir = parent.appendingPathComponent("tailscale", isDirectory: true)
+        let dir = parent.appendingPathComponent(name, isDirectory: true)
         try prepareDirectory(dir, protecting: [parent, dir])
         return dir
     }
