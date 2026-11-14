@@ -48,6 +48,9 @@ final class TunnelController: TunnelControlling {
     private(set) var vpnStatus: NEVPNStatus = .invalid
     /// 확장이 마지막으로 돌려준 상태(진단용).
     private(set) var lastReply: TunnelStatusReply?
+    /// 터널 확장의 메모리 기록 한 줄(기기 로그로 Mac에 올린다).
+    @ObservationIgnored var onMemoryLog: ((String) -> Void)?
+    @ObservationIgnored private var memoryLog = TunnelMemoryLog()
     /// 확장이 오류로 끝난 이유(`fetchLastDisconnectError`).
     private(set) var disconnectMessage: String?
     /// 마지막 넘겨받기에서 연결되기 전에 끊겨 다시 켠 횟수와 마지막 끊김의 오류(도메인·코드). 설치 기록에 남긴다.
@@ -233,6 +236,7 @@ final class TunnelController: TunnelControlling {
         pendingResetLogin = false
         disconnectMessage = nil
         lastReply = nil
+        memoryLog.reset()
         userStopped = false
         do {
             try manager.connection.startVPNTunnel(options: options)
@@ -489,6 +493,7 @@ final class TunnelController: TunnelControlling {
         }
         if status == .disconnected || status == .invalid {
             lastReply = nil
+        memoryLog.reset()
         }
         recompute()
         updatePolling(status)
@@ -567,6 +572,9 @@ final class TunnelController: TunnelControlling {
         }
         guard let response, let reply = TunnelStatusReply.decode(response) else { return }
         lastReply = reply
+        if let mib = reply.physFootprintMiB, let line = memoryLog.sample(mib, at: Date()) {
+            onMemoryLog?(line)
+        }
         recompute()
     }
 }

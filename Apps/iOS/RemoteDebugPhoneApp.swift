@@ -58,6 +58,7 @@ final class AppServices {
             push: bundleID.isEmpty ? nil : PushSetup(store: UserDefaultsPushSettingsStore(), bundleId: bundleID)
         )
         directConnection.onNetworkChange = { [weak model] in model?.noteNetworkChange() }
+        tunnel.onMemoryLog = { [weak model] line in model?.log(.info, "vpn", line) }
         let transfers = self.transfers
         let model = self.model
         model.onFileTransfer = { transfers.handle($0) }
