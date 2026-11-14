@@ -52,6 +52,6 @@
 	<key>NSUserNotificationAlertStyle</key>
 	<string>alert</string>
 	<key>RDSourceRoot</key>
-	<string>$(SRCROOT)</string>
+	<string>$(RD_SOURCE_ROOT)</string>
 </dict>
 </plist>
