@@ -1380,25 +1380,25 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In the %@ app, turn on VPN, log in with the same Tailscale account as this Mac, scan the pairing QR, and allow it here."
+            "value" : "%@ In the app, turn on VPN, log in with the same Tailscale account as this Mac, then scan the pairing QR code and allow it here."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@アプリでVPNをオンにし、このMacと同じTailscaleアカウントでログインしてから、ペアリング用のQRを読み取り、ここで許可します。"
+            "value" : "%@アプリで VPN をオンにし、この Mac と同じ Tailscale アカウントでログインしてから、ペアリング用 QR コードを読み取り、ここで許可します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 %@ App 中打开 VPN，用与这台 Mac 相同的 Tailscale 账户登录，然后扫描配对 QR，并在此处允许。"
+            "value" : "%@ 在 App 中打开 VPN，使用与这台 Mac 相同的 Tailscale 账户登录，然后扫描配对二维码并在此处允许。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在 %@ App 中開啟 VPN，以與這部 Mac 相同的 Tailscale 帳號登入，然後掃描配對 QR 並在此允許。"
+            "value" : "%@ 在 App 中開啟 VPN，使用與這台 Mac 相同的 Tailscale 帳號登入，然後掃描配對 QR Code 並在此允許。"
           }
         }
       }
@@ -4702,7 +4702,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Macの一覧から削除されたか、ファイルAppから追加されたファイルです。"
+            "value" : "Macの一覧から削除されたか、ファイルアプリから追加されたファイルです。"
           }
         },
         "zh-Hans" : {
@@ -16454,7 +16454,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "受信済み · 「ファイル」App の RemoteDebug フォルダ"
+            "value" : "受信済み · 「ファイル」アプリの RemoteDebug フォルダ"
           }
         },
         "zh-Hans" : {
@@ -16566,7 +16566,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "バックアップから除外できませんでした(%@)。共有とインポートはそのまま使えますが、この Mac の tailnet ノードキーが Time Machine バックアップに含まれる可能性があります。権限を確認してから App を再起動してください。"
+            "value" : "バックアップから除外できませんでした(%@)。共有とインポートはそのまま使えますが、この Mac の tailnet ノードキーが Time Machine バックアップに含まれる可能性があります。権限を確認してからアプリを再起動してください。"
           }
         },
         "zh-Hans" : {
@@ -17620,7 +17620,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ビルドリストを取得するたびに自動で送信します。Mac App のログ画面で確認できます。"
+            "value" : "ビルドリストを取得するたびに自動で送信します。Mac アプリのログ画面で確認できます。"
           }
         },
         "zh-Hans" : {
@@ -17760,7 +17760,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ビルドは完了しましたが、iPhone App が見つかりませんでした。iPhone App をビルドするスキームか確認してください。"
+            "value" : "ビルドは完了しましたが、iPhone アプリが見つかりませんでした。iPhone アプリをビルドするスキームか確認してください。"
           }
         },
         "zh-Hans" : {
@@ -17900,7 +17900,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ビルドした App が見つかりませんでした。履歴を確認してください。"
+            "value" : "ビルドしたアプリが見つかりませんでした。履歴を確認してください。"
           }
         },
         "zh-Hans" : {
@@ -17956,7 +17956,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ビルドして公開し、iPhone にインストールします。送信時は iPhone の RemoteDebug App の VPN がオンになっている必要があります。オフの場合は App が保存しておき、次の機会に送信します。"
+            "value" : "ビルドして公開し、iPhone にインストールします。送信時は iPhone の RemoteDebug アプリの VPN がオンになっている必要があります。オフの場合はアプリが保存しておき、次の機会に送信します。"
           }
         },
         "zh-Hans" : {
@@ -18124,7 +18124,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新しい RemoteDebug ビルドがあります。アップデート App からインストールしてください。"
+            "value" : "新しい RemoteDebug ビルドがあります。アップデートアプリからインストールしてください。"
           }
         },
         "zh-Hans" : {
@@ -19088,7 +19088,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "インストール用アドレスがペアリングした Mac を指していないため、開きませんでした。iPhone App と Mac App を最新バージョンに揃えてください。"
+            "value" : "インストール用アドレスがペアリングした Mac を指していないため、開きませんでした。iPhone アプリと Mac アプリを最新バージョンに揃えてください。"
           }
         },
         "zh-Hans" : {
@@ -19486,7 +19486,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "インストール中は RemoteDebug App が閉じられます。VPN がこの App のトンネルでない場合は、この App に移してからインストールします。"
+            "value" : "インストール中は RemoteDebug アプリが閉じられます。VPN がこのアプリのトンネルでない場合は、このアプリに移してからインストールします。"
           }
         },
         "zh-Hans" : {
@@ -20226,7 +20226,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "実行中の App に切り替え"
+            "value" : "実行中のアプリに切り替え"
           }
         },
         "zh-Hans" : {
@@ -20680,7 +20680,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "通知のタイトルと内容(App 名・バージョン、ファイル名)は Apple のプッシュサーバ経由で iPhone に届きます。名前を送信したくない場合は「通知に名前を含めない」をオンにしてください。キーはこの Mac のキーチェーンにのみ保存されます。"
+            "value" : "通知のタイトルと内容(アプリ名・バージョン、ファイル名)は Apple のプッシュサーバ経由で iPhone に届きます。名前を送信したくない場合は「通知に名前を含めない」をオンにしてください。キーはこの Mac のキーチェーンにのみ保存されます。"
           }
         },
         "zh-Hans" : {
@@ -20932,7 +20932,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App のディープリンクは、そのスキームを登録している App がインストールされている場合に開けます。"
+            "value" : "アプリのディープリンクは、そのスキームを登録しているアプリがインストールされている場合に開けます。"
           }
         },
         "zh-Hans" : {
@@ -20960,7 +20960,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App のバージョンと iOS のバージョンとともに、ペアリングした Mac に送信されます。"
+            "value" : "アプリのバージョンと iOS のバージョンとともに、ペアリングした Mac に送信されます。"
           }
         },
         "zh-Hans" : {
@@ -20988,7 +20988,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App の起動コードと、フィードバックを表示する画面に、以下のコードを追加します。"
+            "value" : "アプリの起動コードと、フィードバックを表示する画面に、以下のコードを追加します。"
           }
         },
         "zh-Hans" : {
@@ -21016,7 +21016,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App を使わず Safari でインストール"
+            "value" : "アプリを使わず Safari でインストール"
           }
         },
         "zh-Hans" : {
@@ -21044,7 +21044,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App・デバイスを検索"
+            "value" : "アプリ・デバイスを検索"
           }
         },
         "zh-Hans" : {
@@ -21072,7 +21072,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App で開く"
+            "value" : "アプリで開く"
           }
         },
         "zh-Hans" : {
@@ -21100,7 +21100,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App は %@ になります。このチームですでに使用している値でなければ、そのままにしてください。"
+            "value" : "アプリは %@ になります。このチームですでに使用している値でなければ、そのままにしてください。"
           }
         },
         "zh-Hans" : {
@@ -21128,7 +21128,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App を閉じても iOS がダウンロードを続けます。進行状況はロック画面と Dynamic Island にも表示されます。"
+            "value" : "アプリを閉じても iOS がダウンロードを続けます。進行状況はロック画面と Dynamic Island にも表示されます。"
           }
         },
         "zh-Hans" : {
@@ -21156,7 +21156,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App が再起動されたため、ダウンロードが中断されました。もう一度ダウンロードしてください。"
+            "value" : "アプリが再起動されたため、ダウンロードが中断されました。もう一度ダウンロードしてください。"
           }
         },
         "zh-Hans" : {
@@ -21184,7 +21184,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App が起動しない場合は、「設定」>「プライバシーとセキュリティ」で「デベロッパモード」がオンになっているか確認してください。"
+            "value" : "アプリが起動しない場合は、「設定」>「プライバシーとセキュリティ」で「デベロッパモード」がオンになっているか確認してください。"
           }
         },
         "zh-Hans" : {
@@ -21240,7 +21240,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデート App"
+            "value" : "アップデートアプリ"
           }
         },
         "zh-Hans" : {
@@ -21268,7 +21268,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデート App %@ をインストール済み"
+            "value" : "アップデートアプリ%@ をインストール済み"
           }
         },
         "zh-Hans" : {
@@ -21296,7 +21296,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデート App をインストール済み"
+            "value" : "アップデートアプリをインストール済み"
           }
         },
         "zh-Hans" : {
@@ -21324,7 +21324,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデート App を開く"
+            "value" : "アップデートアプリを開く"
           }
         },
         "zh-Hans" : {
@@ -21352,7 +21352,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデート App で VPN をオン"
+            "value" : "アップデートアプリで VPN をオン"
           }
         },
         "zh-Hans" : {
@@ -21380,7 +21380,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "VPN をアップデート App に移す"
+            "value" : "VPN をアップデートアプリに移す"
           }
         },
         "zh-Hans" : {
@@ -21408,7 +21408,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデート App を開けませんでした。RD アップデートのビルド欄からインストールしてください。"
+            "value" : "アップデートアプリを開けませんでした。RD アップデートのビルド欄からインストールしてください。"
           }
         },
         "zh-Hans" : {
@@ -21436,7 +21436,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデート App を開けませんでした。下の RD アップデートのビルド欄からインストールしてください。"
+            "value" : "アップデートアプリを開けませんでした。下の RD アップデートのビルド欄からインストールしてください。"
           }
         },
         "zh-Hans" : {
@@ -21464,7 +21464,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデート App が VPN をオンにしています"
+            "value" : "アップデートアプリが VPN をオンにしています"
           }
         },
         "zh-Hans" : {
@@ -21492,7 +21492,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデート App がインストールされていません"
+            "value" : "アップデートアプリがインストールされていません"
           }
         },
         "zh-Hans" : {
@@ -22808,7 +22808,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Web アドレスまたは App のディープリンクを iPhone に送信"
+            "value" : "Web アドレスまたはアプリのディープリンクを iPhone に送信"
           }
         },
         "zh-Hans" : {
@@ -22836,7 +22836,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Web アドレスは iPhone の Safari で、App のディープリンクはその App で開きます。同じアドレスをもう一度送信すると、名前だけが変更されます。"
+            "value" : "Web アドレスは iPhone の Safari で、アプリのディープリンクはそのアプリで開きます。同じアドレスをもう一度送信すると、名前だけが変更されます。"
           }
         },
         "zh-Hans" : {
@@ -22948,7 +22948,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この Mac に公式の Tailscale App がありません。Tailscale をインストールしてログインしてください。"
+            "value" : "この Mac に公式の Tailscale アプリがありません。Tailscale をインストールしてログインしてください。"
           }
         },
         "zh-Hans" : {
@@ -23794,7 +23794,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App"
+            "value" : "このアプリ"
           }
         },
         "zh-Hans" : {
@@ -23822,7 +23822,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App で VPN を引き継ぐ"
+            "value" : "このアプリで VPN を引き継ぐ"
           }
         },
         "zh-Hans" : {
@@ -23850,7 +23850,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "VPN をこの App に移す"
+            "value" : "VPN をこのアプリに移す"
           }
         },
         "zh-Hans" : {
@@ -23878,7 +23878,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App はクラッシュ履歴とフィードバックを Mac に送信しません。"
+            "value" : "このアプリはクラッシュ履歴とフィードバックを Mac に送信しません。"
           }
         },
         "zh-Hans" : {
@@ -23906,7 +23906,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App の VPN をオンにしています"
+            "value" : "このアプリの VPN をオンにしています"
           }
         },
         "zh-Hans" : {
@@ -23934,7 +23934,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App の VPN を一度オンにしてから設定できます。オフにしていても、この App を使用している間は Mac が必要なときに VPN を自動でオンにし、使用しなくなってから 30 秒後にオフにします。この設定をオンにすると、iOS がペアリングした Mac のアドレスへの接続を検知したときに VPN をオンにします。そのため、VPN を手動でオフにしても iOS が再びオンにします。実機では確認していない機能です。"
+            "value" : "このアプリの VPN を一度オンにしてから設定できます。オフにしていても、このアプリを使用している間は Mac が必要なときに VPN を自動でオンにし、使用しなくなってから 30 秒後にオフにします。この設定をオンにすると、iOS がペアリングした Mac のアドレスへの接続を検知したときに VPN をオンにします。そのため、VPN を手動でオフにしても iOS が再びオンにします。実機では確認していない機能です。"
           }
         },
         "zh-Hans" : {
@@ -23962,7 +23962,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App の履歴をまだ受信していません。"
+            "value" : "このアプリの履歴をまだ受信していません。"
           }
         },
         "zh-Hans" : {
@@ -23990,7 +23990,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App の新しいビルドは、RemoteDebug App のビルドリストからインストールします。その際、RemoteDebug App が VPN を引き継ぎます。"
+            "value" : "このアプリの新しいビルドは、RemoteDebug アプリのビルドリストからインストールします。その際、RemoteDebug アプリが VPN を引き継ぎます。"
           }
         },
         "zh-Hans" : {
@@ -24018,7 +24018,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App の新しいビルドは、アップデート App(RD アップデート)からインストールします。アップデート App がない場合は、RD アップデートのビルド欄からインストールしてください。"
+            "value" : "このアプリの新しいビルドは、アップデートアプリ(RD アップデート)からインストールします。アップデートアプリがない場合は、RD アップデートのビルド欄からインストールしてください。"
           }
         },
         "zh-Hans" : {
@@ -24046,7 +24046,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App が VPN をオンにしています"
+            "value" : "このアプリが VPN をオンにしています"
           }
         },
         "zh-Hans" : {
@@ -24074,7 +24074,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App が VPN をオンにしています · アップデート App %@"
+            "value" : "このアプリが VPN をオンにしています · アップデートアプリ%@"
           }
         },
         "zh-Hans" : {
@@ -24102,7 +24102,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App が VPN をオンにしています · アップデート App をインストール済み"
+            "value" : "このアプリが VPN をオンにしています · アップデートアプリをインストール済み"
           }
         },
         "zh-Hans" : {
@@ -24130,7 +24130,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この App が異常終了すると、次に開いたときに履歴が作成されます。他の App の履歴は、iPhone の「設定」>「プライバシーとセキュリティ」>「解析と改善」>「解析データ」で開き、共有ボタンで RemoteDebug に渡すかファイルに保存してから、ここで読み込みます。受信した履歴は、Mac に接続されると自動で送信されます。"
+            "value" : "このアプリが異常終了すると、次に開いたときに履歴が作成されます。他のアプリの履歴は、iPhone の「設定」>「プライバシーとセキュリティ」>「解析と改善」>「解析データ」で開き、共有ボタンで RemoteDebug に渡すかファイルに保存してから、ここで読み込みます。受信した履歴は、Mac に接続されると自動で送信されます。"
           }
         },
         "zh-Hans" : {
@@ -24158,7 +24158,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このアドレスを開ける App がありません。そのスキームを使う App がインストールされているか確認してください。"
+            "value" : "このアドレスを開けるアプリがありません。そのスキームを使うアプリがインストールされているか確認してください。"
           }
         },
         "zh-Hans" : {
@@ -24326,7 +24326,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この形式はここではプレビューできません。上の「開く」で iOS のプレビューを使うか、他の App に送信してください。"
+            "value" : "この形式はここではプレビューできません。上の「開く」で iOS のプレビューを使うか、他のアプリに送信してください。"
           }
         },
         "zh-Hans" : {
@@ -24522,7 +24522,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すでに実行中の RemoteDebug が同じフォルダを使用しています。実行中の App を使用するか、その App を終了してからもう一度実行してください。"
+            "value" : "すでに実行中の RemoteDebug が同じフォルダを使用しています。実行中のアプリを使用するか、そのアプリを終了してからもう一度実行してください。"
           }
         },
         "zh-Hans" : {
@@ -25784,7 +25784,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "制限時間内に送信が完了したか確認できませんでした。ホーム画面で App がインストールされているか確認し、ない場合はもう一度インストールしてください。"
+            "value" : "制限時間内に送信が完了したか確認できませんでした。ホーム画面でアプリがインストールされているか確認し、ない場合はもう一度インストールしてください。"
           }
         },
         "zh-Hans" : {
@@ -26120,7 +26120,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "現在の接続は RemoteDebug App のトンネルです。RemoteDebug をインストールするときに、この App のトンネルに移します。"
+            "value" : "現在の接続は RemoteDebug アプリのトンネルです。RemoteDebug をインストールするときに、このアプリのトンネルに移します。"
           }
         },
         "zh-Hans" : {
@@ -26904,7 +26904,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ケーブルで接続した iPhone に RemoteDebug App をビルドしてインストールします"
+            "value" : "ケーブルで接続した iPhone に RemoteDebug アプリをビルドしてインストールします"
           }
         },
         "zh-Hans" : {
@@ -28708,7 +28708,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「ファイル」App で表示"
+            "value" : "「ファイル」アプリで表示"
           }
         },
         "zh-Hans" : {
@@ -28932,7 +28932,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ファイルやリンクをここにドラッグ&ドロップすると、ペアリングした iPhone の RemoteDebug App でダウンロードできます。同じ名前のファイルをもう一度追加すると置き換えられます。接続したプロジェクトがある場合は、プロジェクトごとのエリアに分けて送信できます。"
+            "value" : "ファイルやリンクをここにドラッグ&ドロップすると、ペアリングした iPhone の RemoteDebug アプリでダウンロードできます。同じ名前のファイルをもう一度追加すると置き換えられます。接続したプロジェクトがある場合は、プロジェクトごとのエリアに分けて送信できます。"
           }
         },
         "zh-Hans" : {
@@ -28960,7 +28960,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "パッケージを追加すると、この App の Debug ビルドが異常終了した後に再び開かれたとき、クラッシュ履歴をこの Mac に送信し、App 内でフィードバックを書いて送信できるようになります。受信したものは**クラッシュ・フィードバック**画面に集まります。"
+            "value" : "パッケージを追加すると、このアプリの Debug ビルドが異常終了した後に再び開かれたとき、クラッシュ履歴をこの Mac に送信し、アプリ内でフィードバックを書いて送信できるようになります。受信したものは**クラッシュ・フィードバック**画面に集まります。"
           }
         },
         "zh-Hans" : {
@@ -29296,7 +29296,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ペアリング情報を保存できませんでした。App を再び開くと、もう一度ペアリングが必要になります。"
+            "value" : "ペアリング情報を保存できませんでした。アプリを再び開くと、もう一度ペアリングが必要になります。"
           }
         },
         "zh-Hans" : {
@@ -29828,7 +29828,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ペアリングした Mac がありません。RemoteDebug App で Mac とペアリングすると、ここに RemoteDebug ビルドが表示されます。"
+            "value" : "ペアリングした Mac がありません。RemoteDebug アプリで Mac とペアリングすると、ここに RemoteDebug ビルドが表示されます。"
           }
         },
         "zh-Hans" : {
@@ -29912,7 +29912,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ペアリングした iPhone の RemoteDebug App が VPN に接続されると、ビルドリストを取得するたびにログを送信します。iPhone App の「設定」>「診断ログ」から直接送信することもできます。"
+            "value" : "ペアリングした iPhone の RemoteDebug アプリが VPN に接続されると、ビルドリストを取得するたびにログを送信します。iPhone アプリの「設定」>「診断ログ」から直接送信することもできます。"
           }
         },
         "zh-Hans" : {
@@ -30730,7 +30730,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "プロジェクト画面でプロジェクトフォルダを登録すると、Xcode で iPhone 用に作成した最新の Debug ビルドを公開します。iPhone App のビルドリストで「インストール」をタップしてください。"
+            "value" : "プロジェクト画面でプロジェクトフォルダを登録すると、Xcode で iPhone 用に作成した最新の Debug ビルドを公開します。iPhone アプリのビルドリストで「インストール」をタップしてください。"
           }
         },
         "zh-Hans" : {
@@ -30814,7 +30814,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "プロジェクトが見つかりませんでした。Mac App のプロジェクト画面で接続したか確認してください。"
+            "value" : "プロジェクトが見つかりませんでした。Mac アプリのプロジェクト画面で接続したか確認してください。"
           }
         },
         "zh-Hans" : {
