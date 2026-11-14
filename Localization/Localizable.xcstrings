@@ -3520,7 +3520,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Runs the command from \"Install iPhone App…\" in Terminal to install the app."
+            "value" : "Run the command from \"Install iPhone App…\" in Terminal to install the app."
           }
         },
         "ja" : {
