@@ -63,10 +63,13 @@ struct BuildsView: View {
                     Label("빌드 가져오기…", systemImage: "square.and.arrow.down")
                 }
                 .help("빌드 가져오기 (⌘O)")
-                Button { choosingFolder = true } label: {
-                    Label("폴더 감시…", systemImage: "folder.badge.gearshape")
+                // 샌드박스판은 프로젝트를 등록해 최근 빌드를 찾는다. 폴더 감시는 두지 않는다.
+                if !HostEdition.isSandboxed {
+                    Button { choosingFolder = true } label: {
+                        Label("폴더 감시…", systemImage: "folder.badge.gearshape")
+                    }
+                    .help("고른 폴더의 빌드를 가져오고, 새로 빌드되는 앱도 자동으로 가져옵니다")
                 }
-                .help("고른 폴더의 빌드를 가져오고, 새로 빌드되는 앱도 자동으로 가져옵니다")
             }
         }
         .fileImporter(isPresented: $choosingFolder, allowedContentTypes: [.folder]) { result in
@@ -116,7 +119,9 @@ struct BuildsView: View {
         } actions: {
             Button("빌드 가져오기…", action: showImporter)
                 .buttonStyle(.borderedProminent)
-            Button("폴더 감시…") { choosingFolder = true }
+            if !HostEdition.isSandboxed {
+                Button("폴더 감시…") { choosingFolder = true }
+            }
         }
         .safeAreaInset(edge: .bottom) {
             if model.watchedFolder != nil {

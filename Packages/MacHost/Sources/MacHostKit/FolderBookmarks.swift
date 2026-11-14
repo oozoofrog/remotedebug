@@ -56,6 +56,9 @@ public final class UserDefaultsFolderBookmarks: FolderBookmarking, @unchecked Se
     }
 
     public func save(_ url: URL) throws {
+        // 파일 고르기 창이 준 URL은 접근을 시작해야 북마크를 만들 수 있다(샌드박스).
+        let access = url.startAccessingSecurityScopedResource()
+        defer { if access { url.stopAccessingSecurityScopedResource() } }
         let data = try url.bookmarkData(options: creationOptions, includingResourceValuesForKeys: nil, relativeTo: nil)
         defaults.set(data, forKey: key)
     }
@@ -72,11 +75,7 @@ public final class UserDefaultsFolderBookmarks: FolderBookmarking, @unchecked Se
             let path = URL.resourceValues(forKeys: [.pathKey], fromBookmarkData: data)?.path
             return .unresolvable(path: path)
         }
-        if stale {
-            let access = url.startAccessingSecurityScopedResource()
-            try? save(url)
-            if access { url.stopAccessingSecurityScopedResource() }
-        }
+        if stale { try? save(url) }
         return .folder(url)
     }
 

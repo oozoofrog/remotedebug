@@ -56,6 +56,7 @@ final class AuthKeyDraft {
 public struct RootView: View {
     @Environment(HostModel.self) private var model
     @Environment(ProjectsModel.self) private var projects: ProjectsModel?
+    @Environment(LinkedProjectsModel.self) private var linkedProjects: LinkedProjectsModel?
     @Environment(AgentDesk.self) private var agentDesk: AgentDesk?
     @State private var selection: SidebarItem
     @State private var showingImporter = false
@@ -77,7 +78,7 @@ public struct RootView: View {
 
     public var body: some View {
         NavigationSplitView {
-            List(SidebarItem.allCases.filter { ($0 != .agent || AgentFeature.isEnabled) && ($0 != .projects || !HostEdition.isSandboxed) }, selection: $selection) { item in
+            List(SidebarItem.allCases.filter { ($0 != .agent || AgentFeature.isEnabled) }, selection: $selection) { item in
                 Label(item.title, systemImage: item.symbol)
                     .badge(badge(for: item))
                     .tag(item)
@@ -174,7 +175,9 @@ public struct RootView: View {
         switch selection {
         case .builds: BuildsView(showImporter: { showingImporter = true })
         case .projects:
-            if let projects {
+            if HostEdition.isSandboxed, let linkedProjects {
+                LinkedProjectsView(projects: linkedProjects)
+            } else if let projects {
                 ProjectsView(projects: projects)
             } else {
                 ContentUnavailableView("프로젝트를 쓸 수 없습니다", systemImage: "hammer")
