@@ -1,22 +1,42 @@
-// 요청 머리 해석(RFC 9112 2·3·5장의 좁힌 부분집합). 요청은 모두 믿지 않는 입력이다: 크기를 묶고, 경로는 경로 표의 열쇠로만
-// 쓰며 파일 시스템에 닿지 않는다.
+import Foundation
 
-/// 요청 하나. 이 서버는 본문이 없는 GET·HEAD만 받는다.
-public struct HTTPRequest: Sendable, Equatable {
-    public enum Method: String, Sendable {
-        case get = "GET"
-        case head = "HEAD"
+// 요청 머리 해석(RFC 9112 2·3·5·6장의 좁힌 부분집합). 요청은 모두 믿지 않는 입력이다: 크기를 묶고, 대상은 로직에 그대로
+// 넘기되 파일 시스템에는 닿지 않는다.
+
+/// 요청 머리 하나. 본문은 `contentLength`만큼 머리 뒤에 온다.
+public struct HTTPRequestHead: Sendable, Equatable {
+    /// 대문자 메서드 그대로(토큰 문자만).
+    public var method: String
+    /// 요청 대상 그대로(origin-form, 질의 문자열 포함). 퍼센트 디코딩을 하지 않는다.
+    public var target: String
+    /// 받은 순서의 머리. 이름은 소문자, 값은 앞뒤 공백을 뗀 것.
+    public var headers: [HTTPField]
+    /// `Content-Length`. 없으면 0.
+    public var contentLength: UInt64
+    /// 이 요청 뒤에 연결을 이어 쓰자고 했는가(HTTP/1.1 기본은 참, `Connection: close`면 거짓. HTTP/1.0은 `keep-alive`일 때만).
+    public var keepAlive: Bool
+
+    public init(method: String, target: String, headers: [HTTPField], contentLength: UInt64 = 0, keepAlive: Bool = true) {
+        (self.method, self.target, self.headers) = (method, target, headers)
+        (self.contentLength, self.keepAlive) = (contentLength, keepAlive)
     }
 
-    public var method: Method
-    /// 요청 대상에서 질의 문자열을 뗀 것. 퍼센트 디코딩을 하지 않는다. 경로 표와 바이트로 견주기만 한다.
-    public var path: String
-    /// 머리 이름은 소문자. 같은 이름이 여러 번 오면 처음 값이다(`range`·`host`처럼 두 번 오면 안 되는 것은 해석이 거절한다).
-    public var headers: [String: String]
-
-    public init(method: Method, path: String, headers: [String: String] = [:]) {
-        (self.method, self.path, self.headers) = (method, path, headers)
+    /// 소문자 이름으로 첫 값을 찾는다.
+    public func header(_ name: String) -> String? {
+        headers.first { $0.name == name }?.value
     }
+
+    /// 대상에서 질의 문자열을 뗀 경로.
+    public var path: String {
+        String(target.prefix { $0 != "?" })
+    }
+}
+
+public struct HTTPField: Sendable, Equatable {
+    public var name: String
+    public var value: String
+
+    public init(name: String, value: String) { (self.name, self.value) = (name, value) }
 }
 
 /// 받은 바이트에서 요청 머리 하나를 읽는다. 소켓을 모른다.
@@ -42,25 +62,39 @@ public enum HTTPRequestParser {
     public enum Outcome: Sendable, Equatable {
         /// 머리가 아직 다 오지 않았다. 더 받아서 처음부터 다시 부른다.
         case needMore
-        case request(HTTPRequest)
-        /// 이 상태 코드로 답하고 연결을 닫는다(400, 405, 414, 431, 505).
+        /// 머리와 그것이 차지한 바이트 수(빈 줄의 CRLF까지). 그 뒤는 본문이나 다음 요청이다.
+        case request(HTTPRequestHead, consumed: Int)
+        /// 이 상태 코드로 답하고 연결을 닫는다(400, 411, 414, 431, 501, 505).
         case reject(status: Int)
     }
 
     /// 두 번 오면 안 되는 머리. 두 번 오면 400이다(요청 밀반입과 Range 해석의 모호함을 막는다).
     static let singletonHeaders: Set<String> = ["host", "range", "if-range", "content-length", "transfer-encoding"]
 
+    /// 시작 전 빈 줄(CRLF)은 몇 개까지 건너뛴다(RFC 9112 2.2).
+    static let leadingEmptyLines = 4
+
     public static func parse(_ buffer: [UInt8], limits: Limits = .standard) -> Outcome {
-        let window = buffer.prefix(limits.head + 4)
-        guard let headEnd = firstIndex(of: [13, 10, 13, 10], in: window) else {
+        // 요청 사이의 빈 줄을 건너뛴다.
+        var start = 0
+        var skipped = 0
+        while skipped < leadingEmptyLines, buffer.count >= start + 2, buffer[start] == 13, buffer[start + 1] == 10 {
+            start += 2
+            skipped += 1
+        }
+        let body = buffer[start...]
+        let window = body.prefix(limits.head + 4)
+        guard let relativeEnd = firstIndex(of: [13, 10, 13, 10], in: window) else {
             // 요청 줄이 한도를 넘었으면 414, 머리 전체가 한도를 넘었으면 431을 곧바로 낸다.
-            if firstIndex(of: [13, 10], in: buffer.prefix(limits.requestLine + 2)) == nil, buffer.count > limits.requestLine {
+            if firstIndex(of: [13, 10], in: body.prefix(limits.requestLine + 2)) == nil, body.count > limits.requestLine {
                 return .reject(status: 414)
             }
-            return buffer.count > limits.head ? .reject(status: 431) : .needMore
+            return body.count > limits.head ? .reject(status: 431) : .needMore
         }
-        guard headEnd <= limits.head else { return .reject(status: 431) }
-        let lines = split(Array(buffer[..<headEnd]))
+        guard relativeEnd <= limits.head else { return .reject(status: 431) }
+        let headBytes = Array(body.prefix(relativeEnd))
+        let consumed = start + relativeEnd + 4
+        let lines = split(headBytes)
         guard let requestLine = lines.first else { return .reject(status: 400) }
         guard requestLine.count <= limits.requestLine else { return .reject(status: 414) }
         // 머리 줄 안에 홀로 선 CR·LF는 받지 않는다(줄 끝은 CRLF만).
@@ -70,10 +104,10 @@ public enum HTTPRequestParser {
         guard requestLine.allSatisfy({ (0x20...0x7E).contains($0) }) else { return .reject(status: 400) }
         let parts = requestLine.split(separator: 0x20, omittingEmptySubsequences: false)
         guard parts.count == 3, parts.allSatisfy({ !$0.isEmpty }) else { return .reject(status: 400) }
-        let methodText = String(decoding: parts[0], as: UTF8.self)
+        guard parts[0].allSatisfy(isTokenCharacter) else { return .reject(status: 400) }
+        let method = String(decoding: parts[0], as: UTF8.self)
         let target = Array(parts[1])
         let version = String(decoding: parts[2], as: UTF8.self)
-        guard parts[0].allSatisfy(isTokenCharacter) else { return .reject(status: 400) }
         switch version {
         case "HTTP/1.1", "HTTP/1.0": break
         default:
@@ -81,10 +115,8 @@ public enum HTTPRequestParser {
         }
         // origin-form만 받는다("/" 시작). 절대 형식, "*", 조각(#)은 400.
         guard target.first == 0x2F, !target.contains(0x23) else { return .reject(status: 400) }
-        let pathBytes = target.prefix { $0 != 0x3F }
-        let path = String(decoding: pathBytes, as: UTF8.self)
 
-        var headers: [String: String] = [:]
+        var headers: [HTTPField] = []
         let headerLines = lines.dropFirst()
         guard headerLines.count <= limits.headerCount else { return .reject(status: 431) }
         for line in headerLines {
@@ -97,24 +129,28 @@ public enum HTTPRequestParser {
             // 값: HTAB, SP, 보이는 ASCII, obs-text. 그 밖의 제어 문자(NUL 포함)는 400.
             guard rawValue.allSatisfy({ $0 == 0x09 || $0 >= 0x20 && $0 != 0x7F }) else { return .reject(status: 400) }
             let key = String(decoding: name, as: UTF8.self).lowercased()
-            let value = String(decoding: trimOWS(rawValue), as: UTF8.self)
-            if headers[key] != nil {
-                if singletonHeaders.contains(key) { return .reject(status: 400) }
-                continue
-            }
-            headers[key] = value
+            if singletonHeaders.contains(key), headers.contains(where: { $0.name == key }) { return .reject(status: 400) }
+            headers.append(HTTPField(name: key, value: String(decoding: trimOWS(rawValue), as: UTF8.self)))
         }
+        let find = { (name: String) in headers.first { $0.name == name }?.value }
 
         // HTTP/1.1은 Host가 있어야 한다(RFC 9112 3.2).
-        if version == "HTTP/1.1", headers["host"] == nil { return .reject(status: 400) }
-        // 본문은 받지 않는다. Transfer-Encoding이 있거나 Content-Length가 0이 아니면 400.
-        if headers["transfer-encoding"] != nil { return .reject(status: 400) }
-        if let length = headers["content-length"], length.isEmpty || !length.utf8.allSatisfy({ $0 == 0x30 }) {
-            return .reject(status: 400)
+        if version == "HTTP/1.1", find("host") == nil { return .reject(status: 400) }
+        // 본문은 Content-Length로만 받는다. chunked는 411(길이를 달라), 그 밖의 전송 코딩은 501(RFC 9112 6.1).
+        if let coding = find("transfer-encoding") {
+            let last = coding.split(separator: ",").last.map { $0.trimmingCharacters(in: .whitespaces).lowercased() }
+            return .reject(status: last == "chunked" ? 411 : 501)
         }
-
-        guard let method = HTTPRequest.Method(rawValue: methodText) else { return .reject(status: 405) }
-        return .request(HTTPRequest(method: method, path: path, headers: headers))
+        var contentLength: UInt64 = 0
+        if let text = find("content-length") {
+            guard !text.isEmpty, text.utf8.count <= 19, text.utf8.allSatisfy({ (0x30...0x39).contains($0) }),
+                  let value = UInt64(text) else { return .reject(status: 400) }
+            contentLength = value
+        }
+        let connection = (find("connection") ?? "").lowercased().split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+        let keepAlive = version == "HTTP/1.1" ? !connection.contains("close") : connection.contains("keep-alive")
+        return .request(HTTPRequestHead(method: method, target: String(decoding: target, as: UTF8.self), headers: headers,
+                                        contentLength: contentLength, keepAlive: keepAlive), consumed: consumed)
     }
 
     // MARK: - 바이트 도우미

@@ -27,8 +27,10 @@ public final class CrashLogStore {
         }
     }
 
-    /// 보관하는 기록 수. 넘으면 오래된 것부터 지운다.
+    /// 보관하는 기록 수. 넘으면 이 Mac이 받은 시각이 오래된 것부터 지운다.
     public nonisolated static let limit = 200
+    /// 기기 하나에서 보관하는 기록 수. 넘으면 그 기기의 기록 가운데 받은 시각이 오래된 것부터 지운다.
+    public nonisolated static let perDeviceLimit = 50
 
     /// 최근 크래시가 앞.
     public private(set) var items: [Item] = []
@@ -61,10 +63,26 @@ public final class CrashLogStore {
             memory[item.id] = report.text
         }
         items.append(item)
-        items.sort { $0.crashedAt > $1.crashedAt }
-        for old in items.dropFirst(Self.limit) { removeFile(old) }
-        items = Array(items.prefix(Self.limit))
+        // 남길 것은 이 Mac이 받은 시각으로 고른다(보낸 쪽이 적은 `crashedAt`이 아니라).
+        let kept = Self.retained(items)
+        for old in items where !kept.contains(old.id) { removeFile(old) }
+        items = items.filter { kept.contains($0.id) }.sorted { $0.crashedAt > $1.crashedAt }
         save()
+    }
+
+    /// 남길 기록의 id: 기기마다 받은 시각이 최근인 `perDeviceLimit`개, 그 가운데 전체에서 받은 시각이 최근인 `limit`개.
+    nonisolated static func retained(_ items: [Item]) -> Set<String> {
+        let byReceipt = items.sorted { $0.receivedAt != $1.receivedAt ? $0.receivedAt > $1.receivedAt : $0.id < $1.id }
+        var perDevice: [String: Int] = [:]
+        var kept: [String] = []
+        for item in byReceipt {
+            let count = perDevice[item.deviceId, default: 0]
+            guard count < perDeviceLimit else { continue }
+            perDevice[item.deviceId] = count + 1
+            kept.append(item.id)
+            if kept.count == limit { break }
+        }
+        return Set(kept)
     }
 
     public func fileURL(_ item: Item) -> URL? {

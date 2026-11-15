@@ -55,4 +55,53 @@ import Testing
         let one = try #require(await server.handle(Data(#"{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"remotedebug_crash_logs","arguments":{"id":"\#(item.id)"}}}"#.utf8)))
         #expect(String(decoding: one, as: UTF8.self).contains("EXC_BAD_ACCESS"))
     }
+
+    private func report(_ n: Int, device: String, crashedAt: Date) -> DeviceCrashEvent {
+        DeviceCrashEvent(deviceId: device, deviceName: device, nodeName: "rd-phone-1",
+                         report: CrashReport(kind: .ips, name: "r\(n).ips", bundleId: "com.example.app", appVersion: "1",
+                                             crashedAt: crashedAt, text: "report \(n) \(device)"))
+    }
+
+    @Test func keepsAtMostPerDeviceLimitPerDevice() throws {
+        let dir = try TempDir("crashes-cap")
+        let clock = TickingClock()
+        let store = CrashLogStore(directory: dir.url, now: { clock.tick() })
+        for n in 0..<(CrashLogStore.perDeviceLimit + 5) {
+            store.receive(report(n, device: "d_a", crashedAt: Date(timeIntervalSince1970: 1_000_000 + Double(n))))
+        }
+        store.receive(report(0, device: "d_b", crashedAt: Date(timeIntervalSince1970: 1_000_000)))
+        #expect(store.items.filter { $0.deviceId == "d_a" }.count == CrashLogStore.perDeviceLimit)
+        #expect(store.items.filter { $0.deviceId == "d_b" }.count == 1)
+        // 지운 기록의 원문 파일도 없다.
+        let files = try FileManager.default.contentsOfDirectory(atPath: dir.url.path).filter { $0.hasSuffix(".ips") }
+        #expect(files.count == CrashLogStore.perDeviceLimit + 1)
+    }
+
+    /// 보관 기록을 고를 때 보낸 쪽의 `crashedAt`이 아니라 이 Mac이 받은 시각을 쓴다.
+    @Test func pruningUsesReceiveTimeNotCrashTime() throws {
+        let dir = try TempDir("crashes-receive")
+        let clock = TickingClock()
+        let store = CrashLogStore(directory: dir.url, now: { clock.tick() })
+        // 먼저 받은 기록들의 crashedAt이 나중 것보다 늦다.
+        for n in 0..<CrashLogStore.perDeviceLimit {
+            store.receive(report(n, device: "d_a", crashedAt: Date(timeIntervalSince1970: 4_000_000_000 - Double(n))))
+        }
+        store.receive(report(999, device: "d_a", crashedAt: Date(timeIntervalSince1970: 1)))
+        let names = Set(store.items.map(\.name))
+        #expect(names.contains("r999.ips"), "가장 최근에 받은 기록이 남는다")
+        #expect(!names.contains("r0.ips"), "가장 먼저 받은 기록이 지워진다")
+        #expect(store.items.count == CrashLogStore.perDeviceLimit)
+    }
+}
+
+/// 부를 때마다 1초씩 가는 시계.
+final class TickingClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = Date(timeIntervalSince1970: 1_800_000_000)
+    func tick() -> Date {
+        lock.lock()
+        defer { lock.unlock() }
+        value += 1
+        return value
+    }
 }

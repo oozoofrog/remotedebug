@@ -42,19 +42,27 @@ struct RDSwiftailHost {
 
         var node = NodeConfiguration(stateDirectory: options.stateDirectory, hostname: options.hostname, authKey: authKey)
         if let control = options.controlURL { node.controlURL = control }
-        let configuration = HostConfiguration(
-            node: node,
-            certificates: certificates,
-            content: ServedContent(filePath: options.filePath, app: options.app)
-        )
+        let configuration = HostConfiguration(node: node, certificates: certificates)
 
         let reporter = GateReporter(stateDirectory: options.stateDirectory)
+        let handler = StaticContentHandler(content: ServedContent(filePath: options.filePath, app: options.app)) {
+            reporter.handle(response: $0)
+        }
         reporter.line(options.isProduction ? "ACME: Let's Encrypt 운영"
             : options.acmeDirectory == Options.stagingDirectoryURL ? "ACME: Let's Encrypt 스테이징" : "ACME: 지정한 디렉터리")
         reporter.line("내보냄: /\(options.filePath == nil ? "" : ", /file")\(options.app == nil ? "" : ", /manifest.plist, /app.ipa")"
             + (authKey == nil ? ". 인증 키 없음(상태 폴더의 신원으로 붙는다)" : ""))
 
-        let task = Task { try await SwiftailHost.run(configuration) { reporter.handle($0) } }
+        let runtime: SwiftailHostRuntime
+        do {
+            runtime = try SwiftailHostRuntime(configuration: configuration, handler: handler) { event in
+                if case .certificate(let domain, _, _, _) = event { handler.domain = domain }
+                reporter.handle(event)
+            }
+        } catch {
+            fail("설정 오류: \(describe(error))", code: 78)
+        }
+        let task = Task { try await runtime.run() }
         let sources = installInterruptHandlers(task: task, reporter: reporter)
 
         // 취소 뒤 `run()`은 노드와 인증서 관리자가 끝난 뒤에 돌아온다. 그 뒤라면 부르는 쪽이 `logOut()`을 부를 수 있다.
@@ -210,7 +218,7 @@ final class GateReporter: Sendable {
             } else {
                 line("tailnet lock: mode \(lock.mode), 거른 피어 \(lock.filteredPeerCount)명\(lock.issue.map { ", issue \($0)" } ?? "")")
             }
-        case .certificate(let notBefore, let notAfter, let chainCount):
+        case .certificate(_, let notBefore, let notAfter, let chainCount):
             let (first, sinceRunning) = state.withLock { value -> (Bool, ContinuousClock.Instant?) in
                 value.certificateCount += 1
                 let first = value.firstCertificateAt == nil
@@ -229,25 +237,30 @@ final class GateReporter: Sendable {
         case .serverFailed(let kind):
             line("서버: TLS 리스너를 띄우지 못함(\(kind))")
         case .serverStarted:
-            line("서버: TLS 리스너가 섰다(tailnet 443 → 루프백)")
-        case .connection(let peer):
+            line("서버: 루프백 리스너가 섰다(tailnet 443 → 루프백)")
+        case .listening(let port):
+            line("tailnet: \(port) 포트를 듣는다")
+        case .defaultInterface(let name):
+            line("기본 인터페이스: \(name)")
+        case .connection(let origin):
             let count = state.withLock { value -> Int in
                 value.connections += 1
                 return value.connections
             }
-            line("연결 \(count): 피어 \(peer)")
+            if case .tailnet(let peer) = origin { line("연결 \(count): 피어 \(peer.stableID)") } else { line("연결 \(count)") }
         case .connectionRejected:
             line("연결: 다리를 거치지 않았거나 준비 전에 끝난 연결을 끊음")
-        case .response(let record):
-            let method = record.method?.rawValue ?? "-"
-            let route = record.route?.rawValue ?? "(경로 표에 없음)"
-            var text = "응답: \(method) \(route) \(record.status), 본문 \(record.bodyBytes)바이트, \(String(format: "%.3f초", record.seconds))"
-            if record.route == .file || record.route == .ipa, record.seconds > 0 {
-                text += String(format: ", %.2f MiB/s", Double(record.bodyBytes) / 1_048_576 / record.seconds)
-            }
-            text += record.completed ? ", 다 보냄" : ", 도중에 끊김"
-            line(text)
         }
+    }
+
+    func handle(response record: ResponseRecord) {
+        let route = record.route?.rawValue ?? "(경로 표에 없음)"
+        var text = "응답: \(record.method) \(route) \(record.status), 본문 \(record.bodyBytes)바이트, \(String(format: "%.3f초", record.seconds))"
+        if record.route == .file || record.route == .ipa, record.seconds > 0 {
+            text += String(format: ", %.2f MiB/s", Double(record.bodyBytes) / 1_048_576 / record.seconds)
+        }
+        text += record.completed ? ", 다 보냄" : ", 도중에 끊김"
+        line(text)
     }
 
     /// 상태 폴더에 0600 파일을 쓴다. 링크를 따라가지 않는다.

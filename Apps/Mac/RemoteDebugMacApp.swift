@@ -157,14 +157,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 .appendingPathComponent("RemoteDebugTestHost-\(UUID().uuidString)", isDirectory: true)
             let testPaths = HostPaths(root: root)
             paths = testPaths
-            launch = .ready(HostModel(core: RDCoreHost(), paths: testPaths, bookmarks: NoFolderBookmarks(), id8: "00000000"))
+            launch = .ready(HostModel(core: SwiftailHostCore(paths: testPaths), paths: testPaths, bookmarks: NoFolderBookmarks(), id8: "00000000"))
         } else {
             do {
                 let appPaths = try storage(options)
                 paths = appPaths
                 lock = try StateDirLock.acquire(root: appPaths.root)
                 let bookmarks = UserDefaultsFolderBookmarks(defaults: defaults, key: options.folderBookmarkKey, securityScoped: HostEdition.isSandboxed)
-                let model = HostModel(core: RDCoreHost(), paths: appPaths, bookmarks: bookmarks, id8: options.nodeID8,
+                let model = HostModel(core: SwiftailHostCore(paths: appPaths), paths: appPaths, bookmarks: bookmarks, id8: options.nodeID8,
                                       advertiser: BonjourAdvertiser())
                 model.controlURL = options.controlURL
                 model.directEnabled = options.directListen
@@ -181,7 +181,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         super.init()
         if !options.isTesting, case .ready(let model) = launch, let paths {
             // 샌드박스판은 공식 Tailscale의 실행 파일을 실행하지 않는다(업데이트 페이지 없음).
-            let updatePage: UpdatePageModel? = HostEdition.isSandboxed ? nil : UpdatePageModel(root: paths.root, server: RDCoreUpdatePage())
+            let updatePage: UpdatePageModel? = HostEdition.isSandboxed ? nil : UpdatePageModel(root: paths.root, server: SwiftailUpdatePage())
             self.updatePage = updatePage
             let source = (Bundle.main.object(forInfoDictionaryKey: "RDSourceRoot") as? String).flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
             phoneInstaller = PhoneAppInstaller(root: paths.root, sourceRoot: source)

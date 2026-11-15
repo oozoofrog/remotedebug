@@ -1,4 +1,5 @@
 import Foundation
+import RDHostLogic
 import Testing
 
 @testable import SwiftailHostServer
@@ -52,28 +53,31 @@ struct ByteRangeTests {
         #expect(ByteRange.contentRange(start: start, end: length - 1, length: length) == "bytes 5368709120-6442450943/6442450944")
     }
 
-    @Test func fileResponseHeaders() {
-        let base = [ResponseHeader(name: "Content-Type", value: "application/octet-stream")]
-        func request(_ range: String?) -> HTTPRequest {
-            HTTPRequest(method: .get, path: "/file", headers: range.map { ["range": $0] } ?? [:])
+    @Test func fileResponseHeaders() throws {
+        let directory = try makeTestDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let path = directory.appending(path: "a.bin").path
+        try Data(repeating: 1, count: 100).write(to: URL(filePath: path))
+        func request(_ range: String?) -> HostRequest {
+            HostRequest(method: "GET", target: "/file", headers: range.map { [("range", $0)] } ?? [], body: nil, contentLength: 0,
+                        origin: .direct(remoteIP: "127.0.0.1"))
         }
-        let full = FileResponse.make(length: 100, request: request(nil), baseHeaders: base)
-        #expect(full.status == 200 && full.offset == 0 && full.count == 100)
-        #expect(full.headers.contains(ResponseHeader(name: "Accept-Ranges", value: "bytes")))
+        let base: [(name: String, value: String)] = [("Content-Type", "application/octet-stream")]
+        let full = StaticContentHandler.file(path: path, request: request(nil), headers: base)
+        #expect(full.status == 200 && full.headers.contains { $0 == ("Accept-Ranges", "bytes") })
+        guard case .file(_, 0, 100) = full.body else { Issue.record("전체가 아님"); return }
 
-        let partial = FileResponse.make(length: 100, request: request("bytes=-10"), baseHeaders: base)
-        #expect(partial.status == 206 && partial.offset == 90 && partial.count == 10)
-        #expect(partial.headers.contains(ResponseHeader(name: "Content-Range", value: "bytes 90-99/100")))
+        let partial = StaticContentHandler.file(path: path, request: request("bytes=-10"), headers: base)
+        #expect(partial.status == 206 && partial.headers.contains { $0 == ("Content-Range", "bytes 90-99/100") })
+        guard case .file(_, 90, 10) = partial.body else { Issue.record("구간이 아님"); return }
 
-        let none = FileResponse.make(length: 100, request: request("bytes=100-"), baseHeaders: base)
-        #expect(none.status == 416 && none.count == 0)
-        #expect(none.headers == [ResponseHeader(name: "Content-Range", value: "bytes */100")])
+        let none = StaticContentHandler.file(path: path, request: request("bytes=100-"), headers: base)
+        #expect(none.status == 416 && none.headers.contains { $0 == ("Content-Range", "bytes */100") })
     }
 
     /// 6GiB짜리 성긴 파일(디스크를 거의 쓰지 않는다)에서 4GiB 너머를 읽는다.
     @Test func sparseFileBeyondFourGiB() throws {
-        let directory = FileManager.default.temporaryDirectory.appending(path: "swiftail-host-tests-\(UUID().uuidString)")
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let directory = try makeTestDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
         let url = directory.appending(path: "sparse.bin")
         #expect(FileManager.default.createFile(atPath: url.path, contents: nil))
@@ -86,11 +90,8 @@ struct ByteRangeTests {
 
         let source = try FileSource(path: url.path)
         #expect(source.length == length)
-        let response = FileResponse.make(length: source.length,
-                                         request: HTTPRequest(method: .get, path: "/file", headers: ["range": "bytes=-4"]),
-                                         baseHeaders: [])
-        #expect(response.status == 206 && response.offset == length - 4 && response.count == 4)
-        #expect(try source.read(at: response.offset, count: 4) == marker)
+        #expect(ByteRange.decide(header: "bytes=-4", length: source.length) == .partial(start: length - 4, end: length - 1))
+        #expect(try source.read(at: length - 4, count: 4) == marker)
         #expect(try source.read(at: 5 << 30, count: 8) == [UInt8](repeating: 0, count: 8))
         // 끝을 넘는 읽기는 실패한다(파일이 줄어든 경우).
         #expect(throws: FileSource.Failure.self) { try source.read(at: length - 2, count: 4) }

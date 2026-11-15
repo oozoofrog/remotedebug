@@ -419,14 +419,18 @@ public final class HostModel {
         !((try? FileManager.default.contentsOfDirectory(atPath: paths.stateDir.path)) ?? []).isEmpty
     }
 
-    /// tailnet에서 로그아웃한다: 공유를 멈추고 노드 상태 폴더를 비우고 페어링한 기기 목록을 지운다.
-    /// 다음 공유 시작은 새 기기로 로그인한다. 제어 서버 쪽의 예전 기기 항목은 지우지 않는다.
+    /// tailnet에서 로그아웃한다: 공유를 멈추고(노드가 끝나기를 기다린다), 제어 서버에 로그아웃을 알리고, 노드 상태 폴더와
+    /// 직접 연결 신원을 비우고 페어링한 기기 목록을 지운다. 서버에 알리지 못해도 폴더는 지운다.
+    /// 다음 공유 시작은 새 기기로 로그인한다.
     @discardableResult
     public func logout() async -> Bool {
         await stop()
+        await core.logOut(makeConfig(authKey: ""))
         do {
             let fm = FileManager.default
-            if fm.fileExists(atPath: paths.stateDir.path) { try fm.removeItem(at: paths.stateDir) }
+            for folder in [paths.stateDir, paths.directDir] where fm.fileExists(atPath: folder.path) {
+                try fm.removeItem(at: folder)
+            }
             try paths.prepare()
         } catch {
             lastError = String(localized: "로그인 정보를 지우지 못했습니다. \(error.localizedDescription)")

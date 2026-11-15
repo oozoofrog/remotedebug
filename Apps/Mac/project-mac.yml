@@ -57,10 +57,10 @@ targets:
         CODE_SIGN_IDENTITY: $(RD_MAC_SIGN_IDENTITY)
         ENABLE_HARDENED_RUNTIME: YES
         RD_SOURCE_ROOT: $(SRCROOT)
-        # RDCore.xcframework는 arm64 전용이다(Apple silicon).
+        # Apple silicon 전용으로 배포한다.
         ARCHS: arm64
         ONLY_ACTIVE_ARCH: YES
-    # 화면·미리보기는 MacHostUI(Go 런타임 없음), 실제 코어 연결은 MacHostCore(RDCoreBridge)에 있다.
+    # 화면·미리보기는 MacHostUI, 실제 코어(Swiftail 노드 + 호스트 로직)는 MacHostCore에 있다.
     dependencies:
       - package: MacHost
         product: MacHostKit

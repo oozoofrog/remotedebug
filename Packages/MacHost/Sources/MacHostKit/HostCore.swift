@@ -76,9 +76,13 @@ public protocol HostCore: Sendable {
     func decidePairing(requestID: String, allow: Bool) async throws -> DeviceEntry?
     /// `start` 이후의 코어 이벤트. `stop`하면 끝난다.
     func events() -> AsyncStream<CoreEvent>
+    /// 제어 서버에 이 노드의 로그아웃을 알린다. `stop()`이 끝난 뒤, 상태 폴더를 지우기 전에 부른다.
+    /// 실패해도 돌아온다(부르는 쪽은 상태 폴더를 지운다. 서버가 이미 적용한 뒤일 수 있다).
+    func logOut(_ config: CoreConfig) async
 }
 
 extension HostCore {
     public func setAgentBoard(_ board: Data) async throws {}
     public func setDirect(_ on: Bool) async throws {}
+    public func logOut(_ config: CoreConfig) async {}
 }

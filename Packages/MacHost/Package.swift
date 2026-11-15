@@ -6,14 +6,15 @@ let package = Package(
     platforms: [.macOS("26.0")],
     products: [
         .library(name: "MacHostKit", targets: ["MacHostKit"]),
-        // SwiftUI 화면과 미리보기. Go 런타임(RDCoreBridge)을 링크하지 않아 Xcode 미리보기가 이 대상만으로 뜬다.
+        // SwiftUI 화면과 미리보기. 코어(Swiftail)를 링크하지 않아 Xcode 미리보기가 이 대상만으로 뜬다.
         .library(name: "MacHostUI", targets: ["MacHostUI"]),
-        // 실제 Go 코어(RDCoreBridge) 어댑터. MacHostKit·MacHostUI는 RDCore에 의존하지 않는다.
+        // 실제 코어: Swiftail 노드(SwiftailHostServer)와 호스트 로직(RDHostLogic). MacHostKit·MacHostUI는 의존하지 않는다.
         .library(name: "MacHostCore", targets: ["MacHostCore"]),
     ],
     dependencies: [
         .package(path: "../RemoteDebugKit"),
-        .package(path: "../RDCore"),
+        // ../Swiftail(이 저장소 옆 폴더, 또는 SWIFTAIL_PATH)을 경로로 쓴다.
+        .package(path: "../SwiftailHost"),
     ],
     targets: [
         .target(
@@ -38,18 +39,30 @@ let package = Package(
             dependencies: [
                 "MacHostKit",
                 .product(name: "RDModels", package: "RemoteDebugKit"),
-                .product(name: "RDCoreBridge", package: "RDCore"),
+                .product(name: "SwiftailHostServer", package: "SwiftailHost"),
+                .product(name: "RDHostLogic", package: "SwiftailHost"),
             ]
         ),
         .testTarget(name: "MacHostKitTests", dependencies: ["MacHostKit"]),
         .testTarget(name: "MacHostUITests", dependencies: ["MacHostUI", "MacHostKit"]),
-        .testTarget(name: "MacHostCoreTests", dependencies: ["MacHostCore", "MacHostKit"]),
-        // 실제 코어 + 가짜 tailnet(rdtestenv). RDTESTENV_BIN이 있을 때만 돈다(scripts/e2e-mac.sh).
+        .testTarget(
+            name: "MacHostCoreTests",
+            dependencies: [
+                "MacHostCore", "MacHostKit",
+                .product(name: "RDModels", package: "RemoteDebugKit"),
+                .product(name: "SwiftailHostServer", package: "SwiftailHost"),
+                .product(name: "RDHostLogic", package: "SwiftailHost"),
+            ]
+        ),
+        // 실제 모델 + 실제 코어·로직·HTTP 전송 + 루프백 가짜 tailnet(계정·소켓 밖의 tailnet 없이 돈다).
         .testTarget(
             name: "MacHostE2ETests",
             dependencies: [
                 "MacHostCore", "MacHostKit",
                 .product(name: "RDModels", package: "RemoteDebugKit"),
+                .product(name: "RDBuildInspection", package: "RemoteDebugKit"),
+                .product(name: "SwiftailHostServer", package: "SwiftailHost"),
+                .product(name: "RDHostLogic", package: "SwiftailHost"),
             ]
         ),
     ]

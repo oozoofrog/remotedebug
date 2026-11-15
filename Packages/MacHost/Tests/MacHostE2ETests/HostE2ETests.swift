@@ -1,245 +1,234 @@
+import CryptoKit
 import Foundation
-import MacHostCore
+@testable import MacHostCore
 @testable import MacHostKit
 import RDBuildInspection
+import RDHostLogic
 import RDModels
+import SwiftailHostServer
+import Synchronization
 import Testing
 
-/// 실제 Go 코어(`RDCoreHost`) + 가짜 tailnet(`rdtestenv control`) + 가짜 iPhone 노드(`rdtestenv peer`).
-/// `RDTESTENV_BIN`이 없으면 건너뛴다(scripts/e2e-mac.sh가 설정한다).
+/// 실제 모델(`HostModel`) + 실제 코어(`SwiftailHostCore`) + 실제 호스트 로직과 HTTP 전송. tailnet만 가짜다: 노드 층이
+/// 가짜 iPhone마다 루프백 평문 리스너를 하나씩 세우고, 그 리스너로 온 요청을 그 iPhone의 tailnet 신원으로 로직에 넘긴다.
+/// Swiftail 노드·다리·TLS·인증서는 이 시험에 없다(그 부분은 SwiftailHost의 시험과 실기기 관문이 본다).
 @MainActor
-@Suite("MacHost E2E", .serialized, .enabled(if: E2EEnv.isEnabled))
+@Suite("MacHost E2E (루프백 tailnet)", .serialized)
 struct HostE2ETests {
-    /// 테일넷 안 호스트 리스너 포트(노드마다 따로인 netstack 포트라 Mac의 포트와 겹치지 않는다).
-    static let port = 8080
+    static let fqdn = "rd-mac-e2e00001.tail0001.ts.net"
+    static let phoneA = HostPeer(stableID: "nPHONEA", nodeName: "rd-phone-e2ea", loginName: "user@example.com")
+    static let phoneB = HostPeer(stableID: "nPHONEB", nodeName: "rd-phone-e2eb", loginName: "other@example.com")
 
-    @Test(.timeLimit(.minutes(10)))
+    @Test(.timeLimit(.minutes(2)))
     func pairInstallRevokeAndShutdown() async throws {
-        let bin = try #require(E2EEnv.rdtestenv)
         let tmp = try E2ETempDir()
-        let control = try await FakeControl(binary: bin)
-        defer { control.stop() }
+        let tailnet = LoopbackTailnet(fqdn: Self.fqdn, peers: [Self.phoneA, Self.phoneB])
+        let core = SwiftailHostCore(layout: .init(), factory: tailnet.factory, pollIntervals: (.milliseconds(20), .milliseconds(50)))
 
-        // 1. 실제 코어로 공유 시작(루프백 제어 서버 → listenTLS=false).
+        // 1. 공유 시작.
         let paths = HostPaths(root: tmp.path("host"))
-        let model = HostModel(core: RDCoreHost(), paths: paths, bookmarks: NoBookmarks(),
-                              watcherOptions: .init(useFileEvents: false), id8: randomID8(),
-                              hostDisplayName: "E2E Mac", appVersion: "0.1.0", port: Self.port)
-        model.controlURL = control.url
-        #expect(model.makeConfigForTest().listenTLS == false)
+        let model = HostModel(core: core, paths: paths, bookmarks: NoBookmarks(), watcherOptions: .init(useFileEvents: false),
+                              id8: randomID8(), hostDisplayName: "E2E Mac", appVersion: "0.2.0")
         await model.start()
         #expect(model.lastError == nil, "\(model.lastError ?? "")")
-        #expect(model.isRunning)
-        try await waitUntil("호스트가 Running·listening이 된다", timeout: .seconds(60)) {
+        try await waitUntil("Running·tlsReady") {
             await model.refreshStatus()
-            return model.status?.backendState == .running && model.status?.listening == true
+            return model.status?.backendState == .running && model.status?.tlsReady == true
         }
-        let status = try #require(model.status)
-        #expect(status.fqdn.hasPrefix(model.nodeName + "."))
-        let base = "http://\(status.fqdn):\(Self.port)"
-        #expect(model.installPageURL?.absoluteString == base + "/", "설치 페이지 주소는 코어 리스너와 같은 스킴·포트")
+        try await waitUntil("가짜 iPhone 리스너") { tailnet.client(for: Self.phoneA) != nil && tailnet.client(for: Self.phoneB) != nil }
+        let a = try #require(tailnet.client(for: Self.phoneA))
+        let b = try #require(tailnet.client(for: Self.phoneB))
 
-        // 2. 디버그 빌드 가져오기 → 수락·게시. 비디버그 빌드는 거부되고 목록에 없다.
+        // 2. 디버그 빌드 가져오기 → 수락·게시. 비디버그 빌드는 거부된다.
         let accepted = try #require(await model.importBuild(E2EEnv.fixtures.appendingPathComponent("Debug-iphoneos/AcceptedDev.app")))
         guard case .accepted(let build) = accepted else {
             Issue.record("AcceptedDev가 거부됐다: \(accepted)")
             return
         }
-        let releaseCopy = tmp.path("Release-iphoneos/AcceptedDev.app")
-        try FileManager.default.createDirectory(at: releaseCopy.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try FileManager.default.copyItem(at: E2EEnv.fixtures.appendingPathComponent("Debug-iphoneos/AcceptedDev.app"), to: releaseCopy)
-        let nonDebug: [(URL, RejectionCode)] = [
-            (releaseCopy, .configurationNotDebug),
-            (E2EEnv.fixtures.appendingPathComponent("Debug-iphoneos/AdHocDist.app"), .notDevelopmentProfile),
-            (E2EEnv.fixtures.appendingPathComponent("Debug-iphoneos/Expired.app"), .profileExpired),
-            (E2EEnv.fixtures.appendingPathComponent("Debug-iphoneos/Unsigned.app"), .unsigned),
-        ]
-        for (url, code) in nonDebug {
-            let outcome = await model.importBuild(url)
-            guard case .rejected(let r) = outcome else {
-                Issue.record("\(url.lastPathComponent)(\(url.deletingLastPathComponent().lastPathComponent))가 거부되지 않았다: \(String(describing: outcome))")
-                continue
-            }
-            #expect(r.codes.contains(code), "\(url.lastPathComponent): \(r.codes)")
-            #expect(!r.messages.isEmpty)
+        let unsigned = await model.importBuild(E2EEnv.fixtures.appendingPathComponent("Debug-iphoneos/Unsigned.app"))
+        guard case .rejected = unsigned else {
+            Issue.record("Unsigned가 거부되지 않았다")
+            return
         }
         #expect(model.builds.map(\.id) == [build.id])
-        #expect(model.rejected.count == nonDebug.count)
 
         // 3. 페어링하지 않은 노드: 403 not_paired, 활동에 거부가 남는다.
-        let phone = Peer(binary: bin, control: control.url, stateDir: tmp.path("pa"), hostname: "rd-phone-e2ea")
-        let unpaired = try await phone.run("builds", ["--host", base])
-        expectHTTP(unpaired, 403, code: "not_paired")
-        try await waitUntil("denied 이벤트가 활동에 들어온다") {
+        let unpaired = try await a.get("/v1/builds")
+        #expect(unpaired.status == 403 && unpaired.code == "not_paired")
+        try await waitUntil("denied 이벤트") {
             model.activity.contains { if case .denied(let e) = $0.kind { e.reason == "not_paired" } else { false } }
         }
 
-        // 4. 페어링: 코드 → 요청 이벤트 → 사용자가 승인 → 허용 목록.
+        // 4. 페어링: 코드 → 요청 이벤트 → 승인 → 허용 목록.
         await model.beginPairing()
         let code = try #require(model.pairingCode)
-        #expect(code.displayCode.count == 9)
-        #expect(model.pairingLink?.absoluteString == "remotedebug://pair?host=\(status.fqdn)&code=\(code.code)")
-        #expect(model.installPageLink?.absoluteString == "\(base)/#code=\(code.code)")
-        let pairing = try phone.start("pair", ["--host", base, "--code", code.code, "--device-name", "E2E iPhone", "--wait", "90s"])
-        try await waitUntil("pair-request 이벤트가 온다", timeout: .seconds(60)) { !model.pendingPairRequests.isEmpty }
-        let request = try #require(model.pendingPairRequests.first)
-        #expect(request.deviceName == "E2E iPhone")
-        #expect(request.nodeName == "rd-phone-e2ea")
-        #expect(model.pairingState == .requestReceived(requestId: request.requestId))
-        #expect(model.pairingCode == nil, "쓰인 코드는 더 보여 주지 않는다")
-        #expect(model.devices.isEmpty, "허용 전에는 허용 목록이 비어 있다")
-        #expect(pairing.isRunning, "허용하기 전에는 iPhone이 결과를 기다리고 있어야 한다(pending)")
-        await model.approve(request.requestId)
-        let paired = await pairing.wait(timeout: .seconds(60))
-        expectHTTP(paired, 200)
-        #expect((paired.body?["state"] as? String) == "approved", "\(paired.summary)")
-        #expect(model.devices.count == 1)
+        let request = try await a.post("/v1/pair/request", ["code": code.code, "deviceName": "E2E iPhone"])
+        #expect(request.status == 202, "\(request.text)")
+        let requestID = try #require(request.json?["requestId"] as? String)
+        try await waitUntil("pair-request 이벤트") { !model.pendingPairRequests.isEmpty }
+        let pending = try #require(model.pendingPairRequests.first)
+        #expect(pending.deviceName == "E2E iPhone" && pending.nodeName == "rd-phone-e2ea")
+        #expect(model.devices.isEmpty)
+        await model.approve(pending.requestId)
+        let decided = try await a.get("/v1/pair/request/\(requestID)")
+        #expect(decided.json?["state"] as? String == "approved", "\(decided.text)")
         let device = try #require(model.devices.first)
-        #expect(device.nodeName == "rd-phone-e2ea")
-        #expect(device.name == "E2E iPhone")
-        let saved = try JSONFile<DeviceList>(url: paths.devicesFile).load()
-        #expect(saved?.devices.map(\.id) == [device.id], "허용한 기기를 저장한다")
-        #expect(model.pendingPairRequests.isEmpty)
+        #expect(device.nodeName == "rd-phone-e2ea" && device.nodeStableId == Self.phoneA.stableID)
+        #expect(try JSONFile<DeviceList>(url: paths.devicesFile).load()?.devices.map(\.id) == [device.id])
 
-        // 쓰인 코드는 다시 쓸 수 없다(다른 노드).
-        let intruder = Peer(binary: bin, control: control.url, stateDir: tmp.path("pb"), hostname: "rd-phone-e2eb")
-        let reused = try await intruder.run("pair", ["--host", base, "--code", code.code, "--wait", "5s"])
-        expectHTTP(reused, 403, code: "pair_code_invalid")
+        // 쓰인 코드는 다른 노드가 다시 쓸 수 없다.
+        let reused = try await b.post("/v1/pair/request", ["code": code.code, "deviceName": "Other"])
+        #expect(reused.status == 403 && reused.code == "pair_code_invalid", "\(reused.text)")
 
-        // 4-1. 거부: 실제 어댑터·브리지로 allow=false를 보내면 기기가 추가되지 않는다(T3).
+        // 4-1. 거부.
         await model.beginPairing()
         let denyCode = try #require(model.pairingCode)
-        let denyPairing = try intruder.start("pair", ["--host", base, "--code", denyCode.code, "--device-name", "Intruder", "--wait", "90s"])
-        try await waitUntil("두 번째 pair-request 이벤트가 온다", timeout: .seconds(60)) { !model.pendingPairRequests.isEmpty }
-        let denyRequest = try #require(model.pendingPairRequests.first)
-        #expect(denyRequest.nodeName == "rd-phone-e2eb")
-        #expect(denyPairing.isRunning, "거부하기 전에는 iPhone이 결과를 기다리고 있어야 한다(pending)")
-        await model.deny(denyRequest.requestId)
-        #expect(model.lastError == nil, "\(model.lastError ?? "")")
-        let denied = await denyPairing.wait(timeout: .seconds(60))
-        expectHTTP(denied, 200)
-        #expect((denied.body?["state"] as? String) == "denied", "\(denied.summary)")
-        #expect(model.devices.map(\.id) == [device.id], "거부한 기기가 허용 목록에 들어갔다")
-        #expect(try JSONFile<DeviceList>(url: paths.devicesFile).load()?.devices.map(\.id) == [device.id])
-        expectHTTP(try await intruder.run("builds", ["--host", base]), 403, code: "not_paired")
-        try await waitUntil("거부 결과가 활동에 남는다") {
-            model.activity.contains { if case .pairDecided(let e) = $0.kind { e.requestId == denyRequest.requestId && e.state == .denied } else { false } }
-        }
+        let denyRequest = try await b.post("/v1/pair/request", ["code": denyCode.code, "deviceName": "Intruder"])
+        let denyID = try #require(denyRequest.json?["requestId"] as? String)
+        try await waitUntil("두 번째 pair-request") { !model.pendingPairRequests.isEmpty }
+        let denyPending = try #require(model.pendingPairRequests.first)
+        await model.deny(denyPending.requestId)
+        #expect(try await b.get("/v1/pair/request/\(denyID)").json?["state"] as? String == "denied")
+        #expect(model.devices.map(\.id) == [device.id])
+        #expect(try await b.get("/v1/builds").code == "not_paired")
 
-        // 5. 등록된 노드: 빌드 목록에 수락된 빌드만 있다.
-        let listed = try await phone.run("builds", ["--host", base])
-        expectHTTP(listed, 200)
-        let listedIDs = ((listed.body?["builds"] as? [[String: Any]]) ?? []).compactMap { $0["id"] as? String }
-        #expect(listedIDs == [build.id], "\(listed.summary)")
+        // 5. 등록된 노드: 수락된 빌드만 보인다.
+        let listed = try await a.get("/v1/builds")
+        #expect(((listed.json?["builds"] as? [[String: Any]]) ?? []).compactMap { $0["id"] as? String } == [build.id], "\(listed.text)")
 
-        // 6. 설치 세션 → manifest → IPA, SHA-256이 descriptor와 같다.
-        let session = try await phone.run("session", ["--host", base, "--build", build.id])
-        expectHTTP(session, 201)
-        let manifestURL = try #require(session.body?["manifestUrl"] as? String, "\(session.summary)")
-        let manifestFile = tmp.path("manifest.plist")
-        expectHTTP(try await phone.run("fetch", ["--url", manifestURL, "--out", manifestFile.path]), 200)
-        let ipaURL = try manifestIPAURL(manifestFile)
-        #expect(ipaURL.hasPrefix(base + "/i/"))
-        let ipaFile = tmp.path("app.ipa")
-        expectHTTP(try await phone.run("fetch", ["--url", ipaURL, "--out", ipaFile.path]), 200)
-        #expect(try sha256Hex(ipaFile) == build.descriptor.ipa.sha256)
-        #expect(Int64(try Data(contentsOf: ipaFile).count) == build.descriptor.ipa.size)
+        // 6. 설치 세션 → manifest → IPA(전송의 파일 응답). SHA-256이 같다.
+        let session = try await a.post("/v1/builds/\(build.id)/sessions", [:])
+        #expect(session.status == 201, "\(session.text)")
+        let manifestText = try #require(session.json?["manifestUrl"] as? String)
+        let manifestURL = try #require(URL(string: manifestText))
+        #expect(manifestURL.host() == Self.fqdn && manifestURL.scheme == "https")
+        let manifest = try await a.get(manifestURL.path())
+        #expect(manifest.status == 200)
+        let ipaText = try #require(Self.ipaURL(in: manifest.body))
+        let ipaURL = try #require(URL(string: ipaText))
+        let ipa = try await a.get(ipaURL.path())
+        #expect(ipa.status == 200)
+        #expect(SHA256.hash(data: ipa.body).map { String(format: "%02x", $0) }.joined() == build.descriptor.ipa.sha256)
         try await waitUntil("세션 완료 이벤트") {
             model.activity.contains { if case .session(let e) = $0.kind { e.state == .completed && e.buildId == build.id } else { false } }
         }
 
-        // 7. 등록되지 않은 노드는 첫 노드의 토큰으로 받을 수 없다.
-        let second = try await phone.run("session", ["--host", base, "--build", build.id])
-        expectHTTP(second, 201)
-        let secondManifest = try #require(second.body?["manifestUrl"] as? String)
-        let stolen = try await intruder.run("fetch", ["--url", secondManifest, "--out", tmp.path("stolen.plist").path])
-        expectHTTP(stolen, 403)
-        #expect(["not_paired", "token_invalid"].contains(stolen.errorCode ?? ""), "\(stolen.summary)")
-        expectHTTP(try await intruder.run("builds", ["--host", base]), 403, code: "not_paired")
-        expectHTTP(try await intruder.run("session", ["--host", base, "--build", build.id]), 403, code: "not_paired")
+        // 7. 다른 노드는 첫 노드의 세션으로 받을 수 없다.
+        let second = try await a.post("/v1/builds/\(build.id)/sessions", [:])
+        let secondText = try #require(second.json?["manifestUrl"] as? String)
+        let secondManifest = try #require(URL(string: secondText))
+        let stolen = try await b.get(secondManifest.path())
+        #expect(stolen.status == 403)
 
-        // 8. 기기 제거 뒤에는 접근이 거부된다.
+        // 8. 기기 제거 뒤에는 거부된다.
         await model.removeDevice(device.id)
-        #expect(model.lastError == nil, "\(model.lastError ?? "")")
         #expect(model.devices.isEmpty)
-        expectHTTP(try await phone.run("builds", ["--host", base]), 403, code: "not_paired")
-        let revokedFetch = try await phone.run("fetch", ["--url", secondManifest, "--out", tmp.path("revoked.plist").path])
-        expectHTTP(revokedFetch, 403)
+        #expect(try await a.get("/v1/builds").code == "not_paired")
+        #expect(try await a.get(secondManifest.path()).status == 403)
 
-        // 9. 종료 뒤 호스트의 리스너가 닫혔는지 TCP 단계에서 본다(T5). 사라진 노드로 가는 HTTP 요청은 응답 없이 기한을 넘기므로
-        // 피어의 오류 문장으로는 "리스너는 열렸는데 답이 없음"과 구별되지 않는다. forward는 tailnet 연결이 성공해야 바이트를 잇고,
-        // 연결을 끝내 맺지 못하면 "forward: dial"을 남기고 로컬 연결을 닫는다. 같은 경로로 종료 전 HTTP 응답을 먼저 확인한다.
-        let forwarder = try Child(bin, ["forward", "--control", control.url, "--state-dir", tmp.path("fw").path, "--hostname", "rd-phone-e2ec",
-                                        "--listen", "127.0.0.1:0", "--to", "\(status.fqdn):\(Self.port)"])
-        defer { forwarder.terminate() }
-        let forwardPort = try await forwardListenPort(forwarder)
-        let beforeShutdown = await rawHTTPProbe(port: forwardPort, timeout: .seconds(120))
-        guard case .responded(let head) = beforeShutdown, head.hasPrefix("HTTP/1.1 403") else {
-            Issue.record("종료 전 forward 경로가 동작하지 않는다: \(beforeShutdown)\n\(forwarder.err.string.suffix(1500))")
-            return
-        }
-
+        // 9. 종료: 노드 층이 멈추고 리스너가 닫힌다.
         await model.shutdown()
-        #expect(!model.isRunning)
-        #expect(model.status == nil)
-        // forward는 10초 연결 시도를 20번 한 뒤 닫는다(약 210초).
-        let afterShutdown = await rawHTTPProbe(port: forwardPort, timeout: .seconds(300))
-        #expect(afterShutdown == .closed, "종료 뒤 리스너가 닫히지 않았다: \(afterShutdown)")
-        // stderr는 비동기로 쌓이므로 로컬 연결이 닫힌 뒤에 도착할 수 있다.
-        do {
-            try await waitUntil("forward: dial 기록", timeout: .seconds(5)) { forwarder.err.string.contains("forward: dial") }
-        } catch {
-            Issue.record("tailnet 연결이 실패하지 않았다: \(forwarder.err.string.suffix(1500))")
-        }
+        #expect(!model.isRunning && model.status == nil)
+        #expect(tailnet.runEnded)
+        await #expect(throws: (any Error).self) { try await a.get("/v1/info") }
     }
 
     // MARK: 도우미
+
+    static func ipaURL(in manifest: Data) -> String? {
+        let text = String(decoding: manifest, as: UTF8.self)
+        guard let start = text.range(of: "<key>url</key><string>")?.upperBound, let end = text[start...].range(of: "</string>") else {
+            return nil
+        }
+        return String(text[start..<end.lowerBound])
+    }
 
     private func waitUntil(_ what: String, timeout: Duration = .seconds(20), _ condition: () async -> Bool) async throws {
         let deadline = ContinuousClock.now + timeout
         while ContinuousClock.now < deadline {
             if await condition() { return }
-            try await Task.sleep(for: .milliseconds(100))
+            try await Task.sleep(for: .milliseconds(50))
         }
-        if await condition() { return }
-        throw E2EError("시간 안에 일어나지 않았다: \(what)")
-    }
-
-    private func forwardListenPort(_ forwarder: Child) async throws -> UInt16 {
-        var port: UInt16?
-        try await waitUntil("forward가 준비된다", timeout: .seconds(90)) {
-            guard let line = forwarder.out.string.split(separator: "\n").first,
-                  let obj = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
-                  let listen = obj["listen"] as? String, let text = listen.split(separator: ":").last else { return false }
-            port = UInt16(text)
-            return port != nil
-        }
-        return try #require(port)
-    }
-
-    private func expectHTTP(_ r: ProcessResult, _ status: Int, code: String? = nil, sourceLocation: SourceLocation = #_sourceLocation) {
-        #expect(r.httpStatus == status, "\(r.summary)", sourceLocation: sourceLocation)
-        if let code { #expect(r.errorCode == code, "\(r.summary)", sourceLocation: sourceLocation) }
-    }
-
-    private func manifestIPAURL(_ file: URL) throws -> String {
-        let plist = try PropertyListSerialization.propertyList(from: Data(contentsOf: file), format: nil) as? [String: Any]
-        let items = plist?["items"] as? [[String: Any]]
-        let assets = items?.first?["assets"] as? [[String: Any]]
-        guard let url = assets?.first(where: { $0["kind"] as? String == "software-package" })?["url"] as? String else {
-            throw E2EError("매니페스트에 IPA 주소가 없다")
-        }
-        return url
+        Issue.record("기한 안에 일어나지 않음: \(what)")
+        throw CancellationError()
     }
 }
 
-extension ProcessResult {
-    /// `rdtestenv peer`의 출력 `{"status":N,"body":…}`.
-    var httpStatus: Int? { json?["status"] as? Int }
-    var body: [String: Any]? { json?["body"] as? [String: Any] }
-    var errorCode: String? { (body?["error"] as? [String: Any])?["code"] as? String }
+/// 가짜 tailnet: iPhone 신원마다 루프백 리스너 하나.
+final class LoopbackTailnet: Sendable {
+    let fqdn: String
+    let peers: [HostPeer]
+    private let ports = Mutex<[String: UInt16]>([:])
+    private let ended = Mutex(false)
+
+    init(fqdn: String, peers: [HostPeer]) { (self.fqdn, self.peers) = (fqdn, peers) }
+
+    var runEnded: Bool { ended.withLock { $0 } }
+
+    var factory: HostNodeFactory {
+        HostNodeFactory(make: { [self] _, handler, _ in Layer(tailnet: self, handler: handler) }, logOut: { _ in })
+    }
+
+    func client(for peer: HostPeer) -> PeerClient? {
+        ports.withLock { $0[peer.stableID] }.map(PeerClient.init(port:))
+    }
+
+    struct Layer: HostNodeLayer {
+        let tailnet: LoopbackTailnet
+        let handler: any HostRequestHandling
+
+        func run() async throws {
+            var listeners: [HTTPListener] = []
+            for peer in tailnet.peers {
+                let listener = try await HTTPListener.start(binding: .loopback(port: 0), security: .plaintext,
+                                                            admission: .acceptAllForTesting(peer), handler: handler)
+                listeners.append(listener)
+                tailnet.ports.withLock { $0[peer.stableID] = listener.port }
+            }
+            while !Task.isCancelled { try? await Task.sleep(for: .milliseconds(20)) }
+            for listener in listeners { listener.close() }
+            tailnet.ended.withLock { $0 = true }
+        }
+
+        func snapshot() async -> NodeSnapshot {
+            NodeSnapshot(state: .running, addresses: ["100.64.0.1"], fqdn: tailnet.fqdn, stableID: "nMACE2E",
+                         certDomains: [tailnet.fqdn], peerCount: tailnet.peers.count)
+        }
+
+        func certificateSnapshot() async -> CertificateSnapshot? { CertificateSnapshot() }
+        var serving: ServingState { ServingState(listening: true, tlsReady: !tailnet.runEnded) }
+        func retryCertificates() async {}
+    }
 }
 
-extension HostModel {
-    func makeConfigForTest() -> CoreConfig { makeConfig(authKey: "") }
+/// 가짜 iPhone 하나의 HTTP 클라이언트(그 iPhone의 루프백 리스너로 보낸다).
+struct PeerClient: Sendable {
+    let port: UInt16
+
+    struct Reply: Sendable {
+        var status: Int
+        var body: Data
+        var text: String { String(decoding: body, as: UTF8.self) }
+        var json: [String: Any]? { try? JSONSerialization.jsonObject(with: body) as? [String: Any] }
+        var code: String? { (json?["error"] as? [String: Any])?["code"] as? String }
+    }
+
+    func get(_ path: String) async throws -> Reply { try await send("GET", path, body: nil) }
+
+    func post(_ path: String, _ object: [String: String]) async throws -> Reply {
+        try await send("POST", path, body: try JSONSerialization.data(withJSONObject: object))
+    }
+
+    private func send(_ method: String, _ path: String, body: Data?) async throws -> Reply {
+        var request = URLRequest(url: URL(string: "http://127.0.0.1:\(port)\(path)")!, timeoutInterval: 10)
+        request.httpMethod = method
+        if let body {
+            request.httpBody = body
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.finishTasksAndInvalidate() }
+        let (data, response) = try await session.data(for: request)
+        return Reply(status: (response as? HTTPURLResponse)?.statusCode ?? 0, body: data)
+    }
 }

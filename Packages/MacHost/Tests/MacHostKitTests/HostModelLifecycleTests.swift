@@ -27,8 +27,15 @@ extension HostModelTests {
         try Data("node".utf8).write(to: marker)
         #expect(h.model.hasSavedLogin)
 
+        try FileManager.default.createDirectory(at: h.paths.directDir, withIntermediateDirectories: true)
+
         #expect(await h.model.logout())
 
+        // 차례: 공유 중지 → 서버에 로그아웃 알림(폴더가 아직 있다) → 폴더 지우기.
+        let calls = h.core.calls
+        #expect(calls.firstIndex(of: .logOut).map { $0 > (calls.lastIndex(of: .stop) ?? .max) } == true)
+        #expect(h.core.stateDirAtLogOut == true)
+        #expect(!FileManager.default.fileExists(atPath: h.paths.directDir.path))
         #expect(!h.model.isRunning)
         #expect(!h.model.hasSavedLogin)
         #expect(!FileManager.default.fileExists(atPath: marker.path))

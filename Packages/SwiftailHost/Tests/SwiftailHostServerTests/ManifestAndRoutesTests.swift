@@ -1,3 +1,4 @@
+import RDHostLogic
 import Testing
 
 @testable import SwiftailHostServer
@@ -27,40 +28,36 @@ struct ManifestAndRoutesTests {
 
     @Test func routesDependOnContent() {
         let empty = ServedContent()
-        #expect(HostRouter.route(for: "/", content: empty) == .index)
-        #expect(HostRouter.route(for: "/file", content: empty) == nil)
-        #expect(HostRouter.route(for: "/manifest.plist", content: empty) == nil)
-        #expect(HostRouter.route(for: "/app.ipa", content: empty) == nil)
+        #expect(StaticContentHandler.route(for: "/", content: empty) == .index)
+        #expect(StaticContentHandler.route(for: "/file", content: empty) == nil)
+        #expect(StaticContentHandler.route(for: "/manifest.plist", content: empty) == nil)
+        #expect(StaticContentHandler.route(for: "/app.ipa", content: empty) == nil)
         let full = ServedContent(filePath: "/x/file", app: app)
-        #expect(Route.allCases.allSatisfy { HostRouter.route(for: $0.rawValue, content: full) == $0 })
+        #expect(Route.allCases.allSatisfy { StaticContentHandler.route(for: $0.rawValue, content: full) == $0 })
     }
 
     @Test func indexLinksOnlyWhatIsServed() {
-        let none = String(decoding: HostRouter.indexPage(content: ServedContent(), domain: domain), as: UTF8.self)
+        let none = String(decoding: StaticContentHandler.indexPage(content: ServedContent(), domain: domain), as: UTF8.self)
         #expect(!none.contains("itms-services") && !none.contains("href=\"/file\""))
-        let page = String(decoding: HostRouter.indexPage(content: ServedContent(filePath: "/x", app: app), domain: domain), as: UTF8.self)
+        let page = String(decoding: StaticContentHandler.indexPage(content: ServedContent(filePath: "/x", app: app), domain: domain), as: UTF8.self)
         #expect(page.contains("href=\"/file\""))
         #expect(page.contains("href=\"itms-services://?action=download-manifest&amp;url=https%3A%2F%2F"))
         #expect(page.contains("Tom &amp; &quot;Jerry&quot; &lt;beta&gt; 설치"))
     }
 
-    @Test func manifestPlanUsesListenerDomain() {
-        let content = ServedContent(app: app)
-        let (route, plan) = HostRouter.plan(HTTPRequest(method: .get, path: "/manifest.plist"), content: content, domain: domain)
-        #expect(route == .manifest)
-        guard case .bytes(200, _, let body) = plan else {
-            Issue.record("200 본문이 아님")
-            return
-        }
+    @Test func manifestUsesListenerDomain() async {
+        let content = ServedContent(app: AppPackage(ipaPath: "/x.ipa", bundleIdentifier: "com.example.app", bundleVersion: "1", title: "앱"))
+        let handler = StaticContentHandler(content: content, domain: domain)
+        let manifest = await handler.handle(HostRequest(method: "GET", target: "/manifest.plist", headers: [], body: nil,
+                                                       contentLength: 0, origin: .direct(remoteIP: "127.0.0.1")))
+        #expect(manifest.status == 200)
+        guard case .bytes(let body) = manifest.body else { Issue.record("본문 없음"); return }
         #expect(String(decoding: body, as: UTF8.self).contains("https://\(domain)/app.ipa"))
-        let (_, missing) = HostRouter.plan(HTTPRequest(method: .get, path: "/nope"), content: content, domain: domain)
-        #expect(missing == .bytes(status: 404, headers: [], body: []))
-    }
-
-    @Test func responseHead() {
-        let text = String(decoding: ResponseHead.serialize(status: 405, contentLength: 0, headers: []), as: UTF8.self)
-        #expect(text.hasPrefix("HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\nConnection: close\r\n"))
-        #expect(text.contains("Allow: GET, HEAD\r\n"))
-        #expect(text.hasSuffix("\r\n\r\n"))
+        let missing = await handler.handle(HostRequest(method: "GET", target: "/nope", headers: [], body: nil, contentLength: 0,
+                                                      origin: .direct(remoteIP: "127.0.0.1")))
+        #expect(missing.status == 404)
+        let post = await handler.handle(HostRequest(method: "POST", target: "/", headers: [], body: nil, contentLength: 0,
+                                                   origin: .direct(remoteIP: "127.0.0.1")))
+        #expect(post.status == 405 && post.headers.contains { $0.name == "Allow" })
     }
 }

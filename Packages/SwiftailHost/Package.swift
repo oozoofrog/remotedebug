@@ -25,7 +25,7 @@ let package = Package(
     ],
     targets: [
         // 호스트 로직: 경로·페어링·세션·게시. Swiftail도 소켓도 쓰지 않는다(전송과의 접점은 HostHTTP.swift).
-        .target(name: "RDHostLogic", dependencies: [.product(name: "RDModels", package: "RemoteDebugKit")]),
+        .target(name: "RDHostLogic", dependencies: [.product(name: "RDModels", package: "RemoteDebugKit")], resources: [.copy("Resources/web")]),
         .testTarget(name: "RDHostLogicTests", dependencies: ["RDHostLogic"]),
         .target(
             name: "SwiftailHostServer",
@@ -47,7 +47,14 @@ let package = Package(
                 .product(name: "SwiftailCertificates", package: "Swiftail"),
             ]
         ),
-        .testTarget(name: "SwiftailHostServerTests", dependencies: ["SwiftailHostServer"]),
+        .testTarget(
+            name: "SwiftailHostServerTests",
+            dependencies: [
+                "SwiftailHostServer", "RDHostLogic",
+                .product(name: "Swiftail", package: "Swiftail"),
+                .product(name: "SwiftailLoopback", package: "Swiftail"),
+            ]
+        ),
     ],
     swiftLanguageModes: [.v6]
 )

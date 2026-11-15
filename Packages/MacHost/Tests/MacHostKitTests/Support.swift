@@ -137,6 +137,7 @@ final class FakeHostCore: HostCore {
         case setDirect(Bool)
         case openPairing(Int)
         case decide(String, Bool)
+        case logOut
     }
 
     struct State {
@@ -168,6 +169,7 @@ final class FakeHostCore: HostCore {
         var pairing = PairingCode(code: "K7M29QXD", expiresAt: Date().addingTimeInterval(300))
         var approvedDevice: DeviceEntry? = sampleDevice(1)
         var continuation: AsyncStream<CoreEvent>.Continuation?
+        var stateDirAtLogOut: Bool?
     }
 
     let state = Mutex(State())
@@ -189,6 +191,15 @@ final class FakeHostCore: HostCore {
 
     func registerRequest(_ id: String) {
         state.withLock { _ = $0.pendingRequests.insert(id) }
+    }
+
+    /// 로그아웃 때 상태 폴더가 아직 있었는가(서버에 알린 뒤에 지워야 한다).
+    var stateDirAtLogOut: Bool? { state.withLock { $0.stateDirAtLogOut } }
+
+    func logOut(_ config: CoreConfig) async {
+        record(.logOut)
+        let exists = FileManager.default.fileExists(atPath: config.stateDir)
+        state.withLock { $0.stateDirAtLogOut = exists }
     }
 
     func start(_ config: CoreConfig) async throws {
