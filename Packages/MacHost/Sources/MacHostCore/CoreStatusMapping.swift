@@ -59,17 +59,18 @@ enum NodeEnd: Sendable, Equatable {
         }
     }
 
-    /// `errorMessage`. 로그인 필요는 오류가 아니라 nil.
+    /// `errorMessage`(화면에 나온다). 로그인 필요는 오류가 아니라 nil.
+    /// `host listener:` 머리는 화면이 안내를 고르는 표지라 번역하지 않는다(`StatusGuidance`).
     var message: String? {
         switch self {
         case .nodeKeyExpired: nil
-        case .authKeyRejected: "인증 키가 받아들여지지 않았습니다. 키가 만료됐거나 이미 쓰였는지 확인하세요."
-        case .registrationRejected: "제어 서버가 이 Mac의 등록을 거절했습니다."
-        case .stateDirectoryInUse: "다른 노드가 같은 상태 폴더를 쓰고 있습니다."
-        case .udpUnavailable: "tailnet에 쓸 UDP 소켓을 열지 못했습니다."
-        case .listenFailed: "host listener: tailnet 포트를 열지 못했습니다."
-        case .configuration: "노드 설정이 올바르지 않습니다."
-        case .other: "tailnet 노드가 멈췄습니다."
+        case .authKeyRejected: String(localized: "인증 키가 받아들여지지 않았습니다. 키가 만료됐거나 이미 쓰였는지 확인하세요.")
+        case .registrationRejected: String(localized: "제어 서버가 이 Mac의 등록을 거절했습니다.")
+        case .stateDirectoryInUse: String(localized: "다른 노드가 같은 상태 폴더를 쓰고 있습니다.")
+        case .udpUnavailable: String(localized: "tailnet에 쓸 UDP 소켓을 열지 못했습니다.")
+        case .listenFailed: CoreStatusMapping.listenerPrefix + String(localized: "tailnet 포트를 열지 못했습니다.")
+        case .configuration: String(localized: "노드 설정이 올바르지 않습니다.")
+        case .other: String(localized: "tailnet 노드가 멈췄습니다.")
         }
     }
 
@@ -89,6 +90,9 @@ enum NodeEnd: Sendable, Equatable {
 }
 
 enum CoreStatusMapping {
+    /// 화면(`StatusGuidance`)이 리스너 실패를 알아보는 머리. 번역하지 않는다.
+    static let listenerPrefix = "host listener: "
+
     struct Input: Sendable {
         var phase: NodePhase
         var node: NodeSnapshot
@@ -156,14 +160,15 @@ enum CoreStatusMapping {
     static func userFixable(_ failure: CertificateFailure) -> String? {
         switch failure {
         case .magicDNSDisabled:
-            return "host listener: tailnet의 MagicDNS가 꺼져 있습니다."
+            // 번역문에도 MagicDNS 낱말이 있어야 화면이 MagicDNS 안내를 고른다.
+            return listenerPrefix + String(localized: "tailnet의 MagicDNS가 꺼져 있습니다.")
         case .domainNotAllowed:
-            return "host listener: 이 Mac의 이름이 tailnet의 TLS 도메인 목록에 없습니다"
+            return listenerPrefix + String(localized: "이 Mac의 이름이 tailnet의 TLS 도메인 목록에 없습니다")
         case .rateLimited(let retryAfter):
             if let retryAfter {
-                return "host listener: Let's Encrypt 발급 한도에 걸렸습니다(\(RDTimestamp.string(retryAfter)) 뒤 다시 시도)"
+                return listenerPrefix + String(localized: "Let's Encrypt 발급 한도에 걸렸습니다(\(RDTimestamp.string(retryAfter)) 뒤 다시 시도)")
             }
-            return "host listener: Let's Encrypt 발급 한도에 걸렸습니다"
+            return listenerPrefix + String(localized: "Let's Encrypt 발급 한도에 걸렸습니다")
         case .httpsNotEnabled, .nodeNotRunning, .controlRejected, .acme, .validationFailed, .orderFailed, .unexpectedResponse,
              .invalidCertificate, .network, .timedOut:
             return nil

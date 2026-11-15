@@ -5,7 +5,7 @@ Usage:
     python3 -I scripts/check_strings.py [--catalog PATH ...] [--web PATH | --no-web]
 
 Defaults: every Localization/**/*.xcstrings of the repository and the translation table of the install
-web page (core/internal/host/web/logic.js, between the lines `// RD-STRINGS-BEGIN` and
+web page (Packages/SwiftailHost/Sources/RDHostLogic/Resources/web/logic.js, between the lines `// RD-STRINGS-BEGIN` and
 `// RD-STRINGS-END`; the text from the first `{` to the last `}` there is JSON).
 
 String catalogs (.xcstrings, source language ko): every key needs a non-empty value in en, ja, zh-Hans
@@ -32,7 +32,7 @@ import sys
 
 LANGUAGES = ["en", "ja", "zh-Hans", "zh-Hant"]
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_WEB = os.path.join("core", "internal", "host", "web", "logic.js")
+DEFAULT_WEB = os.path.join("Packages", "SwiftailHost", "Sources", "RDHostLogic", "Resources", "web", "logic.js")
 PRINTF = re.compile(
     r"%(?:(\d+)\$)?[-+ #0']*(?:\d+|\*)?(?:\.(?:\d+|\*))?(hh|h|ll|l|q|L|z|t|j)?([@dDiuUxXoOfFeEgGcCsSpaA])"
 )

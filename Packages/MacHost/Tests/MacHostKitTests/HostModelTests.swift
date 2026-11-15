@@ -153,8 +153,10 @@ struct HostModelTests {
 
         h.core.emit(.pairRequest(pairRequest("pr_agent")))
         #expect(await eventually { h.model.pairRequestsForAgent.map(\.requestId) == ["pr_agent"] })
-        #expect(await h.model.decideForAgent("pr_agent", allow: true) == nil)
-        #expect(h.core.calls.contains(.decide("pr_agent", true)))
+        // 에이전트 통로는 거부만 한다.
+        #expect(await h.model.denyForAgent("pr_agent") == nil)
+        #expect(h.core.calls.contains(.decide("pr_agent", false)))
+        #expect(!h.core.calls.contains(.decide("pr_agent", true)))
         #expect(h.model.pairRequestsForAgent.isEmpty)
     }
 

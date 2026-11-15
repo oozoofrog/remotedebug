@@ -2,7 +2,7 @@
 # README.md, README.ko.md와 docs/*.md가 저장소와 맞는지 검사한다. 어긋난 곳마다 '실패:' 한 줄을 출력하고 종료 코드 1로 끝난다.
 #
 # 검사: (a) 문서의 경로가 있는가. 코드 조각과 모든 코드 블록(json 제외, 들여쓴 블록 포함)에서
-#           scripts/ docs/ Packages/ Apps/ core/ Config/ .agent-loop/ 아래 경로, 루트 파일 이름(project.yml 등),
+#           scripts/ docs/ Packages/ Apps/ Config/ .agent-loop/ 아래 경로, 루트 파일 이름(project.yml 등),
 #           `--spec` 인자, `<이름>.xcodeproj`(project.yml의 name과 비교)를 본다
 #       (b) 문서에 적은 스크립트가 실행 가능하고 문법이 맞는가
 #       (c) 대상·스킴·패키지·모듈·번들 ID 이름이 project.yml, project-*.yml, Packages/*/Package.swift에 있는가.
@@ -84,12 +84,12 @@ if failures:
     finish()
 project_text = text.pop("project.yml")
 
-PREFIXES = ("scripts/", "docs/", "Packages/", "Apps/", "core/", "Config/", ".agent-loop/")
+PREFIXES = ("scripts/", "docs/", "Packages/", "Apps/", "Config/", ".agent-loop/")
 # 사용자나 스크립트가 만드는 파일이라 없어도 되는 경로.
-GENERATED = {"Config/Signing.local.xcconfig", "Packages/RDCore/RDCore.xcframework"}
+GENERATED = {"Config/Signing.local.xcconfig"}
 
 FENCE = re.compile(r"^[ \t]*```([\w+-]*)[^\n]*\n(.*?)^[ \t]*```[ \t]*$", re.M | re.S)
-SHELL_PATH = re.compile(r"(?:^|[\s\"'=(])((?:scripts|docs|Packages|Apps|core|Config|\.agent-loop)/[\w./*+-]+)", re.M)
+SHELL_PATH = re.compile(r"(?:^|[\s\"'=(])((?:scripts|docs|Packages|Apps|Config|\.agent-loop)/[\w./*+-]+)", re.M)
 ROOT_FILE = re.compile(r"(?:^|[\s\"'=(])(\.?[\w-]+(?:\.[\w-]+)*\.(?:yml|yaml|xcconfig|xcodeproj))(?=$|[\s\"')])", re.M)
 BUNDLE_ID = re.compile(r"\bcom\.oozoofrog\.app\.[A-Za-z0-9.-]+")
 SCHEME = re.compile(r"-scheme[=\s]+[\"']?([\w-]+)")
@@ -121,7 +121,7 @@ def line_of_scheme(body, scheme):
 
 # 이름 목록: project.yml, project-*.yml, Packages/*/Package.swift.
 specs = {"project.yml": project_text}
-for spec in sorted(glob.glob("Apps/*/project-*.yml")):
+for spec in sorted(glob.glob("Apps/*/project-*.yml") + glob.glob("project-*.yml")):
     specs[spec] = read(spec)
 project_name = (re.search(r"^name:\s*(\S+)\s*$", project_text, re.M) or [None, ""])[1]
 targets, schemes, packages, bundle_ids = set(), set(), set(), set()
@@ -358,11 +358,11 @@ if helpers_ok:
 
 # (h) 설치 웹 페이지 절차의 화면 문구. 굵은 글씨(**…**)와 큰따옴표("…") 문구가 페이지·Mac 앱 소스에 글자 그대로 있는가.
 #     `<`가 든 문구(자리표시)와 코드 조각은 보지 않는다.
-UI_SOURCES = sorted(glob.glob("core/internal/host/web/*") + glob.glob("Packages/MacHost/Sources/MacHostUI/*.swift")
+UI_SOURCES = sorted(glob.glob("Packages/SwiftailHost/Sources/RDHostLogic/Resources/web/*") + glob.glob("Packages/MacHost/Sources/MacHostUI/*.swift")
                     + glob.glob("Packages/MacHost/Sources/MacHostKit/*.swift"))
 ui_text = "".join(read(f) for f in UI_SOURCES if os.path.isfile(f))
 if not ui_text:
-    fail("화면 문구 검사: core/internal/host/web, Packages/MacHost/Sources를 읽지 못했다")
+    fail("화면 문구 검사: Packages/SwiftailHost/Sources/RDHostLogic/Resources/web, Packages/MacHost/Sources를 읽지 못했다")
 UI_SECTIONS = [("docs/setup.md", r"^## iPhone에서 앱 없이 설치\(웹 페이지\)\n.*?(?=^## |\Z)"),
                ("docs/device-test.md", r"^### D14\. .*?(?=^##+ |\Z)")]
 for path, pattern in UI_SECTIONS:

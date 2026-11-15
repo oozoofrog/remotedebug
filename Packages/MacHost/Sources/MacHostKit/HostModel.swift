@@ -901,9 +901,9 @@ public final class HostModel {
         }
     }
 
-    /// 에이전트용: 요청에 답한다. 실패하면 안내를 돌려준다.
-    public func decideForAgent(_ requestId: String, allow: Bool) async -> String? {
-        if allow { await approve(requestId) } else { await deny(requestId) }
+    /// 에이전트용: 요청을 거부한다. 실패하면 안내를 돌려준다. 에이전트 경로에는 허용이 없다(허용은 `approve`, Mac 앱 화면).
+    public func denyForAgent(_ requestId: String) async -> String? {
+        await deny(requestId)
         if let error = pairingError { return error }
         if pendingPairRequests.contains(where: { $0.requestId == requestId }) { return String(localized: "요청에 답하지 못했습니다.") }
         return nil
@@ -919,7 +919,8 @@ public final class HostModel {
         lastError = message
     }
 
-    /// 사용자가 승인 버튼을 눌렀을 때만 부른다.
+    /// 페어링 요청을 허용한다. Mac 앱 화면의 허용 버튼이 부른다. 에이전트 경로(명령 파일·MCP)의 통로
+    /// (`ProjectsModel.PairingRequests`)에는 허용이 없어 이 함수에 닿지 않는다.
     public func approve(_ requestId: String) async {
         await decide(requestId, allow: true)
     }

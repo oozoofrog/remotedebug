@@ -20,12 +20,22 @@ public struct SwiftailUpdatePage: UpdatePageServing {
         do {
             return try await server.apply(UpdatePageServer.Configuration(listen: config.listen, publicURL: config.publicURL, page: page))
         } catch {
-            throw UpdatePageError(message: error.description)
+            throw UpdatePageError(message: Self.message(error))
+        }
+    }
+
+    /// 화면(`UpdatePageModel.lastError`)에 나오는 문구.
+    static func message(_ failure: UpdatePageServer.Failure) -> String {
+        switch failure {
+        case .invalidPublicURL: String(localized: "publicURL은 /로 끝나는 https 주소여야 합니다")
+        case .invalidPage: String(localized: "page에는 ipaPath와 bundleId가 필요합니다")
+        case .notLoopback: String(localized: "listen은 루프백 주소여야 합니다")
+        case .listenFailed(let address): String(localized: "\(address)에서 기다리지 못했습니다")
         }
     }
 }
 
-/// 업데이트 페이지 설정을 적용하지 못했다. 문구는 Go 코어의 `rd_update_page_set` 오류와 같다.
+/// 업데이트 페이지 설정을 적용하지 못했다.
 public struct UpdatePageError: LocalizedError, Sendable {
     public var message: String
     public var errorDescription: String? { message }

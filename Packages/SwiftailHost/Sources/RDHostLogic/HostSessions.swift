@@ -134,7 +134,10 @@ extension HostLogic {
             let deadline = session.created.addingTimeInterval(options.limits.sessionMaxTTL)
             let remaining = deadline.timeIntervalSince(options.now())
             // 주입한 논리 시계의 남은 시간을 전송의 실제 쓰기 기한으로 옮긴다.
-            return TransferState(allowed: !session.terminal && remaining > 0, deadline: Date().addingTimeInterval(remaining))
+            // 전송을 멈추는 것은 세션 실패(철회·읽기 오류·게시 취소·로직 닫기)와 기한뿐이다(Go `ipaReader`의 `revoked`).
+            // 다른 요청이 세션을 `completed`로 만들어도 이미 보내는 응답은 끝까지 보낸다.
+            // 진행 중인 응답이 있는 세션은 `expired`가 되지 않는다(`expireSession`은 inflight가 0일 때만).
+            return TransferState(allowed: session.state != .failed && remaining > 0, deadline: Date().addingTimeInterval(remaining))
         }
     }
 

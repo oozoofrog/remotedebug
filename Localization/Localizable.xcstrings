@@ -2571,6 +2571,34 @@
         }
       }
     },
+    "%@에서 기다리지 못했습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't listen on %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@で待ち受けできませんでした"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法在 %@ 上监听"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法在 %@ 上監聽"
+          }
+        }
+      }
+    },
     "%@에서 스킬과 MCP 서버를 제거했습니다." : {
       "localizations" : {
         "en" : {
@@ -4187,34 +4215,6 @@
         }
       }
     },
-    "Go 코어(RDCore.xcframework)가 없습니다. 저장소에서 scripts/build-core.sh를 먼저 실행하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The Go core (RDCore.xcframework) is missing. Run scripts/build-core.sh from the repository first."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Goコア(RDCore.xcframework)がありません。リポジトリで先にscripts/build-core.shを実行してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "缺少 Go 核心（RDCore.xcframework）。请先在仓库中运行 scripts/build-core.sh。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "找不到 Go 核心 (RDCore.xcframework)。請先在儲存庫中執行 scripts/build-core.sh。"
-          }
-        }
-      }
-    },
     "HTTPS 인증서" : {
       "localizations" : {
         "en" : {
@@ -4267,6 +4267,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "HTTPS 憑證已關閉"
+          }
+        }
+      }
+    },
+    "HTTPS 인증서를 받았습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Received the HTTPS certificate."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HTTPS証明書を取得しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已获取 HTTPS 证书。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已取得 HTTPS 憑證。"
           }
         }
       }
@@ -4547,6 +4575,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Key ID 為 10 個英文大寫字母與數字。"
+          }
+        }
+      }
+    },
+    "Let's Encrypt 발급 한도에 걸렸습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reached the Let's Encrypt issuance limit"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's Encryptの発行上限に達しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已达到 Let's Encrypt 签发上限"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已達到 Let's Encrypt 簽發上限"
+          }
+        }
+      }
+    },
+    "Let's Encrypt 발급 한도에 걸렸습니다(%@ 뒤 다시 시도)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reached the Let's Encrypt issuance limit (retrying after %@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Let's Encryptの発行上限に達しました(%@以降に再試行)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已达到 Let's Encrypt 签发上限（%@ 之后重试）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已達到 Let's Encrypt 簽發上限（%@ 之後重試）"
           }
         }
       }
@@ -7095,6 +7179,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在 Safari 中開啟"
+          }
+        }
+      }
+    },
+    "Swift 패키지(Swiftail)를 GitHub에서 받지 못했습니다. 인터넷 연결을 확인하고 다시 설치하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't download the Swift package (Swiftail) from GitHub. Check your internet connection and install again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHubからSwiftパッケージ(Swiftail)を取得できませんでした。インターネット接続を確認して、もう一度インストールしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法从 GitHub 下载 Swift 包（Swiftail）。请检查网络连接后重新安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法從 GitHub 下載 Swift 套件 (Swiftail)。請檢查網路連線後重新安裝。"
+          }
+        }
+      }
+    },
+    "TLS 인증서를 받지 못했습니다(%@)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't get the TLS certificate (%@)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "TLS証明書を取得できませんでした(%@)。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法获取 TLS 证书（%@）。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法取得 TLS 憑證 (%@)。"
           }
         }
       }
@@ -10123,6 +10263,90 @@
         }
       }
     },
+    "listen은 루프백 주소여야 합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "listen must be a loopback address"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "listenはループバックアドレスである必要があります"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "listen 必须是环回地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "listen 必須是迴路位址"
+          }
+        }
+      }
+    },
+    "page에는 ipaPath와 bundleId가 필요합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "page needs ipaPath and bundleId"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "pageにはipaPathとbundleIdが必要です"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "page 需要 ipaPath 和 bundleId"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "page 需要 ipaPath 與 bundleId"
+          }
+        }
+      }
+    },
+    "publicURL은 /로 끝나는 https 주소여야 합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "publicURL must be an https address ending with /"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "publicURLは/で終わるhttpsアドレスである必要があります"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "publicURL 必须是以 / 结尾的 https 地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "publicURL 必須是以 / 結尾的 https 位址"
+          }
+        }
+      }
+    },
     "stored 크기 불일치: %@" : {
       "localizations" : {
         "en" : {
@@ -10291,6 +10515,34 @@
         }
       }
     },
+    "tailnet 노드가 멈췄습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The tailnet node stopped."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnetノードが停止しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnet 节点已停止。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnet 節點已停止。"
+          }
+        }
+      }
+    },
     "tailnet 로그인 주소를 받는 중입니다." : {
       "localizations" : {
         "en" : {
@@ -10315,6 +10567,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在取得 tailnet 登入網址。"
+          }
+        }
+      }
+    },
+    "tailnet 로그인이 만료됐습니다. 공유를 다시 시작해 로그인하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The tailnet login expired. Restart sharing to sign in."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnetのログインの有効期限が切れました。共有を再開してログインしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnet 登录已过期。请重新开始共享并登录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnet 登入已過期。請重新開始分享並登入。"
           }
         }
       }
@@ -10655,6 +10935,34 @@
         }
       }
     },
+    "tailnet 포트를 열지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't open the tailnet port."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnetのポートを開けませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开 tailnet 端口。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法開啟 tailnet 連接埠。"
+          }
+        }
+      }
+    },
     "tailnet에 로그인해야 합니다. 로그인하면 자동으로 연결됩니다." : {
       "localizations" : {
         "en" : {
@@ -10679,6 +10987,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "必須登入 tailnet。登入後會自動連線。"
+          }
+        }
+      }
+    },
+    "tailnet에 쓸 UDP 소켓을 열지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't open a UDP socket for the tailnet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnet用のUDPソケットを開けませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法为 tailnet 打开 UDP 套接字。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法為 tailnet 開啟 UDP 通訊端。"
           }
         }
       }
@@ -10763,6 +11099,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "tailnet 已關閉 HTTPS 憑證，因此無法建立安裝網址。請在 Tailscale 管理主控台的 DNS 頁面 (%@) 開啟 MagicDNS 與 HTTPS Certificates。開啟後不必重新開始共享，稍後就會開啟安裝網址。"
+          }
+        }
+      }
+    },
+    "tailnet의 MagicDNS가 꺼져 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MagicDNS is off in the tailnet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnetのMagicDNSがオフになっています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnet 的 MagicDNS 已关闭。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnet 的 MagicDNS 已關閉。"
           }
         }
       }
@@ -13979,6 +14343,34 @@
         }
       }
     },
+    "노드 설정이 올바르지 않습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The node settings are not valid."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノードの設定が正しくありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "节点设置无效。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "節點設定無效。"
+          }
+        }
+      }
+    },
     "노드 이름" : {
       "localizations" : {
         "en" : {
@@ -14003,6 +14395,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "節點名稱"
+          }
+        }
+      }
+    },
+    "노드가 종료되었습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The node has stopped."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノードは終了しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "节点已结束。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "節點已結束。"
           }
         }
       }
@@ -14115,6 +14535,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切換到其他帳號"
+          }
+        }
+      }
+    },
+    "다른 노드가 같은 상태 폴더를 쓰고 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another node is using the same state folder."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のノードが同じ状態フォルダを使用しています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "另一个节点正在使用同一状态文件夹。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "另一個節點正在使用同一個狀態資料夾。"
           }
         }
       }
@@ -15459,6 +15907,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "本機標頭名稱與中央目錄不同：%@"
+          }
+        }
+      }
+    },
+    "루프백 리스너를 띄우지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't start the loopback listener."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ループバックリスナーを起動できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法启动环回监听器。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法啟動迴路監聽器。"
           }
         }
       }
@@ -23609,6 +24085,34 @@
         }
       }
     },
+    "이 Mac의 이름이 tailnet의 TLS 도메인 목록에 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac's name is not in the tailnet's TLS domain list"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このMacの名前がtailnetのTLSドメイン一覧にありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 Mac 的名称不在 tailnet 的 TLS 域名列表中"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 Mac 的名稱不在 tailnet 的 TLS 網域列表中"
+          }
+        }
+      }
+    },
     "이 Mac의 주소를 아직 모릅니다. 공유를 시작한 뒤 다시 열면 코드에 주소가 들어갑니다." : {
       "localizations" : {
         "en" : {
@@ -25217,6 +25721,34 @@
         }
       }
     },
+    "인증 키가 받아들여지지 않았습니다. 키가 만료됐거나 이미 쓰였는지 확인하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The auth key was not accepted. Check whether the key expired or was already used."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認証キーが受け付けられませんでした。キーの有効期限が切れていないか、すでに使用されていないか確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "认证密钥未被接受。请检查密钥是否已过期或已被使用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "驗證金鑰未被接受。請檢查金鑰是否已過期或已被使用。"
+          }
+        }
+      }
+    },
     "인증 키는 저장하지 않고 다음 공유 시작에 한 번만 씁니다." : {
       "localizations" : {
         "en" : {
@@ -26305,6 +26837,34 @@
         }
       }
     },
+    "제어 서버가 이 Mac의 등록을 거절했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The control server rejected this Mac's registration."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コントロールサーバがこのMacの登録を拒否しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "控制服务器拒绝了此 Mac 的注册。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "控制伺服器拒絕了此 Mac 的註冊。"
+          }
+        }
+      }
+    },
     "제어 서버를 바꿀까요?" : {
       "localizations" : {
         "en" : {
@@ -26917,6 +27477,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "直接連線"
+          }
+        }
+      }
+    },
+    "직접 연결 리스너를 열지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't open the direct connection listener."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接接続のリスナーを開けませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开直接连接监听器。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法開啟直接連線監聽器。"
+          }
+        }
+      }
+    },
+    "직접 연결 키를 준비하지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't prepare the direct connection key."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接接続のキーを準備できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法准备直接连接密钥。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法準備直接連線金鑰。"
+          }
+        }
+      }
+    },
+    "직접 연결 포트를 열지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't open the direct connection port."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接接続のポートを開けませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开直接连接端口。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法開啟直接連線連接埠。"
           }
         }
       }
@@ -27901,34 +28545,6 @@
         }
       }
     },
-    "코어 응답을 읽지 못했습니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't read the core's response."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コアの応答を読み取れませんでした。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法读取核心的响应。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法讀取核心回應。"
-          }
-        }
-      }
-    },
     "코어가 알 수 없는 상태(%@)를 보냈습니다. 계속되면 공유를 다시 시작하세요." : {
       "localizations" : {
         "en" : {
@@ -27985,34 +28601,6 @@
         }
       }
     },
-    "코어가 응답하지 않았습니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The core didn't respond."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コアが応答しませんでした。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "核心没有响应。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "核心沒有回應。"
-          }
-        }
-      }
-    },
     "코어가 이미 실행 중입니다." : {
       "localizations" : {
         "en" : {
@@ -28037,34 +28625,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "核心已在執行中。"
-          }
-        }
-      }
-    },
-    "코어에 보낼 값을 만들지 못했습니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't create the value to send to the core."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コアに送信する値を作成できませんでした。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法生成要发送给核心的值。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法建立要傳送給核心的值。"
           }
         }
       }
@@ -32087,6 +32647,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "主機名稱"
+          }
+        }
+      }
+    },
+    "호스트를 준비하지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't prepare the host."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホストを準備できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法准备主机。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法準備主機。"
           }
         }
       }

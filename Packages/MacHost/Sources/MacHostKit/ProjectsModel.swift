@@ -97,19 +97,23 @@ public final class ProjectsModel {
     }
 
     /// 에이전트가 페어링 요청을 보고 답하는 통로.
+    /// 에이전트가 페어링 요청을 보는 통로. 목록과 거부만 있다: 허용은 Mac 앱 화면에서만 한다.
     public struct PairingRequests: Sendable {
         public var list: @MainActor () -> [PairRequestInfo]
-        /// 답한 뒤 실패 안내. 성공하면 nil.
-        public var decide: @MainActor (_ requestId: String, _ allow: Bool) async -> String?
+        /// 거부한 뒤 실패 안내. 성공하면 nil.
+        public var deny: @MainActor (_ requestId: String) async -> String?
 
         public init(list: @escaping @MainActor () -> [PairRequestInfo],
-                    decide: @escaping @MainActor (_ requestId: String, _ allow: Bool) async -> String?) {
+                    deny: @escaping @MainActor (_ requestId: String) async -> String?) {
             self.list = list
-            self.decide = decide
+            self.deny = deny
         }
 
-        public static let unavailable = PairingRequests(list: { [] }, decide: { _, _ in String(localized: "페어링 요청에 답할 수 없습니다.") })
+        public static let unavailable = PairingRequests(list: { [] }, deny: { _ in String(localized: "페어링 요청에 답할 수 없습니다.") })
     }
+
+    /// 에이전트가 허용하려 할 때의 오류.
+    static let approveInMacApp = "에이전트는 페어링을 허용할 수 없습니다. 사용자에게 RemoteDebug Mac 앱의 페어링 요청에서 직접 허용해 달라고 하세요."
 
     /// 에이전트가 iPhone에 파일을 보내는 통로.
     public struct FileSharing: Sendable {
@@ -610,13 +614,16 @@ public final class ProjectsModel {
             }
         case "requests":
             return AgentResponse(ok: true, requests: pairingRequests.list())
-        case "approve", "deny":
+        case "approve":
+            // 허용은 Mac 앱 화면에서만 한다. 통로에 허용이 없으므로 요청 id와 상관없이 같은 오류다.
+            return AgentResponse(ok: false, error: Self.approveInMacApp, requests: pairingRequests.list())
+        case "deny":
             // 요청 id는 둘째 줄로 받는다.
             guard !path.isEmpty else { return AgentResponse(ok: false, error: "요청 id가 필요합니다.") }
             guard pairingRequests.list().contains(where: { $0.requestId == path }) else {
                 return AgentResponse(ok: false, error: "기다리는 요청이 아닙니다: \(path). 만료됐거나 이미 답했습니다.", requests: pairingRequests.list())
             }
-            if let failure = await pairingRequests.decide(path, command == "approve") {
+            if let failure = await pairingRequests.deny(path) {
                 return AgentResponse(ok: false, error: failure, requests: pairingRequests.list())
             }
             return AgentResponse(ok: true, requests: pairingRequests.list())
@@ -682,7 +689,7 @@ public final class ProjectsModel {
             return AgentResponse(ok: report.ok, error: report.ok ? nil : report.message, sharing: host.sharing,
                                  installPage: host.installPage, report: report)
         default:
-            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, approve, deny, push, link, files, unpush, connect, schemes, build 중 하나를 쓰세요.")
+            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build 중 하나를 쓰세요.")
         }
     }
 
@@ -725,10 +732,10 @@ enum AgentScript {
         """
         #!/bin/sh
         # RemoteDebug Mac 앱에 명령을 보낸다. 앱이 이 파일을 실행할 때마다 새로 쓴다.
-        # 사용법: rd status | pair | requests | approve <요청 id> | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]
+        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]
         dir=\(quoted(agentDir))
         bundle=\(quoted(bundleID))
-        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | approve <요청 id> | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]" >&2; exit 2; }
+        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]" >&2; exit 2; }
         cmd=$1
         path=${2:-}
         scheme=${3:-}

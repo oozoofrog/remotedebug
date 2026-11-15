@@ -1,7 +1,7 @@
 #!/bin/bash
 # kit의 IPA 라운드트립 검증: 픽스처 .app → rdvalidate package → unzip -t → ditto 추출 → codesign --verify
 # → rdvalidate inspect(.ipa) → 매니페스트 생성 → plutil -lint.
-# 빌드·임시 파일은 모두 eyebuild 폴더(/Volumes/eyedisk/build/remotedebug/...) 아래에 두고 끝나면 지운다.
+# 빌드·임시 파일은 모두 eyebuild 폴더(`eyebuild dir`가 정하는 위치) 아래에 두고 끝나면 지운다.
 # 종료 코드: 모두 통과 0, 하나라도 실패 1.
 set -uo pipefail
 

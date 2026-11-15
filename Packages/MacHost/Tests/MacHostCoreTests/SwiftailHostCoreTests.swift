@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import MacHostKit
 import RDHostLogic
@@ -48,26 +49,37 @@ final class FakeNode: HostNodeLayer, Sendable {
     }
 
     let state = Mutex(State())
-    private let failGate = Mutex<CheckedContinuation<Void, Never>?>(nil)
+    /// 기다리는 `run()`과, 그것이 기다리기 전에 온 취소. 취소가 먼저 와도 잊지 않는다
+    /// (`stop()`이 `start()` 바로 뒤에 오면 `onCancel`이 continuation보다 먼저 돈다).
+    private let failGate = Mutex<(waiting: CheckedContinuation<Void, Never>?, cancelled: Bool)>((nil, false))
 
     func update(_ body: (inout State) -> Void) { state.withLock { body(&$0) } }
 
     /// `run()`을 이 실패로 끝낸다.
     func end(with error: any Error) {
         state.withLock { $0.failure = error }
-        failGate.withLock { $0.take() }?.resume()
+        failGate.withLock { $0.waiting.take() }?.resume()
     }
 
     func run() async throws {
         state.withLock { $0.runs += 1 }
         await withTaskCancellationHandler {
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-                let ended = state.withLock { $0.failure != nil }
-                if ended { continuation.resume() } else { failGate.withLock { $0 = continuation } }
+                // 실패·취소 확인과 등록을 같은 잠금 안에서 한다: `end`·`onCancel`이 그 사이에 와도 놓치지 않는다.
+                let resumeNow = failGate.withLock { gate -> Bool in
+                    if gate.cancelled || state.withLock({ $0.failure != nil }) { return true }
+                    gate.waiting = continuation
+                    return false
+                }
+                if resumeNow { continuation.resume() }
             }
         } onCancel: {
-            failGate.withLock { $0.take() }?.resume()
+            failGate.withLock { gate in
+                gate.cancelled = true
+                return gate.waiting.take()
+            }?.resume()
         }
+        failGate.withLock { $0.cancelled = false }
         if let failure = state.withLock({ $0.failure }) { throw failure }
     }
 
@@ -82,11 +94,14 @@ final class FakeFactory: Sendable {
     let configurations = Mutex<[HostConfiguration]>([])
     let logOuts = Mutex<[NodeConfiguration]>([])
     let logOutError = Mutex<NodeError?>(nil)
+    /// 노드 층이 받은 처리기(로직). 시험이 tailnet 요청을 흉내 내 직접 부른다.
+    let handler = Mutex<(any HostRequestHandling)?>(nil)
 
     var factory: HostNodeFactory {
         HostNodeFactory(
-            make: { [self] configuration, _, _ in
+            make: { [self] configuration, handler, _ in
                 configurations.withLock { $0.append(configuration) }
+                self.handler.withLock { $0 = handler }
                 return node
             },
             logOut: { [self] configuration in
@@ -124,6 +139,20 @@ final class EventSink: Sendable {
     var all: [CoreEvent] { store.events.withLock { $0 } }
     var states: [CoreStatus] { all.compactMap { if case .state(let s) = $0 { s } else { nil } } }
     var logs: [LogEvent] { all.compactMap { if case .log(let l) = $0 { l } else { nil } } }
+}
+
+/// 요청 본문(시험용).
+final class BytesBody: HostBodyReader, Sendable {
+    private let rest: Mutex<ArraySlice<UInt8>>
+    init(_ bytes: [UInt8]) { rest = Mutex(bytes[...]) }
+    func read(upTo count: Int) async throws -> [UInt8]? {
+        rest.withLock { value in
+            guard !value.isEmpty else { return nil }
+            let chunk = Array(value.prefix(count))
+            value = value.dropFirst(chunk.count)
+            return chunk
+        }
+    }
 }
 
 func eventually(_ seconds: Double = 5, _ condition: @Sendable () -> Bool) async -> Bool {
@@ -400,5 +429,69 @@ struct SwiftailHostCoreTests {
         #expect(fake.logOuts.withLock { $0.map(\.stateDirectory.path) } == [tmp.paths.stateDir.path])
         let log = try String(contentsOf: tmp.paths.coreLogFile, encoding: .utf8)
         #expect(log.contains("로그아웃: 서버에 알리지 못함(control.connection)"))
+    }
+
+    /// 로직의 사건이 RDModels JSON에 없는 값(크래시를 받은 시각, 에이전트 요청의 노드 이름, 멈춤 요청의 기기 id)을 싣고
+    /// 로직이 낸 순서대로 오며, `stop()`은 열린 세션의 `failed`까지 넘긴 뒤 스트림을 끝낸다.
+    @Test func logicEventsCarryDetailsInOrderAndStopDrainsThem() async throws {
+        let tmp = try CoreTempDir("details")
+        let fake = FakeFactory()
+        let core = fake.core(paths: tmp.paths)
+        let config = try tmp.config()
+        try await core.start(config)
+        let sink = EventSink(core.events())
+        let handler = try #require(fake.handler.withLock { $0 })
+        let peer = HostPeer(stableID: "nPHONE1", nodeName: "rd-phone-1a2b3c4d", loginName: "")
+        try await core.setDevices([DeviceEntry(id: "d_1", name: "시험 iPhone", nodeStableId: peer.stableID, nodeName: peer.nodeName,
+                                               loginName: "", pairedAt: Date())])
+        try await core.setAgentBoard(Data(#"{"enabled":true,"projects":[],"agents":[],"requests":[]}"#.utf8))
+        func post(_ path: String, _ json: String = "") async -> Int {
+            let body = Array(json.utf8)
+            let headers = [("host", "rd-mac-0000test.example.ts.net")] + (body.isEmpty ? [] : [("content-type", "application/json")])
+            return await handler.handle(HostRequest(method: "POST", target: path, headers: headers.map { (name: $0.0, value: $0.1) },
+                                                    body: body.isEmpty ? nil : BytesBody(body), contentLength: UInt64(body.count),
+                                                    origin: .tailnet(peer))).status
+        }
+
+        let before = Date()
+        #expect(await post("/v1/crashes", #"{"kind":"feedback","name":"n","bundleId":"com.example.app","appVersion":"1.0","crashedAt":"2026-01-01T00:00:00Z","text":"t"}"#) == 202)
+        #expect(await post("/v1/agent/requests", #"{"text":"hi","project":"","agent":"","continues":""}"#) == 202)
+        let request = try #require(await { () async -> AgentRequestEvent? in
+            _ = await eventually { sink.all.contains { if case .agentRequest = $0 { true } else { false } } }
+            return sink.all.compactMap { if case .agentRequest(let e) = $0 { e } else { nil } }.first
+        }())
+        #expect(request.nodeName == peer.nodeName && request.deviceId == "d_1")
+        #expect(await post("/v1/agent/requests/\(request.requestId)/cancel") == 202)
+        #expect(await eventually { sink.all.contains { if case .agentCancel = $0 { true } else { false } } })
+        let crash = try #require(sink.all.compactMap { if case .deviceCrash(let e) = $0 { e } else { nil } }.first)
+        let receivedAt = try #require(crash.receivedAt)
+        #expect(receivedAt >= before.addingTimeInterval(-1) && receivedAt <= Date())
+        let cancel = try #require(sink.all.compactMap { if case .agentCancel(let e) = $0 { e } else { nil } }.first)
+        #expect(cancel.deviceId == "d_1")
+        let order = sink.all.compactMap { event -> String? in
+            switch event {
+            case .deviceCrash, .agentRequest, .agentCancel: event.type
+            default: nil
+            }
+        }
+        #expect(order == ["device-crash", "agent-request", "agent-cancel"])
+
+        // 열린 세션: stop()이 끝나기 전에 그 `failed`가 스트림에 들어 있다.
+        let ipa = tmp.paths.publishedDir.appendingPathComponent("a.ipa")
+        let data = Data("0123456789".utf8)
+        try data.write(to: ipa)
+        let sha = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        let buildID = HostIDs.buildID(bundleID: "com.example.app", sha256: sha)
+        try await core.publish(PublishRequest(build: BuildDescriptor(
+            id: buildID, bundleId: "com.example.app", displayName: "Sample", version: "1.0", buildNumber: "1", minOS: "26.0",
+            debug: true, configuration: "Debug", configurationEvidence: .path,
+            signing: .init(teamId: "EXAMPLE", profileName: "Example", profileExpires: Date().addingTimeInterval(3600),
+                           provisionedDeviceCount: 1, getTaskAllow: true),
+            ipa: .init(size: Int64(data.count), sha256: sha), publishedAt: Date()), ipaPath: ipa.path))
+        #expect(await post("/v1/builds/\(buildID)/sessions") == 201)
+        await core.stop()
+        #expect(await eventually { sink.ended })
+        let sessions = sink.all.compactMap { if case .session(let e) = $0 { e.state } else { nil } }
+        #expect(sessions.first == .created && sessions.last == .failed)
     }
 }

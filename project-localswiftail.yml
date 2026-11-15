@@ -1,0 +1,9 @@
+# 로컬 Swiftail 빌드: 공개 저장소의 고정 커밋 대신 이 저장소 옆 폴더(../Swiftail)의 Swiftail을 쓴다.
+# 일반 빌드는 project.yml을 그대로 쓴다. Mac 호스트 패키지(Packages/SwiftailHost)의 Swiftail도 이 로컬 패키지로 바뀐다.
+#   xcodegen generate --spec project-localswiftail.yml
+# 명령줄 SwiftPM 빌드는 환경 변수 SWIFTAIL_PATH로 같은 일을 한다(Packages/SwiftailHost/Package.swift).
+include:
+  - path: project.yml
+packages:
+  Swiftail:
+    path: ../Swiftail

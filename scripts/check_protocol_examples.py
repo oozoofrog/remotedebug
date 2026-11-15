@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""docs/protocol.md 검사: JSON 예제 파싱, 필수 엔드포인트·오류 코드·C API 이름 존재, 예제 키 일치.
+"""docs/protocol.md 검사: JSON 예제 파싱, 필수 엔드포인트·오류 코드·Swift 경계(HostCore) 이름 존재, 예제 키 일치.
 
 사용: python3 -I scripts/check_protocol_examples.py docs/protocol.md
 종료 코드 0이면 통과, 1이면 실패 사유를 출력한다.
@@ -18,9 +18,9 @@ ERROR_CODES = [
     "build_changed", "session_expired", "not_debug_build", "too_many_attempts", "internal",
     "invalid_config", "not_running", "unknown_handle", "path_outside_publish_dir", "hash_mismatch",
 ]
-C_API = [
-    "rd_start", "rd_status", "rd_stop", "rd_host_publish", "rd_host_unpublish", "rd_host_set_devices",
-    "rd_host_pairing_open", "rd_host_pairing_decide", "rd_proxy_start", "rd_next_event", "rd_free",
+HOST_CORE = [
+    "HostCore", "SwiftailHostCore", "start", "stop", "status", "publish", "unpublish", "publishResource",
+    "unpublishResource", "setAgentBoard", "setDevices", "setDirect", "openPairing", "decidePairing", "events", "logOut",
 ]
 EVENT_TYPES = ["state", "pair-request", "pair-decided", "device-added", "denied", "session", "log"]
 DESCRIPTOR_KEYS = {"id", "bundleId", "displayName", "version", "buildNumber", "minOS", "debug",
@@ -46,7 +46,7 @@ def main(path):
     if len(blocks) < 10:
         problems.append(f"JSON 예제가 너무 적다: {len(blocks)}")
 
-    for name, items in (("엔드포인트", ENDPOINTS), ("C API", C_API)):
+    for name, items in (("엔드포인트", ENDPOINTS), ("Swift 경계", HOST_CORE)):
         for item in items:
             if item not in text:
                 problems.append(f"{name} 누락: {item}")
@@ -74,7 +74,7 @@ def main(path):
         problems.append("상태 JSON 예제의 키가 계약과 다르다")
     config = find({"mode", "stateDir"})
     if config is None or set(config) != CONFIG_KEYS:
-        problems.append("rd_start 설정 예제의 키가 계약과 다르다")
+        problems.append("CoreConfig 설정 예제의 키가 계약과 다르다")
 
     session = find({"sessionId", "manifestUrl", "installUrl", "expiresAt"})
     if session is None:
@@ -91,7 +91,7 @@ def main(path):
             print(" -", problem)
         return 1
     print(f"통과: JSON 예제 {len(blocks)}개, 엔드포인트 {len(ENDPOINTS)}개, 오류 코드 {len(ERROR_CODES)}개, "
-          f"C API {len(C_API)}개, 이벤트 {len(EVENT_TYPES)}개")
+          f"Swift 경계 {len(HOST_CORE)}개, 이벤트 {len(EVENT_TYPES)}개")
     return 0
 
 

@@ -2,11 +2,11 @@
 
 `protocol.md`가 정하지 않았거나 구현과 다르게 적힌 규칙을 모은다. 이 문서와 `protocol.md`가 다르면 이 문서가 구현과 같다. 절 번호는 `protocol.md`의 절이다.
 
-## A. 설정과 C API (§9)
+## A. 설정과 Swift 경계 (§9)
 
 ### A.1 선택 설정 필드
 
-`rd_start` 설정에 다음 두 필드를 더 받는다. 둘 다 생략할 수 있다.
+`CoreConfig`에 다음 두 필드를 더 받는다. 둘 다 생략할 수 있다.
 
 ```json
 {
@@ -20,49 +20,41 @@
 
 ### A.2 값 범위
 
-- `goMemLimitMiB`는 0 이상 4096 이하다. 범위를 벗어나면 `invalid_config`.
-- `allowedTargets`의 각 항목은 tailnet 주소여야 한다(A.7). 아니면 `invalid_config`.
-- `rd_host_pairing_open`의 `ttl_seconds`는 3600 이하다. 넘으면 `bad_request`. 0 이하이면 300초를 쓴다.
+- `HostCore.openPairing(ttlSeconds:)`는 3600 이하여야 한다. 넘으면 `bad_request`. 0 이하이면 300초를 쓴다.
+- `start`의 값 검사는 §9에 있다. 범위를 벗어나면 `invalid_config`다.
 
-### A.3 상태 디렉터리 하나에 핸들 하나
+### A.3 상태 디렉터리 하나에 노드 하나
 
-같은 `stateDir`(절대 경로로 바꾸고 `..`와 심볼릭 링크를 푼 경로로 비교)를 쓰는 핸들이 살아 있으면 `rd_start`는 실패한다.
+`SwiftailHostCore`는 한 번에 한 실행만 갖는다. 실행 중에 `start`를 다시 부르면 `invalid_config`(`코어가 이미 실행 중입니다.`)다. `stop`이 끝나면 다시 시작할 수 있다.
 
-```json
-{
-  "error": {
-    "code": "invalid_config",
-    "message": "state_dir_in_use"
-  }
-}
-```
+같은 상태 디렉터리를 다른 노드가 쓰고 있으면 Swiftail 노드가 시작하지 못하고(`stateDirectoryInUse`) 상태는 `Error`, `errorMessage`는 `다른 노드가 같은 상태 폴더를 쓰고 있습니다.`다. Mac 앱은 한 번에 하나만 실행되도록 저장소 잠금도 쓴다.
 
-`rd_stop`이 끝나면 그 디렉터리를 다시 쓸 수 있다. 그래서 실행 중에 `allowedTargets`를 바꾸려면 §9의 "rd_start를 다시 호출한다"를 **기존 핸들을 `rd_stop`한 뒤 `rd_start`한다**로 읽는다.
+### A.4 `HostCore.setDevices`
 
-### A.4 `rd_host_set_devices`
-
-입력은 `devices` 키에 배열이 있는 객체여야 한다. `devices`가 없거나 `null`이거나 배열이 아니면 `bad_request`를 돌려주고 허용 목록은 바뀌지 않는다. 목록을 비우려면 `{"devices":[]}`를 보낸다.
+허용 목록 전체를 바꾼다. JSON으로 쓰면 `devices` 키에 배열이 있는 객체여야 한다. `devices`가 없거나 `null`이거나 배열이 아니면 `bad_request`를 돌려주고 허용 목록은 바뀌지 않는다. 목록을 비우려면 `{"devices":[]}`를 보낸다.
 
 목록에서 빠진 노드의 열린 세션은 `failed`가 된다(C.3).
 
-### A.5 상태(`rd_status`)
+### A.5 상태(`CoreStatus`)
 
 `backendState`는 언제나 `Stopped`, `Starting`, `NeedsLogin`, `NeedsMachineAuth`, `Running`, `Error` 중 하나다.
 
-| Tailscale 상태·조건 | `backendState` |
+| 노드 상태·조건 | `backendState` |
 | --- | --- |
-| `NoState`, 알 수 없는 값 | `Starting` |
-| 백엔드가 오류 메시지를 보냈고(인증 키 거부, 제어 서버 오류 등) 아직 `Running`이 아님 | `Error` |
-| `InUseOtherUser` | `Error` |
-| `Running`이지만 호스트 리스너가 3번 연속 열리지 않음(HTTPS·MagicDNS 꺼짐, 포트 사용 중 등) | `Error` |
-| 그 밖의 값 | 그대로 |
+| Swiftail 노드가 등록·netmap·첫 연결을 기다림 | `Starting` |
+| 사용자가 로그인해야 함(노드가 준 주소를 `authURL`에 채움) | `NeedsLogin` |
+| 노드 키가 만료돼 노드가 끝남(다시 로그인해야 함) | `NeedsLogin` |
+| tailnet 관리자가 이 기기를 승인해야 함 | `NeedsMachineAuth` |
+| 인증 키 거부, 등록 거절, 상태 폴더 사용 중, UDP 소켓 실패, 설정 오류, 포트 열기 실패, 그 밖에 노드가 끝남 | `Error` |
+| `Running`이고 인증서를 받지 못한 사유가 사용자가 고쳐야 하는 것(MagicDNS 꺼짐, 이 Mac의 이름이 TLS 도메인 목록에 없음, 발급 한도) | `Error` |
+| 노드가 `Running` | `Running` |
 
-`Error`일 때만 `errorMessage` 필드가 있다. Swift는 모르는 필드를 무시한다.
+`Error`일 때만 `errorMessage` 필드가 있다. Swift는 모르는 필드를 무시한다. 노드가 끝나면 `listening`과 `tlsReady`는 `false`다. 노드가 끝난 `Error`는 사용자가 공유를 다시 시작할 때까지 그대로 둔다(스스로 다시 켜지 않는다).
 
 ```json
 {
   "backendState": "Error",
-  "errorMessage": "host listener: HTTPS 인증서가 꺼져 있습니다(관리 콘솔에서 HTTPS를 켜야 합니다)",
+  "errorMessage": "host listener: tailnet의 MagicDNS가 꺼져 있습니다.",
   "authURL": "",
   "hostname": "rd-mac-ab12cd34",
   "fqdn": "rd-mac-ab12cd34.example-tailnet.ts.net",
@@ -76,33 +68,17 @@
 }
 ```
 
-- 리스너가 열리면 리스너 오류는 지워진다. 백엔드 오류는 `Running`이 되면 지워진다.
-- `NeedsLogin`인데 `authURL`이 비어 있고(예: 노드 키 만료) `authKey`가 없으면, 코어가 로그인을 다시 시작해 `authURL`을 채운다. 30초에 한 번까지만 시도한다. 새 C API는 없다.
-- `tlsReady`: 인증서를 받을 때까지 `Running`인 동안 30초, 60초, 120초…(최대 10분) 간격으로 다시 시도한다. `rd_stop`이면 멈춘다.
-- `rd_stop`은 백엔드가 멈추거나 `Running`에서 벗어나도 기다리다 멈추지 않는다. 백엔드를 기다리는 호출은 모두 노드 수명에 묶인 시간 제한이 있다.
+- 로그인 주소(`authURL`)는 상태와 `state` 이벤트로만 화면에 간다. 로그 파일과 `log` 이벤트에는 쓰지 않는다.
+- HTTPS 인증서가 꺼진 tailnet은 `Running`이고 `certDomains`가 비어 있다(화면이 "HTTPS 인증서 꺼짐"을 고른다). 첫 인증서 발급과 시간을 두고 다시 하는 실패는 `Running`, `tlsReady == false`다(화면의 "인증서 발급 중"). 사용자가 공유를 (다시) 시작하면 조건을 기다리던 발급을 곧바로 다시 본다.
+- 인증서의 발급·갱신·재시도는 Swiftail의 `CertificateManager`가 한다. 재시도 간격과 한도는 Swiftail 저장소의 호스트 계약(`contracts/SwiftailHost.md`, `docs` 폴더 안)이 정한다.
+- tailnet lock 서명 대기는 `lockWait`(Q)다.
+- 상태는 노드가 `Running`이 되기 전에는 250ms, 그 뒤에는 1초마다 읽어 바뀌었을 때만 `state` 이벤트로 낸다. 이때 호스트 로직의 만료 처리(`sweep`)도 돈다.
+- `stop`은 노드와 인증서 관리자가 끝나기를 기다린다.
 
 ### A.6 로그
 
-- `logPath` 파일은 5 MiB를 넘기 전에 `<logPath>.1`로 한 번 돌리고 새로 쓴다(이전 `.1`은 지운다).
-- 임베디드 노드는 프로세스 전체에서 Tailscale 로그 업로드(log.tailscale.com)를 끈다.
-- 인증 키, 토큰, 페이로드 바이트는 로그·이벤트에 남기지 않는다. `/i/{token}/…` 경로는 `/i/…/app.ipa`처럼 토큰을 가린다.
-
-### A.7 프록시 대상은 tailnet 안만 (§6)
-
-CONNECT 대상의 호스트는 다음 중 하나여야 한다. `allowedTargets`에 있어도 아니면 거부한다.
-
-- `.ts.net`으로 끝나는 이름, 또는 노드 자신의 MagicDNS 접미사로 끝나는 이름
-- `100.64.0.0/10` 또는 `fd7a:115c:a1e0::/48` 안의 IP
-
-`rd_start`는 `.ts.net` 이름과 위 IP만 받는다(시작 시점에는 MagicDNS 접미사를 모른다). 실행 중 CONNECT는 연결된 원격 주소도 Tailscale IP인지 확인하고, 아니면 연결을 끊고 403으로 답한다.
-
-프록시의 거부 응답은 JSON이 아닌 평문(`text/plain`)이다.
-
-| 경우 | HTTP |
-| --- | --- |
-| CONNECT가 아닌 요청 | 405 |
-| 허용되지 않은 대상, tailnet 밖 대상 | 403 |
-| 대상에 연결하지 못함 | 502 |
+- `logPath` 파일은 5 MiB를 넘기 전에 `<logPath>.1`로 한 번 돌리고 새로 쓴다(이전 `.1`은 지운다). 파일은 `0600`으로 만든다.
+- 인증 키, 토큰, 페이로드 바이트, 로그인 주소, 노드 이름과 주소는 로그·이벤트에 남기지 않는다. 오류는 종류 이름만 남긴다. `/i/{token}/…` 경로는 `/i/…/app.ipa`처럼 토큰을 가린다.
 
 ## B. REST 인증과 라우팅 (§3, §4, §8)
 
@@ -162,11 +138,11 @@ created → manifest_served → downloading → completed | expired | failed
 
 | 원인 | 시점 |
 | --- | --- |
-| 빌드 게시 취소(`rd_host_unpublish`) | 그 빌드의 열린 세션 전부 |
-| `rd_host_set_devices`에서 세션을 만든 노드가 빠짐 | 그 노드의 열린 세션 전부 |
+| 빌드 게시 취소(`HostCore.unpublish`) | 그 빌드의 열린 세션 전부 |
+| `HostCore.setDevices`에서 세션을 만든 노드가 빠짐 | 그 노드의 열린 세션 전부 |
 | 서빙 때 사본이 바뀐 것을 발견(409 `build_changed`) | 그 세션 |
 | IPA 읽기 오류 | 그 세션 |
-| `rd_stop` | 열린 세션 전부 |
+| `HostCore.stop` | 열린 세션 전부 |
 
 노드를 허용 목록에 다시 넣어도 `failed` 세션은 살아나지 않는다. 새 세션을 만들어야 한다.
 
@@ -178,13 +154,13 @@ created → manifest_served → downloading → completed | expired | failed
 
 ### C.5 게시본 사본 (§4.4, §7, §12)
 
-- 코어는 `publishDir` 안에 `.rd-snapshots` 폴더를 만들어 소유한다. 시작할 때 비우므로 한 `publishDir`는 한 번에 호스트 하나만 쓴다.
-- 게시하면 IPA를 `.rd-snapshots/<buildId>.ipa`로 복제(APFS clonefile, 안 되면 복사)하고 읽기 전용(0400)으로 둔다. 크기·SHA-256은 이 사본에서 계산해 `build_json`과 비교한다(다르면 `hash_mismatch`).
+- 호스트 로직은 `publishDir` 안에 `.rd-snapshots` 폴더를 만들어 소유한다. 시작할 때 비우므로 한 `publishDir`는 한 번에 호스트 하나만 쓴다.
+- 게시하면 IPA를 `.rd-snapshots/<buildId>.ipa`로 복제(APFS clonefile, 안 되면 복사)하고 읽기 전용(0400)으로 둔다. 크기·SHA-256은 이 사본에서 계산해 `BuildDescriptor`의 값과 비교한다(다르면 `hash_mismatch`).
 - 서빙은 이 사본에서만 한다. 게시 뒤 앱이 원본 파일을 바꾸거나 지워도 이미 게시한 빌드의 내용은 바뀌지 않는다. 새 내용을 내보내려면 다시 게시한다.
 - `.rd-snapshots` 안의 파일은 게시할 수 없다(`path_outside_publish_dir`).
 - 이미 게시된 빌드 id를 다시 게시하면 기존 사본을 그대로 쓰고 설명(`BuildDescriptor`)만 바꾼다.
 - 세션 생성 때 사본의 크기·SHA-256을 다시 계산한다. 매니페스트·IPA 서빙 때는 사본의 파일 식별자(inode)·크기·수정 시각이 게시 때와 같은지 확인한다. 다르면 409 `build_changed`다. §12의 "서빙 직전에도 크기·해시를 확인한다"는 이 두 확인을 뜻한다.
-- 게시 취소와 `rd_stop`은 사본을 지운다.
+- 게시 취소와 `HostCore.stop`은 사본을 지운다.
 
 ## D. 이벤트 (§10)
 
@@ -204,7 +180,7 @@ created → manifest_served → downloading → completed | expired | failed
 
 ### D.2 큐가 찼을 때
 
-이벤트 큐(256개)가 차면 `denied`, `log`, `state` 중 가장 오래된 것부터 버린다. `pair-request`, `pair-decided`, `device-added`, `session`은 큐에 이것들만 남았을 때만 가장 오래된 것을 버린다. 버린 수는 다음 `rd_next_event`가 `log` 이벤트로 알린다.
+이벤트 큐는 256개와 인코딩한 페이로드 8MiB를 함께 제한한다. 넘치면 `denied`, `log`, `state`, `device-log`, `device-crash` 중 가장 오래된 것부터 버린다. `pair-request`, `pair-decided`, `device-added`, `session`은 큐에 이것들만 남았을 때만 가장 오래된 것을 버린다. 한도를 혼자 넘는 이벤트는 들어가지 않는다. 버린 수는 다음 이벤트로 `log`가 알린다.
 
 ```json
 {
@@ -216,7 +192,7 @@ created → manifest_served → downloading → completed | expired | failed
 
 ## E. 설치 웹 페이지
 
-Mac 호스트는 RemoteDebug iPhone 앱 없이 Tailscale 공식 앱만 켠 기기가 Safari로 페어링하고 빌드를 설치할 수 있는 페이지를 같은 주소(`https://<fqdn>/`)에서 내준다. 페이지 파일은 코어에 들어 있다(`core/internal/host/web`, go:embed). iPhone 앱의 내장 VPN 경로는 그대로다.
+Mac 호스트는 RemoteDebug iPhone 앱 없이 Tailscale 공식 앱만 켠 기기가 Safari로 페어링하고 빌드를 설치할 수 있는 페이지를 같은 주소(`https://<fqdn>/`)에서 내준다. 페이지 파일은 호스트 로직 패키지의 리소스다(`Packages/SwiftailHost/Sources/RDHostLogic/Resources/web`). iPhone 앱의 내장 VPN 경로는 그대로다.
 
 ### E.1 경로
 
@@ -246,7 +222,7 @@ X-RD-Protocol: 1
 
 ### E.2 허용 목록 밖의 기기
 
-- 페이지 경로는 WhoIs를 부르지 않고, `denied` 이벤트를 보내지 않으며, `denied` 속도 제한(D.1)에 세지 않는다.
+- 페이지 경로는 노드 신원을 확인하지 않고, `denied` 이벤트를 보내지 않으며, `denied` 속도 제한(D.1)에 세지 않는다.
 - 페이지 파일에는 빌드 정보가 없다. 허용 목록 밖의 기기는 페이지를 받을 수 있지만 `/v1/*`와 `/i/*`는 지금처럼 403 `not_paired`다. 할 수 있는 것은 페어링 요청(§4.3)뿐이다.
 - 다른 경로의 응답과 인증은 바뀌지 않는다.
 
@@ -283,13 +259,13 @@ X-RD-Protocol: 1
 
 - Mac 앱은 `.app` 원본에서 가져온 빌드에만 넣는다. `Info.plist`의 `CFBundleIcons > CFBundlePrimaryIcon > CFBundleIconFiles`가 가리키는 PNG 가운데 가장 큰 것을 120×120 표준 PNG로 다시 쓴다. `.ipa` 원본이나 아이콘이 없는 빌드에는 키를 넣지 않는다.
 - 아이콘을 담기 전에 가져온 빌드는 Mac 앱이 다시 시작해 게시를 되살릴 때 원본 `.app`이 남아 있으면 채운다.
-- `rd_host_publish`는 `icon`이 64KiB(65536바이트)를 넘거나 PNG 서명(`89 50 4E 47 0D 0A 1A 0A`)으로 시작하지 않으면 `bad_request`로 거부한다. 받은 값은 `GET /v1/builds`에 그대로 싣는다. `id` 계산에는 쓰지 않는다.
+- `HostCore.publish`는 `icon`이 64KiB(65536바이트)를 넘거나 PNG 서명(`89 50 4E 47 0D 0A 1A 0A`)으로 시작하지 않으면 `bad_request`로 거부한다. 받은 값은 `GET /v1/builds`에 그대로 싣는다. `id` 계산에는 쓰지 않는다.
 - iPhone 앱은 `icon`이 없거나, base64가 아니거나, 64KiB를 넘거나, PNG가 아니면 아이콘만 버리고 빌드는 받는다. 아이콘이 없으면 이름 첫 글자 타일을 보여 준다.
 - 설치 웹 페이지는 `icon`을 쓰지 않는다.
 
 ## G. iPhone 진단 로그
 
-페어링한 기기는 진단 로그를 Mac에 보낼 수 있다. 코어는 로그를 저장하지 않고 Mac 앱에 이벤트로 넘긴다.
+페어링한 기기는 진단 로그를 Mac에 보낼 수 있다. 호스트는 로그를 저장하지 않고 Mac 앱에 이벤트로 넘긴다.
 
 ### G.1 `POST /v1/logs`
 
@@ -300,7 +276,7 @@ X-RD-Protocol: 1
 ```
 
 - `entries`는 1~200개, 본문은 128KiB 이하. 어기면 400 `bad_request`.
-- `at`은 ISO-8601(소수 초 허용). 읽지 못하면 코어가 받은 시각으로 바꾼다.
+- `at`은 ISO-8601(소수 초 허용). 읽지 못하면 호스트가 받은 시각으로 바꾼다.
 - `level`은 `debug`, `info`, `warning`, `error` 가운데 하나. 그 밖의 값은 `info`로 바꾼다.
 - `source`는 40바이트, `message`는 4096바이트에서 UTF-8 글자 경계로 자른다. 잘못된 UTF-8은 `?`로 바꾼다.
 - 성공하면 202와 `{"accepted":<줄 수>}`.
@@ -323,17 +299,17 @@ X-RD-Protocol: 1
 
 Mac 앱이 고른 파일을 페어링한 기기가 받는다. 빌드와 달리 설치 세션 없이 허용 목록 인증(§3)만으로 받는다.
 
-### H.1 C API
+### H.1 Swift 경계
 
-| 함수 | 입력 | 결과 |
+| 메서드 | 입력 | 결과 |
 | --- | --- | --- |
-| `rd_host_publish_resource(handle, resource_json)` | `{"name","size","sha256","path"}`. `id`·`publishedAt`·`project`(H.6)는 생략 가능 | `{"ok":true,"id":"r_…"}` |
-| `rd_host_unpublish_resource(handle, resource_id)` | | `{"ok":true}`. 없는 id는 `resource_not_found` |
+| `HostCore.publishResource(_:)` | `{"name","size","sha256","path"}`. `id`·`publishedAt`·`project`(H.6)는 생략 가능 | `r_…` 형식의 id를 가진 게시 |
+| `HostCore.unpublishResource(id:)` | | 없는 id는 `resource_not_found` |
 
-- `path`는 `publishDir` 안의 일반 파일이어야 한다(`path_outside_publish_dir`). 코어는 빌드처럼 `.rd-snapshots`에 사본을 만들고 사본의 크기·SHA-256을 확인한다(`hash_mismatch`). 이후 원본이 바뀌어도 사본만 내준다.
+- `path`는 `publishDir` 안의 일반 파일이어야 한다(`path_outside_publish_dir`). 호스트 로직은 빌드처럼 `.rd-snapshots`에 사본을 만들고 사본의 크기·SHA-256을 확인한다(`hash_mismatch`). 이후 원본이 바뀌어도 사본만 내준다.
 - `name`은 1~255바이트의 UTF-8 파일 이름. `/`, `\`, `:`, 제어 문자, `.`, `..`는 400 `bad_request`. 크기는 4GiB, 개수는 500개까지.
 - `id`는 `"r_"` + `sha256("rd-resource\n" + name + "\n" + sha256)`의 앞 8자리 16진수다. 같은 이름·같은 내용을 다시 게시하면 같은 id로 설명만 바뀐다(구역 옮기기도 이렇게 한다).
-- `rd_stop`은 사본을 모두 지운다. Mac 앱은 공유를 시작할 때 저장한 목록을 다시 게시한다.
+- `HostCore.stop`은 사본을 모두 지운다. Mac 앱은 공유를 시작할 때 저장한 목록을 다시 게시한다.
 
 ### H.2 `GET /v1/resources`
 
@@ -360,8 +336,8 @@ Mac 앱이 고른 파일을 페어링한 기기가 받는다. 빌드와 달리 �
 
 `link`가 있는 항목은 링크다. 파일 없이 주소만 보낸다.
 
-- `rd_host_publish_resource`에 `{"name","link"}`를 넘긴다(`path`는 무시). `link`는 스킴이 있는 8KiB 이하의 주소다(`https://…`, `앱스킴://…`, `maps://?q=…`, `app-settings:`). 제어 문자는 400.
-- 코어가 `size`를 0으로, `sha256`을 주소 글자의 SHA-256으로 채운다. `id` 규칙은 H.1과 같다.
+- `HostCore.publishResource`에 `{"name","link"}`를 넘긴다(`path`는 무시). `link`는 스킴이 있는 8KiB 이하의 주소다(`https://…`, `앱스킴://…`, `maps://?q=…`, `app-settings:`). 제어 문자는 400.
+- 호스트 로직이 `size`를 0으로, `sha256`을 주소 글자의 SHA-256으로 채운다. `id` 규칙은 H.1과 같다.
 - `GET /v1/resources`에 `"link":"…"`로 나온다. `GET /v1/resources/{id}`는 링크에 404 `resource_not_found`.
 - Mac 앱: **보낸 파일**의 **링크 보내기…**, 웹 주소를 끌어 놓기, `rd link <주소> [이름] [프로젝트]`, MCP `remotedebug_push_link`(`url`, `title`, `project`). 이름이 없으면 주소에서 만든다(`호스트 – 경로 끝`). 같은 주소를 다시 보내면 이전 항목을 바꾼다.
 - iPhone 앱: **파일** 탭의 "링크" 칸. 상세 화면에서 Safari나 그 스킴의 앱으로 열고(열 앱이 없으면 안내), 공유·주소 복사, 주소 구성(스킴·호스트·경로·프래그먼트·쿼리 항목)을 보인다. 받기는 없다.
@@ -379,7 +355,7 @@ Mac 앱이 고른 파일을 페어링한 기기가 받는다. 빌드와 달리 �
 
 - `project.id`: 1~64바이트의 영문자·숫자·`_`·`-`. Mac 앱은 프로젝트 폴더 경로 SHA-256의 앞 6바이트(16진수 12자리)를 쓴다. 경로와 폴더 이름은 보내지 않는다.
 - `project.name`: 화면에 보일 프로젝트 이름. 1~255바이트의 UTF-8, 제어 문자 없음.
-- `rd_host_publish_resource`의 입력에 `project`를 함께 넘긴다. 모양이나 길이가 맞지 않으면 400 `bad_request`다. 같은 id를 다른 `project`로(또는 `project` 없이) 다시 게시하면 구역만 바뀐다.
+- `HostCore.publishResource`의 입력에 `project`를 함께 넘긴다. 모양이나 길이가 맞지 않으면 400 `bad_request`다. 같은 id를 다른 `project`로(또는 `project` 없이) 다시 게시하면 구역만 바뀐다.
 - 호환: 공통 구역 항목에는 `project` 키가 없어 응답이 이전과 같다. 이전 iPhone 앱은 `project`를 무시하고 한 목록으로 보인다. 이전 Mac 앱의 목록에는 키가 없으므로 모두 공통이다. iPhone 앱은 모양이 맞지 않는 `project`를 공통으로 본다. Mac 앱의 `resources.json`도 같은 모양이라 이전 버전이 쓴 파일은 모두 공통으로 읽는다.
 - `id` 규칙(H.1)에는 구역이 들어가지 않는다. 이름이 같은 파일은 구역이 달라도 하나만 두고(나중에 보낸 것이 이전 것을 바꾼다), iPhone은 받은 파일을 지금처럼 이름으로 Documents에 저장한다.
 - Mac 앱: **보낸 파일**은 항목이 있는 프로젝트 구역을 이름순으로 보이고 **공통**을 마지막에 둔다. 도구 막대의 **넣을 구역**(연결한 프로젝트와 공통, 기본은 공통)이 **파일 보내기…**, **링크 보내기…**, 끌어 놓기에 적용된다. 프로젝트 화면의 더 보기 메뉴 **파일 보내기…**는 그 프로젝트 구역에 넣는다. 항목의 오른쪽 클릭 **구역 옮기기**로 다른 구역에 옮긴다(id, 보낸 시각은 그대로). 프로젝트 연결을 끊어도 그 구역의 항목은 지우지 않고, 항목에 저장한 프로젝트 이름으로 계속 보인다.
@@ -390,15 +366,15 @@ Mac 앱이 고른 파일을 페어링한 기기가 받는다. 빌드와 달리 �
 
 iOS는 앱을 바꾸는 동안 그 앱의 패킷 터널을 멈춘다. 그래서 RemoteDebug iPhone 앱은 자기 VPN으로 Mac의 설치 페이지(E)를 열어 자기 자신을 설치할 수 없다(2026-11-12 실기기에서 0.2.0 (6)·(7) 설치 실패). 이 업데이트만 Mac의 공식 Tailscale로 내준다.
 
-### I.1 C API `rd_update_page_set(config_json)`
+### I.1 업데이트 페이지 서버 설정
 
-노드 핸들과 무관하게 프로세스에 하나다.
+Mac 앱이 `UpdatePageServing`(구현 `SwiftailUpdatePage`)으로 `UpdatePageServer.shared`에 넘기는 설정이다. 노드와 무관하게 프로세스에 하나다. 잘못된 설정은 아래 이유와 함께 거절한다(`publicURL`은 `/`로 끝나는 https 주소, `page`에는 `ipaPath`와 `bundleId`가 필요, `listen`은 루프백 주소).
 
 ```
 {"listen":"127.0.0.1:0","publicURL":"https://<Mac>.<tailnet>.ts.net/remotedebug-update-<32자>/","page":{"bundleId","title","version","buildNumber","minOS","size","sha256","publishedAt","ipaPath","icon"}}
 ```
 
-- `listen`은 루프백 주소만 받는다. 빈 문자열이면 서버를 멈춘다. 결과는 `{"ok":true,"addr":"127.0.0.1:P"}`.
+- `listen`은 루프백 주소만 받는다. 빈 문자열이면 서버를 멈춘다. 결과는 듣는 주소(`127.0.0.1:P`, 멈췄으면 빈 문자열)다.
 - `publicURL`은 `/`로 끝나는 https 주소이거나 빈 문자열(경로가 아직 없음)이다. `page`가 없으면 "게시된 빌드 없음" 페이지를 낸다.
 - 경로의 마지막 부분만 본다: `/`(안내와 `itms-services` 링크), `manifest.plist`, `RemoteDebug.ipa`, `icon.png`. 프록시가 앞 경로를 떼든 안 떼든 같다. IPA는 요청마다 `ipaPath`를 열고 크기가 `size`와 다르면 410.
 
@@ -427,11 +403,11 @@ iOS는 앱을 바꾸는 동안 그 앱의 패킷 터널을 멈춘다. 그래서 
 
 현재 앱에서는 꺼져 있다(`AgentFeature.isEnabled`가 `false`). Mac 사이드바와 iPhone 탭에 나오지 않고 Mac 앱은 상태 문서를 넘기지 않는다.
 
-Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전트(Claude Code, Codex)에 넘기고 진행과 답을 돌려준다. 코어는 요청을 이벤트로 넘기고 Mac 앱이 준 상태 문서를 그대로 내줄 뿐, 에이전트를 실행하지 않는다.
+Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전트(Claude Code, Codex)에 넘기고 진행과 답을 돌려준다. 호스트는 요청을 이벤트로 넘기고 Mac 앱이 준 상태 문서를 그대로 내줄 뿐, 에이전트를 실행하지 않는다.
 
-### K.1 C API `rd_host_set_agent_board(handle, board_json)`
+### K.1 `HostCore.setAgentBoard(_:)`
 
-`GET /v1/agent`가 낼 문서 전체를 바꾼다(최대 2MiB). 코어는 `enabled`만 읽는다. 노드를 다시 시작하면 비므로 Mac 앱이 시작할 때마다 다시 넘긴다.
+`GET /v1/agent`가 낼 문서 전체를 바꾼다(최대 2MiB). 호스트는 `enabled`만 읽는다. 노드를 다시 시작하면 비므로 Mac 앱이 시작할 때마다 다시 넘긴다.
 
 ```
 {"enabled":true,"projects":[{"id":"3f9a1c2e7b10","name":"MyApp"}],"agents":["claude","codex"],"requests":[AgentJob]}
@@ -452,7 +428,7 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 - 허용 목록의 기기만. `enabled`가 false면 403 `agent_disabled`.
 - `text`는 앞뒤 공백을 뗀 뒤 1바이트 이상 16KiB 이하의 UTF-8, 나머지는 128바이트 이하. 본문은 32KiB까지. 어기면 400.
 - `continues`에 앞 요청 id를 넣으면 그 요청의 프로젝트·에이전트·세션으로 이어 간다(`project`, `agent`는 무시).
-- 202 `{"id":"a_52d9a07e"}`. 코어는 `agent-request` 이벤트를 넘긴다: `{"type":"agent-request","requestId","deviceId","deviceName","nodeName","text","project","agent","continues"}`.
+- 202 `{"id":"a_52d9a07e"}`. 호스트는 `agent-request` 이벤트를 넘긴다: `{"type":"agent-request","requestId","deviceId","deviceName","nodeName","text","project","agent","continues"}`.
 - 진행과 결과는 `GET /v1/agent`의 `requests`에서 같은 `id`로 본다. Mac 앱이 받지 못하는 요청(없는 프로젝트, 설치되지 않은 에이전트)도 `failed`와 이유로 목록에 나온다.
 
 ### K.4 `POST /v1/agent/requests/{id}/cancel`
@@ -465,11 +441,11 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 - 권한은 Mac에서만 고른다(기본 **프로젝트 파일 수정**): **읽기만**은 `--permission-mode plan` / `--sandbox read-only`, **프로젝트 파일 수정**은 `acceptEdits` / `workspace-write`, **모든 권한**은 `bypassPermissions` / `--dangerously-bypass-approvals-and-sandbox`. iPhone은 권한을 바꿀 수 없다.
 - **페어링한 iPhone의 요청 받기**는 기본으로 꺼져 있다. 꺼져 있어도 iPhone은 `GET /v1/agent`로 목록을 본다.
 - iPhone 앱: **에이전트** 탭. 탭이 보이는 동안 `GET /v1/agent`를 6초마다(끝나지 않은 요청이 있으면 2초마다) 받는다. 이 경로가 404 `not_found`면(이전 Mac 앱) Mac 앱을 업데이트하라고 안내한다. 요청을 누르면 진행·답을 보고, 멈추거나 이어서 요청한다.
-- 확인한 것: 코어 경로(Go 시험), Mac 실행기(가짜 실행기 시험), `claude` 2.1.322의 실제 `stream-json` 출력과 `codex` 0.167.2의 실제 `--json` 실패 출력. `codex`의 성공 출력(`agent_message`)과 실제 iPhone에서 보낸 요청은 확인하지 않았다.
+- 확인한 것: 호스트 경로(`RDHostLogicTests`의 `AgentTests`), Mac 실행기(가짜 실행기 시험), `claude` 2.1.322의 실제 `stream-json` 출력과 `codex` 0.167.2의 실제 `--json` 실패 출력. `codex`의 성공 출력(`agent_message`)과 실제 iPhone에서 보낸 요청은 확인하지 않았다.
 
 ## L. iPhone 크래시 기록
 
-페어링한 기기는 크래시 기록을 Mac에 보낼 수 있다. 코어는 기록을 저장하지 않고 Mac 앱에 이벤트로 넘긴다.
+페어링한 기기는 크래시 기록을 Mac에 보낼 수 있다. 호스트는 기록을 저장하지 않고 Mac 앱에 이벤트로 넘긴다.
 
 ### L.1 `POST /v1/crashes`
 
@@ -513,16 +489,15 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 iPhone 앱은 둘이다. RemoteDebug(스킴 `RemoteDebugPhone`)와 업데이트 앱(스킴 `RemoteDebugVPN`, 홈 화면 이름 "RD 업데이트", 앱 안 제목 "RemoteDebug 업데이트"). 두 앱은 각자 터널 확장을 갖고, 두 확장은 같은 소스(`Apps/iOSTunnel`)로 빌드한다.
 
 - RemoteDebug: 다른 앱의 빌드 설치, 파일, 크래시·피드백, Mac 페어링. 자기 번들 ID의 빌드는 목록에서 뺀다.
-- 업데이트 앱: Mac의 빌드 목록에서 RemoteDebug 앱의 번들 ID인 빌드만 보여 주고 설치한다. VPN 켜기·끄기, 로그인, 기기 정보 가져오기도 한다. 페어링 화면은 없다.
+- 업데이트 앱: Mac의 빌드 목록에서 RemoteDebug 앱의 번들 ID인 빌드만 보여 주고 설치한다. VPN 켜기·끄기와 로그인도 한다. 페어링 화면은 없다.
 
 업데이트 앱의 대상·스킴 이름, 번들 ID(`<앞부분>.RemoteDebugVPN`), URL 스킴(`remotedebug-vpn`)은 이 앱이 VPN만 맡던 때의 것을 그대로 쓴다. 호스트 API와 메시지 형식은 바뀌지 않았다. 업데이트 앱도 같은 tailnet 기기로 `/v1/info`, `/v1/builds`, 설치 세션을 부르므로 Mac은 두 앱을 같은 페어링한 기기로 본다.
 
 ### M.1 공용 저장소
 
 - App Group `group.<번들 ID 앞부분>.RemoteDebug`(Info.plist의 App Group 키)를 두 앱과 두 확장이 함께 쓴다.
-- Tailscale 상태(`tailscaled.state`, 노드 키)는 공용 컨테이너의 `Library/Application Support/RemoteDebug/tailscale`에 둔다. 그래서 어느 앱이 VPN을 켜도 같은 tailnet 기기이고 Mac 페어링이 유지된다.
-- 예전 위치(RemoteDebug 터널 확장의 컨테이너)의 상태는 그 확장이 새 빌드로 처음 켜질 때 공용 위치로 옮긴다. 예전 상태가 Mac과 페어링한 기기라서, 공용 위치에 다른 상태가 이미 있어도(업데이트 앱을 먼저 켜 새 기기가 생긴 경우) 예전 상태로 바꾸고 밀려난 것은 `tailscale.replaced`에 한 벌 남긴다. 옮긴 뒤 공용 설정에 표시를 남긴다.
-- RemoteDebug 앱은 열릴 때 업데이트 앱이 VPN을 켜 두었고 그 표시가 없으면, 자기 터널을 한 번 켜서 기기 정보를 옮긴 뒤 업데이트 앱을 열어 VPN을 돌려준다. 그 전까지 업데이트 앱은 다른 기기로 연결돼 있어 Mac이 `not_paired`로 거절한다.
+- Swiftail 노드 상태(`identity.json`의 노드 키, tailnet lock 상태)는 공용 컨테이너의 `Library/Application Support/RemoteDebug/swiftail`에 둔다. 그래서 어느 앱이 VPN을 켜도 같은 tailnet 기기이고 Mac 페어링이 유지된다.
+- 이전 버전의 상태 폴더(`tailscale`, `tailscale.replaced`)는 읽지 않고, 새 노드가 처음 `Running`이 되면 지운다. 로그인과 Mac 페어링은 새로 해야 한다([setup.md](setup.md#이전-버전에서-업데이트한-뒤)).
 - 페어링한 Mac(`hostId`, 이름, 주소, 페어링 시각, `updatePage`)은 공용 설정의 `RemoteDebug.pairedHost`에 둔다. RemoteDebug 앱의 예전 값(앱만의 설정)은 처음 한 번 옮기고 `RemoteDebug.pairedHostMigrated`를 적는다. 공용 설정에 값이 이미 있으면 덮지 않는다. 업데이트 앱은 이 값을 읽기만 하고(Mac이 알려 준 이름·`updatePage`가 바뀌면 다시 저장한다), 앞으로 올 때마다 다시 읽어 Mac이 바뀌었으면 목록을 새로 받는다. 값이 없으면 "페어링한 Mac이 없습니다"와 RemoteDebug 앱을 여는 버튼을 보여 준다.
 - 기기 식별자(기기 이름의 뒷부분)와 제어 서버 주소는 공용 설정(UserDefaults suite)에 둔다. RemoteDebug 앱의 예전 값은 처음 한 번 옮긴다.
 - 확장은 켜지고 꺼질 때 공용 설정에 `{owner, connected, updatedAt}`을 적는다. `owner`는 VPN을 켠 앱의 번들 ID다.
@@ -589,10 +564,10 @@ iOS는 앱을 설치하는 동안 그 앱과 그 앱의 터널 확장을 끝낸�
 
 ### N.3 상태의 경로 필드
 
-`rd_status`와 `state` 이벤트의 상태에 선택 필드가 둘 생겼다. 값이 없으면 키도 없다. 이 필드를 모르는 쪽은 무시하면 된다.
+`CoreStatus`와 `state` 이벤트의 상태에 선택 필드가 둘 생겼다. 값이 없으면 키도 없다. 이 필드를 모르는 쪽은 무시하면 된다.
 
-- `peerPath`(터널 모드): `rd_tunnel_set_path_peer`로 정한 피어까지의 경로.
-- `peerPaths`(호스트 모드): 페어링한 기기별 경로. 키는 기기의 `nodeStableId`다.
+- `peerPath`(터널 모드): 앱이 알려 준 피어까지의 경로(아래 `peer`).
+- `peerPaths`(호스트 모드): 페어링한 기기별 경로. 키는 기기의 `nodeStableId`다. Mac 호스트(`SwiftailHostCore`)는 이 필드를 아직 내지 않는다. Swiftail이 경로를 이름으로만 묻기 때문이다.
 
 경로 하나의 모양:
 
@@ -612,15 +587,7 @@ iOS는 앱을 설치하는 동안 그 앱과 그 앱의 터널 확장을 끝낸�
 
 - 피어에 지금 쓰는 UDP 주소가 있으면 직접이다. 없고 최근에 주고받은 것이 있으면 중계(`"direct": false`)다. 최근에 주고받은 것이 없는 피어는 경로를 모르므로 넣지 않는다.
 - `backendState`가 `Running`일 때만 넣는다. 2초 상태 점검마다 다시 읽는다.
-- 터널 모드에서 대상 피어가 정해져 있으면 코어는 점검마다 피어를 포함한 상태를 읽는다. 대상이 없으면 이전과 같이 피어 없는 상태만 읽는다.
-
-```c
-/* Tunnel mode: MagicDNS name of the peer whose path rd_status reports as
- * "peerPath". "" stops reporting. Returns {"ok":true}. */
-char *rd_tunnel_set_path_peer(int64_t handle, const char *fqdn);
-```
-
-오류: 없는 핸들 `unknown_handle`, 터널 모드가 아님 `invalid_config`, 이름이 253자를 넘음 `bad_request`.
+- 터널 모드에서 대상 피어가 정해져 있으면 확장은 점검마다 그 피어까지의 경로를 읽어 `peerPath`로 낸다.
 
 앱과 터널 확장 사이의 상태 요청에 선택 필드 `peer`가 생겼다.
 
@@ -628,7 +595,7 @@ char *rd_tunnel_set_path_peer(int64_t handle, const char *fqdn);
 {"cmd":"status","peer":"rd-mac-ab12cd34.example-tailnet.ts.net"}
 ```
 
-앱은 페어링한 Mac의 주소를 넣는다. 확장은 이름이 바뀌었을 때 코어에 알린다. `peer`가 없는 요청은 이전과 같다.
+앱은 페어링한 Mac의 주소를 넣는다. 확장은 이름이 바뀌었을 때 노드(`SwiftailTunnelEngine.setPathPeer`)에 알린다. `peer`가 없는 요청은 이전과 같다.
 
 ### N.4 화면
 
@@ -650,31 +617,25 @@ RemoteDebug 앱의 설정에 "Mac에 연결할 때 VPN 자동으로 켜기(주�
 
 Mac과 iPhone이 같은 네트워크(같은 Wi-Fi)에 있으면 VPN 없이 직접 주고받는다. 빌드 목록, 파일 목록과 파일 받기, 진단 로그, 크래시·피드백 보내기가 여기에 해당한다. 직접 연결이 되지 않으면 N절대로 VPN을 자동으로 켜서 tailnet으로 보낸다. 앱 설치는 직접 연결이 되는 동안에도 VPN으로 한다(O.7).
 
-실기기에서 확인하지 않았다(O.9). 코어의 리스너·인증·등록은 Go 시험으로, 경로 선택은 가짜 전송·시계·Bonjour를 쓴 Swift 시험으로, 리스너와 공개 키 고정은 이 Mac의 루프백 주소에서 실제 TLS 1.3 연결로 확인했다.
+실기기에서 확인하지 않았다(O.9). 호스트 쪽 리스너·인증·등록의 시험은 `DirectListenerTests`(`SwiftailHostServerTests`)와 `DirectTests`(`RDHostLogicTests`)에, iPhone 쪽 경로 선택의 시험은 `PhoneClientKitTests`에 있다.
 
 모든 새 필드와 경로는 선택이다. 이 절을 모르는 iPhone 앱은 등록하지 않고 이전처럼 tailnet만 쓴다. 이 절을 모르는 Mac 앱은 등록 요청에 `404`를 돌려주고, iPhone 앱은 10분 동안 다시 묻지 않는다.
 
 ### O.1 직접 연결 리스너
 
-호스트 모드의 코어가 tailnet 리스너와 별도로 여는 HTTPS 리스너다. tailnet 상태(로그인, 연결)와 관계없이 열린다.
+호스트 모드의 호스트가 tailnet 리스너와 별도로 여는 HTTPS 리스너다. tailnet 상태(로그인, 연결)와 관계없이 열린다.
 
-- 주소: 모든 인터페이스. 포트는 처음 열 때 빈 포트를 하나 골라 상태 폴더의 `direct.json`에 저장하고 계속 쓴다. 그 포트를 열 수 없게 되면 새 포트를 골라 저장한다.
+- 주소: 모든 인터페이스. 포트는 처음 열 때 빈 포트를 하나 골라 직접 연결 신원 폴더(`direct`)의 `direct.json`에 저장하고 계속 쓴다. 그 포트를 열 수 없게 되면 새 포트를 골라 저장한다.
 - 받는 상대: 원격 주소가 사설(10/8, 172.16/12, 192.168/16, IPv6 fc00::/7)이나 링크 로컬(169.254/16, fe80::/10)일 때만 받는다. 그 밖의 주소(공인 주소, 100.64/10, Tailscale의 IPv6 대역 fd7a:115c:a1e0::/48, 루프백)는 TLS를 시작하기 전에 연결을 닫는다.
-- TLS: 1.3만 받는다. 인증서는 이 리스너만 쓰는 자체 서명 P-256 키로, 처음 한 번 만들어 상태 폴더에 `direct-key.pem`, `direct-cert.pem`(권한 0600)으로 둔다. 키는 바꾸지 않는다(iPhone이 공개 키를 고정한다). tailnet 리스너의 인증서와 무관하다.
+- TLS: 1.3만 받는다. 인증서는 이 리스너만 쓰는 자체 서명 P-256 키로, 처음 한 번 만들어 직접 연결 신원 폴더에 `direct-key.pem`, `direct-cert.pem`(권한 0600)으로 둔다. 키는 바꾸지 않는다(iPhone이 공개 키를 고정한다). tailnet 리스너의 인증서와 무관하다.
 - 식별자: 16진수 16자의 무작위 값을 처음 한 번 만들어 `direct.json`에 둔다. Bonjour 인스턴스 이름으로만 쓴다.
 - `/v1/info`의 `hostId`: tailnet 노드가 아직 올라오지 않았으면 마지막으로 알던 값(`direct.json`의 `hostId`)을 돌려준다.
 
-설정(`rd_start`)의 선택 필드 `directListen`이 `true`면 시작할 때 연다. 없으면 열지 않는다. 실행 중에는 다음 함수로 켜고 끈다.
+`CoreConfig`의 선택 필드 `directListen`이 `true`면 시작할 때 연다. 없으면 열지 않는다. 실행 중에는 `HostCore.setDirect(_:)`로 켜고 끈다. 결과는 다음 `status()`의 `direct`에 나온다.
 
-```c
-/* Turns the same-network listener on (1) or off (0).
- * Returns {"ok":true,"direct":{"listening":bool,"port":N,"id":"…"}}. */
-char *rd_host_set_direct(int64_t handle, int32_t on);
-```
+오류: 종료된 노드 `not_running`, 키를 만들지 못했거나 포트를 열지 못함 `internal`.
 
-오류: 없는 핸들 `unknown_handle`, 호스트 모드가 아님 `invalid_config`, 종료된 노드 `not_running`, 키를 만들지 못했거나 포트를 열지 못함 `internal`.
-
-상태(`rd_status`, `state` 이벤트)의 선택 필드 `direct`. 이번 실행에서 리스너를 한 번도 켜지 않았으면 키가 없다.
+상태(`CoreStatus`, `state` 이벤트)의 선택 필드 `direct`. 이번 실행에서 리스너를 한 번도 켜지 않았으면 키가 없다.
 
 ```json
 {
@@ -709,15 +670,15 @@ Authorization: RD-Device <deviceId>.<token>
 ```
 
 - `deviceId`는 허용 목록 항목의 `id`, `token`은 등록(O.4)에서 받은 값(32바이트 난수의 base64url, 채움 문자 없음)이다.
-- 코어는 토큰 32바이트의 SHA-256(16진수)을 그 기기 항목의 `directTokenHash`와 시간 차 없이 비교한다. 토큰 자체는 Mac 어디에도 저장하지 않는다.
-- 맞으면 그 기기의 tailnet 신원(노드 StableID, 노드 이름, 로그인 이름)으로 요청을 처리한다. 그래서 처리기와 이벤트(`device-log`의 `deviceId` 등)는 tailnet으로 온 요청과 같다. 직접 연결에서는 WhoIs를 부르지 않는다.
+- 호스트는 토큰 32바이트의 SHA-256(16진수)을 그 기기 항목의 `directTokenHash`와 시간 차 없이 비교한다. 토큰 자체는 Mac 어디에도 저장하지 않는다.
+- 맞으면 그 기기의 tailnet 신원(노드 StableID, 노드 이름, 로그인 이름)으로 요청을 처리한다. 그래서 처리기와 이벤트(`device-log`의 `deviceId` 등)는 tailnet으로 온 요청과 같다. 직접 연결에서는 tailnet 노드 신원을 묻지 않는다.
 - 틀리면 `403 not_paired`를 돌려주고 기존 `denied` 이벤트(경로와 이유만, 주소 없음)를 낸다.
 - 한 원격 IP에서 1분 안에 10번 틀리면 그 1분이 끝날 때까지 그 IP의 요청은 토큰을 보지 않고 `429 too_many_attempts`로 답한다.
 - Mac 앱에서 기기를 지우면 허용 목록에서 항목이 빠지므로 다음 요청부터 `403`이다.
 
 ### O.4 등록
 
-tailnet 리스너에서만 받는다. 허용 목록에 있는 기기(WhoIs + 허용 목록)만 부를 수 있다.
+tailnet 리스너에서만 받는다. 허용 목록에 있는 기기(노드 신원 + 허용 목록)만 부를 수 있다.
 
 ```
 POST /v1/direct/enroll        (본문 없음)
@@ -742,8 +703,8 @@ POST /v1/direct/enroll        (본문 없음)
 
 - 다시 부르면 토큰이 바뀌고 이전 토큰은 그 즉시 쓸 수 없다.
 - 리스너가 꺼져 있으면 `404 direct_off`, 허용 목록에 없으면 `403 not_paired`.
-- 코어는 해시를 기기 항목에 넣고 `device-updated` 이벤트를 낸다. 모양은 `device-added`와 같고(`device`에 항목 전체), 항목에 선택 필드 `directTokenHash`가 있다. 이벤트에 토큰은 없다.
-- Mac 앱은 `device-updated`를 받으면 이미 허용한 기기의 해시만 바꿔 `devices.json`에 저장하고, 다음 시작 때 `rd_host_set_devices`로 해시까지 넣는다. 그래서 Mac 앱을 다시 시작해도 iPhone이 다시 등록하지 않아도 된다. 그사이 지운 기기의 `device-updated`는 무시한다.
+- 호스트는 해시를 기기 항목에 넣고 `device-updated` 이벤트를 낸다. 모양은 `device-added`와 같고(`device`에 항목 전체), 항목에 선택 필드 `directTokenHash`가 있다. 이벤트에 토큰은 없다.
+- Mac 앱은 `device-updated`를 받으면 이미 허용한 기기의 해시만 바꿔 `devices.json`에 저장하고, 다음 시작 때 `HostCore.setDevices`로 해시까지 넣는다. 그래서 Mac 앱을 다시 시작해도 iPhone이 다시 등록하지 않아도 된다. 그사이 지운 기기의 `device-updated`는 무시한다.
 - 같은 기기를 다시 페어링하면 새 항목에는 해시가 없다. iPhone은 `403`을 받고 다시 등록한다.
 
 ### O.5 찾기
@@ -783,7 +744,7 @@ iPhone은 `https://<Mac의 사설 IP>:<포트>`에 연결하고, 서버가 낸 �
 tailnet으로만 가는 것과 그 이유:
 
 - 설치(`POST /v1/builds/{id}/sessions`, 진행 확인, `/i/*`): iOS 설치기(`itms-services`)는 시스템이 신뢰하는 인증서의 HTTPS 주소에서만 매니페스트와 IPA를 받는다. 그런 주소는 tailnet 이름(`*.ts.net`)뿐이다. 그래서 설치를 누르면 직접 연결 중이어도 VPN을 자동으로 켜고, 설치 주소는 지금처럼 tailnet 이름일 때만 연다.
-- 페어링과 등록: 누구인지를 tailnet 신원(WhoIs)으로 확인해야 한다.
+- 페어링과 등록: 누구인지를 tailnet 노드 신원으로 확인해야 한다.
 - 에이전트 요청: iPhone 앱이 VPN 연결을 조건으로 둔 채 그대로다(기능이 숨겨져 있다).
 
 파일 받기는 경로에 따라 방식이 다르다. tailnet 경로는 이전처럼 시스템 백그라운드 세션을 쓴다. 직접 경로는 앱이 떠 있는 동안만 도는 세션으로 받고, 끊긴 전송은 같은 파일을 다시 받을 때 이어 받는다(Range). 백그라운드 세션이 앱이 멈춘 사이의 서버 확인을 고정 값으로 처리한다고 보장할 수 없기 때문이다. 그래서 직접 경로로 받는 큰 파일은 앱을 백그라운드로 보내면 멈출 수 있다.
@@ -818,7 +779,7 @@ tailnet으로만 가는 것과 그 이유:
 
 ## P. 새 빌드·파일 알림(APNs)
 
-새 빌드가 게시되거나 Mac에서 보낸 파일·링크가 추가되면 Mac 앱이 페어링한 iPhone의 RemoteDebug 앱에 알림을 보낸다. 코어는 기기 토큰을 보관만 하고, 알림은 Mac 앱이 Apple의 개발(sandbox) 서버로 직접 보낸다. RD 업데이트 앱은 알림을 쓰지 않는다.
+새 빌드가 게시되거나 Mac에서 보낸 파일·링크가 추가되면 Mac 앱이 페어링한 iPhone의 RemoteDebug 앱에 알림을 보낸다. 호스트는 기기 토큰을 보관만 하고, 알림은 Mac 앱이 Apple의 개발(sandbox) 서버로 직접 보낸다. RD 업데이트 앱은 알림을 쓰지 않는다.
 
 ### P.1 등록 API
 
@@ -830,16 +791,16 @@ PUT 본문(4 KiB 이하):
 {"token": "0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd", "bundleId": "com.oozoofrog.app.RemoteDebugPhone", "environment": "development"}
 ```
 
-- `token`: 16진수만, 짝수 길이, 64~512자. 코어가 소문자로 바꿔 저장한다.
+- `token`: 16진수만, 짝수 길이, 64~512자. 호스트가 소문자로 바꿔 저장한다.
 - `bundleId`: 1~255자, `A-Z a-z 0-9 . -`만.
 - `environment`: 정확히 `"development"`만 받는다.
 - 어긋나면 `400 bad_request`, 허용 목록에 없는 기기는 `403 not_paired`다.
 
-PUT 성공은 `200 {"registered":true}`, DELETE(본문 없음, 몇 번을 불러도 같다)는 `200 {"registered":false}`다. 코어는 값이 실제로 바뀐 때에만 `device-updated`를 낸다. 같은 값을 다시 PUT하거나 이미 없는 것을 DELETE하면 200만 돌려주고 이벤트는 없다. 이 경로를 모르는 이전 Mac은 `404 not_found`를 주고, iPhone은 이를 "이 Mac은 알림을 지원하지 않음"으로 보며 오류로 띄우지 않는다.
+PUT 성공은 `200 {"registered":true}`, DELETE(본문 없음, 몇 번을 불러도 같다)는 `200 {"registered":false}`다. 호스트는 값이 실제로 바뀐 때에만 `device-updated`를 낸다. 같은 값을 다시 PUT하거나 이미 없는 것을 DELETE하면 200만 돌려주고 이벤트는 없다. 이 경로를 모르는 이전 Mac은 `404 not_found`를 주고, iPhone은 이를 "이 Mac은 알림을 지원하지 않음"으로 보며 오류로 띄우지 않는다.
 
 ### P.2 기기 항목의 `push`와 `device-updated`
 
-기기 항목(protocol §5)에 선택 필드 `push`가 더해진다. 등록하지 않았으면 키가 없다(`null`이나 빈 객체가 아니다). 페어링을 해제하면 Mac이 `rd_host_set_devices`로 목록을 통째로 바꾸므로 토큰도 항목과 함께 사라진다. `rd_host_set_devices`는 받은 `push`를 그대로 보존한다(Mac을 다시 시작한 뒤 복원).
+기기 항목(protocol §5)에 선택 필드 `push`가 더해진다. 등록하지 않았으면 키가 없다(`null`이나 빈 객체가 아니다). 페어링을 해제하면 Mac이 `HostCore.setDevices`로 목록을 통째로 바꾸므로 토큰도 항목과 함께 사라진다. `setDevices`는 받은 `push`를 그대로 보존한다(Mac을 다시 시작한 뒤 복원).
 
 ```json
 {"type": "device-updated", "device": {"id": "d_9c2e41b7", "name": "시험용 iPhone", "nodeStableId": "nSTABLE1", "nodeName": "rd-phone-1", "loginName": "user@example.com", "pairedAt": "2026-11-11T09:05:00Z", "push": {"token": "0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd0123abcd", "bundleId": "com.oozoofrog.app.RemoteDebugPhone", "environment": "development"}}}
@@ -901,11 +862,11 @@ Mac 앱이 `https://api.sandbox.push.apple.com/3/device/<token>`으로 HTTP/2 PO
 
 - 앱이 꺼진 상태에서 알림이나 동작 버튼을 눌러 시작하는 경우, 파일 알림의 **받기** 버튼, 스위치를 껐을 때 Mac에서 토큰이 지워지는지.
 - 실제 iPhone(iOS 27.2)에서 확인한 것: 알림 도착, 본문을 눌러 탭 이동, **링크 열기**와 **설치** 버튼.
-- 코어의 등록·삭제 경로는 두 리스너에서 단위 시험으로 확인했다.
+- 등록·삭제 경로는 `DirectAndPushTests`(`RDHostLogicTests`)에 단위 시험이 있다.
 
-## Q. Tailnet Lock 서명 대기 (`rd_status.lockWait`)
+## Q. Tailnet Lock 서명 대기 (`CoreStatus.lockWait`)
 
-tailnet에 Tailnet Lock이 켜져 있고 이 노드의 키가 아직 서명되지 않았으면, 다른 노드가 이 노드의 통신을 버린다. 백엔드 상태는 `Running`인 채다. 코어는 그동안 `rd_status`에 `lockWait`를 넣는다.
+tailnet에 Tailnet Lock이 켜져 있고 이 노드의 키가 아직 서명되지 않았으면, 다른 노드가 이 노드의 통신을 버린다. 백엔드 상태는 `Running`인 채다. 호스트는 그동안 상태에 `lockWait`를 넣는다.
 
 ```json
 {"backendState": "Running", "lockWait": {"nodeKey": "nodekey:<hex 64>", "lockKey": "tlpub:<hex 64>"}}
@@ -913,6 +874,6 @@ tailnet에 Tailnet Lock이 켜져 있고 이 노드의 키가 아직 서명되�
 
 - `nodeKey`, `lockKey`는 공개 키다. 서명 기기에서 `tailscale lock sign <nodeKey> <lockKey>`에 그대로 넣는다.
 - 있는 때: lock이 켜져 있고(`Enabled`) 이 노드가 서명되지 않았고(`NodeKeySigned == false`) 백엔드가 `Running`일 때만. 그 밖에는 필드가 없다.
-- 코어는 `Running`인 동안 상태를 물을 때마다 lock 상태를 다시 읽고, 서명되면 필드를 빼고 `state` 사건을 낸다. 서명된 뒤에는 그 실행에서 다시 묻지 않는다.
+- 호스트는 `Running`인 동안 상태를 물을 때마다 lock 상태를 다시 읽고, 서명되면 필드를 빼고 `state` 사건을 낸다. 서명된 뒤에는 그 실행에서 다시 묻지 않는다.
 - 호스트 모드와 터널 모드 모두 같다.
 - Mac 앱: 안내 종류 "서명 필요"와 서명 명령 복사. iPhone 앱: VPN 카드에 같은 안내와 명령 복사.

@@ -2,7 +2,7 @@ import Foundation
 import JavaScriptCore
 import Testing
 
-/// core/internal/host/web 아래 파일을 불러 둔 JavaScriptCore 문맥. 테스트마다 새로 만든다.
+/// Packages/SwiftailHost/Sources/RDHostLogic/Resources/web 아래 파일을 불러 둔 JavaScriptCore 문맥. 테스트마다 새로 만든다.
 final class JSHarness {
     let context: JSContext
     private let errors = ErrorBox()
@@ -11,8 +11,8 @@ final class JSHarness {
 
     static let webDirectory: URL = {
         var url = URL(fileURLWithPath: #filePath)
-        for _ in 0..<5 { url.deleteLastPathComponent() }  // WebPageTests, Tests, WebPage, Packages, 파일 이름
-        return url.appending(path: "core/internal/host/web", directoryHint: .isDirectory)
+        for _ in 0..<4 { url.deleteLastPathComponent() }  // 파일 이름, WebPageTests, Tests, WebPage → Packages
+        return url.appending(path: "SwiftailHost/Sources/RDHostLogic/Resources/web", directoryHint: .isDirectory)
     }()
 
     /// logic.js를 불러온다. `withPage`면 RD_NO_AUTOSTART를 켠 뒤 install.js도 불러온다.

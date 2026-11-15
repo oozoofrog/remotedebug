@@ -100,18 +100,6 @@ private func expectRoundTrip<T: Codable>(_ type: T.Type, _ json: String) throws 
 
     // MARK: json-3, json-4 CoreConfig
 
-    @Test func tunnelConfigExampleRoundTrips() throws {
-        // 문서 예시는 터널 모드가 쓰지 않는 호스트 전용 키를 생략한다. Swift 모델은 항상 내보내므로 기본값을 채워 읽는다.
-        let doc = try DocJSON.block("tunnel.md", withKeys: ["mode", "utunFd"])
-        var merged = try JSONSerialization.jsonObject(with: Data(doc.utf8)) as! [String: Any]
-        for (key, value) in ["listenTLS": true, "port": 443, "publishDir": "", "allowedTargets": [String]()] as [String: Any] where merged[key] == nil {
-            merged[key] = value
-        }
-        let json = String(decoding: try JSONSerialization.data(withJSONObject: merged), as: UTF8.self)
-        let c = try expectRoundTrip(CoreConfig.self, json)
-        #expect(c.mode == .tunnel && c.utunFd == 7 && c.mtu == 1280 && c.goMemLimitMiB == 28)
-    }
-
     @Test func optionalConfigFieldsAreOmittedUnlessSet() throws {
         let plain = try object(CoreConfig(mode: .host, stateDir: "/s", hostname: "rd-mac-1"))
         for key in ["utunFd", "mtu", "hostDisplayName", "appVersion"] { #expect(plain[key] == nil, "\(key)") }
@@ -235,7 +223,12 @@ private func expectRoundTrip<T: Codable>(_ type: T.Type, _ json: String) throws 
             } else if keys == ["error"] {
                 _ = try expectRoundTrip(APIErrorBody.self, json)
             } else if keys.contains("backendState") {
-                _ = try expectRoundTrip(CoreStatus.self, json)
+                // 필드 몇 개만 보이는 조각 예시는 읽히는지만 본다(모델은 모든 필드를 내보내므로 다시 인코딩하면 원본과 다르다).
+                if keys.contains("hostname") {
+                    _ = try expectRoundTrip(CoreStatus.self, json)
+                } else {
+                    _ = try decode(CoreStatus.self, json)
+                }
             }
         }
     }

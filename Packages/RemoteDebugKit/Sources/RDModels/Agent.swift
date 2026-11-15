@@ -167,8 +167,13 @@ public struct AgentRequestEvent: Codable, Sendable, Hashable {
     public var project: String
     public var agent: String
     public var continues: String
+    /// 보낸 기기의 tailnet 노드 이름. Mac 코어 안에서만 채운다(JSON에는 없다).
+    public var nodeName: String = ""
 
-    public init(requestId: String, deviceId: String, deviceName: String, text: String, project: String = "", agent: String = "", continues: String = "") {
+    enum CodingKeys: String, CodingKey { case requestId, deviceId, deviceName, text, project, agent, continues }
+
+    public init(requestId: String, deviceId: String, deviceName: String, text: String, project: String = "", agent: String = "", continues: String = "",
+                nodeName: String = "") {
         self.requestId = requestId
         self.deviceId = deviceId
         self.deviceName = deviceName
@@ -176,6 +181,7 @@ public struct AgentRequestEvent: Codable, Sendable, Hashable {
         self.project = project
         self.agent = agent
         self.continues = continues
+        self.nodeName = nodeName
     }
 }
 
@@ -183,9 +189,14 @@ public struct AgentRequestEvent: Codable, Sendable, Hashable {
 public struct AgentCancelEvent: Codable, Sendable, Hashable {
     public var requestId: String
     public var deviceName: String
+    /// 멈춰 달라고 한 기기의 허용 목록 id. Mac 코어 안에서만 채운다(JSON에는 없다).
+    public var deviceId: String = ""
 
-    public init(requestId: String, deviceName: String = "") {
+    enum CodingKeys: String, CodingKey { case requestId, deviceName }
+
+    public init(requestId: String, deviceName: String = "", deviceId: String = "") {
         self.requestId = requestId
         self.deviceName = deviceName
+        self.deviceId = deviceId
     }
 }

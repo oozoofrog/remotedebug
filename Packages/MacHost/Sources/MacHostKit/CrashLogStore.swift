@@ -47,11 +47,12 @@ public final class CrashLogStore {
     }
 
     /// 받은 기록을 저장한다. 같은 기기가 같은 기록을 다시 보내면 그대로 둔다.
+    /// 받은 시각은 코어가 알려 준 값(`event.receivedAt`), 없으면 지금이다.
     func receive(_ event: DeviceCrashEvent) {
         let report = event.report
         guard !items.contains(where: { $0.id == report.id }) else { return }
         let item = Item(id: report.id, kind: report.kind, name: report.name, bundleId: report.bundleId,
-                        appVersion: report.appVersion, crashedAt: report.crashedAt, receivedAt: now(),
+                        appVersion: report.appVersion, crashedAt: report.crashedAt, receivedAt: event.receivedAt ?? now(),
                         deviceId: event.deviceId, deviceName: event.deviceName,
                         file: "\(report.id).\(report.kind.fileExtension)",
                         imageFile: report.image == nil || directory == nil ? nil : "\(report.id).\(report.image?.first == 0x89 ? "png" : "jpg")")

@@ -62,8 +62,9 @@ public struct PhoneAppInstallError: Error, Equatable, Sendable {
              String(localized: "프로비저닝 프로파일을 만들지 못했습니다. Xcode > Settings > Accounts에서 팀을 고르고 'Download Manual Profiles'를 누른 뒤 다시 설치하세요.")),
             (["unable to find a destination", "could not locate device", "device is not connected"],
              String(localized: "iPhone에 닿지 못했습니다. 케이블로 연결하고 잠금을 푼 뒤 '이 컴퓨터를 신뢰'를 허용하세요.")),
-            (["rdcore.xcframework"],
-             String(localized: "Go 코어(RDCore.xcframework)가 없습니다. 저장소에서 scripts/build-core.sh를 먼저 실행하세요.")),
+            // 터널 확장이 쓰는 Swiftail은 빌드할 때 GitHub에서 받는다.
+            (["could not resolve package dependencies", "failed to clone repository"],
+             String(localized: "Swift 패키지(Swiftail)를 GitHub에서 받지 못했습니다. 인터넷 연결을 확인하고 다시 설치하세요.")),
         ]
         for rule in rules where rule.needles.contains(where: { lower.contains($0) }) {
             return PhoneAppInstallError(rule.message)

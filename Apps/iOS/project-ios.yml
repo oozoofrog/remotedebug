@@ -3,10 +3,12 @@
 # com.oozoofrog.app.RemoteDebugPhone.Tunnel, com.oozoofrog.app.RemoteDebugPhone.Widgets가 된다.
 # RemoteDebug 앱을 업데이트하는 두 번째 앱(홈 화면 이름 RD 업데이트)은 com.oozoofrog.app.RemoteDebugVPN, 그 터널은 com.oozoofrog.app.RemoteDebugVPN.Tunnel이다.
 # 두 앱은 App Group(group.<앞부분>.RemoteDebug)으로 같은 Swiftail 상태를 써서 같은 tailnet 기기로 보인다.
-# 터널 확장은 Swiftail(Swift로 쓴 tailnet 노드)이다. 이 저장소 옆 폴더(../Swiftail)에 Swiftail 패키지가 있어야 한다.
+# 터널 확장은 Swiftail(Swift로 쓴 tailnet 노드)이다. 공개 저장소의 고정 커밋을 쓴다.
+# 옆 폴더(../Swiftail)의 로컬 checkout으로 빌드하려면 project-localswiftail.yml로 만든다.
 packages:
   Swiftail:
-    path: ../Swiftail
+    url: https://github.com/oozoofrog/Swiftail
+    revision: b407e5ccad103c6049586436e0169d244c8592af
 targets:
   RemoteDebugPhone:
     type: application

@@ -1,20 +1,20 @@
 #!/usr/bin/env bash
 # 이 저장소의 iPhone 앱(RemoteDebug)을 자기 개발자 계정으로 빌드해 USB나 Wi-Fi로 연결한 iPhone에 설치한다.
 # 필요한 것: Xcode(Apple 계정 로그인, Apple Development 인증서), XcodeGen(`brew install xcodegen`),
-#           개발자 모드를 켠 iPhone. Go는 필요 없다(코어는 릴리스에서 내려받는다).
+#           개발자 모드를 켠 iPhone. 소스만으로 빌드한다. Swiftail은 Xcode가 처음 빌드할 때 공개 저장소에서 받으므로
+#           인터넷이 필요하다(SWIFTAIL_PATH로 로컬 체크아웃을 가리키는 방법은 README).
 # 사용: scripts/install-phone.sh [--team <팀 ID>] [--device <UDID>] [--prefix <번들 ID 앞부분>]
 #   팀·기기가 하나뿐이면 인자 없이 된다. 여러 개면 목록을 보여 주고 멈춘다.
 # 빌드 산출물: RD_BUILD_ROOT(기본 ~/RemoteDebugBuild)/phone-install
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CORE_URL="${RD_CORE_URL:-https://github.com/oozoofrog/remotedebug/releases/latest/download/RDCore.xcframework.zip}"
 TEAM="" DEVICE="" PREFIX=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --team) TEAM="$2"; shift 2 ;;
     --device) DEVICE="$2"; shift 2 ;;
     --prefix) PREFIX="$2"; shift 2 ;;
-    -h|--help) sed -n '2,7p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,8p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "error: 모르는 인자: $1" >&2; exit 2 ;;
   esac
 done
@@ -23,20 +23,7 @@ fail() { echo "error: $*" >&2; exit 1; }
 command -v xcodebuild >/dev/null || fail "Xcode가 없습니다. App Store에서 Xcode를 설치하세요."
 command -v xcodegen >/dev/null || fail "XcodeGen이 없습니다. 'brew install xcodegen'으로 설치하세요."
 
-# 1. 코어(RDCore.xcframework). 없으면 릴리스에서 내려받는다.
-CORE="$ROOT/Packages/RDCore/RDCore.xcframework"
-if [ ! -e "$CORE/Info.plist" ]; then
-  echo "==> 코어를 내려받습니다: $CORE_URL"
-  TMP="$(mktemp -d)"
-  trap 'rm -rf "$TMP"' EXIT
-  curl -fL --progress-bar -o "$TMP/core.zip" "$CORE_URL" || fail "코어를 내려받지 못했습니다. 직접 빌드하려면 scripts/build-core.sh를 쓰세요(Go 필요)."
-  ditto -x -k "$TMP/core.zip" "$TMP/out"
-  [ -e "$TMP/out/RDCore.xcframework/Info.plist" ] || fail "내려받은 파일에 RDCore.xcframework가 없습니다."
-  rm -rf "$CORE"
-  mv "$TMP/out/RDCore.xcframework" "$CORE"
-fi
-
-# 2. 서명 팀. 인자 → Config/Signing.local.xcconfig → 키체인의 Apple Development 인증서.
+# 1. 서명 팀. 인자 → Config/Signing.local.xcconfig → 키체인의 Apple Development 인증서.
 LOCAL="$ROOT/Config/Signing.local.xcconfig"
 config() { [ -e "$2" ] || return 0; sed -n "s/^$1 *= *//p" "$2" | tail -1 | tr -d '[:space:]'; }
 REPO_TEAM="$(config DEVELOPMENT_TEAM "$LOCAL")"
@@ -62,7 +49,7 @@ for team, org in seen.items(): print(team, org)
   TEAM="${TEAMS%% *}"
 fi
 
-# 3. 번들 ID 앞부분. 저장소 설정의 팀이면 저장소 값, 다른 팀이면 그 팀만 쓰는 dev.<팀 ID 소문자>.
+# 2. 번들 ID 앞부분. 저장소 설정의 팀이면 저장소 값, 다른 팀이면 그 팀만 쓰는 dev.<팀 ID 소문자>.
 if [ -z "$PREFIX" ]; then
   PREFIX="$(config RD_BUNDLE_PREFIX "$LOCAL")"
   if [ -z "$PREFIX" ]; then
@@ -78,7 +65,7 @@ if [ ! -e "$LOCAL" ]; then
   printf 'DEVELOPMENT_TEAM = %s\nRD_BUNDLE_PREFIX = %s\n' "$TEAM" "$PREFIX" > "$LOCAL"
 fi
 
-# 4. iPhone.
+# 3. iPhone.
 if [ -z "$DEVICE" ]; then
   JSON="$(mktemp)"
   xcrun devicectl list devices --json-output "$JSON" --quiet >/dev/null 2>&1 || true
@@ -104,7 +91,7 @@ PY
   DEVICE="${PHONES%% *}"
 fi
 
-# 5. 빌드 → 설치 → 실행.
+# 4. 빌드 → 설치 → 실행.
 OUT="${RD_BUILD_ROOT:-$HOME/RemoteDebugBuild}/phone-install"
 mkdir -p "$OUT"
 (cd "$ROOT" && xcodegen generate --spec project.yml >/dev/null)

@@ -6,7 +6,7 @@
 > - Apple Developer 계정 설정 변경(App ID 등록, Network Extension 권한, iPhone 기기 등록)
 > - 실제 tailnet에 노드를 추가하거나 관리 콘솔에서 지우는 일, tailnet의 DNS·HTTPS·ACL 설정을 바꾸는 일
 > - 사용자의 tailnet을 쓰는 일: 공식 Tailscale 앱으로 iPhone을 그 tailnet에 로그인하고, 그 iPhone 노드를 Mac에서 허용하는 일(D14)
-> - Mac 앱의 tailnet 상태 폴더(`state`)를 지우는 일(D9)
+> - Mac 앱의 tailnet 상태 폴더(`tailnet`)를 지우는 일(D9)
 > - 인증 키를 만들거나 쓰는 일
 
 아래 기대 결과는 설계상 예상이며, 어느 항목도 아직 확인하지 않음. 결과는 [결과 기록표](device-test-results.md)에 적고, 로그와 스크린샷은 저장소 루트의 `device-evidence/` 폴더에 `<항목 번호>-<순번>.<확장자>` 이름으로 둔다. 이 폴더는 노드 이름과 tailnet 주소를 담을 수 있어 저장소에서 제외했다.
@@ -15,11 +15,11 @@
 
 1. [설정 문서](setup.md)대로 두 앱을 빌드하고 tailnet을 준비한다.
 2. iPhone을 Mac에 연결하고 Mac의 콘솔 앱에서 그 iPhone을 고른다.
-3. 콘솔 앱의 검색에 `subsystem:com.oozoofrog.app.RemoteDebugPhone`을 넣는다. 터널 확장의 기록은 `com.oozoofrog.app.RemoteDebugPhone.Tunnel`이다. 이 두 값은 코드에 고정돼 있어 번들 ID를 바꿔도 그대로다. 코어 메시지 본문은 `<private>`로 가려질 수 있다.
+3. 콘솔 앱의 검색에 `subsystem:com.oozoofrog.app.RemoteDebugPhone`을 넣는다. 터널 확장의 기록은 `com.oozoofrog.app.RemoteDebugPhone.Tunnel`이다. 이 두 값은 코드에 고정돼 있어 번들 ID를 바꿔도 그대로다. 노드(Swiftail) 메시지 본문은 `<private>`로 가려질 수 있다. 터널 확장 안의 Swiftail 로그 줄은 `subsystem:Swiftail`로 찾는다.
 
 | 볼 곳 | 위치 | 내용 |
 | --- | --- | --- |
-| VPN 진단 | iPhone 앱 > 톱니 > 설정 > "VPN 진단" | VPN, tailnet 상태, tailnet 주소, 피어, 경로, MTU, 코어 메모리(RSS), 확장 메모리(phys_footprint), 확장 단계, 마지막 오류 |
+| VPN 진단 | iPhone 앱 > 톱니 > 설정 > "VPN 진단" | VPN, tailnet 상태, tailnet 주소, 피어, 경로, MTU, 확장 메모리(phys_footprint), 확장 단계, 마지막 오류 |
 | 활동 | Mac 앱 > 활동 > "활동" | 페어링 결과, 설치 진행, 거부된 접근 |
 | 코어 로그 | Mac 앱 > 활동 > "코어 로그" | 코어의 경고와 메시지 |
 | 네트워크 | Mac 앱 > 네트워크 | 공유 상태, 주소(FQDN), HTTPS 인증서, 고급 > 코어 메모리 |
@@ -50,18 +50,18 @@ RemoteDebug iPhone 앱 없이 D14만 할 때는 D9의 Mac 부분(공유 시작�
 
 U 번호는 `docs/tunnel.md`의 "실기기에서만 확인할 것" 번호와 같다. 인용문은 그 문서의 문장이다.
 
-### U1. utun fd 탐색과 CreateTUNFromFile
+### U1. utun fd 탐색과 노드의 utun 입출력
 
-> 1. iOS NE 샌드박스에서 utun fd 탐색과 `CreateTUNFromFile`(UTUN_OPT_IFNAME, `net.InterfaceByName`, AF_ROUTE 소켓)이 되는가. 경로 감시 소켓 오류는 장치 전체를 닫는다(→ `TUN 장치가 닫혔습니다.`).
+> 1. iOS NE 샌드박스에서 utun fd 탐색과 노드의 utun 읽기·쓰기가 되는가. utun을 더 읽을 수 없으면 노드가 끝난다(→ `TUN 장치가 닫혔습니다.`).
 
-- 목표: 확장이 utun을 찾아 코어를 시작하는지 본다.
+- 목표: 확장이 utun을 찾아 노드를 시작하는지 본다.
 - 절차:
   1. 콘솔 앱에서 기록을 시작한다.
   2. iPhone 앱에서 **VPN 켜기**를 누르고 로그인한다.
   3. 5분 동안 VPN을 켜 둔다.
-- 기대 결과: 콘솔에 `utun 확인: <이름> fd=<번호>`와 `코어 시작됨`이 나온다. VPN 진단의 확장 단계가 "실행 중"이고 tailnet 상태가 `Running`이다.
+- 기대 결과: 콘솔에 `utun 확인: <이름> fd=<번호>`와 `노드 시작됨`이 나온다. VPN 진단의 확장 단계가 "실행 중"이고 tailnet 상태가 `Running`이다.
 - 기록: 콘솔 기록 파일, VPN 진단 스크린샷.
-- 실패 시: "VPN 장치(utun)를 찾지 못했습니다."면 `Apps/iOSTunnel/UTUNLocator.swift`를 본다. "TUN 장치가 닫혔습니다."면 경로 감시 소켓 오류를 의심한다.
+- 실패 시: "VPN 장치(utun)를 찾지 못했습니다."면 `Apps/iOSTunnel/UTUNLocator.swift`를 본다. "TUN 장치가 닫혔습니다."면 utun 읽기 오류를 의심한다.
 
 ### U2. 첫 네트워크 설정 전의 utun
 
@@ -119,7 +119,7 @@ U 번호는 `docs/tunnel.md`의 "실기기에서만 확인할 것" 번호와 같
 
 ### U6. 확장의 메모리 한도
 
-> 6. 확장 전체(Go + Swift + NE 프레임워크)의 phys_footprint가 유휴·트래픽 상태에서 50MiB 안인가.
+> 6. 확장 전체(Swiftail + Swift + NE 프레임워크)의 phys_footprint가 유휴·트래픽 상태에서 50MiB 안인가.
 
 - 목표: 확장 메모리가 보고된 한도 안에 드는지 본다.
 - 절차: 아래 D3의 절차대로 잰다.
@@ -132,18 +132,18 @@ U 번호는 `docs/tunnel.md`의 "실기기에서만 확인할 것" 번호와 같
 > 7. 첫 잠금 해제 전 주문형 VPN 시작에 맞는 `stateDir`의 데이터 보호 등급·App Group 위치.
 
 - 목표: 첫 잠금 해제 전 시작이 가능한지 본다.
-- 현재 코드: 앱은 주문형(On Demand) 규칙을 설정하지 않고, App Group도 쓰지 않는다. `stateDir`는 확장 컨테이너의 `Library/Application Support/RemoteDebug/tailscale`이고 보호 등급은 `completeUntilFirstUserAuthentication`이다.
+- 현재 코드: 주문형(On Demand) 규칙은 설정에서 켠 경우에만 있다(기본 꺼짐). 노드 상태 폴더는 App Group 공용 컨테이너(없으면 확장 컨테이너)의 `Library/Application Support/RemoteDebug/swiftail`이고 보호 등급은 `completeUntilFirstUserAuthentication`이다.
 - 절차:
   1. VPN을 켜고 VPN 진단의 tailnet 주소를 적는다.
   2. iPhone을 재시동하고 잠금을 해제한다.
   3. 앱을 열어 **VPN 켜기**를 누른다.
 - 기대 결과: 로그인을 다시 묻지 않고 같은 tailnet 주소가 나온다.
-- 기록: 재시동 전후 tailnet 주소. 주문형 규칙이 없어 잠금 해제 전 시작은 시험할 수 없으므로 결과는 "해당 없음", 비고에 "주문형 규칙 없음"으로 적는다.
+- 기록: 재시동 전후 tailnet 주소. 주문형 규칙을 켜지 않았으면 잠금 해제 전 시작은 시험할 수 없으므로 결과는 "해당 없음", 비고에 "주문형 규칙 없음"으로 적는다.
 - 실패 시: 로그인을 다시 물으면 `stateDir`의 보호 등급과 위치를 의심한다.
 
 ### U8. 기본 리졸버를 쓰려는 tailnet의 DNS
 
-> 8. iOS에서 엔진이 100.100.100.100을 기본 리졸버로 삼으려는 tailnet(사용자 지정 서버로 가는 split DNS, 역방향 영역 밖 주소의 ExtraRecord, `DisableSplitDNSWhenNoCustomResolvers` 노브)에서도 범위 지정 DNS가 나가는 것은 Go 테스트(`TestTunnelIOSDNS`, goos `ios`)로 확인했다. 실기기에서는 그런 tailnet에서 호스트 FQDN이 풀리고 다른 이름(인터넷 이름, `corp.example.com`)은 기기 리졸버로 풀리는지만 본다.
+> 8. 기본 리졸버를 쓰려는 tailnet(사용자 지정 서버로 가는 split DNS, 역방향 영역 밖 주소의 ExtraRecord)에서도 호스트 FQDN이 풀리고 다른 이름(인터넷 이름, `corp.example.com`)은 기기 리졸버로 풀리는가.
 
 - 목표: 사용자 지정 DNS가 있는 tailnet에서 기기의 일반 DNS가 유지되는지 본다.
 - 절차:
@@ -198,18 +198,18 @@ U 번호는 `docs/tunnel.md`의 "실기기에서만 확인할 것" 번호와 같
   4. 이미 tailnet에 있는 다른 기기에서 `curl -v https://<FQDN>/v1/info`를 실행한다.
 - 기대 결과: 인증서 검증이 통과하고 페어링하지 않은 기기는 403 `not_paired`를 받는다.
 - 기록: 발급 시간(초), `curl` 출력의 인증서 부분과 상태 코드.
-- 실패 시: 코어는 인증서를 받을 때까지 30초, 60초, 120초(최대 10분) 간격으로 다시 시도한다. 10분이 넘으면 코어 로그와 D10을 본다.
+- 실패 시: 발급이 실패하면 Mac 앱의 네트워크 화면에 사유가 나온다. 오래 걸리면 코어 로그와 D10을 본다.
 
 ### D3. VPN 메모리
 
-- 목표: 터널 확장의 메모리를 상태별로 잰다. 한도는 Apple 포럼 보고치인 약 50MiB로 가정하며, 코어의 `goMemLimitMiB`는 28이다.
+- 목표: 터널 확장의 메모리를 상태별로 잰다. 한도는 Apple 포럼 보고치인 약 50MiB로 가정한다.
 - 절차:
-  1. VPN을 켜고 10분 동안 유휴로 둔다. 앱을 앞에 띄운 채 VPN 진단의 코어 메모리(RSS)와 확장 메모리(phys_footprint)를 적는다.
+  1. VPN을 켜고 10분 동안 유휴로 둔다. 앱을 앞에 띄운 채 VPN 진단의 확장 메모리(phys_footprint)를 적는다.
   2. Xcode의 Debug > Attach to Process에서 `RemoteDebugTunnel` 프로세스에 붙이고 Debug 내비게이터의 메모리 게이지를 본다.
   3. 가장 큰 빌드를 설치하면서 최댓값을 적는다.
   4. Wi-Fi와 셀룰러를 전환하면서 최댓값을 적는다.
 - 기대 결과: 모든 값이 50MiB 미만이다.
-- 기록: [결과 기록표](device-test-results.md)의 "D3 메모리" 표에 상태(유휴, 전송, 전환)별 RSS, phys_footprint, Xcode 게이지 값(MiB)과 빌드 크기를 적는다.
+- 기록: [결과 기록표](device-test-results.md)의 "D3 메모리" 표에 상태(유휴, 전송, 전환)별 phys_footprint, Xcode 게이지 값(MiB)과 빌드 크기를 적는다.
 - 실패 시: VPN이 갑자기 끊기고 "VPN 연결이 끊겼습니다. 다시 연결하세요."가 나오면 메모리 초과 종료를 의심한다. 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 `JetsamEvent` 기록을 찾는다.
 
 ### D4. 네트워크 전환
@@ -271,7 +271,7 @@ U 번호는 `docs/tunnel.md`의 "실기기에서만 확인할 것" 번호와 같
   4. 꺼진 뒤 **VPN 켜기**를 눌러 정상 연결을 본다.
 - 기대 결과: 오류 없이 "꺼짐"이 된다. 다음 켜기가 된다. 콘솔에 `시작 중 종료 요청을 받아 새 노드를 멈춥니다`가 나올 수 있다.
 - 기록: 콘솔 기록 파일, 각 시도의 최종 상태.
-- 실패 시: 다음 켜기가 `state_dir_in_use`나 `tunnel_in_use`로 실패하면 앞 노드가 남은 것이다.
+- 실패 시: 다음 켜기가 "다른 터널이 같은 로그인 정보를 쓰고 있습니다."로 실패하면 앞 노드가 남은 것이다.
 
 ### D9. 브라우저와 인증 키 로그인
 
@@ -281,7 +281,7 @@ U 번호는 `docs/tunnel.md`의 "실기기에서만 확인할 것" 번호와 같
   2. iPhone: **VPN 켜기** 뒤 **로그인 페이지 열기**로 로그인한다.
   3. 사용자 승인을 받아 두 기기의 로그인 상태를 지운다.
      - tailnet 관리 콘솔의 Machines에서 두 노드를 지운다. 지운 노드는 다시 로그인할 때까지 tailnet에 연결하지 못한다.
-     - Mac: RemoteDebug를 종료하고 `~/Library/Containers/com.oozoofrog.app.RemoteDebugMac/Data/Library/Application Support/RemoteDebug/state` 폴더만 지운다. Mac의 tailnet 노드 키가 지워진다. 그 위 `RemoteDebug` 폴더의 `devices.json`(허용 기기 목록), `builds.json`(빌드 목록), `Published/`(게시한 IPA), `identity.json`(노드 이름의 8자)은 지우지 않는다. 이 파일들까지 지우면 허용 기기와 게시한 빌드가 사라지고 Mac 노드 이름이 바뀐다.
+     - Mac: RemoteDebug를 종료하고 `~/Library/Application Support/RemoteDebug/tailnet` 폴더만 지운다. Mac의 tailnet 노드 키가 지워진다. 그 위 `RemoteDebug` 폴더의 `devices.json`(허용 기기 목록), `builds.json`(빌드 목록), `Published/`(게시한 IPA), `identity.json`(노드 이름의 8자)은 지우지 않는다. 이 파일들까지 지우면 허용 기기와 게시한 빌드가 사라지고 Mac 노드 이름이 바뀐다.
      - iPhone: 앱을 지우고 Xcode로 다시 설치한다. tailnet 로그인과 저장한 Mac 페어링이 함께 지워지므로 D9 뒤에 다시 페어링한다.
   4. 사용자 승인을 받아 인증 키를 만든다.
   5. Mac: **네트워크** 화면의 "인증 키(선택)"에 키를 넣고 **공유 시작**을 누른다. iPhone: **인증 키로 켜기**를 누르고 키를 넣는다.
@@ -289,7 +289,7 @@ U 번호는 `docs/tunnel.md`의 "실기기에서만 확인할 것" 번호와 같
   7. 잘못된 키로 한 번 시도한다.
 - 기대 결과: 네 경우 모두 연결된다. 키는 입력란에 남지 않는다. 잘못된 키는 Mac에서 "공유 오류", iPhone에서 "tailnet에 연결하지 못했습니다. ‘다시 연결’을 누르고, 계속되면 ‘인증 키로 켜기’로 다시 로그인하세요."로 나온다.
 - 기록: 방법별 결과, 로그인에서 연결까지의 시간. 인증 키 자체는 기록하지 않는다.
-- 실패 시: "tailnet 로그인 주소를 받는 중입니다."에 멈추면 코어의 로그인 재시도(30초에 한 번)와 네트워크를 본다.
+- 실패 시: "tailnet 로그인 주소를 받는 중입니다."에 멈추면 코어 로그와 네트워크를 본다.
 
 ### D10. HTTPS가 꺼진 tailnet
 

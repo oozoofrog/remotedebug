@@ -7,12 +7,12 @@
 | Mac | Apple silicon | arm64 |
 | macOS | 26.0 이상 | 27.2 |
 | Xcode | iOS·macOS 26.0 SDK 이상. 확인한 버전은 오른쪽 하나뿐이다 | 27.2 (27B48), Swift 6.4.2 |
-| Go | 1.27.3 이상(`core/go.mod`). `scripts/go.sh`가 `GOTOOLCHAIN=local`로 실행하므로 자동으로 내려받지 않는다 | 1.27.3 |
 | XcodeGen | `xcodegen` 명령 | 2.46.0 |
+| 인터넷 | 처음 빌드할 때 Xcode(SwiftPM)가 [Swiftail](https://github.com/oozoofrog/Swiftail)을 공개 저장소의 고정한 리비전으로 받는다. Go나 미리 만든 바이너리는 필요 없다 | |
 | iPhone | iOS 26.0 이상, 개발자 모드 켜짐. 앱과 설치할 Debug 빌드의 개발 프로필에 그 기기가 들어 있어야 한다 | 실기기 확인하지 않음 |
 | 시뮬레이터 | arm64. VPN 확장은 쓸 수 없다 | iPhone 18 Pro, iOS 27.2 |
 
-작성 환경은 빌드 산출물을 로컬 도구 `eyebuild`로 `/Volumes/eyedisk/build` 아래에 모은다. 이 문서의 명령은 일반 형태다.
+작성 환경은 빌드 산출물을 로컬 도구 `eyebuild`로 한 폴더에 모은다. 이 문서의 명령은 일반 형태다.
 
 ### tailnet
 
@@ -75,24 +75,18 @@ Xcode 자동 서명은 연결한 iPhone을 개발자 계정에 등록할 수 있
 ## 빌드와 실행
 
 ```sh
-scripts/build-core.sh
 xcodegen generate --spec project.yml
 open RemoteDebug.xcodeproj
 ```
 
-- `scripts/build-core.sh`가 Go 코어를 빌드하고 `Packages/RDCore/RDCore.xcframework` 링크를 만든다. 이 링크가 있어야 프로젝트와 패키지가 빌드된다.
+- 앱과 패키지는 소스만으로 빌드된다. Swiftail은 Xcode가 패키지로 받는다.
+- Swiftail을 로컬 체크아웃으로 쓰려면 SwiftPM 명령에는 환경 변수 `SWIFTAIL_PATH`에 그 폴더를 주고(폴더 이름은 `Swiftail`이어야 한다), Xcode 프로젝트는 `xcodegen generate --spec project-localswiftail.yml`로 만든다. 이 명세는 이 저장소 옆의 `../Swiftail` 폴더를 쓴다.
 - Xcode에서 스킴 `RemoteDebugMac`을 고르고 My Mac으로 실행한다.
 - 스킴 `RemoteDebugPhone`을 고르고 연결한 iPhone으로 실행한다. 실기기 설치는 기기 소유자가 승인해야 한다.
 
 ### `eyebuild`가 없는 Mac
 
-`scripts/go.sh`, `scripts/build-core.sh`, `scripts/e2e-mac.sh`, `scripts/e2e-full.sh`, `scripts/check-ipa-roundtrip.sh`, `scripts/check-real-builds.sh`는 `eyebuild`를 부른다. 없을 때 나오는 문구는 스크립트마다 다르다.
-
-| 스크립트 | `eyebuild`가 없을 때 |
-| --- | --- |
-| `scripts/build-core.sh`, `scripts/e2e-mac.sh`, `scripts/e2e-full.sh` | `eyebuild: command not found`로 멈춘다 |
-| `scripts/go.sh` | `exec: eyebuild: not found`로 멈춘다 |
-| `scripts/check-ipa-roundtrip.sh`, `scripts/check-real-builds.sh` | `FAIL rdvalidate 빌드`를 출력하고 끝난다. `scripts/check-real-builds.sh`는 그 전에 아래의 DerivedData 조건으로 먼저 끝날 수 있다 |
+`scripts/check-ipa-roundtrip.sh`, `scripts/check-real-builds.sh`는 `eyebuild`를 부른다. 없으면 `FAIL rdvalidate 빌드`를 출력하고 끝난다. `scripts/check-real-builds.sh`는 그 전에 아래의 DerivedData 조건으로 먼저 끝날 수 있다.
 
 아래 스크립트를 PATH에 있는 폴더에 `eyebuild`라는 이름으로 두면 같은 명령을 받는다. 산출물은 `RD_BUILD_ROOT`(기본 `~/RemoteDebugBuild`) 아래에 쌓인다. 이 스크립트는 빌드하지 않는 호출(`dir`, `run`, `rm`, `swift … build --help`, `xcodebuild … -version`)로 인자 전달만 확인했다. 이 스크립트로 실제 빌드와 시험은 확인하지 않음.
 
@@ -115,7 +109,7 @@ case "$cmd" in
 esac
 ```
 
-`scripts/check-real-builds.sh`는 `/Volumes/eyedisk/build/Xcode/DerivedData`의 Debug 빌드만 찾는다. 그 폴더가 없는 Mac에서는 수락할 빌드가 없어 종료 코드 3으로 끝난다.
+`scripts/check-real-builds.sh`는 스크립트에 고정된 작성 환경의 Xcode DerivedData 위치에서 Debug 빌드만 찾는다. 그 위치가 없는 Mac에서는 수락할 빌드가 없어 종료 코드 3으로 끝난다.
 
 ### 명령줄 빌드와 시험
 
@@ -123,18 +117,12 @@ esac
 
 | 명령 | 내용 | 기록된 시간 |
 | --- | --- | --- |
-| `scripts/build-core.sh` | xcframework 생성 | 약 20~35초 |
-| `scripts/go.sh test -race -count=1 ./...` | Go 전체 시험 | 약 2분 |
-| `scripts/go.sh test -race -count=1 -run TestTunnel -v ./...` | 터널 시험 | 약 30초 |
 | `swift test --package-path Packages/RemoteDebugKit` | 킷 시험 | 약 10초 |
 | `swift test --package-path Packages/PhoneClient` | iPhone 로직 시험 | 약 5초 |
-| `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost` | Mac 로직 시험. `RDCore.xcframework` 필요. `RD_TEST_TMPDIR`를 주지 않으면 시험이 작성 환경의 `/Volumes/eyedisk/build/remotedebug/mac-host-tmp`에 임시 폴더를 만들려다 그 볼륨이 없는 Mac에서는 실패한다 | 약 10초 |
+| `swift test --package-path Packages/SwiftailHost` | 호스트 로직(`RDHostLogic`)과 HTTP 전송(`SwiftailHostServer`) 시험. Swiftail이 필요하다 | 기록 없음 |
+| `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost` | Mac 로직과 호스트 통합 시험(`MacHostCoreTests`, `MacHostE2ETests`). `RD_TEST_TMPDIR`를 주지 않으면 일부 시험이 작성 환경의 빌드 디스크 폴더에 임시 폴더를 만들려다 그 폴더가 없는 Mac에서는 실패한다 | 기록 없음 |
+| `swift test --package-path Packages/WebPage` | 설치 웹 페이지 로직을 JavaScriptCore로 시험 | 기록 없음 |
 | `scripts/check-ipa-roundtrip.sh` | IPA 묶기와 풀기 | 약 5초 |
-| `scripts/e2e-mac.sh` | 실제 Go 코어와 가짜 tailnet으로 Mac 호스트 시험 | 약 4분 30초 |
-| `RD_E2E_APP=1 scripts/e2e-mac.sh` | 위에 더해 샌드박스 앱을 빌드해 실행하고 종료 확인 | 약 5분 |
-| `scripts/e2e-full.sh` | Mac과 iPhone 로직 통합 시험. 제한 600초 | 시험 실행 약 4분 |
-
-`scripts/e2e-mac.sh`와 `scripts/e2e-full.sh`는 코어를 다시 빌드하지 않는다. `core/` 소스가 xcframework보다 새로우면 바로 실패하므로 먼저 `scripts/build-core.sh`를 실행한다.
 
 ```sh
 xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugMac -destination 'platform=macOS,arch=arm64' build
@@ -144,6 +132,16 @@ xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugPhone -destination 
 xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugPhone -destination 'platform=iOS Simulator,id=<시뮬레이터 ID>' test
 xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugPhone -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO build
 ```
+
+## 이전 버전에서 업데이트한 뒤
+
+앱 안의 tailnet 노드가 바뀌었다(Swiftail). 이전 버전의 로그인과 페어링은 옮기지 않는다.
+
+- Mac: 업데이트한 앱을 처음 실행하면 Tailscale에 다시 로그인해야 한다. **네트워크** 화면에서 로그인한다. 이전 노드의 상태 폴더(`~/Library/Application Support/RemoteDebug/state`)는 읽지 않고, 새 노드가 처음 실행 상태가 되면 지운다. 같은 네트워크 직접 연결의 신원은 새 위치(`direct`)로 옮긴다.
+- iPhone: RemoteDebug와 RD 업데이트 두 앱 모두 이전 버전의 tailnet 로그인을 이어받지 않는다(두 앱은 같은 노드를 공유한다). VPN을 켜면 로그인이 필요하고, Mac과 같은 계정으로 로그인한 뒤 Mac과 다시 페어링해야 한다.
+- 이전 노드는 tailnet 관리 콘솔의 Machines에 남아 있을 수 있다. 필요하면 지운다. 사용자의 tailnet을 바꾸는 일이므로 관리자가 직접 한다.
+- 페어링 허용은 Mac 앱 화면에서만 한다. 에이전트(MCP 도구, `rd` 명령)는 대기 중인 요청을 보고 거부할 수 있지만 허용할 수 없다.
+- 호스트 API(`/v1/*`)에 직접 요청을 보내는 도구는 상태를 바꾸는 요청(`POST`, `PUT`, `DELETE`)에 JSON 본문(`Content-Type: application/json`)을 쓰고, 브라우저에서 보낸 요청이면 같은 출처여야 한다([protocol.md](protocol.md) §3).
 
 ## 첫 실행: Mac
 
@@ -177,7 +175,7 @@ xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugPhone -destination 
 **프로젝트** 화면 도구 막대의 **에이전트에 설치…**에서 Claude Code와 Codex를 각각 **설치**한다. 사용자 전체 설정에 두 가지가 들어가고, 어느 프로젝트에서든 에이전트가 RemoteDebug로 빌드·게시할 수 있다.
 
 - 스킬 `remotedebug`: `~/.claude/skills/remotedebug/SKILL.md`, `~/.codex/skills/remotedebug/SKILL.md`
-- MCP 서버 `remotedebug`: `claude mcp add --scope user`, `codex mcp add`로 등록한다. 서버는 앱 실행 파일을 `--mcp` 인자로 띄운 것이고, 도구는 `remotedebug_status`, `remotedebug_schemes`, `remotedebug_build`, `remotedebug_pairing_code`, `remotedebug_pair_requests`, `remotedebug_pair_decide`, `remotedebug_push_file`, `remotedebug_files`, `remotedebug_device_logs`다.
+- MCP 서버 `remotedebug`: `claude mcp add --scope user`, `codex mcp add`로 등록한다. 서버는 앱 실행 파일을 `--mcp` 인자로 띄운 것이고, 도구는 `remotedebug_status`, `remotedebug_schemes`, `remotedebug_build`, `remotedebug_pairing_code`, `remotedebug_pair_requests`, `remotedebug_pair_decide`, `remotedebug_push_file`, `remotedebug_files`, `remotedebug_device_logs`다. 페어링 요청은 에이전트가 볼 수 있고 거부할 수 있지만 허용은 Mac 앱 화면에서만 할 수 있다.
 
 `claude`나 `codex` 명령을 찾지 못하면 스킬만 설치하고 그렇게 알린다. 새로 여는 세션부터 적용된다. 같은 화면의 **제거**로 되돌린다. 앱을 다른 위치로 옮기면 **다시 설치**를 눌러 서버 경로를 고친다.
 
@@ -199,6 +197,8 @@ RD="$HOME/Library/Application Support/RemoteDebug/agent/rd"
 "$RD" status                          # 공유 여부, 설치 페이지 주소, 연결한 프로젝트
 "$RD" push <파일>                     # 파일을 iPhone RemoteDebug 앱으로 보낸다
 "$RD" files                           # 보낸 파일 목록(구역 포함). files <프로젝트>는 그 구역만
+"$RD" requests                        # 허용을 기다리는 페어링 요청
+"$RD" deny <요청 id>                  # 요청을 거부한다. 허용은 Mac 앱 화면에서만 한다
 ```
 
 두 파일은 저장소에 새 변경으로 남는다. 커밋할지는 그 프로젝트에서 정한다.
@@ -207,7 +207,7 @@ RD="$HOME/Library/Application Support/RemoteDebug/agent/rd"
 
 ### 터미널에서 iPhone 앱 설치
 
-`scripts/install-phone.sh`는 iPhone 앱을 자기 개발자 계정으로 빌드해 연결한 iPhone에 설치한다. Xcode와 XcodeGen만 있으면 된다. 코어(`RDCore.xcframework`)가 없으면 최신 릴리스에서 내려받으므로 Go는 필요 없다.
+`scripts/install-phone.sh`는 iPhone 앱을 자기 개발자 계정으로 빌드해 연결한 iPhone에 설치한다. Xcode와 XcodeGen만 있으면 되고, 소스만으로 빌드한다. 처음 빌드할 때 Xcode가 Swiftail을 받으므로 인터넷이 필요하다.
 
 ```bash
 git clone https://github.com/oozoofrog/remotedebug.git
@@ -219,7 +219,7 @@ remotedebug/scripts/install-phone.sh
 - `Config/Signing.local.xcconfig`가 없으면 고른 값으로 만든다.
 - 빌드 산출물은 `RD_BUILD_ROOT`(기본 `~/RemoteDebugBuild`)의 `phone-install`에 둔다.
 
-확인한 것: 새로 복제한 저장소에서 팀·기기를 인자로 주고 iPhone 14 Pro(iOS 27.2)에 설치. 다른 계정, 처음 등록하는 기기, 릴리스 주소에서 코어 내려받기는 확인하지 않음.
+확인한 것: 새로 복제한 저장소에서 팀·기기를 인자로 주고 iPhone 14 Pro(iOS 27.2)에 설치. 다른 계정과 처음 등록하는 기기는 확인하지 않음. 이 설치는 이전 버전의 스크립트로 한 것이고, 지금의 스크립트(소스만으로 빌드)로는 실행해 보지 않음.
 
 App Sandbox 안에서 도는 Mac 앱(Mac App Store판)은 `xcodebuild`를 실행하지 못한다. 그 앱의 **iPhone 앱 설치…**는 이 명령을 안내한다. **프로젝트** 화면에서는 프로젝트 폴더를 등록하면 Xcode에서 한 최근 Debug 기기용 빌드를 찾아 게시한다(빌드는 Xcode에서 한다). 빌드를 프로젝트 폴더 안 `Build/Products`에서 먼저 찾고, Xcode의 DerivedData에 두는 프로젝트는 **빌드 폴더 허용…**으로 그 폴더를 한 번 허용해야 찾는다. 폴더 감시는 없다.
 
@@ -306,7 +306,7 @@ RemoteDebug iPhone 앱은 설치하는 동안 자기 VPN이 꺼지므로 자기 
 
 ## iPhone에서 앱 없이 설치(웹 페이지)
 
-RemoteDebug iPhone 앱 대신 공식 Tailscale 앱과 Safari로 페어링하고 설치한다. 실제 iPhone의 Safari, 실제 TLS 인증서, 공식 Tailscale 앱, Safari에서 여는 iOS 설치 창으로는 확인하지 않음. 화면 문구는 페이지 소스(`core/internal/host/web`)와 Mac 앱 소스에서 옮겼다. 실기기 확인은 [D14](device-test.md#d14-설치-웹-페이지공식-tailscale-앱)다.
+RemoteDebug iPhone 앱 대신 공식 Tailscale 앱과 Safari로 페어링하고 설치한다. 실제 iPhone의 Safari, 실제 TLS 인증서, 공식 Tailscale 앱, Safari에서 여는 iOS 설치 창으로는 확인하지 않음. 화면 문구는 페이지 소스(`Packages/SwiftailHost/Sources/RDHostLogic/Resources/web`)와 Mac 앱 소스에서 옮겼다. 실기기 확인은 [D14](device-test.md#d14-설치-웹-페이지공식-tailscale-앱)다.
 
 ### 준비
 
@@ -369,11 +369,7 @@ RemoteDebug iPhone 앱 대신 공식 Tailscale 앱과 Safari로 페어링하고 
 
 | 증상 | 원인 | 조치 |
 | --- | --- | --- |
-| `RDCore.xcframework 링크가 가리키는 폴더가 없습니다`, 또는 Xcode가 `RDCore.xcframework`를 찾지 못함 | 링크가 가리키는 빌드 폴더가 지워졌거나(작성 환경은 며칠 쓰지 않은 빌드 폴더를 자동으로 지운다) 다른 Mac에서 받은 저장소다 | `scripts/build-core.sh`를 실행하고 Xcode에서 패키지를 다시 읽는다 |
-| `RDCore.xcframework가 core/ 소스보다 오래됐습니다.` | xcframework를 만든 뒤 `core/`가 바뀌었다 | `scripts/build-core.sh` |
-| `exec: go: not found` | Go가 없다 | Go 1.27.3 이상을 설치한다 |
-| `go.mod requires go >= 1.27.3` | Go가 오래됐다. `GOTOOLCHAIN=local`이라 자동으로 받지 않는다 | Go를 올린다 |
-| `eyebuild: command not found`, `exec: eyebuild: not found`, 또는 `FAIL rdvalidate 빌드` | `eyebuild`가 없다(마지막 문구는 `rdvalidate` 빌드 실패에서도 나온다) | [대체 스크립트](#eyebuild가-없는-mac)를 둔다 |
+| `FAIL rdvalidate 빌드` | `eyebuild`가 없다(이 문구는 `rdvalidate` 빌드 실패에서도 나온다) | [대체 스크립트](#eyebuild가-없는-mac)를 둔다 |
 | "HTTPS 인증서 꺼짐" | tailnet의 HTTPS Certificates가 꺼져 있다 | **DNS 설정 페이지 열기**에서 켠다. 앱은 공유를 다시 시작하지 않아도 잠시 뒤 열린다고 안내하며, 이 동작은 확인하지 않음 |
 | "MagicDNS 꺼짐" | tailnet의 MagicDNS가 꺼져 있다 | **DNS 설정 페이지 열기**에서 켠다 |
 | Mac: "코드가 만료됐거나 틀린 시도가 많아 더 쓸 수 없습니다. 새 코드를 만드세요." | 5분이 지났거나 다섯 번 틀렸다 | **새 코드 만들기** |
@@ -384,8 +380,9 @@ RemoteDebug iPhone 앱 대신 공식 Tailscale 앱과 Safari로 페어링하고 
 | 설치한 앱이 실행되지 않는다("전송 완료" 뒤 홈 화면에서 열리지 않는다). 앱은 전송이 끝날 때마다 개발자 모드 안내를 보여 주며, 그 문구는 증상이 아니라 안내다 | 개발자 모드가 꺼져 있거나 기기가 빌드의 개발 프로필에 없다 | 설정 > 개인정보 보호 및 보안 > 개발자 모드를 켜고 재시동한다(이 설정 경로는 실기기에서 확인하지 않음). 그래도 열리지 않으면 프로필에 기기가 등록되어 있는지 본다 |
 | Mac 거부 목록: "프로비저닝 프로필이 만료됐습니다. Xcode에서 프로필을 갱신하고 다시 빌드하세요." | 빌드의 프로필이 만료됐다 | Xcode에서 다시 빌드해 가져온다 |
 | iPhone: "프로비저닝 프로파일이 …에 만료되었습니다. 설치해도 실행되지 않을 수 있습니다." | 게시된 빌드의 프로필이 만료됐다 | Mac에서 새 빌드를 가져온다 |
+| 패키지를 받지 못해 빌드가 멈춘다(Swiftail) | 인터넷에 닿지 않거나 고정한 리비전을 받을 수 없다. 로컬 체크아웃을 쓰는 중이면 그 경로(`SWIFTAIL_PATH`)가 틀렸다 | 연결을 확인하고 Xcode에서 패키지를 다시 읽는다. 로컬 체크아웃은 [빌드와 실행](#빌드와-실행)을 본다 |
 | "RemoteDebug가 이미 실행 중" | 다른 RemoteDebug가 같은 저장 폴더를 쓰고 있다 | **실행 중인 앱으로 전환**, 또는 그 앱을 종료하고 다시 실행한다 |
-| "저장된 빌드 목록(…)을 읽지 못했습니다" | `builds.json`이 손상됐거나 읽을 수 없다. 앱 컨테이너의 Application Support/RemoteDebug에 있다 | 파일을 복구한 뒤 공유를 시작하거나 빌드를 다시 가져온다. 게시본은 지우지 않는다 |
+| "저장된 빌드 목록(…)을 읽지 못했습니다" | `builds.json`이 손상됐거나 읽을 수 없다. `~/Library/Application Support/RemoteDebug`에 있다 | 파일을 복구한 뒤 공유를 시작하거나 빌드를 다시 가져온다. 게시본은 지우지 않는다 |
 | "백업에서 빼지 못했습니다(…)" | 저장 폴더에 백업 제외를 표시하지 못했다. 노드 키가 Time Machine 백업에 들어갈 수 있다 | 폴더 권한을 확인한 뒤 앱을 다시 실행한다. 공유와 가져오기는 그대로 쓸 수 있다 |
 
 실기기 항목은 [실기기 확인 절차](device-test.md)에 있다.

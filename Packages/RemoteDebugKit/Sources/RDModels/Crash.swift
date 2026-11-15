@@ -120,11 +120,16 @@ public struct DeviceCrashEvent: Codable, Sendable, Hashable {
     public var deviceName: String
     public var nodeName: String
     public var report: CrashReport
+    /// 호스트가 기록을 받은 시각. Mac 코어 안에서만 채운다(JSON에는 없다). 없으면 받는 쪽이 지금 시각을 쓴다.
+    public var receivedAt: Date?
 
-    public init(deviceId: String, deviceName: String, nodeName: String, report: CrashReport) {
+    enum CodingKeys: String, CodingKey { case deviceId, deviceName, nodeName, report }
+
+    public init(deviceId: String, deviceName: String, nodeName: String, report: CrashReport, receivedAt: Date? = nil) {
         self.deviceId = deviceId
         self.deviceName = deviceName
         self.nodeName = nodeName
         self.report = report
+        self.receivedAt = receivedAt
     }
 }

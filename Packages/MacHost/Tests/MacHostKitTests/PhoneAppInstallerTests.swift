@@ -120,6 +120,7 @@ import Testing
         #expect(PhoneAppInstallError.explain("error: Personal development teams, including \"x\", do not support the Network Extensions capability.", step: "빌드").message.contains("유료"))
         #expect(PhoneAppInstallError.explain("Failed Registering Bundle Identifier: The app identifier \"com.oozoofrog.app.RemoteDebugPhone\" cannot be registered to your development team because it is not available.", step: "빌드").message.contains("번들 ID"))
         #expect(PhoneAppInstallError.explain("ERROR: Developer Mode disabled", step: "설치").message.contains("개발자 모드"))
+        #expect(PhoneAppInstallError.explain("xcodebuild: error: Could not resolve package dependencies:\n  Failed to clone repository https://github.com/oozoofrog/Swiftail", step: "빌드").message.contains("Swiftail"))
         #expect(PhoneAppInstallError.explain("line\nerror: something odd\n", step: "빌드").message == "빌드에 실패했습니다. error: something odd")
     }
 }

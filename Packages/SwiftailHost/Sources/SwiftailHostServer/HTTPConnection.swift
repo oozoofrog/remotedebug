@@ -32,6 +32,7 @@ public struct HTTPServerLimits: Sendable {
 ///
 /// 접점(`RDHostLogic/HostHTTP.swift`)의 전송 쪽 몫: 머리 이름을 소문자로 넘기고, `Content-Length`·`Connection`·`Date`를
 /// 붙이고, `HEAD`는 본문을 빼고, chunked 요청 본문은 411로 거절하고, `onFinished`를 한 번 부른다.
+/// 처리기가 `HostFileTransferMonitoring`도 따르면 파일 본문을 보내는 동안 세션 상태·기한·진행률·읽기 오류를 로직에 묻고 알린다.
 enum HTTPConnectionServer {
     static let sendChunk = 262_144
     static let receiveChunk = 65_536
@@ -41,6 +42,7 @@ enum HTTPConnectionServer {
                       watchdog: Watchdog, openConnections: @escaping @Sendable () -> Int) async {
         var buffer: [UInt8] = []
         var served = 0
+        let monitor = handler as? any HostFileTransferMonitoring
         watchdog.extend(seconds: limits.idleTimeout)
         while true {
             // 머리.
@@ -99,7 +101,7 @@ enum HTTPConnectionServer {
             let keepAlive = head.keepAlive && bodyIntact && served < limits.requestsPerConnection
                 && openConnections() <= limits.keepAliveConnections
             let sent = await ResponseWriter.send(response, to: connection, isHead: head.method == "HEAD", keepAlive: keepAlive,
-                                                 watchdog: watchdog, progressTimeout: limits.progressTimeout)
+                                                 watchdog: watchdog, progressTimeout: limits.progressTimeout, monitor: monitor)
             guard sent, keepAlive else {
                 if sent { await ResponseWriter.closeGracefully(connection, watchdog: watchdog) }
                 return
@@ -243,8 +245,14 @@ enum ResponseWriter {
     }
 
     /// 응답을 보낸다. 다 보냈으면 참. `onFinished`는 어느 길이든 한 번 부른다.
+    ///
+    /// 파일 본문이고 `monitor`가 그 파일의 전송 상태를 알려 주면(설치 세션의 IPA):
+    /// - 머리를 보내기 전과 조각마다 상태를 묻고, 허용되지 않거나 기한이 지났으면 멈추고 연결을 끊는다.
+    /// - 기한을 쓰기 기한으로도 건다: 막힌 쓰기도 기한에 끊긴다. 세션이 철회되면 막힌 쓰기도 0.25초 안에 끊긴다(감시 주기).
+    /// - 온전히 보낸 조각마다 진행률을 알린다.
+    /// - 파일을 열거나 읽지 못하면 `onFinished` 전에 읽기 오류를 알린다(Go `ipaReader.readErr` → 세션 `failed`).
     static func send(_ response: HostResponse, to connection: NWConnection, isHead: Bool, keepAlive: Bool, watchdog: Watchdog,
-                     progressTimeout: Double) async -> Bool {
+                     progressTimeout: Double, monitor: (any HostFileTransferMonitoring)? = nil) async -> Bool {
         let finished = FinishOnce(response.onFinished)
         defer { finished.call(0, false) }
         let noBody = forbidsBody(response.status)
@@ -262,18 +270,26 @@ enum ResponseWriter {
             finished.call(isHead ? 0 : UInt64(body.count), true)
             return true
         case .file(let path, let offset, let count):
+            // HEAD는 본문을 보내지 않으니 세션 전송이 아니다(로직도 HEAD에는 전송을 등록하지 않는다).
+            let transfer = isHead ? nil : monitor.flatMap { monitor in
+                monitor.transferState(filePath: path).map { _ in TransferGuard(monitor: monitor, filePath: path) }
+            }
             let source: FileSource
             do {
                 source = try FileSource(path: path)
             } catch {
+                transfer?.readFailed()
                 _ = await ConnectionIO.send(connection, head(status: 500, headers: [], contentLength: 0, keepAlive: false))
                 return false
             }
             let (end, overflow) = offset.addingReportingOverflow(count)
             guard !overflow, end <= source.length else {
+                transfer?.readFailed()
                 _ = await ConnectionIO.send(connection, head(status: 500, headers: [], contentLength: 0, keepAlive: false))
                 return false
             }
+            // 처리기가 답한 뒤 머리를 보내기 전에 세션이 끝났을 수 있다. 그러면 아무것도 보내지 않고 끊는다.
+            if let transfer, !transfer.mayContinue() { return false }
             let length = noBody ? 0 : count
             guard await ConnectionIO.send(connection, head(status: response.status, headers: response.headers,
                                                            contentLength: length, keepAlive: keepAlive)) else { return false }
@@ -281,11 +297,18 @@ enum ResponseWriter {
                 finished.call(0, true)
                 return true
             }
+            if let transfer { watchdog.watchTransfer(deadline: transfer.deadline(), abort: { !transfer.mayContinue() }) }
+            defer { watchdog.watchTransfer(deadline: nil, abort: nil) }
             var sent: UInt64 = 0
             while sent < length {
+                if let transfer, !transfer.mayContinue() {
+                    finished.call(sent, false)
+                    return false
+                }
                 watchdog.extend(seconds: progressTimeout)
                 let size = Int(min(UInt64(HTTPConnectionServer.sendChunk), length - sent))
                 guard let chunk = try? source.read(at: offset + sent, count: size) else {
+                    transfer?.readFailed()
                     finished.call(sent, false)
                     return false
                 }
@@ -294,6 +317,7 @@ enum ResponseWriter {
                     return false
                 }
                 sent += UInt64(size)
+                transfer?.progress(sent)
             }
             finished.call(sent, true)
             return true
@@ -306,6 +330,27 @@ enum ResponseWriter {
         watchdog.extend(seconds: 2)
         while case .bytes = await ConnectionIO.receive(connection, maximum: HTTPConnectionServer.receiveChunk) {}
     }
+}
+
+/// 파일 전송 하나를 로직의 `HostFileTransferMonitoring`에 잇는다. 전송이 등록된 파일(설치 세션의 IPA)에만 만든다.
+struct TransferGuard: Sendable {
+    let monitor: any HostFileTransferMonitoring
+    let filePath: String
+
+    /// 세션이 아직 받을 수 있고 기한 전이면 참. 로직이 전송을 잊었으면(onFinished 뒤) 거짓.
+    func mayContinue() -> Bool {
+        guard let state = monitor.transferState(filePath: filePath) else { return false }
+        return state.allowed && state.deadline > Date()
+    }
+
+    /// 쓰기 기한(연속 시계). 로직이 전송을 잊었으면 지금.
+    func deadline() -> ContinuousClock.Instant {
+        let remaining = monitor.transferState(filePath: filePath)?.deadline.timeIntervalSinceNow ?? 0
+        return .now + .milliseconds(Int(max(0, min(remaining, 86_400)) * 1000))
+    }
+
+    func progress(_ sentBodyBytes: UInt64) { monitor.recordTransferProgress(filePath: filePath, sentBodyBytes: sentBodyBytes) }
+    func readFailed() { monitor.recordTransferReadFailure(filePath: filePath) }
 }
 
 /// `onFinished`를 한 번만 부른다.
@@ -378,8 +423,15 @@ enum ConnectionIO {
 }
 
 /// 기한이 지나면 연결을 끊는다. 진전이 있을 때마다 `extend`로 기한을 민다. 끊긴 연결의 받기·보내기는 곧바로 끝난다.
+/// 파일 전송 중에는 `watchTransfer`로 건 절대 기한과 중단 조건도 같은 주기로 본다.
 final class Watchdog: Sendable {
+    private struct TransferWatch {
+        var deadline: ContinuousClock.Instant
+        var abort: @Sendable () -> Bool
+    }
+
     private let deadline: Mutex<ContinuousClock.Instant?>
+    private let transfer = Mutex<TransferWatch?>(nil)
     private let task: Mutex<Task<Void, Never>?>
 
     init(connection: NWConnection, seconds: Double) {
@@ -389,7 +441,12 @@ final class Watchdog: Sendable {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(250))
                 guard let self else { return }
-                if let limit = self.deadline.withLock({ $0 }), ContinuousClock.now > limit {
+                let now = ContinuousClock.now
+                if let limit = self.deadline.withLock({ $0 }), now > limit {
+                    connection.cancel()
+                    return
+                }
+                if let watch = self.transfer.withLock({ $0 }), now > watch.deadline || watch.abort() {
                     connection.cancel()
                     return
                 }
@@ -400,6 +457,13 @@ final class Watchdog: Sendable {
 
     func extend(seconds: Double) {
         deadline.withLock { $0 = .now + .milliseconds(Int(seconds * 1000)) }
+    }
+
+    /// 파일 전송의 절대 기한과 중단 조건을 건다. nil이면 푼다. 진전 기한(`extend`)과 따로 선다.
+    func watchTransfer(deadline: ContinuousClock.Instant?, abort: (@Sendable () -> Bool)?) {
+        transfer.withLock { value in
+            if let deadline, let abort { value = TransferWatch(deadline: deadline, abort: abort) } else { value = nil }
+        }
     }
 
     /// 기한을 멈춘다(로직이 도는 동안).

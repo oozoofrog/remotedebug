@@ -24,6 +24,16 @@ import Testing
         #expect(plain.bundleId.isEmpty && plain.crashedAt == Date(timeIntervalSince1970: 5))
     }
 
+    @Test func receiveTimeComesFromTheCoreWhenGiven() {
+        let store = CrashLogStore(directory: nil, now: { Date(timeIntervalSince1970: 2_000) })
+        var given = event(ips)
+        given.receivedAt = Date(timeIntervalSince1970: 1_000)
+        store.receive(given)
+        store.receive(event("다른 기록", name: "Other.ips"))
+        #expect(store.items.first { $0.name == "Sample.ips" }?.receivedAt == Date(timeIntervalSince1970: 1_000))
+        #expect(store.items.first { $0.name == "Other.ips" }?.receivedAt == Date(timeIntervalSince1970: 2_000))
+    }
+
     @Test func storesOncePerReportAndReloads() throws {
         let dir = try TempDir("crashes")
         let store = CrashLogStore(directory: dir.url)

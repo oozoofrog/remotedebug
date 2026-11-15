@@ -206,9 +206,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 },
                 pairingRequests: .init(
                     list: { [weak model] in model?.pairRequestsForAgent ?? [] },
-                    decide: { [weak model] id, allow in
+                    deny: { [weak model] id in
                         guard let model else { return String(localized: "RemoteDebug가 준비되지 않았습니다.") }
-                        return await model.decideForAgent(id, allow: allow)
+                        return await model.denyForAgent(id)
                     }),
                 fileSharing: .init(
                     list: { [weak model] in model?.sharedFiles ?? [] },

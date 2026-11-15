@@ -11,9 +11,6 @@ DerivedData/
 .build/
 .swiftpm/
 
-# scripts/build-core.sh가 만드는 링크
-Packages/RDCore/RDCore.xcframework
-
 # 개발 팀 ID
 Config/Signing.local.xcconfig
 
@@ -27,3 +24,4 @@ device-evidence/
 .agent-loop/*/brief.md
 .agent-loop/*/plan.json
 .agent-loop/*/evidence/
+Package.resolved

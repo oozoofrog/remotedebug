@@ -1,15 +1,15 @@
 # RemoteDebug 프로토콜 (v1)
 
-Mac 호스트와 iPhone 클라이언트, 그리고 Go 코어(C API)가 공유하는 계약이다. 구현은 이 문서를 따르고, 바꿀 때는 이 문서를 먼저 고친다.
+Mac 호스트와 iPhone 클라이언트가 공유하는 계약이다. Mac 앱과 호스트 노드 사이의 Swift 경계(`HostCore`)도 §9–§10에서 다룬다. 구현은 이 문서를 따르고, 바꿀 때는 이 문서를 먼저 고친다.
 JSON 키는 camelCase, 시각은 UTC ISO-8601(`Z`), 문자열은 UTF-8이다.
 
 ## 1. 역할과 용어
 
 | 용어 | 뜻 |
 | --- | --- |
-| 호스트 | Mac 앱. 내장 tsnet 노드로 tailnet에 올라 HTTPS로 빌드를 제공한다. |
-| 클라이언트 | iPhone 앱. 패킷 터널 확장 안의 tsnet 노드로 tailnet에 올라 호스트를 호출한다. |
-| 노드 | tailnet 안의 기기. WhoIs가 돌려주는 `StableID`로 식별한다. |
+| 호스트 | Mac 앱. 내장 Swiftail 노드로 tailnet에 올라 HTTPS로 빌드를 제공한다. |
+| 클라이언트 | iPhone 앱. 패킷 터널 확장 안의 Swiftail 노드로 tailnet에 올라 호스트를 호출한다. 공식 Tailscale 앱으로 연 설치 웹 페이지(addenda E)도 클라이언트다. |
+| 노드 | tailnet 안의 기기. 호스트는 연결의 원격 노드 신원(`StableID`, 노드 이름, 로그인 이름)으로 식별하고, 이 신원은 호스트의 Swiftail 노드가 알려 준다. |
 | 허용 목록 | 호스트가 승인한 클라이언트 노드 목록. 이 목록에 없는 노드는 어떤 빌드도 보거나 받을 수 없다. |
 | 빌드 | 호스트에 게시된 개발 서명 IPA 한 개와 그 메타데이터(`BuildDescriptor`). |
 | 설치 세션 | 허용된 노드 하나가 빌드 하나를 받기 위해 여는 1회용·만료형 권한. 토큰으로 구분한다. |
@@ -29,15 +29,17 @@ remotedebug://pair?host=<fqdn>&code=<code>
 
 ## 3. 인증 규칙
 
-모든 `/v1/*` 요청은 호스트가 연결의 원격 주소로 WhoIs를 조회해 노드를 확인한다.
+모든 `/v1/*` 요청은 연결의 원격 노드 신원으로 노드를 확인한다.
 
 | 구분 | 규칙 |
 | --- | --- |
-| 허용 목록 인증 | WhoIs 성공 + 노드 `StableID`가 허용 목록에 있어야 한다. 아니면 403 `not_paired`와 `denied` 이벤트. |
+| 허용 목록 인증 | 노드 신원을 알 수 있고 노드 `StableID`가 허용 목록에 있어야 한다. 아니면 403 `not_paired`와 `denied` 이벤트. |
 | 페어링 코드 인증 | 열려 있는 코드와 일치해야 한다. 아니면 403 `pair_code_invalid`. |
 | 세션 인증 | 경로의 토큰이 열려 있는 세션과 같고, 요청 노드가 세션을 만든 노드와 같아야 한다. 아니면 403 `token_invalid`. |
 
 출하 코드에는 인증을 건너뛰는 경로가 없다. 테스트는 가짜 tailnet(§11)을 쓴다.
+
+상태를 바꾸는 요청(`/v1/*`의 `POST`, `PUT`, `DELETE`)에는 다음을 강제한다. 요청 본문이 있으면 `Content-Type`은 `application/json`이어야 하고(아니면 415 `unsupported_media_type`), `Sec-Fetch-Site`가 `cross-site`이거나 `Origin` 헤더가 호스트 자신의 주소와 다르면 403 `origin_not_allowed`다. 호스트 자신의 주소는 tailnet으로 온 요청에서는 `https://<fqdn>`(평문 시험 설정에서는 `http://`), 같은 네트워크 직접 연결에서는 `https://<요청의 Host>`다.
 
 ## 4. REST API
 
@@ -140,7 +142,7 @@ remotedebug://pair?host=<fqdn>&code=<code>
 }
 ```
 
-호스트는 요청 시점의 WhoIs 노드(`StableID`, 이름, 로그인 이름)를 요청에 묶어 두고 `pair-request` 이벤트로 알린다. 호스트 사용자가 승인해야 허용 목록에 들어간다. 요청 대기 시간은 120초다.
+호스트는 요청 시점의 노드 신원(`StableID`, 이름, 로그인 이름)을 요청에 묶어 두고 `pair-request` 이벤트로 알린다. 호스트 사용자가 승인해야 허용 목록에 들어간다. 요청 대기 시간은 120초다.
 
 ### 4.4 설치 세션
 
@@ -222,7 +224,7 @@ remotedebug://pair?host=<fqdn>&code=<code>
 }
 ```
 
-Swift 앱이 허용 목록을 저장한다. 시작할 때 `rd_host_set_devices`로 코어에 밀어 넣고, 승인되면 코어가 `device-added` 이벤트를 보내 Swift가 저장한다. 앱이 저장하기 전에 종료되면 그 기기는 다시 페어링해야 한다.
+Swift 앱이 허용 목록을 저장한다. 시작할 때 `HostCore.setDevices`로 호스트에 밀어 넣고, 승인되면 호스트가 `device-added` 이벤트를 보내 Swift 앱이 저장한다. 앱이 저장하기 전에 종료되면 그 기기는 다시 페어링해야 한다.
 
 선택 필드 `directTokenHash`(같은 네트워크 직접 연결에 등록한 기기의 토큰 해시)는 [protocol-addenda.md](protocol-addenda.md)의 O.4에 있다. 등록하지 않은 기기에는 키가 없다.
 
@@ -230,12 +232,7 @@ Swift 앱이 허용 목록을 저장한다. 시작할 때 `rd_host_set_devices`�
 
 ## 6. 클라이언트 동작 (iPhone)
 
-1. 터널 확장이 `mode: "proxy"`로 노드를 시작하고 `rd_proxy_start("127.0.0.1:0")`로 로컬 HTTP CONNECT 프록시를 연다.
-2. 확장이 `NEPacketTunnelNetworkSettings`에 `NEProxySettings`(HTTP·HTTPS 서버 = 로컬 프록시 주소, `matchDomains = ["ts.net"]`)를 넣는다. 터널 경로(`includedRoutes`)는 비워 둔다.
-3. 프록시는 `allowedTargets`에 있는 `host:port`로의 CONNECT만 중계한다. 그 외 대상과 CONNECT가 아닌 요청은 거부한다. 페어링 링크를 읽는 순간 `allowedTargets`는 `["<fqdn>:443"]` 하나가 된다.
-4. 앱의 `URLSession`은 시스템 프록시를 통해 호스트의 REST API를 호출한다. 설치는 `installUrl`을 `UIApplication.open`으로 열어 iOS 설치기에 맡긴다.
-
-2~3의 시스템 프록시 경로가 iOS 설치기에도 적용되는지는 실기기에서만 확인할 수 있다(architecture.md의 가정 A1).
+터널 확장은 IP 패킷을 tailnet으로 중계하는 패킷 터널이다. 앱의 `URLSession`은 호스트의 REST API를 호출하고, 설치는 `installUrl`을 `UIApplication.open`으로 열어 iOS 설치기에 맡긴다. 터널·DNS·MTU 규칙은 [tunnel.md](tunnel.md)가 정한다. 터널 확장에는 호스트별 허용 목록이나 프록시가 없다.
 
 ## 7. 디버그 한정 정책 (`DebugBuildPolicy`)
 
@@ -252,7 +249,7 @@ Swift 앱이 허용 목록을 저장한다. 시작할 때 `rd_host_set_devices`�
 | 7 | 구성: 앱이 `<Config>-iphoneos` 폴더 안에 있으면 `Config == "Debug"`(허용 구성 목록으로 확장 가능). 폴더 정보가 없으면 `*.debug.dylib` 존재로 갈음. 둘 다 없으면 사용자가 Debug임을 직접 확인해야 통과 | `configuration_not_debug`, `configuration_unverified` |
 | 8 | 대상 기기 UDID가 주어졌다면 `ProvisionedDevices`에 포함 | `device_not_provisioned` |
 
-호스트(코어)는 게시 호출에서 `debug == true`, `signing.getTaskAllow == true`, IPA 크기·SHA-256 일치를 다시 확인한다. 어기면 422 `not_debug_build` 또는 `hash_mismatch`.
+호스트 로직(`RDHostLogic`)은 게시 호출에서 `debug == true`, `signing.getTaskAllow == true`, IPA 크기·SHA-256 일치를 다시 확인한다. 어기면 422 `not_debug_build` 또는 `hash_mismatch`.
 
 ## 8. 오류 형식과 코드
 
@@ -268,37 +265,41 @@ Swift 앱이 허용 목록을 저장한다. 시작할 때 `rd_host_set_devices`�
 | HTTP | code | 의미 |
 | --- | --- | --- |
 | 400 | `bad_request` | 형식 오류 |
-| 403 | `not_paired` | 노드가 허용 목록에 없거나 WhoIs 실패 |
+| 403 | `not_paired` | 노드가 허용 목록에 없거나 노드 신원을 알 수 없음 |
 | 403 | `pair_code_invalid` | 코드 없음·불일치·만료 |
 | 403 | `token_invalid` | 토큰 불일치 또는 다른 노드 |
+| 403 | `origin_not_allowed` | 상태를 바꾸는 요청의 출처가 호스트 자신과 다름(§3) |
 | 404 | `build_not_found` | 없는 빌드 |
+| 405 | `method_not_allowed` | 경로는 있지만 메서드가 다름 |
 | 409 | `build_changed` | 서빙 직전 크기·SHA-256 불일치 |
 | 410 | `session_expired` | 세션 만료 또는 완료 |
+| 415 | `unsupported_media_type` | 상태를 바꾸는 요청의 본문이 `application/json`이 아님(§3) |
 | 422 | `not_debug_build` | 게시 조건 위반 |
 | 429 | `too_many_attempts` | 코드 시도 초과 |
 | 500 | `internal` | 내부 오류 |
 
-C API 전용 코드: `invalid_config`, `not_running`, `unknown_handle`, `path_outside_publish_dir`, `hash_mismatch`.
+`HostCore` 경계에서 던지는 코드: `invalid_config`, `not_running`, `unknown_handle`, `path_outside_publish_dir`, `hash_mismatch`.
 
-## 9. 코어 C API (Go c-archive)
+## 9. Mac 앱과 호스트 노드 사이의 Swift 경계 (`HostCore`)
 
-모든 함수는 NUL 종료 JSON 문자열(`char*`)을 돌려주고, 호출자가 `rd_free`로 해제한다. 실패는 `{"error":{"code":"…","message":"…"}}`다.
+Mac 앱의 모델(`HostModel`, `MacHostKit`)은 호스트 노드를 `HostCore` 프로토콜(`Packages/MacHost/Sources/MacHostKit/HostCore.swift`)로만 부른다. 실제 구현은 `SwiftailHostCore`(`MacHostCore`)다. 이것이 Swiftail 노드, 호스트 로직(`RDHostLogic`: 경로·페어링·세션·게시), HTTP 전송(`SwiftailHostServer`)을 묶는다. 시험은 같은 프로토콜의 가짜 구현이나 노드 층만 가짜인 실제 구현을 쓴다. 같은 프로세스 안의 Swift 호출이라 C 문자열이나 핸들은 없다. 실패는 `APIErrorBody`(§8 코드)를 던진다.
 
-| 함수 | 입력 | 성공 출력 |
+| 메서드 | 입력 | 결과 |
 | --- | --- | --- |
-| `rd_start(config_json)` | 아래 설정 | `{"handle":1}` |
-| `rd_status(handle)` | | 상태 JSON |
-| `rd_stop(handle)` | | `{"ok":true}` |
-| `rd_host_publish(handle, build_json)` | `BuildDescriptor` + `ipaPath` | `{"ok":true,"id":"b_…"}` |
-| `rd_host_unpublish(handle, build_id)` | | `{"ok":true}` |
-| `rd_host_set_devices(handle, devices_json)` | `{"devices":[DeviceEntry]}` | `{"ok":true}` |
-| `rd_host_pairing_open(handle, ttl_seconds)` | | `{"code":"K7M29QXD","expiresAt":"…"}` |
-| `rd_host_pairing_decide(handle, request_id, allow)` | `allow`는 0 또는 1 | 승인 시 `{"ok":true,"device":DeviceEntry}`, 거절 시 `{"ok":true}` |
-| `rd_proxy_start(handle, listen_addr)` | `127.0.0.1:0` | `{"addr":"127.0.0.1:54321"}` |
-| `rd_next_event(handle, timeout_ms)` | | `{"event":{…}}` 또는 시간 초과 시 `{"event":null}` |
-| `rd_free(ptr)` | | 반환 없음 |
+| `start(_ config: CoreConfig)` | 아래 설정 | 노드와 호스트 로직을 시작한다. 이미 실행 중이면 `invalid_config` |
+| `stop()` | | 노드를 멈추고 열린 세션을 `failed`로 끝낸 뒤 이벤트 스트림을 닫는다 |
+| `status()` | | `CoreStatus`(아래 상태) |
+| `publish(_:)` / `unpublish(buildID:)` | `PublishRequest`(`BuildDescriptor` + `ipaPath`) / 빌드 id | 없는 id의 `unpublish`는 `build_not_found` |
+| `publishResource(_:)` / `unpublishResource(id:)` | 파일 게시(addenda H) | 없는 id의 `unpublishResource`는 `resource_not_found` |
+| `setAgentBoard(_:)` | `GET /v1/agent`가 낼 JSON(addenda K) | |
+| `setDevices(_:)` | `[DeviceEntry]`(허용 목록 전체) | 모델은 이 호출을 한 번에 하나씩 순서대로 보낸다 |
+| `setDirect(_:)` | 켜기·끄기 | 같은 네트워크 직접 연결 리스너(addenda O). 결과는 다음 `status()`의 `direct` |
+| `openPairing(ttlSeconds:)` | | `PairingCode`: `{"code":"K7M29QXD","expiresAt":"…"}` |
+| `decidePairing(requestID:allow:)` | | 승인하면 허용 목록에 들어간 `DeviceEntry`, 거절하면 `nil` |
+| `events()` | | `start` 이후의 `CoreEvent` 스트림. `stop`하면 끝난다 |
+| `logOut(_:)` | `CoreConfig` | 제어 서버에 이 노드의 로그아웃을 알린다. `stop()`이 끝난 뒤 상태 폴더를 지우기 전에 부르고, 실패해도 돌아온다 |
 
-설정(`rd_start`):
+설정(`CoreConfig`):
 
 ```json
 {
@@ -317,14 +318,13 @@ C API 전용 코드: `invalid_config`, `not_running`, `unknown_handle`, `path_ou
 }
 ```
 
-- `mode`는 `host` 또는 `proxy`. `controlURL`이 비면 Tailscale 기본 제어 서버를 쓴다.
-- `listenTLS`가 `false`(평문 HTTP)이면 `controlURL`의 호스트가 루프백일 때만 허용한다. 아니면 `invalid_config`. 테스트에서만 쓴다.
-- `publishDir`: 게시본 IPA는 이 폴더 안의 일반 파일이어야 한다(아니면 `path_outside_publish_dir`). 코어는 게시 시점에 크기·SHA-256을 계산해 `build_json`의 값과 비교한다.
-- `allowedTargets`: `proxy` 모드에서 CONNECT를 허용할 `host:port` 목록. 실행 중 변경은 `rd_start`를 다시 호출한다.
-- `goMemLimitMiB`: 0이 아니면 Go 런타임 메모리 한도로 적용한다(NE용).
-- 선택 필드 `directListen`(`host` 모드): `true`면 같은 네트워크 직접 연결 리스너를 함께 연다. 없으면 열지 않는다. [protocol-addenda.md](protocol-addenda.md)의 O.1.
+- `SwiftailHostCore`는 `mode`가 `host`일 때만 시작한다(다른 값은 `invalid_config`). `stateDir`와 `hostname`은 비면 안 되고 `port`는 1~65535, `controlURL`은 비었거나 `http(s)` 주소여야 한다(아니면 `invalid_config`). `controlURL`이 비면 Tailscale 기본 제어 서버를 쓴다.
+- `listenTLS`가 `false`면 평문 HTTP로 듣고 인증서를 받지 않는다. 이때 매니페스트·설치 주소가 `http://`가 되므로 iOS 설치기는 쓸 수 없다. 시험 전용이다.
+- `publishDir`: 게시본 IPA는 이 폴더 안의 일반 파일이어야 한다(아니면 `path_outside_publish_dir`). 호스트는 게시 시점에 크기·SHA-256을 계산해 `BuildDescriptor`의 값과 비교한다(아니면 `hash_mismatch`).
+- `allowedTargets`, `goMemLimitMiB`와 터널 전용 필드(`utunFd`, `mtu`)는 Mac 호스트가 쓰지 않는다. `CoreConfig`의 JSON 키로만 남아 있다.
+- 선택 필드 `hostDisplayName`, `appVersion`은 `/v1/info`에 실린다. 선택 필드 `directListen`: `true`면 시작할 때 같은 네트워크 직접 연결 리스너를 함께 연다. 없으면 열지 않는다. [protocol-addenda.md](protocol-addenda.md)의 O.1.
 
-상태(`rd_status`):
+상태(`CoreStatus`):
 
 ```json
 {
@@ -344,13 +344,13 @@ C API 전용 코드: `invalid_config`, `not_running`, `unknown_handle`, `path_ou
 
 `backendState`는 `Stopped`, `Starting`, `NeedsLogin`, `NeedsMachineAuth`, `Running`, `Error` 중 하나다. `NeedsLogin`이면 `authURL`을 채운다.
 
-선택 필드 `peerPaths`(페어링한 기기까지의 경로, 직접·중계)와 터널 모드의 `peerPath`는 [protocol-addenda.md](protocol-addenda.md)의 N.3에 있다. 값이 없으면 키도 없다.
+선택 필드 `peerPaths`(페어링한 기기까지의 경로, 직접·중계)와 터널의 `peerPath`는 [protocol-addenda.md](protocol-addenda.md)의 N.3에 있다. 값이 없으면 키도 없다.
 
-선택 필드 `direct`(같은 네트워크 직접 연결 리스너의 `listening`, `port`, `id`)는 [protocol-addenda.md](protocol-addenda.md)의 O.1에 있다. 리스너를 켠 적이 없으면 키가 없다. 리스너를 켜고 끄는 `rd_host_set_direct`와 이벤트 `device-updated`도 O절에 있다.
+선택 필드 `direct`(같은 네트워크 직접 연결 리스너의 `listening`, `port`, `id`)는 [protocol-addenda.md](protocol-addenda.md)의 O.1에 있다. 리스너를 켠 적이 없으면 키가 없다. 리스너를 켜고 끄는 `setDirect`와 이벤트 `device-updated`도 O절에 있다.
 
 ## 10. 이벤트
 
-`rd_next_event`가 돌려주는 `event`는 `type` 필드로 구분한다.
+`HostCore.events()`가 내는 `CoreEvent`는 JSON으로 쓰면 `type` 필드로 구분한다.
 
 ```json
 {
@@ -375,12 +375,12 @@ C API 전용 코드: `invalid_config`, `not_running`, `unknown_handle`, `path_ou
 
 ## 11. 가짜 tailnet 테스트
 
-`tailscale.com/tstest/integration/testcontrol`로 로컬 제어 서버를 띄우고 노드를 자동 승인한다. 테스트 설정은 `controlURL=http://127.0.0.1:<port>`, `listenTLS=false`, `port`는 임의다. 이때 매니페스트·설치 주소는 `http://`가 된다(iOS 설치기는 `https`만 받으므로 테스트 전용). 실제 tailnet에는 사용자 허가 없이 노드를 추가하지 않는다.
+호스트 시험은 tailnet만 가짜로 둔다. 노드 층(`HostNodeLayer`)을 가짜로 바꿔 iPhone마다 루프백 평문 리스너를 하나씩 세우고, 그 리스너로 온 요청을 그 iPhone의 노드 신원으로 호스트 로직에 넘긴다(`Packages/MacHost/Tests/MacHostE2ETests`). 이 시험에는 Swiftail 노드, TLS, 인증서가 없다. 이때 매니페스트·설치 주소는 `http://`가 된다(iOS 설치기는 `https`만 받으므로 시험 전용). 실제 tailnet에는 사용자 허가 없이 노드를 추가하지 않는다.
 
 ## 12. 보안 속성과 비목표
 
 - 허용 목록 밖의 노드는 목록·세션·IPA에 접근할 수 없다. 설치기의 요청도 세션을 만든 노드에서 온 것이어야 한다.
 - 호스트는 디버그 조건을 만족하지 않는 IPA를 게시하지 않고, 서빙 직전에도 크기·해시를 확인한다.
-- 클라이언트 프록시는 열린 프록시가 아니다. 허용된 `host:port`의 CONNECT만 받는다.
+- 상태를 바꾸는 요청은 JSON 본문과 같은 출처만 받는다(§3).
 - tailnet ACL 태그(`tag:rd-mac`, `tag:rd-phone`)로 `tcp:443`만 허용하면 네트워크 층에서도 한 번 더 막을 수 있다(선택, docs/setup.md).
 - 비목표: 침해된 Mac·iPhone 방어, 다중 사용자 권한, Apple 서명 외의 IPA 변조 방지, App Store 배포.

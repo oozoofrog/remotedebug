@@ -236,11 +236,15 @@ struct ProjectsModelTests {
         let waiting = ProjectsModel.PairRequestInfo(requestId: "pr_1", deviceName: "iPhone", nodeName: "rd-phone-1", loginName: "me@", expiresAt: expires)
         let answering = ProjectsModel(root: w.tmp.path("state-answer"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived),
                                       pairingRequests: .init(list: { decided.withLock { $0.isEmpty } ? [waiting] : [] },
-                                                             decide: { id, allow in decided.withLock { $0.append("\(id):\(allow)") }; return nil })) { _ in nil }
+                                                             deny: { id in decided.withLock { $0.append(id) }; return nil })) { _ in nil }
         #expect(await answering.handleAgentRequest("requests\n\n\n").requests == [waiting])
-        #expect(await !answering.handleAgentRequest("approve\npr_other\n\n").ok)
-        #expect(await answering.handleAgentRequest("approve\npr_1\n\n").ok)
-        #expect(decided.withLock { $0 } == ["pr_1:true"])
+        // 허용 명령은 오류로 끝나고 요청은 그대로 남는다.
+        let approve = await answering.handleAgentRequest("approve\npr_1\n\n")
+        #expect(!approve.ok && approve.error == ProjectsModel.approveInMacApp && approve.requests == [waiting])
+        #expect(decided.withLock { $0 }.isEmpty)
+        #expect(await !answering.handleAgentRequest("deny\npr_other\n\n").ok)
+        #expect(await answering.handleAgentRequest("deny\npr_1\n\n").ok)
+        #expect(decided.withLock { $0 } == ["pr_1"])
 
         // 프로젝트 폴더에 스킬과 AGENTS.md 단락을 쓴다. 두 번 써도 단락은 하나다.
         let folder = project.deletingLastPathComponent()
@@ -425,6 +429,14 @@ struct AgentIntegrationTests {
             #expect((schema?["properties"] as? [String: Any])?["project"] != nil, "\(name)")
             #expect((schema?["required"] as? [String])?.contains("project") == false, "\(name)")
         }
+
+        // 페어링 도구는 허용 시도를 앱의 approve 명령으로 넘기고(앱은 오류로 답한다), 설명은 허용이 Mac 앱에서만 된다고 알린다.
+        calls.withLock { $0.removeAll() }
+        let approve = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"remotedebug_pair_decide","arguments":{"request_id":"pr_1","approve":true}}}"#.utf8)))
+        #expect((approve["result"] as? [String: Any])?["isError"] as? Bool == true)
+        #expect(calls.withLock { $0 } == ["approve|pr_1|"])
+        let decide = tools.first { $0["name"] as? String == "remotedebug_pair_decide" }?["description"] as? String ?? ""
+        #expect(decide.contains("허용은 할 수 없다") && decide.contains("Mac 앱"))
 
         let unknown = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":4,"method":"nope"}"#.utf8)))
         #expect(unknown["error"] != nil)

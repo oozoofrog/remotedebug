@@ -13,7 +13,7 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../RemoteDebugKit"),
-        // ../Swiftail(이 저장소 옆 폴더, 또는 SWIFTAIL_PATH)을 경로로 쓴다.
+        // Swiftail은 SwiftailHost가 공개 저장소의 고정 커밋으로 받는다(SWIFTAIL_PATH가 있으면 그 로컬 checkout).
         .package(path: "../SwiftailHost"),
     ],
     targets: [
