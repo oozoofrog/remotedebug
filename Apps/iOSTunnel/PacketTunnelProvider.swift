@@ -2,6 +2,7 @@ import Foundation
 import Network
 import NetworkExtension
 import os
+import OSLog
 import RDCoreBridge
 import RDModels
 
@@ -132,6 +133,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         startEventLoop(node, generation: generation)
         startPathMonitor(node, generation: generation)
         startMemoryJournal(generation: generation)
+        #if RD_SWIFTAIL_TUNNEL
+        startSwiftailLogJournal(generation: generation)
+        #endif
         // 노드를 저장한 뒤 종료 요청이 왔으면 노드는 종료 쪽 장벽이 멈춘다. 시작을 성공으로 알리지 않는다.
         guard lifecycle.isCurrent(generation) else { throw stoppedDuringStart() }
         // Running을 기다리지 않는다. NeedsLogin이면 앱이 상태를 물어 authURL을 보여 준다.
@@ -219,6 +223,9 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
             logger.log("network-settings: IPv4 경로 \(plan.ipv4?.routes.count ?? 0)개, IPv6 경로 \(plan.ipv6?.routes.count ?? 0)개, DNS \(plan.dns == nil ? "없음" : "있음", privacy: .public), mtu \(plan.mtu)")
             applier.submit(plan)
         case .state(let status):
+            if runtime.lastStatus?.backendState != status.backendState {
+                TunnelMemoryJournal.append("tailnet 상태: \(status.backendState.rawValue)")
+            }
             runtime.setStatus(status)
             logger.log("상태: \(status.backendState.rawValue, privacy: .public)")
             if status.backendState == .error {
@@ -291,7 +298,19 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
     }
 
     private func pathChanged(_ path: NWPath, node: any TunnelEngine) {
-        guard path.status == .satisfied, let interface = Self.defaultInterface(path) else { return }
+        guard path.status == .satisfied, let interface = Self.defaultInterface(path) else {
+            if runtime.noteInterface(nil) { TunnelMemoryJournal.append("네트워크 경로 없음") }
+            return
+        }
+        // 전환 시각을 남긴다(앱이 뒤에 있어도 확장 기록으로 올라간다).
+        if runtime.noteInterface(interface.name) {
+            TunnelMemoryJournal.append("네트워크 경로: \(interface.name) (\(String(describing: interface.type)))")
+        }
+        #if RD_SWIFTAIL_TUNNEL
+        // 시험 빌드 전용: 알림마다 경로의 주소 체계를 남긴다(주소 값은 남기지 않는다).
+        TunnelMemoryJournal.append(
+            "기본 인터페이스 알림: \(interface.name) 경로 IPv4=\(path.supportsIPv4) IPv6=\(path.supportsIPv6) DNS=\(path.supportsDNS), \(Self.addressFamilies(of: interface.name))")
+        #endif
         do {
             // 같은 인터페이스를 다시 알릴지는 구현이 정한다(Go는 이름이 바뀔 때만, Swiftail은 매번).
             try node.setDefaultInterface(interface)
@@ -299,6 +318,56 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
             logger.error("기본 인터페이스 알림 실패: \(String(describing: error), privacy: .public)")
         }
     }
+
+    #if RD_SWIFTAIL_TUNNEL
+    /// 시험 빌드 전용: 인터페이스에 붙은 주소의 종류만 문장으로 만든다.
+    static func addressFamilies(of name: String) -> String {
+        var head: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&head) == 0 else { return "주소 읽기 실패" }
+        defer { freeifaddrs(head) }
+        var v4 = false, clat = false, v6 = false, v6Routable = false
+        var cursor = head
+        while let entry = cursor {
+            cursor = entry.pointee.ifa_next
+            guard String(cString: entry.pointee.ifa_name) == name, let address = entry.pointee.ifa_addr else { continue }
+            switch Int32(address.pointee.sa_family) {
+            case AF_INET:
+                v4 = true
+                let raw = address.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { UInt32(bigEndian: $0.pointee.sin_addr.s_addr) }
+                if raw >> 8 == 0xC00000 { clat = true }
+            case AF_INET6:
+                v6 = true
+                let first = address.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) { $0.pointee.sin6_addr.__u6_addr.__u6_addr8.0 }
+                if first != 0xFE { v6Routable = true }
+            default: break
+            }
+        }
+        let v4Text = v4 ? (clat ? "AF_INET 있음(192.0.0.x CLAT)" : "AF_INET 있음(CLAT 아님)") : "AF_INET 없음"
+        let v6Text = v6 ? (v6Routable ? "AF_INET6 있음(링크 로컬 밖 주소 있음)" : "AF_INET6 있음(링크 로컬뿐)") : "AF_INET6 없음"
+        return "\(v4Text), \(v6Text)"
+    }
+
+    /// 시험 빌드 전용: 이 프로세스의 Swiftail 로거 줄을 2초마다 확장 기록으로 옮긴다.
+    private func startSwiftailLogJournal(generation: Int) {
+        let task = Task.detached {
+            guard let store = try? OSLogStore(scope: .currentProcessIdentifier) else {
+                TunnelMemoryJournal.append("Swiftail 로그 저장소를 열지 못함")
+                return
+            }
+            var since = Date()
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(2))
+                let predicate = NSPredicate(format: "subsystem == %@ AND date > %@", "Swiftail", since as NSDate)
+                guard let entries = try? store.getEntries(matching: predicate) else { continue }
+                for case let entry as OSLogEntryLog in entries where entry.date > since {
+                    TunnelMemoryJournal.append("[Swiftail \(entry.category)] \(entry.composedMessage.prefix(220))", at: entry.date)
+                    since = entry.date
+                }
+            }
+        }
+        if !lifecycle.attach(generation: generation, cleanup: { task.cancel() }) { task.cancel() }
+    }
+    #endif
 
     /// 만족된 경로의 첫 물리 인터페이스(터널 자신 `utun*`·`ipsec*`·루프백 제외).
     static func defaultInterface(_ path: NWPath) -> NWInterface? {
@@ -364,6 +433,8 @@ private final class TunnelRuntime: @unchecked Sendable {
     private var _status: CoreStatus?
     private var _lastError: String?
     private var _engineDead = false
+    private var _interface: String?
+    private var _interfaceKnown = false
     private var _pathPeer: String?
 
     private func locked<T>(_ body: () -> T) -> T {
@@ -380,6 +451,8 @@ private final class TunnelRuntime: @unchecked Sendable {
             _status = nil
             _lastError = nil
             _engineDead = false
+            _interface = nil
+            _interfaceKnown = false
             _pathPeer = nil
         }
     }
@@ -397,6 +470,16 @@ private final class TunnelRuntime: @unchecked Sendable {
 
     func setStatus(_ status: CoreStatus) { locked { _status = status } }
     func setLastError(_ message: String?) { locked { _lastError = message } }
+
+    /// 기본 인터페이스 이름이 바뀌었으면 기억하고 `true`(기록용).
+    func noteInterface(_ name: String?) -> Bool {
+        locked {
+            guard _interface != name || !_interfaceKnown else { return false }
+            _interface = name
+            _interfaceKnown = true
+            return true
+        }
+    }
 
     /// 처음 표시하면 `true`.
     func markEngineDead() -> Bool {

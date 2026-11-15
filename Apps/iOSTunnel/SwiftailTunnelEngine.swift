@@ -45,6 +45,9 @@ final class SwiftailTunnelEngine: TunnelEngine, @unchecked Sendable {
                     self.logger.log("Swiftail 상태: \(String(describing: Self.backendState(state)), privacy: .public)")
                 case .peerPathChanged(_, let path):
                     self.logger.log("Swiftail 경로: \(Self.pathText(path), privacy: .public)")
+                case .tailnetLockChanged(let lock):
+                    // 화면 안내는 아직 없다. 종류와 개수만 남긴다(키는 남기지 않는다).
+                    self.logger.log("Swiftail tailnet lock: \(String(describing: lock.mode), privacy: .public), 서명 기다림 \(lock.signingRequest != nil), 걸러진 피어 \(lock.filteredPeerCount)")
                 }
                 if let status = await self.status() { self.continuation.yield(.state(status)) }
             }
@@ -159,7 +162,6 @@ final class SwiftailTunnelEngine: TunnelEngine, @unchecked Sendable {
         case .control(.authKeyRejected): "authKeyRejected"
         case .control(.registrationRejected): "registrationRejected"
         case .control(.nodeKeyExpired): "nodeKeyExpired"
-        case .control(.tailnetLockEnabled): "tailnetLockEnabled"
         case .control(.storage): "storage"
         case .control: "control"
         case .invalidConfiguration: "invalidConfiguration"
@@ -177,7 +179,6 @@ final class SwiftailTunnelEngine: TunnelEngine, @unchecked Sendable {
         case .control(.authKeyRejected): "인증 키가 거부됐습니다. 새 인증 키로 다시 켜세요."
         case .control(.registrationRejected): "tailnet이 이 기기의 등록을 거절했습니다. 관리자에게 확인하세요."
         case .control(.nodeKeyExpired): "이 기기의 tailnet 키가 만료됐습니다. 다시 로그인하세요."
-        case .control(.tailnetLockEnabled): "tailnet lock이 켜진 tailnet은 지원하지 않습니다."
         case .control(.storage): "저장된 로그인 정보를 읽거나 쓰지 못했습니다."
         case .control: "tailnet 제어 서버와의 연결이 끝났습니다. VPN을 다시 켜세요."
         case .invalidConfiguration: "터널 설정이 잘못됐습니다."
