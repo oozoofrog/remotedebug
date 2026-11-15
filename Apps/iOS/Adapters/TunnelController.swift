@@ -572,6 +572,8 @@ final class TunnelController: TunnelControlling {
         }
         guard let response, let reply = TunnelStatusReply.decode(response) else { return }
         lastReply = reply
+        // 앱이 뒤에 있던 동안 확장이 쌓아 둔 줄을 먼저 옮긴다.
+        for line in TunnelMemoryJournal.drain() { onMemoryLog?("(확장 기록) " + line) }
         if let mib = reply.physFootprintMiB, let line = memoryLog.sample(mib, at: Date()) {
             onMemoryLog?(line)
         }

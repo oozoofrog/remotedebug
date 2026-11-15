@@ -131,6 +131,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
 
         startEventLoop(node, generation: generation)
         startPathMonitor(node, generation: generation)
+        startMemoryJournal(generation: generation)
         // 노드를 저장한 뒤 종료 요청이 왔으면 노드는 종료 쪽 장벽이 멈춘다. 시작을 성공으로 알리지 않는다.
         guard lifecycle.isCurrent(generation) else { throw stoppedDuringStart() }
         // Running을 기다리지 않는다. NeedsLogin이면 앱이 상태를 물어 authURL을 보여 준다.
@@ -243,6 +244,22 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         logger.error("엔진이 멈춰 터널을 끝냅니다")
         applier.discardPending()
         cancelTunnelWithError(TunnelProviderError.engineStopped.nsError())
+    }
+
+    // MARK: 메모리 기록
+
+    /// 앱이 뒤에 있어 상태를 묻지 않는 동안에도 메모리 사용량이 남도록, 30초마다 재고 5분마다 한 줄을 쌓는다.
+    private func startMemoryJournal(generation: Int) {
+        let task = Task.detached {
+            var log = TunnelMemoryLog()
+            while !Task.isCancelled {
+                if let mib = ProcessMemory.physFootprintMiB(), let line = log.sample(mib, at: Date()) {
+                    TunnelMemoryJournal.append(line)
+                }
+                try? await Task.sleep(for: .seconds(30))
+            }
+        }
+        if !lifecycle.attach(generation: generation, cleanup: { task.cancel() }) { task.cancel() }
     }
 
     // MARK: 설정 적용

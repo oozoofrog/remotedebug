@@ -241,6 +241,20 @@ struct RootView: View {
                 #endif
                 Task { await handleVPNRequest(request.action, returning: request.returning) }
             } else {
+                #if RD_SWIFTAIL_TUNNEL
+                // 시험 빌드: `remotedebug://test?download=<리소스 id>`로 파일 받기를 시작한다(전송 시간 측정용).
+                if url.host == "test", let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "download" })?.value {
+                    Task {
+                        await model.refresh()
+                        if let resource = model.resources.first(where: { $0.id == id }) {
+                            model.download(resource)
+                        } else {
+                            model.log(.warning, "files", "시험 받기: 리소스 \(id)가 목록에 없음")
+                        }
+                    }
+                    return
+                }
+                #endif
                 model.handle(url: url)
             }
         }
