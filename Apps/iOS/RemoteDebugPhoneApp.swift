@@ -248,6 +248,14 @@ struct RootView: View {
                     TunnelProbe.shared.set(on: probe == "on", fqdn: model.host?.fqdn) { [weak model] line in model?.log(.info, "probe", line) }
                     return
                 }
+                // 시험 빌드: `remotedebug://test?fetch=<호스트>[&range=bytes=0-1048575]`로 그 호스트의 `/file`을 받아 시간을 잰다.
+                if url.host == "test", let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
+                   let host = items.first(where: { $0.name == "fetch" })?.value {
+                    TunnelFetch.start(host: host, range: items.first(where: { $0.name == "range" })?.value) { [weak model] line in
+                        model?.log(.info, "probe", line)
+                    }
+                    return
+                }
                 // 시험 빌드: `remotedebug://test?download=<리소스 id>`로 파일 받기를 시작한다(전송 시간 측정용).
                 if url.host == "test", let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "download" })?.value {
                     Task {
