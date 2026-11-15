@@ -1,7 +1,7 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// Go 코어 대신 Swiftail(순수 Swift tailnet 노드) 위에서 도는 Mac 호스트: 호스트 로직(RDHostLogic)과 전송(SwiftailHostServer).
+// Swiftail(순수 Swift tailnet 노드) 위에서 도는 Mac 호스트: 호스트 로직(RDHostLogic)과 전송(SwiftailHostServer).
 // Swiftail은 공개 저장소의 고정 커밋을 쓴다.
 // 로컬 checkout으로 빌드하려면 환경 변수 SWIFTAIL_PATH에 그 경로를 준다(폴더 이름은 Swiftail이어야 한다).
 import Foundation

@@ -164,7 +164,7 @@ final class FakeHostCore: HostCore {
         var resources: [String: ResourcePublishRequest] = [:]
         /// 코어가 아는 페어링 요청(pending).
         var pendingRequests: Set<String> = []
-        /// `stop` 때 스트림을 끝내기 전에 보낼 이벤트(rd_stop의 세션 failed 등).
+        /// `stop` 때 스트림을 끝내기 전에 보낼 이벤트(`stop`이 내보내는 세션 failed 등).
         var stopEvents: [CoreEvent] = []
         var pairing = PairingCode(code: "K7M29QXD", expiresAt: Date().addingTimeInterval(300))
         var approvedDevice: DeviceEntry? = sampleDevice(1)

@@ -144,7 +144,7 @@ public struct ResourceDescriptor: Codable, Sendable, Hashable, Identifiable {
     }
 }
 
-/// `rd_host_publish_resource` 입력: 설명 + `publishDir` 안의 파일 경로.
+/// 파일 공유 게시 입력(예전 Go 코어의 `rd_host_publish_resource`와 같은 JSON): 설명 + `publishDir` 안의 파일 경로.
 public struct ResourcePublishRequest: Codable, Sendable, Hashable {
     public var resource: ResourceDescriptor
     public var path: String

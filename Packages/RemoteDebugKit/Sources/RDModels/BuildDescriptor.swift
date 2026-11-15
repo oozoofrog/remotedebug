@@ -170,8 +170,8 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
     }
 }
 
-/// `rd_host_publish`의 입력(protocol §9): `BuildDescriptor`의 필드를 그대로 펼치고 `ipaPath`를 더한 객체.
-/// 코어(Go `host.PublishRequest`)가 받는 모양과 같다. `ipaPath`는 호스트 내부 경로라서 클라이언트에 보내는 형식(§4)에는 쓰지 않는다.
+/// 게시 입력(protocol §9, 예전 Go 코어의 `rd_host_publish`와 같은 JSON): `BuildDescriptor`의 필드를 그대로 펼치고 `ipaPath`를 더한 객체.
+/// 예전 Go 코어의 `host.PublishRequest`가 받던 모양과 같다. `ipaPath`는 호스트 내부 경로라서 클라이언트에 보내는 형식(§4)에는 쓰지 않는다.
 public struct PublishRequest: Codable, Sendable, Hashable {
     public var build: BuildDescriptor
     /// `publishDir` 안의 일반 파일을 가리키는 절대 경로.

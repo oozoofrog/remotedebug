@@ -34,7 +34,7 @@ public struct HostAPI: Sendable {
         public static let standard = Timeouts()
     }
 
-    /// 호스트가 받는 페어링 본문 필드의 최대 길이(UTF-8 바이트, core/internal/host/pairing.go).
+    /// 호스트가 받는 페어링 본문 필드의 최대 길이(UTF-8 바이트. 호스트 로직 `RDHostLogic`의 페어링 검사와 같은 값).
     public static let maxDeviceNameBytes = 200
     public static let maxPlatformBytes = 200
     public static let maxClientVersionBytes = 100

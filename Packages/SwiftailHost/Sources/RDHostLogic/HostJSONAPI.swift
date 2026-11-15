@@ -2,7 +2,7 @@ import Foundation
 import RDModels
 
 extension HostLogic {
-    /// 이전 rd_host_publish의 JSON 입력. 공유 모델로 상태를 보관하되 원문의 문자열 메타데이터도 보존한다.
+    /// 예전 Go 코어의 `rd_host_publish`와 같은 JSON 입력. 공유 모델로 상태를 보관하되 원문의 문자열 메타데이터도 보존한다.
     @discardableResult
     public func publish(json data: Data) throws -> String {
         let input: HostJSON
@@ -57,7 +57,7 @@ extension HostLogic {
         return try publishBuild(.init(build: build, ipaPath: path), wire: encoded, timestamp: publishedAt)
     }
 
-    /// 이전 rd_host_publish_resource의 JSON 입력. 빠진 시각과 잘못된 시각은 현재 시각으로 채운다.
+    /// 예전 Go 코어의 `rd_host_publish_resource`와 같은 JSON 입력. 빠진 시각과 잘못된 시각은 현재 시각으로 채운다.
     @discardableResult
     public func publishResource(json data: Data) throws -> String {
         let input: HostJSON
@@ -78,7 +78,7 @@ extension HostLogic {
         return try publishResourceRequest(.init(resource: resource, path: input.string("path")), timestamp: publishedAt)
     }
 
-    /// 이전 rd_host_set_devices의 JSON 입력. devices 배열이 반드시 있어야 한다.
+    /// 예전 Go 코어의 `rd_host_set_devices`와 같은 JSON 입력. devices 배열이 반드시 있어야 한다.
     public func setDevices(json data: Data) throws {
         let input: HostJSON
         do { input = try HostJSON(data: data, singleValue: true) }

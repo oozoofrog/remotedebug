@@ -1,11 +1,11 @@
 // Swiftail 노드의 모습 → protocol §9 `CoreStatus`. 소켓도 시계도 없는 값 함수라 시험이 그대로 부른다.
 //
-// 화면(`StatusGuidance`)은 Go 코어 때의 상태 이름과 오류 문구 머리(`host listener:`)로 안내를 고른다. 새 상태 이름을 만들지 않고
+// 화면(`StatusGuidance`)은 예전 Go 코어 때부터 쓰던 상태 이름과 오류 문구 머리(`host listener:`)로 안내를 고른다. 새 상태 이름을 만들지 않고
 // 그 자리에 맞춘다:
 // - 로그인 필요 두 모양(실행 중 `needsLogin(url)`, `run()`이 `nodeKeyExpired`로 끝남) → 둘 다 `NeedsLogin`.
 // - 기기 승인 → `NeedsMachineAuth`.
 // - HTTPS 인증서 꺼짐 → `Running` + 빈 `certDomains`(화면이 "HTTPS 인증서 꺼짐"을 고른다).
-// - MagicDNS 꺼짐·이름이 cert 도메인에 없음·발급 한도 → `Error` + `host listener: …`(Go의 리스너 실패와 같은 자리).
+// - MagicDNS 꺼짐·이름이 cert 도메인에 없음·발급 한도 → `Error` + `host listener: …`(예전 Go 코어의 리스너 실패와 같은 자리).
 // - 첫 발급(약 40초)과 물러났다 다시 하는 실패 → `Running` + `tlsReady == false`(화면의 "인증서 발급 중").
 import Foundation
 import RDModels
@@ -194,14 +194,14 @@ enum CoreStatusMapping {
         }
     }
 
-    /// 상태 이벤트를 낼지 견줄 때 메모리 값은 뺀다(Go monitor와 같다).
+    /// 상태 이벤트를 낼지 견줄 때 메모리 값은 뺀다(예전 Go 코어의 monitor와 같은 규칙).
     static func comparable(_ status: CoreStatus) -> CoreStatus {
         var copy = status
         copy.rssMiB = 0
         return copy
     }
 
-    /// Go `host.BaseURL`.
+    /// 호스트의 기준 주소(예전 Go 코어의 `host.BaseURL`과 같은 규칙).
     static func baseURL(tls: Bool, fqdn: String, port: Int) -> String {
         let name = fqdn.hasSuffix(".") ? String(fqdn.dropLast()) : fqdn
         if tls { return port == 443 || port == 0 ? "https://\(name)" : "https://\(name):\(port)" }

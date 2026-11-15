@@ -32,7 +32,7 @@ public enum RejectionCode: String, Codable, Sendable, Hashable, CaseIterable {
     case configurationUnverified = "configuration_unverified"
     case deviceNotProvisioned = "device_not_provisioned"
     /// 킷 전용(protocol §7 표 밖): 게시에 꼭 필요한 값을 읽지 못함. 지금은 `CFBundleIdentifier`가 없거나 빈 경우로,
-    /// 코어의 `rd_host_publish`가 `bad_request`로 거부하는 빌드를 미리 거부해 양쪽 수락 규칙을 맞춘다.
+    /// 호스트 로직의 게시가 `bad_request`로 거부하는 빌드를 미리 거부해 양쪽 수락 규칙을 맞춘다.
     case unreadable
 }
 

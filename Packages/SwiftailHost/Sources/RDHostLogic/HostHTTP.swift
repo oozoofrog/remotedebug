@@ -2,7 +2,7 @@ import Foundation
 
 // 호스트 로직(경로·페어링·세션·게시)과 전송(Swiftail 노드·다리·TLS·직접 연결 리스너) 사이의 접점.
 // 로직은 Tailscale도 소켓도 모른다: 전송이 요청 하나를 `HostRequest`로 넘기고 `HostResponse`를 받아 보낸다.
-// Go 코어의 `host.Handler()`·`host.DirectHandler()`와 `WhoIsFunc`가 하던 일을 이 타입들이 나눠 맡는다.
+// 예전 Go 코어의 `host.Handler()`·`host.DirectHandler()`와 `WhoIsFunc`가 하던 일을 이 타입들이 나눠 맡는다.
 
 /// tailnet으로 들어온 요청의 상대. 전송이 연결마다 한 번 알아내 그 연결의 모든 요청에 붙인다.
 public struct HostPeer: Sendable, Hashable {

@@ -1,6 +1,6 @@
 #if DEBUG
 // 미리보기·테스트 전용. Release 빌드에는 들어가지 않으며 실제 화면은 이 데이터를 쓰지 않는다.
-// 이 대상(MacHostUI)은 Go 런타임을 링크하지 않으므로 Xcode 미리보기가 이 파일만으로 뜬다.
+// 이 대상(MacHostUI)은 Swiftail 노드를 링크하지 않으므로 Xcode 미리보기가 이 파일만으로 뜬다.
 import Foundation
 import MacHostKit
 import RDBuildInspection

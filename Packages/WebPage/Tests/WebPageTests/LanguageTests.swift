@@ -49,8 +49,8 @@ import Testing
         #expect(js.eval("RDLogic.LANGUAGES.join()").toString() == "ko,en,ja,zh-Hans,zh-Hant")
     }
 
-    /// 표 안의 번역을 바꾼 logic.js를 불러온다(시험용 번역 값). 표 밖의 코드는 그대로다.
-    private func harness(patching edits: [String: [String: String]]) throws -> JSContext {
+    /// logic.js의 번역 표(STRINGS)에서 표 부분의 글과 위치를 읽는다.
+    private static func loadSource() throws -> (source: String, range: Range<String.Index>, table: [String: [String: String]]) {
         let url = JSHarness.webDirectory.appending(path: "logic.js")
         let source = try String(contentsOf: url, encoding: .utf8)
         let begin = try #require(source.range(of: "// RD-STRINGS-BEGIN\n"))
@@ -58,7 +58,22 @@ import Testing
         let block = String(source[begin.upperBound..<end.lowerBound])
         let open = try #require(block.firstIndex(of: "{"))
         let close = try #require(block.lastIndex(of: "}"))
-        var table = try #require(JSONSerialization.jsonObject(with: Data(block[open...close].utf8)) as? [String: [String: String]])
+        let table = try #require(JSONSerialization.jsonObject(with: Data(block[open...close].utf8)) as? [String: [String: String]])
+        return (source, begin.upperBound..<end.lowerBound, table)
+    }
+
+    /// 표에 실제로 들어 있는 번역. 어떤 키가 번역돼 있는지에 기대지 않고 표의 값과 견준다.
+    private static func translation(_ lang: String, _ key: String, _ params: [String: String] = [:]) throws -> String {
+        var text = try #require(try loadSource().table[lang]?[key], "표에 없는 키: \(lang) \(key)")
+        for (name, value) in params { text = text.replacingOccurrences(of: "{\(name)}", with: value) }
+        return text
+    }
+
+    /// 표 안의 번역을 바꾼 logic.js를 불러온다(시험용 번역 값). 표 밖의 코드는 그대로다.
+    /// 값을 ""로 바꾸면 그 언어에는 번역이 없는 글자가 된다.
+    private func harness(patching edits: [String: [String: String]]) throws -> JSContext {
+        let loaded = try Self.loadSource()
+        var table = loaded.table
         for (lang, values) in edits {
             for (key, value) in values {
                 #expect(table[lang]?[key] != nil, "시험할 키가 표에 없다: \(key)")
@@ -66,7 +81,8 @@ import Testing
             }
         }
         let json = String(decoding: try JSONSerialization.data(withJSONObject: table), as: UTF8.self)
-        let patched = source.replacingCharacters(in: begin.upperBound..<end.lowerBound, with: "  var STRINGS = \(json);\n  ")
+        let patched = loaded.source.replacingCharacters(in: loaded.range, with: "  var STRINGS = \(json);\n  ")
+        let url = JSHarness.webDirectory.appending(path: "logic.js")
         let context = try #require(JSContext())
         var failure: String?
         context.exceptionHandler = { _, value in failure = value?.toString() }
@@ -77,7 +93,8 @@ import Testing
 
     @Test func fallbackChain() throws {
         let ctx = try harness(patching: [
-            "ja": ["새로고침": "再読み込み"],
+            "ja": ["새로고침": "再読み込み", "다시 시도": "", "닫기": ""],
+            "zh-Hans": ["새로고침": ""],
             "en": ["새로고침": "Refresh", "다시 시도": "Try again", "닫기": ""],
         ])
         func t(_ lang: String, _ key: String) -> String {
@@ -100,13 +117,18 @@ import Testing
         #expect(t(#""{name} 설치", {}"#) == "{name} 설치")
         #expect(t(#""{a}{a} {b}", { a: 1, b: 0 }"#) == "11 0")
         #expect(t(#""{year}. {month}. {day}.", { year: 2020, month: 1, day: 1 }"#) == "2020. 1. 1.")
-        js.eval("RDLogic.setLanguage('en')")
-        #expect(t(#""{name} 설치", { name: "App" }"#) == "Install App")
-        #expect(t(#""남은 시간 {minutes}분 {seconds}초", { minutes: 1, seconds: 5 }"#) == "1 min 5 s left")
-        #expect(t(#""{name} 설치 취소", { name: "App" }"#) == "App 설치 취소")
+        // 영어: 시험용 번역 값으로 바꿔 어떤 키가 번역돼 있든 같은 성질을 본다.
+        let ctx = try harness(patching: [
+            "en": ["{name} 설치": "Install {name}", "남은 시간 {minutes}분 {seconds}초": "{minutes} min {seconds} s left", "{name} 설치 취소": ""],
+        ])
+        func e(_ expr: String) -> String { ctx.evaluateScript("RDLogic.setLanguage('en'); RDLogic.t(\(expr))").toString() }
+        #expect(e(#""{name} 설치", { name: "App" }"#) == "Install App")
+        #expect(e(#""남은 시간 {minutes}분 {seconds}초", { minutes: 1, seconds: 5 }"#) == "1 min 5 s left")
+        // 번역이 비어 있는 글자는 한국어 원문에 값만 채운다.
+        #expect(e(#""{name} 설치 취소", { name: "App" }"#) == "App 설치 취소")
     }
 
-    /// 영어에서는 번역한 글자만 영어로, 나머지는 한국어로 보인다. 다른 언어(fr)는 영어와 같다.
+    /// 영어에서는 표에 있는 글자만 영어로, 나머지는 한국어로 보인다. 다른 언어(fr)는 영어와 같다.
     @Test func englishAndUnknownLanguages() throws {
         func render(_ languages: String?) throws -> [String] {
             let js = try JSHarness(withPage: true)
@@ -124,7 +146,15 @@ import Testing
             ]
         }
         let english = try render(#"["en-US"]"#)
-        #expect(english == ["en", "1 min 5 s left", "Refresh", "설치 세션이 만료되었습니다. 다시 설치하세요.", "5바이트"])
+        let table = try Self.loadSource().table["en"] ?? [:]
+        let expired = "설치 세션이 만료되었습니다. 다시 설치하세요."
+        #expect(english == [
+            "en",
+            try Self.translation("en", "남은 시간 {minutes}분 {seconds}초", ["minutes": "1", "seconds": "5"]),
+            try Self.translation("en", "새로고침"),
+            table[expired] ?? expired,
+            try Self.translation("en", "{count}바이트", ["count": "5"]),
+        ])
         var french = try render(#"["fr-FR"]"#)
         #expect(french.removeFirst() == "en")
         #expect(french == Array(english.dropFirst()))
@@ -161,7 +191,7 @@ import Testing
         E.prototype.getAttribute = function (k) { return Object.prototype.hasOwnProperty.call(this.attrs, k) ? this.attrs[k] : null; };
         E.prototype.setAttribute = function (k, v) { this.attrs[k] = String(v); };
         var refresh = new T("  새로고침\\n");
-        var plain = new T("빌드");
+        var plain = new T("표에 없는 글자");
         var other = new T("RemoteDebug");
         var hidden = new T("다시 시도");
         var labelled = new E("button", { "aria-label": "다시 시도", "data-x": "다시 시도" }, [refresh]);
@@ -171,11 +201,11 @@ import Testing
         RDPage.localize(tree);
         """)
         try js.checkNoException()
-        #expect(js.eval("refresh.nodeValue").toString() == "  Refresh\n")
-        #expect(js.eval("plain.nodeValue").toString() == "빌드")
+        #expect(js.eval("refresh.nodeValue").toString() == "  \(try Self.translation("en", "새로고침"))\n")
+        #expect(js.eval("plain.nodeValue").toString() == "표에 없는 글자")
         #expect(js.eval("other.nodeValue").toString() == "RemoteDebug")
         #expect(js.eval("hidden.nodeValue").toString() == "다시 시도")
-        #expect(js.eval("labelled.attrs['aria-label']").toString() == "Try again")
+        #expect(js.eval("labelled.attrs['aria-label']").toString() == (try Self.translation("en", "다시 시도")))
         #expect(js.eval("labelled.attrs['data-x']").toString() == "다시 시도")
     }
 }

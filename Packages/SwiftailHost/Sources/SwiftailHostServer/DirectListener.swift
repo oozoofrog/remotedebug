@@ -2,7 +2,7 @@ import Foundation
 import Network
 import RDHostLogic
 
-/// 같은 네트워크 직접 연결 리스너(docs/protocol-addenda.md O). Go `core/internal/direct`의 `Listen`과 `filtered`를 옮겼다.
+/// 같은 네트워크 직접 연결 리스너(docs/protocol-addenda.md O). 예전 Go 코어의 직접 연결 리스너를 옮겨 온 것이다.
 ///
 /// 저장한 포트에서 듣고, 묶지 못하면 새 포트를 골라 저장한다. TLS 1.3이고, 사설(RFC 1918, IPv6 고유 로컬)·링크 로컬
 /// 상대만 받는다. 거르는 것은 TLS 바이트를 주고받기 전이다. 요청은 `HostOrigin.direct(remoteIP:)`로 같은 로직에 간다.

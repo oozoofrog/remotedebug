@@ -1,7 +1,7 @@
 import Foundation
 import RDModels
 
-/// `rd_host_pairing_open`의 결과(protocol §2, §9).
+/// 페어링 코드 열기의 결과(protocol §2, §9).
 public struct PairingCode: Codable, Sendable, Hashable {
     /// 8자 Crockford base32 코드(구분자 없음).
     public var code: String

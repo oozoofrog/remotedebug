@@ -3,7 +3,7 @@ import Testing
 
 @testable import RDModels
 
-/// docs/tunnel.md·docs/protocol-addenda.md의 JSON 예제와 Go 코어가 실제로 보내는 모양을 모델로 읽는다.
+/// docs/tunnel.md·docs/protocol-addenda.md의 JSON 예제와 예전 Go 코어가 실제로 보내던 모양을 모델로 읽는다.
 enum DocJSON {
     static func blocks(_ file: String) throws -> [String] {
         var u = URL(fileURLWithPath: #filePath)
@@ -54,7 +54,7 @@ private func expectRoundTrip<T: Codable>(_ type: T.Type, _ json: String) throws 
     // MARK: json-1 NextEventResponse
 
     @Test func nextEventResponseRejectsErrorReplies() throws {
-        // Go api.NextEvent: 없는 핸들이면 즉시 오류 응답.
+        // 예전 Go 코어의 api.NextEvent: 없는 핸들이면 즉시 오류 응답.
         let errorReply = #"{"error":{"code":"unknown_handle","message":"핸들이 없습니다."}}"#
         #expect(throws: DecodingError.self) { try decode(NextEventResponse.self, errorReply) }
         #expect(throws: DecodingError.self) { try decode(NextEventResponse.self, "{}") }
@@ -91,7 +91,7 @@ private func expectRoundTrip<T: Codable>(_ type: T.Type, _ json: String) throws 
         #expect(obj["bundleId"] as? String == d.bundleId)
         #expect((obj["signing"] as? [String: Any])?["getTaskAllow"] as? Bool == true)
         #expect(obj["publishedAt"] as? String == "2026-11-11T09:00:00Z")
-        // Go host.PublishRequest와 같은 모양(임베드된 BuildDescriptor + ipaPath)을 다시 읽을 수 있다.
+        // 예전 Go host.PublishRequest와 같은 모양(임베드된 BuildDescriptor + ipaPath)을 다시 읽을 수 있다.
         let back = try RDJSON.decoder().decode(PublishRequest.self, from: RDJSON.encoder().encode(req))
         #expect(back == req)
         // 클라이언트용 BuildDescriptor 인코딩에는 ipaPath가 없다.

@@ -14,7 +14,7 @@ enum TunnelStorage {
     static let stateName = "swiftail"
     /// 예전 Go 코어가 쓰던 상태 폴더 이름. Swiftail은 이 상태를 읽지 않는다(로그인은 다시 한다).
     static let legacyGoStateName = "tailscale"
-    /// 예전 상태를 옮기다 밀려난 상태를 남기던 폴더 이름(Go 시절).
+    /// 예전 상태를 옮기다 밀려난 상태를 남기던 폴더 이름(예전 Go 코어 시절).
     static let legacyGoReplacedName = "tailscale.replaced"
 
     /// `base/RemoteDebug/swiftail`을 만들고(있으면 그대로) 보호 등급과 백업 제외를 적용해 돌려준다.

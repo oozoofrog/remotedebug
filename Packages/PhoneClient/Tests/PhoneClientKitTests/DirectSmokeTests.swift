@@ -4,8 +4,8 @@ import Testing
 
 @testable import PhoneClientKit
 
-/// 실제 코어의 직접 연결 리스너에 iPhone 앱의 실제 전송(공개 키 고정 `URLSession`)으로 붙어 보는 수동 확인.
-/// `RD_DIRECT_SMOKE_FILE`이 있을 때만 돈다. Mac 쪽은 core/internal/host의 `TestDirectSmokeServer`가 띄운다.
+/// 실제 Mac 호스트의 직접 연결 리스너에 iPhone 앱의 실제 전송(공개 키 고정 `URLSession`)으로 붙어 보는 수동 확인.
+/// `RD_DIRECT_SMOKE_FILE`이 있을 때만 돈다. 설정 파일은 Mac 호스트의 직접 연결 리스너가 떠 있는 상태에서 따로 만들어 준다(예전 Go 코어의 `TestDirectSmokeServer`는 없어졌다).
 @Suite("직접 연결 수동 확인")
 struct DirectSmokeTests {
     private struct Setup: Decodable {

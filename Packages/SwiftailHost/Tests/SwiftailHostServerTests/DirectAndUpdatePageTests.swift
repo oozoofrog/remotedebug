@@ -36,7 +36,7 @@ struct DirectListenerTests {
         #expect(SecCertificateCopySubjectSummary(certificate) as String? == "RemoteDebug direct")
     }
 
-    /// Go 코어가 쓴 모양(SEC1 `EC PRIVATE KEY`, `{"id","port","hostId"}`)을 그대로 읽는다.
+    /// 예전 Go 코어가 남긴 모양(SEC1 `EC PRIVATE KEY`, `{"id","port","hostId"}`)을 그대로 읽는다.
     @Test func goShapedIdentityIsReused() throws {
         let directory = try makeTestDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }

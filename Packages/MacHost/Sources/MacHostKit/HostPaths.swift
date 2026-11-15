@@ -19,7 +19,7 @@ public struct HostPaths: Sendable, Hashable {
     public var stateDir: URL { root.appendingPathComponent("tailnet", isDirectory: true) }
     /// 같은 네트워크 직접 연결의 신원(`direct.json`, `direct-cert.pem`, `direct-key.pem`). iPhone이 이 키를 고정한다.
     public var directDir: URL { root.appendingPathComponent("direct", isDirectory: true) }
-    /// Go 코어가 쓰던 노드 상태 폴더. 옮기지 않는다: Swiftail 노드가 처음 `.running`이 되면 직접 연결 신원만 `directDir`로
+    /// 예전 Go 코어가 남긴 노드 상태 폴더. 옮기지 않는다: Swiftail 노드가 처음 `.running`이 되면 직접 연결 신원만 `directDir`로
     /// 옮긴 뒤 지운다(더 쓰지 않는 등록의 키가 들어 있다).
     public var legacyStateDir: URL { root.appendingPathComponent("state", isDirectory: true) }
     /// 코어 `publishDir`. 게시본 IPA가 `<buildId>.ipa`로 놓인다. 코어가 `.rd-snapshots`를 만든다.

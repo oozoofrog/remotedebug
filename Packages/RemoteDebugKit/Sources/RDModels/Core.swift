@@ -1,6 +1,6 @@
 import Foundation
 
-/// protocol §9 `rd_start` 설정(+ docs/tunnel.md의 터널 모드, docs/protocol-addenda.md A.1의 선택 필드).
+/// protocol §9 코어 시작 설정(예전 Go 코어의 `rd_start` 입력과 같은 JSON. docs/tunnel.md의 터널 모드, docs/protocol-addenda.md A.1의 선택 필드 포함).
 ///
 /// 선택 필드는 값이 있을 때만 인코딩한다: `utunFd`·`mtu`는 nil이 아닐 때, `hostDisplayName`·`appVersion`은
 /// nil도 빈 문자열도 아닐 때. 그래서 호스트·프록시 설정의 JSON은 §9 예시와 키가 같다.
@@ -146,7 +146,7 @@ public struct BackendState: RawRepresentable, Codable, Sendable, Hashable, Expre
     public static let error: BackendState = "Error"
 }
 
-/// protocol §9 `rd_status` 출력. 코어가 `null`·누락으로 보낸 값은 빈 값으로 읽는다.
+/// protocol §9 상태 출력(예전 Go 코어의 `rd_status`와 같은 JSON). 코어가 `null`·누락으로 보낸 값은 빈 값으로 읽는다.
 public struct CoreStatus: Codable, Sendable, Hashable {
     public var backendState: BackendState
     public var authURL: String
@@ -239,7 +239,7 @@ public struct CoreStatus: Codable, Sendable, Hashable {
     }
 }
 
-/// docs/protocol-addenda.md Q `rd_status.lockWait`: 서명 기기에서 이 노드에 서명할 때 넣는 공개 키 둘.
+/// docs/protocol-addenda.md Q 상태의 `lockWait`: 서명 기기에서 이 노드에 서명할 때 넣는 공개 키 둘.
 public struct LockWait: Codable, Sendable, Hashable {
     /// `nodekey:<hex>`
     public var nodeKey: String
@@ -255,7 +255,7 @@ public struct LockWait: Codable, Sendable, Hashable {
     public var signCommand: String { "tailscale lock sign \(nodeKey) \(lockKey)" }
 }
 
-/// docs/protocol-addenda.md O `rd_status.direct`: 같은 네트워크 직접 연결 리스너.
+/// docs/protocol-addenda.md O 상태의 `direct`: 같은 네트워크 직접 연결 리스너.
 public struct DirectStatus: Codable, Sendable, Hashable {
     /// 지금 연결을 받고 있다.
     public var listening: Bool
@@ -322,7 +322,7 @@ public struct PeerPath: Codable, Sendable, Hashable {
     }
 }
 
-/// docs/tunnel.md `rd_status.tunnel`. 코어가 `null`로 보낸 배열은 빈 배열로 읽는다.
+/// docs/tunnel.md 상태의 `tunnel`. 코어가 `null`로 보낸 배열은 빈 배열로 읽는다.
 public struct TunnelStatus: Codable, Sendable, Hashable {
     public var addresses: [String]
     public var routes: [String]
@@ -353,7 +353,7 @@ public struct TunnelStatus: Codable, Sendable, Hashable {
     }
 }
 
-/// `rd_next_event`의 반환 래퍼: `{"event":{…}}` 또는 `{"event":null}`(시간 초과).
+/// 예전 Go 코어의 `rd_next_event`가 돌려주던 래퍼: `{"event":{…}}` 또는 `{"event":null}`(시간 초과).
 /// `event` 키는 반드시 있어야 한다. C API 오류 응답(`{"error":{…}}`)은 "이벤트 없음"으로 읽지 않고 디코딩에 실패한다.
 /// 호출자는 그때 `APIErrorBody`로 다시 읽는다.
 public struct NextEventResponse: Codable, Sendable, Hashable {

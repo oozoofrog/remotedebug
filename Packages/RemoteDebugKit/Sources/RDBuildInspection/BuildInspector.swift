@@ -200,7 +200,7 @@ public enum BuildInspector {
         var warnings: [String] = []
         let bundleId = g.bundleId
 
-        // 코어의 게시(rd_host_publish)는 빈 bundleId를 bad_request로 거부한다. 수락 규칙을 맞추려고 여기서 거부한다.
+        // 호스트 로직의 게시(`HostFiles`)는 빈 bundleId를 bad_request로 거부한다. 수락 규칙을 맞추려고 여기서 거부한다.
         if (bundleId ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             reasons.append(Rejection(code: .unreadable, detail: "Info.plist에 CFBundleIdentifier가 없거나 비어 있어 게시할 수 없습니다"))
         }

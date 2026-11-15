@@ -1,4 +1,4 @@
-// OTA 설치 매니페스트(docs/protocol.md 4.5, Go `core/internal/host/sessions.go`의 `Manifest`와 같은 모양).
+// OTA 설치 매니페스트(docs/protocol.md 4.5, 예전 Go 코어의 `Manifest`와 같은 모양).
 
 /// 설치할 앱 하나. 매니페스트의 `metadata`가 된다.
 public struct AppPackage: Sendable, Equatable {

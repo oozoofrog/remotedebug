@@ -7,7 +7,7 @@ import ServiceManagement
 import SwiftUI
 import UserNotifications
 
-// 앱 대상에는 진입점·수명 주기·실제 코어 연결만 둔다. 화면과 미리보기는 MacHostUI(Go 런타임을 링크하지 않는다)에 있다.
+// 앱 대상에는 진입점·수명 주기·실제 코어 연결만 둔다. 화면과 미리보기는 MacHostUI(Swiftail 노드를 링크하지 않는다)에 있다.
 
 /// 진입점. `--mcp` 인자로 띄우면 창 없이 MCP 서버로 돌며, 명령은 실행 중인 앱에 넘긴다.
 @main

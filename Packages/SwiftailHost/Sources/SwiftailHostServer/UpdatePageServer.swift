@@ -2,7 +2,7 @@ import Foundation
 import RDHostLogic
 import Synchronization
 
-/// RemoteDebug iPhone 앱 자신의 업데이트 페이지(docs/protocol-addenda.md I). Go `core/internal/updatepage`를 옮겼다.
+/// RemoteDebug iPhone 앱 자신의 업데이트 페이지(docs/protocol-addenda.md I). 예전 Go 코어의 업데이트 페이지를 옮겨 온 것이다.
 ///
 /// 루프백에서 듣는다. Mac의 공식 Tailscale 앱이 `tailscale serve`로 비밀 HTTPS 경로를 이 리스너로 넘기므로, iPhone은
 /// 앱의 VPN(앱을 바꾸는 동안 iOS가 멈춘다) 대신 공식 Tailscale VPN으로 새 빌드를 설치할 수 있다.
@@ -28,7 +28,7 @@ public final class UpdatePageServer: Sendable {
         }
     }
 
-    /// `rd_update_page_set`의 입력. `listen`이 비면 멈춘다. `publicURL`은 공식 Tailscale 앱이 이 페이지를 내는
+    /// 업데이트 페이지 설정 입력(예전 Go 코어의 `rd_update_page_set`과 같은 JSON). `listen`이 비면 멈춘다. `publicURL`은 공식 Tailscale 앱이 이 페이지를 내는
     /// `/`로 끝나는 https 주소이고, 비면 아직 경로가 서지 않았다.
     public struct Configuration: Sendable, Equatable {
         public var listen: String

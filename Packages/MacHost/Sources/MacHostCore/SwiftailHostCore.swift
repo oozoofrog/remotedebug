@@ -1,12 +1,12 @@
 // SwiftailHostCore — Swiftail 노드(SwiftailHostServer)와 호스트 로직(RDHostLogic)을 MacHostKit의 `HostCore`로 묶는다.
-// Go 코어(`core/internal/node`의 host 모드)가 하던 일을 옮겼다.
+// 예전 Go 코어의 host 모드가 하던 일을 옮겨 온 것이다(Go 코어는 없어졌다).
 //
 // - 노드: `start`가 `SwiftailHostRuntime`을 띄우고 `stop`이 그 Task를 취소한 뒤 노드와 인증서 관리자가 끝나기를 기다린다.
 //   `run()`이 다시 켜도 소용없는 실패로 끝나면 다시 켜지 않는다(사용자가 공유를 다시 시작할 때까지 상태로만 알린다).
 // - 로그인: `needsLogin(url)`의 URL은 상태(`authURL`)와 상태 이벤트로만 화면에 간다. 로그 파일과 로그 이벤트에는 쓰지 않는다.
 //   `startInteractiveLogin()`은 부르지 않는다(이미 등록돼 있어도 새 node 키로 다시 등록한다. Swiftail 계약).
 // - 상태 이벤트: 250ms(실행 전)·2초(실행 중)마다 상태를 읽어 바뀌었으면 낸다. 그때 로직의 `sweep()`도 한다
-//   (Go `node.monitor`와 같은 간격: 페어링 요청·세션 만료, 오래된 기록·거부 기록·직접 연결 실패 차단 정리).
+//   (예전 Go 코어와 같은 간격: 페어링 요청·세션 만료, 오래된 기록·거부 기록·직접 연결 실패 차단 정리).
 // - 로직의 사건은 완전한 형태(`eventDetails`)로 받아 RDModels 이벤트에 없는 값(크래시를 받은 시각, 에이전트 요청의 노드 이름,
 //   멈춤 요청의 기기 id)을 채워 넘긴다. 로직이 잠금 안에서 낸 순서 그대로 구독자 버퍼에 동기로 들어간다.
 // - `stop()`: 노드를 멈추고, 직접 연결 리스너를 닫고, 로직을 닫아(열린 세션의 `failed`, addenda C.3) 그 이벤트까지 넘긴 뒤
@@ -24,9 +24,9 @@ import Synchronization
 public final class SwiftailHostCore: HostCore, Sendable {
     /// 저장 위치. 노드 상태는 `CoreConfig.stateDir`에 둔다.
     public struct Layout: Sendable {
-        /// 직접 연결 신원 폴더. nil이면 `stateDir`(Go 코어와 같은 자리).
+        /// 직접 연결 신원 폴더. nil이면 `stateDir`(예전 Go 코어가 직접 연결 신원을 두던 자리와 같다).
         public var directDirectory: URL?
-        /// Go 코어의 노드 상태 폴더. 있으면 노드가 처음 `.running`이 된 뒤 지운다(직접 연결 신원은 먼저 옮긴다).
+        /// 예전 Go 코어가 남긴 노드 상태 폴더. 있으면 노드가 처음 `.running`이 된 뒤 지운다(직접 연결 신원은 먼저 옮긴다).
         public var legacyStateDirectory: URL?
 
         public init(directDirectory: URL? = nil, legacyStateDirectory: URL? = nil) {
@@ -594,7 +594,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
         }
     }
 
-    /// 이 프로세스의 물리 메모리 사용량(MiB). Go `memstat.RSSMiB` 자리.
+    /// 이 프로세스의 물리 메모리 사용량(MiB). 예전 Go 코어가 같은 값을 보고하던 자리.
     static func residentMiB() -> Double {
         var info = task_vm_info_data_t()
         var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
@@ -657,7 +657,7 @@ final class SerialLock: Sendable {
     }
 }
 
-/// Go 코어의 상태 폴더(`<root>/state`). 옮기지 않는다: 직접 연결 신원만 새 자리로 옮기고 나머지는 지운다.
+/// 예전 Go 코어가 남긴 상태 폴더(`<root>/state`). 옮기지 않는다: 직접 연결 신원만 새 자리로 옮기고 나머지는 지운다.
 enum LegacyState {
     static let directFiles = [DirectIdentity.stateFile, DirectIdentity.certificateFile, DirectIdentity.keyFile]
 
@@ -698,7 +698,7 @@ enum LegacyState {
     }
 }
 
-/// `CoreConfig.logPath`의 진단 로그. 5MiB에 닿으면 `<경로>.1`로 한 번 돌린다(Go 코어와 같다).
+/// `CoreConfig.logPath`의 진단 로그. 5MiB에 닿으면 `<경로>.1`로 한 번 돌린다(예전 Go 코어의 로그와 같은 규칙).
 /// URL·키·이름·주소는 쓰지 않는다(부르는 쪽이 종류만 넘긴다).
 final class CoreLogFile: Sendable {
     static let maxBytes = 5 << 20

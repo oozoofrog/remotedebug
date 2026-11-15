@@ -30,7 +30,7 @@ let package = Package(
             dependencies: [
                 "MacHostKit",
                 .product(name: "RDModels", package: "RemoteDebugKit"),
-                // 미리보기용 가짜 검사기(InspectionResult 등). 순수 Swift라 Go 런타임과 무관하다.
+                // 미리보기용 가짜 검사기(InspectionResult 등). 순수 Swift라 노드와 무관하다.
                 .product(name: "RDBuildInspection", package: "RemoteDebugKit"),
             ]
         ),

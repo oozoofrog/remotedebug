@@ -375,7 +375,7 @@ struct SwiftailHostCoreTests {
         await core.stop()
     }
 
-    /// 첫 `.running` 뒤에 Go 코어의 상태 폴더를 지운다. 직접 연결 신원은 먼저 옮기고, 관문 폴더는 건드리지 않는다.
+    /// 첫 `.running` 뒤에 예전 Go 코어가 남긴 상태 폴더를 지운다. 직접 연결 신원은 먼저 옮기고, 관문 폴더는 건드리지 않는다.
     @Test func legacyStateIsRemovedAfterFirstRunKeepingDirectIdentity() async throws {
         let tmp = try CoreTempDir("legacy")
         let legacy = tmp.paths.legacyStateDir

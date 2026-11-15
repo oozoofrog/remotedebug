@@ -3,7 +3,7 @@ import Foundation
 
 /// 저장 폴더 하나를 한 프로세스만 쓰게 하는 배타적 권고 잠금(`<root>/.lock`, `flock`).
 ///
-/// 코어 `rd_start`의 `state_dir_in_use` 검사는 한 프로세스 안에서만 동작한다(addenda A.3). 두 번째 앱 인스턴스가
+/// 코어가 자기 저장 폴더 사용을 검사해도 그것은 한 프로세스 안에서만 동작한다(addenda A.3). 두 번째 앱 인스턴스가
 /// `Work/`·`Published/`를 비우거나 같은 노드 신원으로 tailnet에 오르지 않도록, 불러오기·공유 시작 전에 잡고 종료할 때 놓는다.
 /// 프로세스가 죽으면 커널이 잠금을 푼다.
 public final class StateDirLock: @unchecked Sendable {

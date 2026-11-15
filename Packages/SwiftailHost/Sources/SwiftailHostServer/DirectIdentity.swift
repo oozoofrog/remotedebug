@@ -3,10 +3,10 @@ import Darwin
 import Foundation
 import Synchronization
 
-/// 같은 네트워크 직접 연결 리스너의 저장된 신원(docs/protocol-addenda.md O). Go `core/internal/direct`를 옮겼다.
+/// 같은 네트워크 직접 연결 리스너의 저장된 신원(docs/protocol-addenda.md O). 예전 Go 코어의 직접 연결 신원을 옮겨 온 것이다.
 ///
-/// 파일은 Go 코어와 같은 이름·모양이다: `direct.json`(`{"id","port","hostId"}`), `direct-cert.pem`(`CERTIFICATE`),
-/// `direct-key.pem`(Go는 SEC1 `EC PRIVATE KEY`, 새로 만들 때는 PKCS#8 `PRIVATE KEY`. 둘 다 읽는다). 그래서 Go 코어가
+/// 파일은 예전 Go 코어가 남긴 것과 같은 이름·모양이다: `direct.json`(`{"id","port","hostId"}`), `direct-cert.pem`(`CERTIFICATE`),
+/// `direct-key.pem`(예전 Go 코어는 SEC1 `EC PRIVATE KEY`, 새로 만들 때는 PKCS#8 `PRIVATE KEY`. 둘 다 읽는다). 그래서 예전 Go 코어가
 /// 남긴 신원을 그대로 읽어 같은 공개 키로 답한다(페어링한 iPhone의 고정 값이 그대로 맞는다).
 ///
 /// 키와 인증서는 한 번 만들고 바꾸지 않는다: iPhone이 그 공개 키를 고정한다.

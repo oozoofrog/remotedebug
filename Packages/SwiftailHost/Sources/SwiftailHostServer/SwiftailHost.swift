@@ -10,7 +10,7 @@ import Synchronization
 public struct HostConfiguration: Sendable {
     /// 노드 설정. 상태 디렉터리는 이미 있어야 한다(인증서 관리자는 그 아래 `certs/`만 만든다).
     public var node: NodeConfiguration
-    /// ACME 설정. nil이면 tailnet 포트에서 평문 HTTP로 답한다(루프백 시험 제어 서버용. Go 코어의 `listenTLS: false`).
+    /// ACME 설정. nil이면 tailnet 포트에서 평문 HTTP로 답한다(루프백 시험 제어 서버용. 예전 Go 코어의 `listenTLS: false`와 같은 용도).
     public var certificates: CertificateConfiguration?
     /// tailnet에서 들을 포트.
     public var port: UInt16

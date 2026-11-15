@@ -533,7 +533,7 @@ public final class HostModel {
         await refreshLibrary()
     }
 
-    /// `rd_stop`이 보내는 세션 `failed` 이벤트(addenda C.3)를 적용한 뒤 이벤트 처리를 끝낸다.
+    /// `core.stop()`이 내보내는 세션 `failed` 이벤트(addenda C.3)를 적용한 뒤 이벤트 처리를 끝낸다.
     private func stopCoreIfStarted() async {
         guard coreStarted else { return }
         coreStarted = false
@@ -622,7 +622,7 @@ public final class HostModel {
         )
     }
 
-    /// 제어 서버 URL의 호스트가 루프백인지. 코어(`node.IsLoopbackHost`: `localhost` 또는 Go `net.ParseIP` + `IsLoopback`)와
+    /// 제어 서버 URL의 호스트가 루프백인지. 예전 Go 코어(`node.IsLoopbackHost`: `localhost` 또는 `net.ParseIP` + `IsLoopback`)와
     /// 같게 판정한다: `localhost`(대소문자 무시), IPv4 `127.0.0.0/8`(앞자리 0 금지), IPv6 `::1`, IPv4 대응 주소 `::ffff:127.x.x.x`.
     public nonisolated static func isLoopbackHost(of controlURL: String) -> Bool {
         guard !controlURL.isEmpty, var host = URLComponents(string: controlURL)?.host, !host.isEmpty else { return false }

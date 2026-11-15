@@ -78,7 +78,7 @@ public struct DeviceEntry: Codable, Sendable, Hashable, Identifiable {
     }
 }
 
-/// `rd_host_set_devices` 입력.
+/// 기기 목록 설정 입력(예전 Go 코어의 `rd_host_set_devices`와 같은 JSON).
 public struct DeviceList: Codable, Sendable, Hashable {
     public var devices: [DeviceEntry]
 

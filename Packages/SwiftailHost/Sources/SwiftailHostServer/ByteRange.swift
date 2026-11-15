@@ -24,7 +24,7 @@ public enum ByteRange {
             return .full
         }
         let set = bytes[6...]
-        // 여러 구간은 multipart 대신 전체를 보낸다(Go 호스트와 같다).
+        // 여러 구간은 multipart 대신 전체를 보낸다(예전 Go 호스트와 같은 동작).
         if set.contains(0x2C) { return .full }
         let spec = trim(set)
         guard let dash = spec.firstIndex(of: 0x2D) else { return .full }

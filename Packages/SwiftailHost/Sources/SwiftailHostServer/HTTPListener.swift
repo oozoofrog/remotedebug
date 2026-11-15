@@ -196,7 +196,7 @@ public final class HTTPListener: Sendable {
                                          openConnections: { [connections] in connections.count })
     }
 
-    /// Swiftail의 신원 → 로직의 상대. 이름은 Go 코어의 `whois`와 같다: MagicDNS 이름의 첫 레이블, 없으면 표시용 이름.
+    /// Swiftail의 신원 → 로직의 상대. 이름은 예전 Go 코어의 `whois`와 같다: MagicDNS 이름의 첫 레이블, 없으면 표시용 이름.
     static func peer(_ identity: PeerIdentity) -> HostPeer {
         let first = identity.name.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? ""
         return HostPeer(stableID: identity.stableID, nodeName: first.isEmpty ? identity.computedName : first,
@@ -254,7 +254,7 @@ public struct TLSServerIdentity: @unchecked Sendable {
         self.minimumVersion = minimumVersion
     }
 
-    /// tailnet 인증서(TLS 1.2 이상. Go 호스트의 tailnet 리스너와 같다).
+    /// tailnet 인증서(TLS 1.2 이상. 예전 Go 호스트의 tailnet 리스너와 같다).
     public init(_ certificate: TailnetCertificate) throws(Failure) {
         try self.init(chain: certificate.chain, privateKeyX963: Array(certificate.privateKey.x963Representation),
                       minimumVersion: .TLSv12)

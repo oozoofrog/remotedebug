@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import RDModels
 
-/// `rd_update_page_set` 입력(docs/protocol-addenda.md I).
+/// 업데이트 페이지 설정 입력(docs/protocol-addenda.md I. 예전 Go 코어의 `rd_update_page_set`과 같은 JSON).
 public struct UpdatePageConfig: Codable, Sendable, Hashable {
     public struct Build: Codable, Sendable, Hashable {
         public var bundleId: String
@@ -22,7 +22,7 @@ public struct UpdatePageConfig: Codable, Sendable, Hashable {
     public var page: Build?
 }
 
-/// 루프백 업데이트 페이지 서버. 실제 구현은 Go 코어(`rd_update_page_set`)다.
+/// 루프백 업데이트 페이지 서버. 실제 구현은 MacHostCore의 `SwiftailUpdatePage`다.
 public protocol UpdatePageServing: Sendable {
     /// 적용하고 듣는 주소(`127.0.0.1:P`)를 돌려준다.
     func apply(_ config: UpdatePageConfig) async throws -> String
