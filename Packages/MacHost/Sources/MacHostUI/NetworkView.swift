@@ -6,7 +6,11 @@ import SwiftUI
 struct NetworkView: View {
     @Environment(HostModel.self) private var model
     @Environment(AuthKeyDraft.self) private var authKey
-    @State private var showingAdvanced = false
+    /// Tailscale을 직접 다루는 설정을 펼쳤는가. 기본은 접힘.
+    @AppStorage(NetworkView.detailsKey) private var showsDetails = false
+    @State private var confirmingLogout = false
+    @State private var isLoggingOut = false
+    @State private var logoutError: String?
     @State private var controlDraft = ""
     @State private var confirmingControlURL = false
     @State private var confirmingForget = false
@@ -27,6 +31,20 @@ struct NetworkView: View {
     }
 
     private var showsKeyField: Bool { Self.showsKeyField(model) }
+    /// 인증 키 입력란이 지금 화면에 보이는가(세부 설정을 펼쳤을 때만).
+    private var showsKeyFieldNow: Bool { showsDetails && showsKeyField }
+
+    static let detailsKey = "RemoteDebug.network.showsTailscaleDetails"
+    static let detailsTitle = String(localized: "Tailscale 세부 설정 보기")
+    static let logoutTitle = String(localized: "로그아웃…")
+
+    /// 로그아웃 확인 창의 설명.
+    static func logoutMessage(devices: Int) -> String {
+        let paired = devices > 0
+            ? String(localized: "공유를 멈추고 이 Mac의 로그인 정보와 페어링한 iPhone \(devices)대를 지웁니다.")
+            : String(localized: "공유를 멈추고 이 Mac의 로그인 정보를 지웁니다.")
+        return paired + " " + String(localized: "다시 쓰려면 공유를 시작해 로그인하고 iPhone을 새로 페어링하세요. 이 Mac은 새 기기로 등록되고, 예전 기기 항목은 Tailscale 관리 화면에 남습니다.")
+    }
 
     /// "설치 페이지" 줄에 보일 주소(코드 없음). 페어링할 수 없으면 nil("아직 없음").
     static func installPageAddress(_ model: HostModel) -> URL? { model.installPageURL }
@@ -49,9 +67,9 @@ struct NetworkView: View {
     var body: some View {
         @Bindable var authKey = authKey
         Form {
-            Section("상태") {
+            Section("연결") {
                 // 입력란이 보이면 시작·다시 시작 버튼은 입력란 옆에 하나만 둔다.
-                GuidanceCard(guidance: model.guidance, showsStartActions: !showsKeyField)
+                GuidanceCard(guidance: model.guidance, showsStartActions: !showsKeyFieldNow)
                 if let conflict = model.deviceScopeConflict {
                     VStack(alignment: .leading, spacing: 8) {
                         Label(conflict.message, systemImage: "exclamationmark.triangle.fill")
@@ -60,66 +78,22 @@ struct NetworkView: View {
                         Button("기기 목록 지우기…") { confirmingForget = true }
                     }
                 }
-            }
-
-            if showsKeyField {
-                Section("로그인") {
-                    SecureField("인증 키(선택)", text: $authKey.value, prompt: Text("tskey-auth-…"))
-                        .accessibilityLabel("tailnet 인증 키")
-                    HStack {
-                        Text("인증 키는 저장하지 않고 다음 공유 시작에 한 번만 씁니다.")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        if isStopped {
-                            SharingButton()
-                        } else {
-                            RestartSharingButton(title: Self.keyFieldActionTitle(model, draft: authKey.value))
-                        }
-                    }
+                if let error = logoutError {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-            }
-
-            TailscaleTokenSection()
-
-            UpdatePageSection()
-
-            PushSection()
-
-            Section("이 Mac") {
-                LabeledContent("노드 이름") { Text(model.nodeName).textSelection(.enabled) }
-                if let status = model.status {
-                    LabeledContent("호스트 이름") { valueText(status.hostname) }
-                    LabeledContent("주소(FQDN)") { valueText(status.fqdn) }
-                    LabeledContent("설치 페이지") {
-                        if let page = Self.installPageAddress(model) {
-                            HStack(spacing: 6) {
-                                Text(page.absoluteString).textSelection(.enabled)
-                                CopyLinkButton(url: page, title: Self.copyAddressTitle,
-                                               announcement: Self.copyAddressAnnouncement, iconOnly: true)
-                                    .buttonStyle(.borderless)
-                            }
-                        } else {
-                            Text("아직 없음").foregroundStyle(.secondary)
+                if model.hasSavedLogin {
+                    LabeledContent {
+                        HStack {
+                            if isLoggingOut { ProgressView().controlSize(.small) }
+                            Button(Self.logoutTitle) { confirmingLogout = true }
+                                .disabled(isLoggingOut)
                         }
+                    } label: {
+                        Text("다른 계정으로 바꾸기")
+                        Text("로그아웃한 뒤 공유를 시작하면 다시 로그인합니다.")
                     }
-                    LabeledContent("tailnet IP") {
-                        if status.tailscaleIPs.isEmpty {
-                            Text("아직 없음").foregroundStyle(.secondary)
-                        } else {
-                            VStack(alignment: .trailing) {
-                                ForEach(status.tailscaleIPs, id: \.self) { Text($0).textSelection(.enabled) }
-                            }
-                        }
-                    }
-                    if status.backendState == .running {
-                        LabeledContent("HTTPS 인증서") {
-                            Text(status.certDomains.isEmpty ? "사용 안 함" : (status.tlsReady ? "발급됨" : "발급 중"))
-                        }
-                    }
-                } else {
-                    Text("공유 중에만 tailnet 주소를 표시합니다.")
-                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -138,8 +112,75 @@ struct NetworkView: View {
                 Text(Self.directFooter)
             }
 
+            PushSection()
+
             Section {
-                DisclosureGroup("고급", isExpanded: $showingAdvanced) {
+                Toggle(Self.detailsTitle, isOn: $showsDetails)
+            } footer: {
+                Text("인증 키 로그인, QR 한 번으로 iPhone 연결, iPhone 앱 업데이트, 이 Mac의 주소, 제어 서버 설정입니다. 켜지 않아도 연결과 설치는 됩니다.")
+            }
+
+            if showsDetails {
+                if showsKeyField {
+                    Section("인증 키로 로그인") {
+                        SecureField("인증 키(선택)", text: $authKey.value, prompt: Text("tskey-auth-…"))
+                            .accessibilityLabel("tailnet 인증 키")
+                        HStack {
+                            Text("인증 키는 저장하지 않고 다음 공유 시작에 한 번만 씁니다.")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            if isStopped {
+                                SharingButton()
+                            } else {
+                                RestartSharingButton(title: Self.keyFieldActionTitle(model, draft: authKey.value))
+                            }
+                        }
+                    }
+                }
+
+                TailscaleTokenSection()
+
+                UpdatePageSection()
+
+                Section("이 Mac") {
+                    LabeledContent("노드 이름") { Text(model.nodeName).textSelection(.enabled) }
+                    if let status = model.status {
+                        LabeledContent("호스트 이름") { valueText(status.hostname) }
+                        LabeledContent("주소(FQDN)") { valueText(status.fqdn) }
+                        LabeledContent("설치 페이지") {
+                            if let page = Self.installPageAddress(model) {
+                                HStack(spacing: 6) {
+                                    Text(page.absoluteString).textSelection(.enabled)
+                                    CopyLinkButton(url: page, title: Self.copyAddressTitle,
+                                                   announcement: Self.copyAddressAnnouncement, iconOnly: true)
+                                        .buttonStyle(.borderless)
+                                }
+                            } else {
+                                Text("아직 없음").foregroundStyle(.secondary)
+                            }
+                        }
+                        LabeledContent("tailnet IP") {
+                            if status.tailscaleIPs.isEmpty {
+                                Text("아직 없음").foregroundStyle(.secondary)
+                            } else {
+                                VStack(alignment: .trailing) {
+                                    ForEach(status.tailscaleIPs, id: \.self) { Text($0).textSelection(.enabled) }
+                                }
+                            }
+                        }
+                        if status.backendState == .running {
+                            LabeledContent("HTTPS 인증서") {
+                                Text(status.certDomains.isEmpty ? "사용 안 함" : (status.tlsReady ? "발급됨" : "발급 중"))
+                            }
+                        }
+                    } else {
+                        Text("공유 중에만 tailnet 주소를 표시합니다.")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section("제어 서버와 진단") {
                     HStack {
                         TextField("제어 서버 URL", text: $controlDraft, prompt: Text("비우면 Tailscale 기본 서버"))
                             .disabled(!isStopped)
@@ -183,6 +224,19 @@ struct NetworkView: View {
             Button("취소", role: .cancel) { controlDraft = model.controlURL }
         } message: {
             Text("페어링한 기기 \(model.devicesDroppedByControlURL(controlDraft))대는 지금 제어 서버에서 페어링해 새 서버에서는 쓸 수 없습니다. 바꾸면 기기 목록을 지우고, 새 서버에서 iPhone을 다시 페어링해야 합니다.")
+        }
+        .confirmationDialog("이 Mac을 로그아웃할까요?", isPresented: $confirmingLogout) {
+            Button("로그아웃", role: .destructive) {
+                isLoggingOut = true
+                logoutError = nil
+                Task {
+                    if await !model.logout() { logoutError = model.lastError }
+                    isLoggingOut = false
+                }
+            }
+            Button("취소", role: .cancel) {}
+        } message: {
+            Text(Self.logoutMessage(devices: model.devices.count))
         }
         .confirmationDialog("기기 목록을 지울까요?", isPresented: $confirmingForget) {
             Button("기기 목록 지우기", role: .destructive) { model.forgetDevicesFromOtherServer() }

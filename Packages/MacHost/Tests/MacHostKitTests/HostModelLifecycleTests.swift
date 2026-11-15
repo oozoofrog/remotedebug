@@ -14,6 +14,33 @@ extension HostModelTests {
         return b.id
     }
 
+    // MARK: 로그아웃
+
+    /// 로그아웃은 공유를 멈추고 노드 상태 폴더와 페어링 목록을 비운다. 그 뒤에도 다시 시작할 수 있다.
+    @Test func logoutStopsSharingAndClearsLoginAndDevices() async throws {
+        let h = try makeHarness("logout")
+        await h.model.load()
+        await h.model.start()
+        h.core.emit(.deviceAdded(sampleDevice(1)))
+        #expect(await eventually { h.model.devices.count == 1 })
+        let marker = h.paths.stateDir.appendingPathComponent("tailscaled.state")
+        try Data("node".utf8).write(to: marker)
+        #expect(h.model.hasSavedLogin)
+
+        #expect(await h.model.logout())
+
+        #expect(!h.model.isRunning)
+        #expect(!h.model.hasSavedLogin)
+        #expect(!FileManager.default.fileExists(atPath: marker.path))
+        #expect(FileManager.default.fileExists(atPath: h.paths.stateDir.path), "빈 폴더는 다시 만든다")
+        #expect(h.model.devices.isEmpty)
+        #expect(try JSONFile<DeviceList>(url: h.paths.devicesFile).load()?.devices.isEmpty ?? true)
+
+        await h.model.start()
+        #expect(h.model.isRunning)
+        await h.model.shutdown()
+    }
+
     // MARK: 수명 주기
 
     @Test(arguments: [false, true])

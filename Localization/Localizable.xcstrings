@@ -7463,6 +7463,34 @@
         }
       }
     },
+    "Tailscale 세부 설정 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Tailscale details"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscaleの詳細設定を表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示 Tailscale 详细设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示 Tailscale 詳細設定"
+          }
+        }
+      }
+    },
     "Tailscale 연결이 끝나면 HTTPS 설치 주소를 엽니다." : {
       "localizations" : {
         "en" : {
@@ -11861,34 +11889,6 @@
         }
       }
     },
-    "고급" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Advanced"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "詳細設定"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "高级"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "進階"
-          }
-        }
-      }
-    },
     "고른 폴더의 빌드를 가져오고, 새로 빌드되는 앱도 자동으로 가져옵니다" : {
       "localizations" : {
         "en" : {
@@ -12675,6 +12675,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "共享已關閉，無法配對。請開始共享。"
+          }
+        }
+      }
+    },
+    "공유를 멈추고 이 Mac의 로그인 정보를 지웁니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This stops sharing and removes this Mac’s sign-in."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有を停止し、この Macのログイン情報を削除します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会停止共享并删除这台 Mac 的登录信息。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這會停止分享並刪除此 Mac 的登入資訊。"
+          }
+        }
+      }
+    },
+    "공유를 멈추고 이 Mac의 로그인 정보와 페어링한 iPhone %lld대를 지웁니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This stops sharing and removes this Mac’s sign-in and %lld paired iPhone(s)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有を停止し、この Macのログイン情報とペアリングした iPhone %lld台を削除します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会停止共享，并删除这台 Mac 的登录信息和已配对的 %lld 台 iPhone。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這會停止分享，並刪除此 Mac 的登入資訊和已配對的 %lld 台 iPhone。"
           }
         }
       }
@@ -14007,6 +14063,34 @@
         }
       }
     },
+    "다른 계정으로 바꾸기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch accounts"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のアカウントに切り替える"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切换到其他账户"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切換到其他帳號"
+          }
+        }
+      }
+    },
     "다른 앱으로 보내기" : {
       "localizations" : {
         "en" : {
@@ -14199,6 +14283,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重試"
+          }
+        }
+      }
+    },
+    "다시 쓰려면 공유를 시작해 로그인하고 iPhone을 새로 페어링하세요. 이 Mac은 새 기기로 등록되고, 예전 기기 항목은 Tailscale 관리 화면에 남습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To use it again, start sharing, sign in, and pair your iPhone again. This Mac registers as a new device, and its old entry stays in the Tailscale admin console."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再び使うには、共有を開始してログインし、iPhone をペアリングし直してください。この Macは新しいデバイスとして登録され、以前のデバイス項目はTailscaleの管理コンソールに残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要再次使用，请开始共享并登录，然后重新配对 iPhone。这台 Mac 会注册为新设备，旧的设备条目仍保留在 Tailscale 管理控制台中。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "若要再次使用，請開始分享並登入，然後重新配對 iPhone。此 Mac 會註冊為新裝置，舊的裝置項目仍保留在 Tailscale 管理主控台中。"
           }
         }
       }
@@ -14959,30 +15071,114 @@
         }
       }
     },
-    "로그인" : {
+    "로그아웃" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Log In"
+            "value" : "Sign Out"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ログイン"
+            "value" : "ログアウト"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "登录"
+            "value" : "退出登录"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "登入"
+            "value" : "登出"
+          }
+        }
+      }
+    },
+    "로그아웃…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign Out…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログアウト…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出登录…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登出…"
+          }
+        }
+      }
+    },
+    "로그아웃한 뒤 공유를 시작하면 다시 로그인합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "After signing out, start sharing to sign in again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログアウト後に共有を開始すると、もう一度ログインします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出登录后，开始共享即可重新登录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登出後，開始分享即可重新登入。"
+          }
+        }
+      }
+    },
+    "로그인 정보를 지우지 못했습니다. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn’t remove the sign-in. %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログイン情報を削除できませんでした。%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法删除登录信息。%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法刪除登入資訊。%@"
           }
         }
       }
@@ -21957,6 +22153,34 @@
         }
       }
     },
+    "연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connection"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "連線"
+          }
+        }
+      }
+    },
     "연결 경로 %@" : {
       "localizations" : {
         "en" : {
@@ -23157,6 +23381,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "將此 Mac 連線至 Tailscale"
+          }
+        }
+      }
+    },
+    "이 Mac을 로그아웃할까요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out this Mac?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この Macをログアウトしますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要让这台 Mac 退出登录吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要登出此 Mac 嗎？"
           }
         }
       }
@@ -24685,6 +24937,34 @@
         }
       }
     },
+    "인증 키 로그인, QR 한 번으로 iPhone 연결, iPhone 앱 업데이트, 이 Mac의 주소, 제어 서버 설정입니다. 켜지 않아도 연결과 설치는 됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auth key sign-in, connecting an iPhone with one QR scan, iPhone app updates, this Mac’s addresses, and the control server. Connecting and installing work without turning this on."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認証キーでのログイン、QR一回でのiPhone接続、iPhone アプリのアップデート、この Macのアドレス、コントロールサーバの設定です。オンにしなくても接続とインストールはできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "包括使用认证密钥登录、扫一次二维码连接 iPhone、iPhone App 更新、这台 Mac 的地址以及控制服务器设置。不打开也可以连接和安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "包括使用驗證金鑰登入、掃一次 QR 碼連接 iPhone、iPhone App 更新、此 Mac 的位址以及控制伺服器設定。不開啟也可以連線和安裝。"
+          }
+        }
+      }
+    },
     "인증 키(선택)" : {
       "localizations" : {
         "en" : {
@@ -24765,6 +25045,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "以驗證金鑰重新啟動"
+          }
+        }
+      }
+    },
+    "인증 키로 로그인" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with an auth key"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認証キーでログイン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用认证密钥登录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用驗證金鑰登入"
           }
         }
       }
@@ -25769,6 +26077,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "要變更控制伺服器嗎？"
+          }
+        }
+      }
+    },
+    "제어 서버와 진단" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Control server and diagnostics"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コントロールサーバと診断"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "控制服务器与诊断"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "控制伺服器與診斷"
           }
         }
       }

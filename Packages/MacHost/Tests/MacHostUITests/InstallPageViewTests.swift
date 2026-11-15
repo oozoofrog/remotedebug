@@ -95,6 +95,9 @@ extension ScreenTests {
     @Test(.timeLimit(.minutes(1)))
     func networkScreenShowsAndCopiesTheInstallPageAddress() async throws {
         let tmp = try UITempDir("installnet")
+        // 주소 줄은 세부 설정을 펼쳤을 때 보인다.
+        UserDefaults.standard.set(true, forKey: NetworkView.detailsKey)
+        defer { UserDefaults.standard.removeObject(forKey: NetworkView.detailsKey) }
         let sharing = await pairingModel(.sharing, tmp)
         let log = CopyLog()
         let window = host(RootView(selection: .network).environment(sharing).environment(\.linkCopier, log.copier))

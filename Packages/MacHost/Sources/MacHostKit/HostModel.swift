@@ -414,6 +414,30 @@ public final class HostModel {
         await task.value
     }
 
+    /// 이 Mac의 tailnet 로그인이 저장돼 있는가(노드 상태 폴더에 파일이 있다).
+    public var hasSavedLogin: Bool {
+        !((try? FileManager.default.contentsOfDirectory(atPath: paths.stateDir.path)) ?? []).isEmpty
+    }
+
+    /// tailnet에서 로그아웃한다: 공유를 멈추고 노드 상태 폴더를 비우고 페어링한 기기 목록을 지운다.
+    /// 다음 공유 시작은 새 기기로 로그인한다. 제어 서버 쪽의 예전 기기 항목은 지우지 않는다.
+    @discardableResult
+    public func logout() async -> Bool {
+        await stop()
+        do {
+            let fm = FileManager.default
+            if fm.fileExists(atPath: paths.stateDir.path) { try fm.removeItem(at: paths.stateDir) }
+            try paths.prepare()
+        } catch {
+            lastError = String(localized: "로그인 정보를 지우지 못했습니다. \(error.localizedDescription)")
+            return false
+        }
+        devices = []
+        saveDevices()
+        lastError = nil
+        return true
+    }
+
     /// 앱 종료 때 부른다. 공유와 폴더 감시를 멈춘다. 이 모델은 다시 시작할 수 없다.
     public func shutdown() async {
         isShutDown = true

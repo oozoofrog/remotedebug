@@ -97,6 +97,8 @@ struct PairingKeyNote: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Button("설정하기…") {
+                    // 이 설정은 네트워크 화면의 세부 설정 안에 있다.
+                    UserDefaults.standard.set(true, forKey: NetworkView.detailsKey)
                     dismiss()
                     showNetwork()
                 }
