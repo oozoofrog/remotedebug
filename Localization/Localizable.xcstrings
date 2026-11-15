@@ -6511,34 +6511,6 @@
         }
       }
     },
-    "RemoteDebug 앱에서 기기 정보 가져오기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import Device Info from RemoteDebug App"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "RemoteDebugアプリからデバイス情報を読み込む"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "从 RemoteDebug App 获取设备信息"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "從 RemoteDebug App 取得裝置資訊"
-          }
-        }
-      }
-    },
     "RemoteDebug 앱으로 페어링" : {
       "localizations" : {
         "en" : {
@@ -6563,34 +6535,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用 RemoteDebug App 配對"
-          }
-        }
-      }
-    },
-    "RemoteDebug 앱을 쓰던 iPhone이면 먼저 기기 정보를 가져오세요. 그래야 Mac 페어링이 그대로 유지됩니다. 새 기기로 시작하면 Tailscale 로그인과 Mac 페어링을 다시 합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "If you've used the RemoteDebug app on this iPhone, import the device info first so the Mac pairing is kept. If you start as a new device, you'll need to log in to Tailscale and pair with the Mac again."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "RemoteDebugアプリを使っていたiPhoneの場合は、先にデバイス情報を読み込んでください。そうすればMacとのペアリングがそのまま維持されます。新しいデバイスとして開始すると、Tailscaleへのログインとのペアリングをやり直すことになります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如果是用过 RemoteDebug App 的 iPhone，请先获取设备信息，这样 Mac 配对才能保持不变。作为新设备开始时，需要重新登录 Tailscale 并与 Mac 配对。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "如果這支 iPhone 之前用過 RemoteDebug App，請先取得裝置資訊，這樣 Mac 的配對才會保留。若以新裝置開始，則需要重新進行 Tailscale 登入與 Mac 配對。"
           }
         }
       }
@@ -10627,6 +10571,34 @@
         }
       }
     },
+    "tailnet 제어 서버와의 연결이 끝났습니다. VPN을 다시 켜세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The connection to the tailnet control server ended. Turn VPN on again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnetの制御サーバーとの接続が終了しました。VPNをもう一度オンにしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与 tailnet 控制服务器的连接已结束。请重新打开 VPN。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "與 tailnet 控制伺服器的連線已結束。請重新開啟 VPN。"
+          }
+        }
+      }
+    },
     "tailnet 주소" : {
       "localizations" : {
         "en" : {
@@ -10819,6 +10791,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "tailnet 的 MagicDNS 已關閉，因此無法建立安裝網址。請在 Tailscale 管理主控台的 DNS 頁面 (%@) 開啟 MagicDNS 與 HTTPS Certificates。開啟後不必重新開始共享，稍後就會開啟安裝網址。"
+          }
+        }
+      }
+    },
+    "tailnet이 이 기기의 등록을 거절했습니다. 관리자에게 확인하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The tailnet refused to register this device. Ask your administrator."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnetがこのデバイスの登録を拒否しました。管理者に確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnet 拒绝了此设备的注册。请联系管理员确认。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "tailnet 拒絕了此裝置的註冊。請向管理員確認。"
           }
         }
       }
@@ -13867,6 +13867,34 @@
         }
       }
     },
+    "네트워크 소켓을 열지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't open a network socket."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ネットワークソケットを開けませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开网络套接字。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法開啟網路 socket。"
+          }
+        }
+      }
+    },
     "네트워크 화면" : {
       "localizations" : {
         "en" : {
@@ -14199,6 +14227,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "從其他控制伺服器允許的 %lld 部裝置"
+          }
+        }
+      }
+    },
+    "다른 터널이 같은 로그인 정보를 쓰고 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another tunnel is using the same sign-in information."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のトンネルが同じログイン情報を使用しています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "另一个隧道正在使用相同的登录信息。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "另一個通道正在使用相同的登入資訊。"
           }
         }
       }
@@ -18361,34 +18417,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "有新的 RemoteDebug 建置。請在更新 App 中安裝。"
-          }
-        }
-      }
-    },
-    "새 기기로 시작하기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start with a New Device"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しいデバイスで開始"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以新设备开始"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以新裝置開始"
           }
         }
       }
@@ -24091,6 +24119,34 @@
         }
       }
     },
+    "이 기기의 tailnet 키가 만료됐습니다. 다시 로그인하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This device's tailnet key has expired. Sign in again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスのtailnetキーの有効期限が切れました。もう一度ログインしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此设备的 tailnet 密钥已过期。请重新登录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此裝置的 tailnet 金鑰已過期。請重新登入。"
+          }
+        }
+      }
+    },
     "이 기록 지우기" : {
       "localizations" : {
         "en" : {
@@ -25133,6 +25189,34 @@
         }
       }
     },
+    "인증 키가 거부됐습니다. 새 인증 키로 다시 켜세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The auth key was rejected. Turn VPN on again with a new auth key."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認証キーが拒否されました。新しい認証キーでもう一度オンにしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "认证密钥被拒绝。请使用新的认证密钥重新打开。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "驗證金鑰被拒絕。請使用新的驗證金鑰重新開啟。"
+          }
+        }
+      }
+    },
     "인증 키는 저장하지 않고 다음 공유 시작에 한 번만 씁니다." : {
       "localizations" : {
         "en" : {
@@ -25645,6 +25729,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法讀取已儲存的裝置列表(%1$@)：%2$@ 請修復檔案後再開始共享。"
+          }
+        }
+      }
+    },
+    "저장된 로그인 정보를 읽거나 쓰지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't read or write the saved sign-in information."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存されているログイン情報を読み書きできませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取或写入已保存的登录信息。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法讀取或寫入已儲存的登入資訊。"
           }
         }
       }
@@ -27789,34 +27901,6 @@
         }
       }
     },
-    "코어 메모리(RSS)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Core memory (RSS)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コアのメモリ(RSS)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "核心内存（RSS）"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "核心記憶體(RSS)"
-          }
-        }
-      }
-    },
     "코어 응답을 읽지 못했습니다." : {
       "localizations" : {
         "en" : {
@@ -28793,6 +28877,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "標籤須以 tag: 開頭(如 tag:rd-phone)，只能使用英文小寫、數字與連字號。有多個時以逗號分隔。"
+          }
+        }
+      }
+    },
+    "터널 설정이 잘못됐습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The tunnel configuration is invalid."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トンネルの設定が正しくありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隧道配置无效。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通道設定無效。"
           }
         }
       }

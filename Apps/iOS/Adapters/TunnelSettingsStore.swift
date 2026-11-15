@@ -6,7 +6,6 @@ final class TunnelSettingsStore {
     private let defaults: UserDefaults
     static let nodeIDKey = "RemoteDebug.tunnelNodeID"
     static let controlURLKey = "RemoteDebug.controlURL"
-    static let loggingKey = "RemoteDebug.tunnelLogging"
     /// Mac에 연결할 때 iOS가 VPN을 켜게 하는 주문형 연결(기본 꺼짐). 공용 설정에 둔다.
     static let onDemandKey = "RemoteDebug.vpnOnDemand"
 
@@ -16,7 +15,7 @@ final class TunnelSettingsStore {
         self.defaults = defaults
         guard let legacy, legacy !== defaults, !defaults.bool(forKey: Self.migratedKey) else { return }
         defaults.set(true, forKey: Self.migratedKey)
-        for key in [Self.nodeIDKey, Self.controlURLKey, Self.loggingKey] {
+        for key in [Self.nodeIDKey, Self.controlURLKey] {
             if let value = legacy.object(forKey: key) { defaults.set(value, forKey: key) }
         }
     }
@@ -38,18 +37,13 @@ final class TunnelSettingsStore {
         set { defaults.set(newValue, forKey: Self.controlURLKey) }
     }
 
-    var logging: Bool {
-        get { defaults.bool(forKey: Self.loggingKey) }
-        set { defaults.set(newValue, forKey: Self.loggingKey) }
-    }
-
     var onDemand: Bool {
         get { defaults.bool(forKey: Self.onDemandKey) }
         set { defaults.set(newValue, forKey: Self.onDemandKey) }
     }
 
     func providerConfig() -> TunnelProviderConfig {
-        TunnelProviderConfig(hostname: hostname, controlURL: controlURL, logging: logging)
+        TunnelProviderConfig(hostname: hostname, controlURL: controlURL)
     }
 
     /// 빈 값이나 `https://호스트` 주소면 정리한 값을, 아니면 `nil`.

@@ -2,7 +2,11 @@
 # 번들 ID는 $(RD_BUNDLE_PREFIX)로 시작한다(Config/Signing.xcconfig). 기본 앞부분이면 com.oozoofrog.app.RemoteDebugPhone,
 # com.oozoofrog.app.RemoteDebugPhone.Tunnel, com.oozoofrog.app.RemoteDebugPhone.Widgets가 된다.
 # RemoteDebug 앱을 업데이트하는 두 번째 앱(홈 화면 이름 RD 업데이트)은 com.oozoofrog.app.RemoteDebugVPN, 그 터널은 com.oozoofrog.app.RemoteDebugVPN.Tunnel이다.
-# 두 앱은 App Group(group.<앞부분>.RemoteDebug)으로 같은 Tailscale 상태를 써서 같은 tailnet 기기로 보인다.
+# 두 앱은 App Group(group.<앞부분>.RemoteDebug)으로 같은 Swiftail 상태를 써서 같은 tailnet 기기로 보인다.
+# 터널 확장은 Swiftail(Swift로 쓴 tailnet 노드)이다. 이 저장소 옆 폴더(../Swiftail)에 Swiftail 패키지가 있어야 한다.
+packages:
+  Swiftail:
+    path: ../Swiftail
 targets:
   RemoteDebugPhone:
     type: application
@@ -85,7 +89,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         # 시뮬레이터만 로컬 서명. 기기 빌드는 Xcode 기본 신원(Apple Development)과 DEVELOPMENT_TEAM으로 서명한다.
         "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
-        # RDCore.xcframework의 iOS 슬라이스는 arm64 전용이다.
+        # 기기는 arm64뿐이다(시뮬레이터도 Apple Silicon만 쓴다).
         ARCHS: arm64
     dependencies:
       - target: RemoteDebugTunnel
@@ -136,8 +140,16 @@ targets:
         "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
         ARCHS: arm64
     dependencies:
-      - package: RDCore
-        product: RDCoreBridge
+      - package: Swiftail
+        product: Swiftail
+      - package: Swiftail
+        product: SwiftailBase
+      - package: Swiftail
+        product: SwiftailControl
+      - package: Swiftail
+        product: SwiftailEngine
+      - package: Swiftail
+        product: SwiftailMagicsock
       - package: RemoteDebugKit
         product: RDModels
   RemoteDebugWidgets:
@@ -173,7 +185,7 @@ targets:
         ARCHS: arm64
         TARGETED_DEVICE_FAMILY: "1"
   # RemoteDebug 앱을 업데이트하는 앱(홈 화면 이름 RD 업데이트). 대상·스킴·번들 ID는 예전 이름 그대로 둔다.
-  # Mac에 게시된 RemoteDebug 빌드를 설치하고 VPN도 켠다. 터널 확장은 RemoteDebugTunnel과 같은 소스다.
+  # Mac에 게시된 RemoteDebug 빌드를 설치하고 VPN도 켠다. 터널 확장은 RemoteDebugTunnel과 같은 소스(Apps/iOSTunnel)다.
   RemoteDebugVPN:
     type: application
     platform: iOS
@@ -289,8 +301,16 @@ targets:
         "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
         ARCHS: arm64
     dependencies:
-      - package: RDCore
-        product: RDCoreBridge
+      - package: Swiftail
+        product: Swiftail
+      - package: Swiftail
+        product: SwiftailBase
+      - package: Swiftail
+        product: SwiftailControl
+      - package: Swiftail
+        product: SwiftailEngine
+      - package: Swiftail
+        product: SwiftailMagicsock
       - package: RemoteDebugKit
         product: RDModels
   RemoteDebugPhoneTests:

@@ -220,17 +220,9 @@ struct SettingsView: View {
 
     // MARK: 진단
 
-    #if RD_SWIFTAIL_TUNNEL
-    /// 시험 빌드 전용: 터널을 Go 코어 대신 Swiftail로 띄운다. VPN을 다시 켜야 반영된다.
-    @AppStorage(TunnelEngineChoice.swiftailKey, store: SharedContainer.defaults) private var usesSwiftail = false
-    #endif
-
     @ViewBuilder
     private var diagnosticsSection: some View {
         Section {
-            #if RD_SWIFTAIL_TUNNEL
-            Toggle("Swiftail 터널(시험)", isOn: $usesSwiftail)
-            #endif
             LabeledContent("이 기기의 tailnet 이름") {
                 Text(state.nodeHostname).textSelection(.enabled)
             }
@@ -256,7 +248,6 @@ struct SettingsView: View {
                         LabeledContent("경로", value: String(localized: "\(String(tunnel.routes.count))개"))
                         LabeledContent("MTU", value: "\(tunnel.mtu)")
                     }
-                    LabeledContent("코어 메모리(RSS)", value: Self.mib(status.rssMiB))
                 }
                 if let footprint = reply.physFootprintMiB {
                     LabeledContent("확장 메모리(phys_footprint)", value: Self.mib(footprint))

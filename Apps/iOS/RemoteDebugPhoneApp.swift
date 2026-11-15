@@ -111,7 +111,6 @@ struct RootView: View {
     @State private var updaterInstalled: InstalledApp?
     /// 업데이트 앱의 주소를 열 수 있는가. 설치된 버전을 읽지 못하는 iOS에서도 설치 여부는 이것으로 안다.
     @State private var updaterPresent = false
-    @State private var mergingIdentity = false
     @State private var crashNotice: String?
     @State private var tab: PhoneTab = .builds
 
@@ -233,22 +232,15 @@ struct RootView: View {
                         : String(localized: "크래시 기록을 받았습니다. Mac과 연결되면 보냅니다."))
                 }
             } else if let request = AppPair.request(from: url) {
-                #if RD_SWIFTAIL_TUNNEL
-                // 시험 빌드: `…?action=connect&engine=swiftail`(또는 `go`)로 터널 구현을 고른다.
-                if let engine = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "engine" })?.value {
-                    SharedContainer.defaults.set(engine == "swiftail", forKey: TunnelEngineChoice.swiftailKey)
-                    model.log(.info, "vpn", "터널 구현: \(engine == "swiftail" ? "Swiftail" : "Go")")
-                }
-                #endif
                 Task { await handleVPNRequest(request.action, returning: request.returning) }
             } else {
-                #if RD_SWIFTAIL_TUNNEL
-                // 시험 빌드: `remotedebug://test?probe=on|off`로 Mac의 설치 페이지를 1초마다 불러 성공·실패가 바뀌는 시각을 남긴다.
+                #if RD_TEST_LINKS
+                // 시험 링크 빌드: `remotedebug://test?probe=on|off`로 Mac의 설치 페이지를 1초마다 불러 성공·실패가 바뀌는 시각을 남긴다.
                 if url.host == "test", let probe = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "probe" })?.value {
                     TunnelProbe.shared.set(on: probe == "on", fqdn: model.host?.fqdn) { [weak model] line in model?.log(.info, "probe", line) }
                     return
                 }
-                // 시험 빌드: `remotedebug://test?fetch=<호스트>[&range=bytes=0-1048575]`로 그 호스트의 `/file`을 받아 시간을 잰다.
+                // 시험 링크 빌드: `remotedebug://test?fetch=<호스트>[&range=bytes=0-1048575]`로 그 호스트의 `/file`을 받아 시간을 잰다.
                 if url.host == "test", let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems,
                    let host = items.first(where: { $0.name == "fetch" })?.value {
                     TunnelFetch.start(host: host, range: items.first(where: { $0.name == "range" })?.value) { [weak model] line in
@@ -256,7 +248,7 @@ struct RootView: View {
                     }
                     return
                 }
-                // 시험 빌드: `remotedebug://test?download=<리소스 id>`로 파일 받기를 시작한다(전송 시간 측정용).
+                // 시험 링크 빌드: `remotedebug://test?download=<리소스 id>`로 파일 받기를 시작한다(전송 시간 측정용).
                 if url.host == "test", let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "download" })?.value {
                     Task {
                         await model.refresh()
@@ -382,28 +374,6 @@ struct RootView: View {
         return opened
     }
 
-    /// 업데이트 앱이 VPN을 켜 두었는데 이 앱의 페어링한 기기 정보가 아직 공용 저장소로 가지 않았다.
-    /// 이대로면 업데이트 앱은 다른 기기로 연결돼 Mac이 받아 주지 않는다. 이 앱의 터널을 한 번 켜서 옮기고 업데이트 앱에 돌려준다.
-    private func mergeIdentityIfNeeded() async {
-        guard !mergingIdentity, tunnel.pairedAppOwnsVPN, !TunnelStateMapping.isActive(tunnel.vpnStatus),
-              !SharedContainer.defaults.bool(forKey: SharedContainer.storeMigratedKey) else { return }
-        mergingIdentity = true
-        defer { mergingIdentity = false }
-        model.log(.info, "vpn", "기기 정보 합치기: 이 앱의 터널을 한 번 켜 페어링한 기기 정보를 공용 저장소로 옮김")
-        model.noteManualVPNChange()
-        do { try await tunnel.connectOwn() } catch {
-            model.log(.error, "vpn", "기기 정보 합치기 실패: \(error.localizedDescription)")
-            return
-        }
-        await tunnel.waitUntilOwnTunnelSettles()
-        guard tunnel.state == .connected else {
-            model.log(.warning, "vpn", "기기 정보 합치기: 이 앱의 VPN이 연결되지 않아 업데이트 앱으로 돌려주지 않음")
-            return
-        }
-        model.log(.info, "vpn", "기기 정보 합치기 끝. 업데이트 앱으로 VPN을 돌려줌")
-        await openUpdater(.connect, returning: true)
-    }
-
     /// 업데이트 앱이 보낸 요청: 이 앱의 터널로 VPN을 켜거나 끈다. `returning`이면 마친 뒤 업데이트 앱으로 돌아간다.
     private func handleVPNRequest(_ action: AppPair.Action, returning: Bool) async {
         switch action {
@@ -413,12 +383,12 @@ struct RootView: View {
             model.log(.info, "vpn", "업데이트 앱의 요청으로 이 앱의 VPN을 켬")
             model.noteManualVPNChange()
             do { try await tunnel.connectOwn() } catch { model.log(.error, "vpn", "켜기 실패: \(error.localizedDescription)") }
-            // 터널이 뜨면서 예전 기기 정보를 공용 저장소로 옮긴다. 다 뜬 뒤에 돌아간다.
+            // 다 뜬 뒤에 돌아간다.
             await tunnel.waitUntilOwnTunnelSettles()
             // 로그인이 필요하면 이 앱에 머문다.
             if case .needsLogin = tunnel.state { return }
             if returning {
-                // 요청한 업데이트 앱이 같은 기기 정보로 다시 켜도록 넘긴다.
+                // 요청한 업데이트 앱이 같은 로그인으로 다시 켜도록 넘긴다.
                 await openUpdater(.connect, returning: true)
                 return
             }
@@ -453,7 +423,6 @@ struct RootView: View {
                 // 다른 앱의 VPN 여부를 읽은 뒤에 판단한다.
                 try? await Task.sleep(for: .seconds(1))
                 tunnel.refreshExternal()
-                await mergeIdentityIfNeeded()
             }
             Task {
                 await tunnel.reload()
@@ -512,7 +481,7 @@ struct RootView: View {
             },
             openLogin: { url in Task { _ = await services.opener.open(url) } },
             reloginTunnel: {
-                model.log(.info, "vpn", "다른 계정으로 로그인: 저장된 Tailscale 로그인을 지우고 VPN을 다시 켭니다")
+                model.log(.info, "vpn", "다른 계정으로 로그인: 서버에서 로그아웃하고 저장된 로그인을 지운 뒤 VPN을 다시 켭니다")
                 if tunnel.isTunnelActive {
                     await model.disconnectTunnel()
                     await tunnel.waitUntilStopped()

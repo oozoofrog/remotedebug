@@ -64,7 +64,6 @@ enum PreviewFixtures {
                 hostname: "rd-phone-0a1b2c3d",
                 fqdn: "rd-phone-0a1b2c3d.example.ts.net",
                 tailscaleIPs: ["100.64.0.11", "fd7a:115c:a1e0::b"],
-                rssMiB: 27.5,
                 tunnel: TunnelStatus(addresses: ["100.64.0.11/32"], routes: ["100.64.0.10/32", "100.100.100.100/32"], mtu: 1280, peerCount: 1)
             ),
             physFootprintMiB: 33.2

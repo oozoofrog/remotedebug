@@ -135,22 +135,22 @@ struct TunnelStorageTests {
         defer { try? FileManager.default.removeItem(at: base) }
 
         let dir = try TunnelStorage.prepareStateDirectory(in: base)
-        #expect(dir.path.hasSuffix("RemoteDebug/tailscale"))
+        #expect(dir.path.hasSuffix("RemoteDebug/swiftail"))
         var isDirectory: ObjCBool = false
         #expect(FileManager.default.fileExists(atPath: dir.path, isDirectory: &isDirectory) && isDirectory.boolValue)
         #expect(try isExcluded(dir))
         #expect(try isExcluded(dir.deletingLastPathComponent()))
 
-        // 코어가 파일을 만든 뒤 다시 준비해도 같은 폴더이고 백업 제외가 유지된다.
-        try Data("state".utf8).write(to: dir.appendingPathComponent("tailscaled.state"))
+        // 노드가 파일을 만든 뒤 다시 준비해도 같은 폴더이고 백업 제외가 유지된다.
+        try Data("state".utf8).write(to: dir.appendingPathComponent("identity.json"))
         let again = try TunnelStorage.prepareStateDirectory(in: base)
         #expect(again.standardizedFileURL == dir.standardizedFileURL)
         #expect(try isExcluded(again))
-        #expect(FileManager.default.fileExists(atPath: again.appendingPathComponent("tailscaled.state").path))
+        #expect(FileManager.default.fileExists(atPath: again.appendingPathComponent("identity.json").path))
 
         // 로그인을 지우면 상태 파일이 사라지고, 다시 준비하면 빈 폴더가 생긴다.
         try TunnelStorage.resetStateDirectory(in: base)
-        #expect(!FileManager.default.fileExists(atPath: dir.appendingPathComponent("tailscaled.state").path))
+        #expect(!FileManager.default.fileExists(atPath: dir.appendingPathComponent("identity.json").path))
         let fresh = try TunnelStorage.prepareStateDirectory(in: base)
         #expect(try FileManager.default.contentsOfDirectory(atPath: fresh.path).isEmpty)
         #expect(try isExcluded(fresh))
@@ -170,16 +170,39 @@ struct TunnelStorageTests {
         #expect(try isExcluded(dir))
     }
 
-    @Test("로그 폴더와 기존 로그 파일을 백업에서 뺀다")
-    func logFile() throws {
+    @Test("예전 Go 상태만 지우고 Swiftail 상태와 그 밖의 파일은 둔다")
+    func removesLegacyGoStateOnly() throws {
         let base = try makeBase()
         defer { try? FileManager.default.removeItem(at: base) }
-        let file = try TunnelStorage.prepareLogFile(in: base)
-        #expect(file.lastPathComponent == "core.log")
-        #expect(try isExcluded(file.deletingLastPathComponent()))
+        let root = base.appendingPathComponent("RemoteDebug", isDirectory: true)
+        let current = try TunnelStorage.prepareStateDirectory(in: base)
+        try Data("identity".utf8).write(to: current.appendingPathComponent("identity.json"))
+        for name in ["tailscale", "tailscale.replaced"] {
+            let legacy = root.appendingPathComponent(name, isDirectory: true)
+            try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)
+            try Data("old".utf8).write(to: legacy.appendingPathComponent("tailscaled.state"))
+        }
+        try Data("keep".utf8).write(to: root.appendingPathComponent("other.txt"))
 
-        try Data("log".utf8).write(to: file)
-        _ = try TunnelStorage.prepareLogFile(in: base)
-        #expect(try isExcluded(file))
+        #expect(TunnelStorage.removeLegacyGoState(in: base))
+        #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("tailscale").path))
+        #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("tailscale.replaced").path))
+        #expect(FileManager.default.fileExists(atPath: current.appendingPathComponent("identity.json").path))
+        #expect(FileManager.default.fileExists(atPath: root.appendingPathComponent("other.txt").path))
+        // 지울 것이 없으면 거짓이고, 없는 폴더에도 안전하다.
+        #expect(!TunnelStorage.removeLegacyGoState(in: base))
+        #expect(!TunnelStorage.removeLegacyGoState(in: base.appendingPathComponent("nowhere")))
+    }
+
+    @Test("로그인을 지워도 예전 Go 상태는 건드리지 않는다")
+    func resetKeepsLegacyGoState() throws {
+        let base = try makeBase()
+        defer { try? FileManager.default.removeItem(at: base) }
+        let legacy = base.appendingPathComponent("RemoteDebug/tailscale", isDirectory: true)
+        try FileManager.default.createDirectory(at: legacy, withIntermediateDirectories: true)
+        _ = try TunnelStorage.prepareStateDirectory(in: base)
+        try TunnelStorage.resetStateDirectory(in: base)
+        #expect(FileManager.default.fileExists(atPath: legacy.path))
+        #expect(!FileManager.default.fileExists(atPath: base.appendingPathComponent("RemoteDebug/swiftail").path))
     }
 }

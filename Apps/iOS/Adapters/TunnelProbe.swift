@@ -1,8 +1,8 @@
-#if RD_SWIFTAIL_TUNNEL
+#if RD_TEST_LINKS
 import Foundation
 import Network
 
-/// 시험 빌드 전용: Mac의 tailnet 주소(설치 페이지)를 1초마다 불러, 성공과 실패가 바뀌는 시각을 기기 로그에 남긴다.
+/// 시험 링크 빌드(`RD_TEST_LINKS`) 전용: Mac의 tailnet 주소(설치 페이지)를 1초마다 불러, 성공과 실패가 바뀌는 시각을 기기 로그에 남긴다.
 /// 주소가 tailnet 이름이라 요청은 터널을 지난다. 설치 페이지는 접속자를 확인하지 않으므로 페어링이 없어도 응답한다.
 @MainActor
 final class TunnelProbe {
@@ -49,7 +49,7 @@ final class TunnelProbe {
     }
 }
 
-/// 시험 빌드 전용: `https://<호스트>/file`을 받아 버리면서 걸린 시간, 속도, 덩어리 사이의 가장 긴 간격(멈춤)을 기기 로그에 남긴다.
+/// 시험 링크 빌드(`RD_TEST_LINKS`) 전용: `https://<호스트>/file`을 받아 버리면서 걸린 시간, 속도, 덩어리 사이의 가장 긴 간격(멈춤)을 기기 로그에 남긴다.
 /// Swiftail 호스트 관문의 전송 측정에 쓴다. 상대가 Let's Encrypt 스테이징 인증서를 써서 `URLSession`은 ATS에 막히므로
 /// (-1200) `NWConnection`으로 직접 요청하고 **이 연결만** 서버 검증을 건너뛴다. 서버는 요청 하나에 연결 하나다
 /// (`Connection: close`). 받은 내용은 버리고, 호스트 이름은 로그에 남기지 않는다.

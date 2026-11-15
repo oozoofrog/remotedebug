@@ -1,4 +1,3 @@
-#if RD_SWIFTAIL_TUNNEL
 import Foundation
 import Network
 import os
@@ -9,9 +8,12 @@ import SwiftailControl
 import SwiftailEngine
 import SwiftailMagicsock
 
-/// Swiftail의 `TailnetNode`를 터널 확장의 호출 지점에 맞춘다. 사건과 상태를 Go 코어와 같은 모양
-/// (`CoreEvent`, `CoreStatus`)으로 바꿔 내므로 앱 쪽은 그대로다.
-final class SwiftailTunnelEngine: TunnelEngine, @unchecked Sendable {
+/// Swiftail의 `TailnetNode`를 터널 확장의 호출 지점에 맞춘다. 사건과 상태를 앱이 읽는 모양
+/// (`CoreEvent`, `CoreStatus`, 공용 모델 RDModels)으로 바꿔 낸다.
+///
+/// - `run()`은 이 객체가 만든 Task 하나에서 돈다. `stop()`은 그 Task를 취소하고 끝나기를 기다린다.
+/// - 서버 쪽 로그아웃(`logOut`)은 `run()`이 돌지 않을 때만 부른다(Swiftail 계약 "로그아웃").
+final class SwiftailTunnelEngine: @unchecked Sendable {
     private let node: TailnetNode
     private let hostname: String
     private let logger: Logger
@@ -70,6 +72,7 @@ final class SwiftailTunnelEngine: TunnelEngine, @unchecked Sendable {
         }
     }
 
+    /// 상태·설정·로그 사건. 구독자는 하나다.
     func events() -> AsyncStream<CoreEvent> { stream }
 
     func status() async -> CoreStatus? {
@@ -99,16 +102,18 @@ final class SwiftailTunnelEngine: TunnelEngine, @unchecked Sendable {
             lockWait: status.tailnetLock.signingRequest.map { LockWait(nodeKey: $0.nodeKey, lockKey: $0.lockKey) })
     }
 
-    /// Swiftail에는 경로 소켓 감시가 없어 만족된 경로마다 그대로 넘긴다.
-    func setDefaultInterface(_ interface: NWInterface) throws {
+    /// 만족된 경로를 받을 때마다 그대로 넘긴다(Swiftail은 같은 인터페이스를 다시 알려도 거른다).
+    func setDefaultInterface(_ interface: NWInterface) {
         let node = node
         Task { await node.setDefaultInterface(interface) }
     }
 
-    func setPathPeer(_ fqdn: String) throws {
+    /// 경로(직접·중계)를 알아볼 피어의 MagicDNS 이름. 다음 상태 점검부터 `peerPath`가 채워진다.
+    func setPathPeer(_ fqdn: String) {
         lock.withLock { pathPeer = fqdn }
     }
 
+    /// 노드를 멈추고 `run()`이 끝날 때까지 기다린다. 몇 초 걸릴 수 있어 직렬 큐에서 부른다.
     func stop() {
         let (run, pumps) = lock.withLock { (runTask, self.pumps) }
         let done = DispatchSemaphore(value: 0)
@@ -120,6 +125,36 @@ final class SwiftailTunnelEngine: TunnelEngine, @unchecked Sendable {
         }
         done.wait()
         continuation.finish()
+    }
+
+    // MARK: 서버 로그아웃
+
+    /// 서버 쪽 로그아웃의 결과. 어느 쪽이든 호출자는 로컬 상태를 지운다.
+    enum LogOutResult: Equatable, Sendable {
+        case done
+        /// 서버에 닿지 못했거나 거절했다(기한 10초 포함). 서버가 이미 적용했을 수도 있다. 값은 로그에 남길 종류 이름.
+        case failed(String)
+    }
+
+    /// 제어 서버에 이 기기의 node 키를 만료시키라고 알린다. 상태 폴더는 건드리지 않는다.
+    /// 이 프로세스에서 같은 상태 폴더의 `run()`이 돌지 않을 때만 부른다(앞의 노드를 `stop()`으로 끝낸 뒤).
+    /// shortcut: Swiftail은 다른 프로세스가 같은 폴더로 `run()` 중인지는 막지 못한다(계약 "로그아웃" 동작 O1).
+    /// 두 앱의 터널은 iOS가 한 번에 하나만 켜므로 두지 않았다.
+    static func logOut(stateDirectory: URL, hostname: String, controlURL: String, logger: Logger) async -> LogOutResult {
+        let control = URL(string: controlURL).flatMap { controlURL.isEmpty ? nil : $0 } ?? NodeConfiguration.defaultControlURL
+        do {
+            // 장치는 쓰지 않는다. `logOut()`은 설정과 신원 파일만 본다.
+            let node = try TailnetNode(
+                configuration: NodeConfiguration(stateDirectory: stateDirectory, hostname: hostname, controlURL: control),
+                device: .memory())
+            try await node.logOut()
+            logger.log("서버 로그아웃: 완료")
+            return .done
+        } catch {
+            let kind = (error as? NodeError).map(Self.kind(of:)) ?? "unknown"
+            logger.error("서버 로그아웃 실패(\(kind, privacy: .public)). 로컬 로그인은 그대로 지웁니다")
+            return .failed(kind)
+        }
     }
 
     // MARK: 변환
@@ -173,19 +208,17 @@ final class SwiftailTunnelEngine: TunnelEngine, @unchecked Sendable {
     }
 
     /// 앱이 보여 줄 문장. 서버가 준 진단 문자열은 넣지 않는다.
-    /// shortcut: 시험 빌드 전용이라 번역 파일에 넣지 않았다. 정식 교체 때 `String(localized:)`로 바꾼다.
     static func message(for error: NodeError) -> String {
         switch error {
         case .tunnelDeviceClosed: TunnelEngineMessages.tunDeviceClosed
-        case .control(.authKeyRejected): "인증 키가 거부됐습니다. 새 인증 키로 다시 켜세요."
-        case .control(.registrationRejected): "tailnet이 이 기기의 등록을 거절했습니다. 관리자에게 확인하세요."
-        case .control(.nodeKeyExpired): "이 기기의 tailnet 키가 만료됐습니다. 다시 로그인하세요."
-        case .control(.storage): "저장된 로그인 정보를 읽거나 쓰지 못했습니다."
-        case .control: "tailnet 제어 서버와의 연결이 끝났습니다. VPN을 다시 켜세요."
-        case .invalidConfiguration: "터널 설정이 잘못됐습니다."
-        case .udpUnavailable: "네트워크 소켓을 열지 못했습니다."
-        case .stateDirectoryInUse: "다른 터널이 같은 로그인 정보를 쓰고 있습니다."
+        case .control(.authKeyRejected): String(localized: "인증 키가 거부됐습니다. 새 인증 키로 다시 켜세요.")
+        case .control(.registrationRejected): String(localized: "tailnet이 이 기기의 등록을 거절했습니다. 관리자에게 확인하세요.")
+        case .control(.nodeKeyExpired): String(localized: "이 기기의 tailnet 키가 만료됐습니다. 다시 로그인하세요.")
+        case .control(.storage): String(localized: "저장된 로그인 정보를 읽거나 쓰지 못했습니다.")
+        case .control: String(localized: "tailnet 제어 서버와의 연결이 끝났습니다. VPN을 다시 켜세요.")
+        case .invalidConfiguration: String(localized: "터널 설정이 잘못됐습니다.")
+        case .udpUnavailable: String(localized: "네트워크 소켓을 열지 못했습니다.")
+        case .stateDirectoryInUse: String(localized: "다른 터널이 같은 로그인 정보를 쓰고 있습니다.")
         }
     }
 }
-#endif

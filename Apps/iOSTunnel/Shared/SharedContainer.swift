@@ -2,7 +2,7 @@ import Foundation
 
 /// RemoteDebug 앱과 업데이트 앱(RD 업데이트), 두 앱의 터널 확장이 함께 쓰는 저장소(App Group).
 ///
-/// 두 앱은 같은 tailnet 기기로 보여야 한다. 그래서 Tailscale 상태(`tailscaled.state`, 노드 키)와
+/// 두 앱은 같은 tailnet 기기로 보여야 한다. 그래서 Swiftail 상태(노드 키, tailnet lock)와
 /// 기기 식별자·제어 서버 주소를 App Group 컨테이너에 둔다. iOS는 VPN을 한 번에 하나만 켜므로
 /// 두 확장이 같은 상태를 동시에 쓰는 일은 없다.
 enum SharedContainer {
@@ -26,39 +26,6 @@ enum SharedContainer {
     /// 공용 컨테이너의 `Library/Application Support`. 없으면 `nil`.
     static func groupSupportDirectory() -> URL? {
         groupURL()?.appendingPathComponent("Library/Application Support", isDirectory: true)
-    }
-
-    /// 예전 위치(RemoteDebug 터널 확장의 컨테이너)의 Tailscale 상태를 공용 위치로 옮긴다.
-    ///
-    /// 예전 상태는 Mac과 페어링한 기기 정보다. 그래서 공용 위치에 다른 상태가 이미 있어도(업데이트 앱을 먼저 켜서
-    /// 새 기기가 만들어진 경우) 예전 상태가 이긴다. 밀려난 상태는 `tailscale.replaced`로 한 벌 남긴다.
-    /// 옮겼으면 `true`.
-    @discardableResult
-    static func migrateState(from legacySupport: URL, to groupSupport: URL) -> Bool {
-        let fm = FileManager.default
-        let legacy = legacySupport.appendingPathComponent("RemoteDebug/tailscale", isDirectory: true)
-        let target = groupSupport.appendingPathComponent("RemoteDebug/tailscale", isDirectory: true)
-        guard hasState(legacy) else { return false }
-        do {
-            try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
-            if fm.fileExists(atPath: target.path) {
-                let replaced = target.deletingLastPathComponent().appendingPathComponent("tailscale.replaced", isDirectory: true)
-                try? fm.removeItem(at: replaced)
-                if hasState(target) { try fm.moveItem(at: target, to: replaced) } else { try fm.removeItem(at: target) }
-            }
-            try fm.moveItem(at: legacy, to: target)
-            return true
-        } catch {
-            return false
-        }
-    }
-
-    /// RemoteDebug 앱의 터널이 새 빌드로 한 번 켜져 예전 기기 정보를 공용 위치로 옮겼는가(옮길 것이 없었어도 참).
-    static let storeMigratedKey = "RemoteDebug.storeStateMigrated"
-
-    /// 폴더에 파일이 하나라도 있는가.
-    static func hasState(_ dir: URL) -> Bool {
-        !((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []).isEmpty
     }
 }
 

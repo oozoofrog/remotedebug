@@ -9,33 +9,6 @@ import Testing
         return dir
     }
 
-    @Test func 예전_상태를_공용_위치로_한_번_옮긴다() throws {
-        let legacy = try temp(), shared = try temp()
-        let old = legacy.appendingPathComponent("RemoteDebug/tailscale")
-        try FileManager.default.createDirectory(at: old, withIntermediateDirectories: true)
-        try Data("node-key".utf8).write(to: old.appendingPathComponent("tailscaled.state"))
-
-        #expect(SharedContainer.migrateState(from: legacy, to: shared))
-        let moved = shared.appendingPathComponent("RemoteDebug/tailscale/tailscaled.state")
-        #expect(try Data(contentsOf: moved) == Data("node-key".utf8))
-        #expect(!FileManager.default.fileExists(atPath: old.path))
-        // 옮길 것이 없으면 아무것도 하지 않는다.
-        #expect(!SharedContainer.migrateState(from: legacy, to: shared))
-    }
-
-    @Test func 공용_위치에_다른_기기가_있어도_페어링한_예전_기기가_이긴다() throws {
-        let legacy = try temp(), shared = try temp()
-        for (base, text) in [(legacy, "paired"), (shared, "fresh")] {
-            let dir = base.appendingPathComponent("RemoteDebug/tailscale")
-            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-            try Data(text.utf8).write(to: dir.appendingPathComponent("tailscaled.state"))
-        }
-        #expect(SharedContainer.migrateState(from: legacy, to: shared))
-        #expect(try Data(contentsOf: shared.appendingPathComponent("RemoteDebug/tailscale/tailscaled.state")) == Data("paired".utf8))
-        // 밀려난 상태는 한 벌 남긴다.
-        #expect(try Data(contentsOf: shared.appendingPathComponent("RemoteDebug/tailscale.replaced/tailscaled.state")) == Data("fresh".utf8))
-    }
-
     @Test func 짝_앱에_보내는_요청을_읽는다() throws {
         let url = try #require(URL(string: "remotedebug-vpn://vpn?action=connect&return=1"))
         let request = try #require(AppPair.request(from: url))

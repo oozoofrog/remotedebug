@@ -51,6 +51,8 @@ final class TunnelController: TunnelControlling {
     /// 터널 확장의 메모리 기록 한 줄(기기 로그로 Mac에 올린다).
     @ObservationIgnored var onMemoryLog: ((String) -> Void)?
     @ObservationIgnored private var memoryLog = TunnelMemoryLog()
+    /// 직전 상태 요청에 확장이 답하지 않았는가(같은 줄을 반복해 남기지 않는다).
+    @ObservationIgnored private var statusUnanswered = false
     /// 확장이 오류로 끝난 이유(`fetchLastDisconnectError`).
     private(set) var disconnectMessage: String?
     /// 마지막 넘겨받기에서 연결되기 전에 끊겨 다시 켠 횟수와 마지막 끊김의 오류(도메인·코드). 설치 기록에 남긴다.
@@ -85,6 +87,9 @@ final class TunnelController: TunnelControlling {
     var pathPeer: String? {
         didSet {
             guard pathPeer != oldValue, settings.onDemand || onDemandActive else { return }
+            // 켜져 있는 터널의 구성을 저장하면 iOS가 터널을 다시 시작할 수 있다. 자동 갱신은 꺼져 있을 때만 하고,
+            // 켜져 있는 동안은 사용자가 설정을 바꿀 때(`syncOnDemand()` 직접 호출)와 다음에 켤 때(`prepare()`)로 미룬다.
+            guard !TunnelStateMapping.isActive(vpnStatus) else { return }
             Task { try? await syncOnDemand() }
         }
     }
@@ -243,6 +248,7 @@ final class TunnelController: TunnelControlling {
         disconnectMessage = nil
         lastReply = nil
         memoryLog.reset()
+        statusUnanswered = false
         userStopped = false
         do {
             try manager.connection.startVPNTunnel(options: options)
@@ -480,12 +486,17 @@ final class TunnelController: TunnelControlling {
             Task { [weak self] in
                 let error = await Self.lastDisconnectError(connection)
                 guard let self, self.vpnStatus == .disconnected else { return }
+                // 누가 끊었는지 남긴다(도메인·코드만. 확장이 보낸 오류면 `TunnelProviderError`, 아니면 iOS가 끊은 것이다).
+                if let error {
+                    let nsError = error as NSError
+                    self.logger.log("VPN이 끊김: \(nsError.domain, privacy: .public) \(nsError.code)")
+                    self.onMemoryLog?("VPN이 끊김: \(nsError.domain) \(nsError.code)")
+                }
                 if let done = self.takeoverRestarts {
                     let drop = Self.takeoverDrop(error)
                     if let error {
                         let nsError = error as NSError
                         self.lastTakeoverDrop = "\(nsError.domain) \(nsError.code)"
-                        self.logger.log("넘겨받는 중 VPN이 끊김: \(nsError.domain, privacy: .public) \(nsError.code)")
                     }
                     if VPNTakeover.restarts(after: drop, restartsDone: done, userStopped: self.userStopped) {
                         await self.restartTakeover(done + 1)
@@ -499,7 +510,7 @@ final class TunnelController: TunnelControlling {
         }
         if status == .disconnected || status == .invalid {
             lastReply = nil
-        memoryLog.reset()
+            memoryLog.reset()
         }
         recompute()
         updatePolling(status)
@@ -576,7 +587,13 @@ final class TunnelController: TunnelControlling {
                 continuation.resume(returning: nil)
             }
         }
-        guard let response, let reply = TunnelStatusReply.decode(response) else { return }
+        guard let response, let reply = TunnelStatusReply.decode(response) else {
+            // 확장이 답하지 않았다(멈췄거나 이미 끝났을 수 있다). 처음 한 번만 남긴다.
+            if !statusUnanswered { onMemoryLog?("확장이 상태 요청에 답하지 않음") }
+            statusUnanswered = true
+            return
+        }
+        statusUnanswered = false
         lastReply = reply
         // 앱이 뒤에 있던 동안 확장이 쌓아 둔 줄을 먼저 옮긴다.
         for line in TunnelMemoryJournal.drain() { onMemoryLog?("(확장 기록) " + line) }

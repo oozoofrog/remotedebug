@@ -35,11 +35,11 @@ enum TunnelExtensionPhase: String, Codable, Sendable {
 /// 확장 → 앱 응답. 인증 키·토큰은 담지 않는다(`CoreStatus`에는 `authURL`만 있다).
 ///
 /// ```json
-/// {"phase":"running","status":{…rd_status…},"physFootprintMiB":31.5,"lastError":null}
+/// {"phase":"running","status":{…CoreStatus…},"physFootprintMiB":31.5,"lastError":null}
 /// ```
 struct TunnelStatusReply: Codable, Equatable, Sendable {
     var phase: TunnelExtensionPhase
-    /// `rd_status`. 코어가 아직 없으면 `nil`.
+    /// `CoreStatus`. 코어가 아직 없으면 `nil`.
     var status: CoreStatus?
     /// 확장 프로세스의 phys_footprint(MiB, `TASK_VM_INFO`). 읽지 못하면 `nil`.
     var physFootprintMiB: Double?

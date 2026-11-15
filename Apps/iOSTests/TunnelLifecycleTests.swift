@@ -24,7 +24,7 @@ struct TunnelLifecycleTests {
 
     typealias Lifecycle = TunnelLifecycle<FakeNode>
 
-    @Test("노드가 생기기 전에 종료: rd_start를 부르지 않고 시작을 실패시킨다")
+    @Test("노드가 생기기 전에 종료: 노드를 만들지 않고 시작을 실패시킨다")
     func stopBeforeNode() {
         let lifecycle = Lifecycle()
         let recorder = Recorder()
@@ -47,7 +47,7 @@ struct TunnelLifecycleTests {
         #expect(lifecycle.phase == .stopping)
     }
 
-    @Test("rd_start 도중 종료: 새 노드를 같은 큐에서 멈추고 단계는 stopping으로 남는다")
+    @Test("노드 시작 도중 종료: 새 노드를 같은 큐에서 멈추고 단계는 stopping으로 남는다")
     func stopDuringStart() throws {
         let lifecycle = Lifecycle()
         let recorder = Recorder()
@@ -62,7 +62,7 @@ struct TunnelLifecycleTests {
             do {
                 let node = try lifecycle.startNode(generation: generation, start: {
                     entered.signal()
-                    proceed.wait()  // rd_start가 오래 걸리는 동안
+                    proceed.wait()  // 노드 시작이 오래 걸리는 동안
                     return FakeNode(id: 7)
                 }, stop: recorder.stop)
                 outcome.set(.success(node))
@@ -77,7 +77,7 @@ struct TunnelLifecycleTests {
         let taken = lifecycle.requestStop()
         #expect(taken.node == nil)
         proceed.signal()
-        // stopTunnel의 coreQueue 장벽: rd_start가 끝난 뒤에 실행된다.
+        // stopTunnel의 coreQueue 장벽: 노드 시작이 끝난 뒤에 실행된다.
         coreQueue.sync { lifecycle.drainOnCoreQueue(extra: taken.node, stop: recorder.stop) }
         finished.wait()
 
@@ -152,7 +152,7 @@ struct TunnelLifecycleTests {
         let stale = lifecycle.begin()
         let current = lifecycle.begin()
         #expect(throws: Lifecycle.LifecycleError.stoppedDuringStart) {
-            // 확인 뒤 rd_start 도중에 새 시작이 들어온 경우와 같다.
+            // 확인 뒤 노드 시작 도중에 새 시작이 들어온 경우와 같다.
             try lifecycle.startNode(generation: current, start: {
                 _ = lifecycle.begin()
                 return FakeNode(id: 3)

@@ -1,0 +1,19 @@
+# 시험 링크 빌드: 일반 빌드에 없는 시험 전용 도구(`remotedebug://test?…` 주소, 연결 시험, 확장의 시험 진단)를 함께 넣는다.
+# 일반 빌드는 project.yml을 그대로 쓴다. 이 빌드는 TLS 검증을 건너뛰는 도구와 Mac을 1초마다 부르는 도구가 들어 있어
+# 배포하지 않는다.
+#   xcodegen generate --spec project-testlinks.yml
+include:
+  - path: project.yml
+targets:
+  RemoteDebugPhone:
+    settings:
+      base:
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) RD_TEST_LINKS
+  RemoteDebugTunnel:
+    settings:
+      base:
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) RD_TEST_LINKS
+  RemoteDebugVPNTunnel:
+    settings:
+      base:
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) RD_TEST_LINKS

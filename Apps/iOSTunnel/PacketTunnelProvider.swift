@@ -3,13 +3,13 @@ import Network
 import NetworkExtension
 import os
 import OSLog
-import RDCoreBridge
 import RDModels
+import Swiftail
 
 /// tailnet 패킷 터널(docs/tunnel.md "터널 확장(Swift)의 책임").
 ///
-/// - 패킷은 코어(Go)가 utun fd로 직접 읽고 쓴다. 이 클래스는 `packetFlow`를 쓰지 않는다.
-/// - `rd_start`·`rd_stop`은 `coreQueue`(직렬)에서만 부른다.
+/// - 패킷은 Swiftail 노드가 utun fd로 직접 읽고 쓴다. 이 클래스는 `packetFlow`를 쓰지 않는다.
+/// - 노드 시작·종료(`SwiftailTunnelEngine`)는 `coreQueue`(직렬)에서만 부른다.
 /// - 시작·종료 순서는 `TunnelLifecycle`이 정한다. 시작 중에 온 종료 요청은 새 노드를 멈추고 시작을 실패시킨다.
 /// - 그 밖의 변하는 상태는 `TunnelRuntime`(잠금)에 둔다. NE는 이 객체의 메서드를 여러 스레드에서 부른다.
 /// - NE 경계를 넘기는 오류는 `TunnelProviderError`의 `NSError`다.
@@ -20,7 +20,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
     private let coreQueue = DispatchQueue(label: "com.oozoofrog.app.RemoteDebugPhone.Tunnel.core")
     private let pathQueue = DispatchQueue(label: "com.oozoofrog.app.RemoteDebugPhone.Tunnel.path")
     private let runtime = TunnelRuntime()
-    private let lifecycle = TunnelLifecycle<any TunnelEngine>()
+    private let lifecycle = TunnelLifecycle<SwiftailTunnelEngine>()
     private let applier: SerialApplier<TunnelSettingsPlan>
 
     override init() {
@@ -45,18 +45,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         }
         // 인증 키는 이 시작에만 쓰고 보관하지 않는다.
         let authKey = TunnelStartOptions.authKey(from: options) ?? ""
-        if TunnelStartOptions.resetsLogin(options) {
-            do {
-                let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-                try TunnelStorage.resetStateDirectory(in: support)
-                if let shared = SharedContainer.groupSupportDirectory() { try TunnelStorage.resetStateDirectory(in: shared) }
-                logger.log("저장된 Tailscale 로그인을 지웠습니다")
-            } catch {
-                logger.error("Tailscale 로그인을 지우지 못했습니다: \(error.localizedDescription, privacy: .public)")
-            }
-        }
+        let resetsLogin = TunnelStartOptions.resetsLogin(options)
         Task {
             do {
+                if resetsLogin { await resetLogin(config: config) }
                 try await start(config: config, authKey: authKey, generation: generation)
                 completionHandler(nil)
             } catch {
@@ -87,59 +79,38 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         guard lifecycle.isCurrent(generation) else { throw stoppedDuringStart() }
         logger.log("utun 확인: \(found.interfaceName, privacy: .public) fd=\(found.fd)")
 
-        let node: any TunnelEngine
+        let node: SwiftailTunnelEngine
         do {
             node = try await onCoreQueue { [lifecycle, logger] in
-                try lifecycle.startNode(generation: generation, start: { () throws -> any TunnelEngine in
-                    #if RD_SWIFTAIL_TUNNEL
-                    if TunnelEngineChoice.usesSwiftail {
-                        logger.log("Swiftail로 터널을 시작합니다")
-                        return try SwiftailTunnelEngine(
-                            stateDirectory: try Self.prepareStateDirectory(name: TunnelStorage.swiftailStateName),
-                            hostname: config.hostname, controlURL: config.controlURL, authKey: authKey,
-                            utunFd: found.fd, mtu: Self.mtu, logger: logger)
-                    }
-                    #endif
-                    let stateDir = try Self.prepareStateDirectory()
-                    let coreConfig = CoreConfig(
-                        mode: .tunnel,
-                        stateDir: stateDir.path,
-                        hostname: config.hostname,
-                        authKey: authKey,
-                        controlURL: config.controlURL,
-                        goMemLimitMiB: config.goMemLimitMiB,
-                        logPath: config.logging ? try Self.logFileURL().path : "",
-                        utunFd: Int(found.fd),
-                        mtu: Self.mtu,
-                        appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-                    )
-                    return try GoTunnelEngine(config: coreConfig, logger: logger)
+                try lifecycle.startNode(generation: generation, start: { () throws -> SwiftailTunnelEngine in
+                    try SwiftailTunnelEngine(
+                        stateDirectory: try Self.prepareStateDirectory(),
+                        hostname: config.hostname, controlURL: config.controlURL, authKey: authKey,
+                        utunFd: found.fd, mtu: Self.mtu, logger: logger)
                 }, stop: { started in
                     // 시작하는 동안 종료 요청이 왔다. 방금 만든 노드를 같은 큐에서 멈춘다.
                     logger.log("시작 중 종료 요청을 받아 새 노드를 멈춥니다")
                     Self.stopNode(started, logger: logger)
                 })
             }
-        } catch TunnelLifecycle<any TunnelEngine>.LifecycleError.stoppedDuringStart {
+        } catch TunnelLifecycle<SwiftailTunnelEngine>.LifecycleError.stoppedDuringStart {
             throw stoppedDuringStart()
-        } catch let error as RDCoreError {
-            logger.error("코어 시작 실패: \(error.code, privacy: .public)")
-            throw fail(.coreStart, generation: generation, detail: error.message)
+        } catch let error as NodeError {
+            logger.error("노드 시작 실패: \(SwiftailTunnelEngine.kind(of: error), privacy: .public)")
+            throw fail(.coreStart, generation: generation, detail: SwiftailTunnelEngine.message(for: error))
         } catch {
-            logger.error("코어 시작 실패: \(error.localizedDescription, privacy: .public)")
+            logger.error("노드 시작 실패: \(error.localizedDescription, privacy: .public)")
             throw fail(.coreStart, generation: generation, detail: error.localizedDescription)
         }
 
         startEventLoop(node, generation: generation)
         startPathMonitor(node, generation: generation)
         startMemoryJournal(generation: generation)
-        #if RD_SWIFTAIL_TUNNEL
         startSwiftailLogJournal(generation: generation)
-        #endif
         // 노드를 저장한 뒤 종료 요청이 왔으면 노드는 종료 쪽 장벽이 멈춘다. 시작을 성공으로 알리지 않는다.
         guard lifecycle.isCurrent(generation) else { throw stoppedDuringStart() }
         // Running을 기다리지 않는다. NeedsLogin이면 앱이 상태를 물어 authURL을 보여 준다.
-        logger.log("코어 시작됨")
+        logger.log("노드 시작됨")
         SharedVPNState(owner: AppPair.currentAppID, connected: true, updatedAt: Date()).write()
     }
 
@@ -148,10 +119,12 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
     override func stopTunnel(with reason: NEProviderStopReason) async {
         SharedVPNState(owner: AppPair.currentAppID, connected: false, updatedAt: Date()).write()
         logger.log("터널 종료 요청: 사유 \(reason.rawValue)")
+        // 누가 끊었는지(사용자, 시스템, 설정 변경 등)를 앱이 뒤에 있어도 확장 기록으로 남긴다.
+        TunnelMemoryJournal.append("터널 종료 요청: 사유 \(reason.rawValue) (\(Self.describe(reason)))")
         let (node, cleanups) = lifecycle.requestStop()
         applier.discardPending()
         for cleanup in cleanups { cleanup() }
-        // 진행 중인 rd_start가 있으면 그것이 끝난 뒤에 실행된다(같은 직렬 큐).
+        // 진행 중인 노드 시작이 있으면 그것이 끝난 뒤에 실행된다(같은 직렬 큐).
         // 엔진 종료는 몇 초 걸릴 수 있으므로 메인 스레드가 아닌 직렬 큐에서 부른다.
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             coreQueue.async { [lifecycle, logger] in
@@ -161,7 +134,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         }
     }
 
-    private static func stopNode(_ node: any TunnelEngine, logger: Logger) {
+    private static func stopNode(_ node: SwiftailTunnelEngine, logger: Logger) {
         node.stop()
     }
 
@@ -178,14 +151,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         }
     }
 
-    /// 앱이 알려 준 Mac 이름이 바뀌었으면 코어에 알린다. 코어는 다음 상태 점검부터 `peerPath`를 채운다.
+    /// 앱이 알려 준 Mac 이름이 바뀌었으면 노드에 알린다. 노드는 다음 상태 점검부터 `peerPath`를 채운다.
     private func notePathPeer(_ peer: String?) {
         guard let peer, let node = lifecycle.currentNode, runtime.updatePathPeer(peer) else { return }
-        do {
-            try node.setPathPeer(peer)
-        } catch {
-            runtime.forgetPathPeer()
-        }
+        node.setPathPeer(peer)
     }
 
     private func statusReply() async -> TunnelStatusReply {
@@ -204,7 +173,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
 
     // MARK: 이벤트
 
-    private func startEventLoop(_ node: any TunnelEngine, generation: Int) {
+    private func startEventLoop(_ node: SwiftailTunnelEngine, generation: Int) {
         let stream = node.events()
         let task = Task.detached { [weak self] in
             for await event in stream {
@@ -228,16 +197,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
             }
             runtime.setStatus(status)
             logger.log("상태: \(status.backendState.rawValue, privacy: .public)")
+            if status.backendState == .running { removeLegacyGoStateOnce() }
             if status.backendState == .error {
                 runtime.setLastError(TunnelSecretRedactor.redact(status.errorMessage))
                 if status.errorMessage == TunnelEngineMessages.tunDeviceClosed { engineDied() }
-            }
-        case .log(let entry):
-            // 코어 로그는 비밀을 담지 않지만 내용은 공개 로그로 남기지 않는다.
-            switch entry.level {
-            case "error": logger.error("코어: \(entry.message, privacy: .private)")
-            case "warn": logger.warning("코어: \(entry.message, privacy: .private)")
-            default: logger.debug("코어: \(entry.message, privacy: .private)")
             }
         default:
             break
@@ -285,7 +248,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
 
     // MARK: 기본 인터페이스
 
-    private func startPathMonitor(_ node: any TunnelEngine, generation: Int) {
+    private func startPathMonitor(_ node: SwiftailTunnelEngine, generation: Int) {
         let monitor = NWPathMonitor()
         monitor.pathUpdateHandler = { [weak self] path in
             self?.pathChanged(path, node: node)
@@ -297,7 +260,7 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         if !lifecycle.attach(generation: generation, cleanup: { monitor.cancel() }) { monitor.cancel() }
     }
 
-    private func pathChanged(_ path: NWPath, node: any TunnelEngine) {
+    private func pathChanged(_ path: NWPath, node: SwiftailTunnelEngine) {
         guard path.status == .satisfied, let interface = Self.defaultInterface(path) else {
             if runtime.noteInterface(nil) { TunnelMemoryJournal.append("네트워크 경로 없음") }
             return
@@ -306,21 +269,17 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         if runtime.noteInterface(interface.name) {
             TunnelMemoryJournal.append("네트워크 경로: \(interface.name) (\(String(describing: interface.type)))")
         }
-        #if RD_SWIFTAIL_TUNNEL
-        // 시험 빌드 전용: 알림마다 경로의 주소 체계를 남긴다(주소 값은 남기지 않는다).
+        #if RD_TEST_LINKS
+        // 시험 링크 빌드 전용: 알림마다 경로의 주소 체계를 남긴다(주소 값은 남기지 않는다).
         TunnelMemoryJournal.append(
             "기본 인터페이스 알림: \(interface.name) 경로 IPv4=\(path.supportsIPv4) IPv6=\(path.supportsIPv6) DNS=\(path.supportsDNS), \(Self.addressFamilies(of: interface.name))")
         #endif
-        do {
-            // 같은 인터페이스를 다시 알릴지는 구현이 정한다(Go는 이름이 바뀔 때만, Swiftail은 매번).
-            try node.setDefaultInterface(interface)
-        } catch {
-            logger.error("기본 인터페이스 알림 실패: \(String(describing: error), privacy: .public)")
-        }
+        // 같은 인터페이스를 다시 알릴지는 노드가 정한다(Swiftail이 같은 인터페이스는 거른다).
+        node.setDefaultInterface(interface)
     }
 
-    #if RD_SWIFTAIL_TUNNEL
-    /// 시험 빌드 전용: 인터페이스에 붙은 주소의 종류만 문장으로 만든다.
+    #if RD_TEST_LINKS
+    /// 시험 링크 빌드 전용: 인터페이스에 붙은 주소의 종류만 문장으로 만든다.
     static func addressFamilies(of name: String) -> String {
         var head: UnsafeMutablePointer<ifaddrs>?
         guard getifaddrs(&head) == 0 else { return "주소 읽기 실패" }
@@ -347,7 +306,10 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         return "\(v4Text), \(v6Text)"
     }
 
-    /// 시험 빌드 전용: 이 프로세스의 Swiftail 로거 줄을 2초마다 확장 기록으로 옮긴다.
+    #endif
+
+    /// 이 프로세스의 Swiftail 로거 줄(상태 전이, 제어·DERP 연결, 경로 전환. 키·주소·이름은 없다)을 2초마다
+    /// 확장 기록으로 옮긴다. 앱이 앞에 올 때 기기 로그로 올라가므로 앱이 뒤에 있던 동안의 사건도 남는다.
     private func startSwiftailLogJournal(generation: Int) {
         let task = Task.detached {
             guard let store = try? OSLogStore(scope: .currentProcessIdentifier) else {
@@ -367,7 +329,6 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         }
         if !lifecycle.attach(generation: generation, cleanup: { task.cancel() }) { task.cancel() }
     }
-    #endif
 
     /// 만족된 경로의 첫 물리 인터페이스(터널 자신 `utun*`·`ipsec*`·루프백 제외).
     static func defaultInterface(_ path: NWPath) -> NWInterface? {
@@ -401,24 +362,76 @@ final class PacketTunnelProvider: NEPacketTunnelProvider, @unchecked Sendable {
         }
     }
 
-    /// 확장 컨테이너의 `Library/Application Support/RemoteDebug/tailscale`(첫 잠금 해제 후 접근 가능, 백업 제외).
-    /// 두 앱이 같은 tailnet 기기로 보이도록 App Group 컨테이너를 쓴다. 예전 위치의 상태는 처음 한 번 옮긴다.
-    static func prepareStateDirectory(name: String = TunnelStorage.goStateName) throws -> URL {
+    /// 공용 컨테이너의 `Library/Application Support/RemoteDebug/swiftail`(첫 잠금 해제 후 접근 가능, 백업 제외).
+    /// 두 앱이 같은 tailnet 기기로 보이도록 App Group 컨테이너를 쓴다. 공용 컨테이너가 없으면 확장 컨테이너를 쓴다.
+    /// 예전 Go 터널의 상태는 읽거나 옮기지 않는다(로그인은 다시 한다).
+    static func prepareStateDirectory() throws -> URL {
+        if let shared = SharedContainer.groupSupportDirectory() {
+            return try TunnelStorage.prepareStateDirectory(in: shared)
+        }
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        guard let shared = SharedContainer.groupSupportDirectory() else {
-            return try TunnelStorage.prepareStateDirectory(in: support, name: name)
-        }
-        if AppPair.currentAppID.hasSuffix(AppPair.storeSuffix) {
-            // 예전 기기 정보는 RemoteDebug 앱의 확장 컨테이너에만 있다.
-            SharedContainer.migrateState(from: support, to: shared)
-            SharedContainer.defaults.set(true, forKey: SharedContainer.storeMigratedKey)
-        }
-        return try TunnelStorage.prepareStateDirectory(in: shared, name: name)
+        return try TunnelStorage.prepareStateDirectory(in: support)
     }
 
-    static func logFileURL() throws -> URL {
-        let caches = try FileManager.default.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-        return try TunnelStorage.prepareLogFile(in: caches)
+    // MARK: 로그인 초기화
+
+    /// "다른 계정으로 로그인". 순서는 `run()` 중지·대기 → 서버 쪽 `logOut()` → 상태 폴더 지우기다.
+    /// 앱이 VPN을 먼저 끄고 꺼질 때까지 기다린 뒤 시작을 요청하므로 이 시점에 도는 노드는 없다(`stopTunnel`이 노드의
+    /// `run()`이 끝나기를 기다렸다). 도는 노드가 남아 있으면 같은 폴더를 지우지 않는다.
+    /// `logOut()`은 실패하거나 기한(10초)이 지날 수 있다. 서버가 이미 적용했을 수 있으므로 어느 쪽이든 로컬 상태는 지운다.
+    private func resetLogin(config: TunnelProviderConfig) async {
+        guard lifecycle.currentNode == nil else {
+            logger.error("도는 노드가 있어 로그인을 지우지 않습니다")
+            return
+        }
+        if let directory = try? Self.prepareStateDirectory() {
+            let result = await SwiftailTunnelEngine.logOut(
+                stateDirectory: directory, hostname: config.hostname, controlURL: config.controlURL, logger: logger)
+            if case .failed(let kind) = result {
+                TunnelMemoryJournal.append("서버 로그아웃 실패(\(kind)): 로컬 로그인을 그대로 지웁니다")
+            }
+        }
+        do {
+            let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            try TunnelStorage.resetStateDirectory(in: support)
+            if let shared = SharedContainer.groupSupportDirectory() { try TunnelStorage.resetStateDirectory(in: shared) }
+            logger.log("저장된 tailnet 로그인을 지웠습니다")
+        } catch {
+            logger.error("tailnet 로그인을 지우지 못했습니다: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    // MARK: 예전 Go 상태
+
+    /// Swiftail 노드가 처음 실행 상태가 된 뒤 App Group 컨테이너의 예전 Go 터널 상태를 한 번 지운다(그 밖의 것은 건드리지 않는다).
+    private func removeLegacyGoStateOnce() {
+        guard runtime.markLegacyCleanup(), let shared = SharedContainer.groupSupportDirectory() else { return }
+        Task.detached(priority: .utility) { [logger] in
+            if TunnelStorage.removeLegacyGoState(in: shared) { logger.log("예전 Go 터널 상태를 지웠습니다") }
+        }
+    }
+
+    private static func describe(_ reason: NEProviderStopReason) -> String {
+        switch reason {
+        case .none: "없음"
+        case .userInitiated: "사용자"
+        case .providerFailed: "확장 오류"
+        case .noNetworkAvailable: "네트워크 없음"
+        case .unrecoverableNetworkChange: "네트워크 전환"
+        case .providerDisabled: "확장 꺼짐"
+        case .authenticationCanceled: "인증 취소"
+        case .configurationFailed: "구성 오류"
+        case .idleTimeout: "유휴 시간 초과"
+        case .configurationDisabled: "구성 해제"
+        case .configurationRemoved: "구성 삭제"
+        case .superceded: "다른 구성이 켜짐"
+        case .userLogout: "사용자 로그아웃"
+        case .userSwitch: "사용자 전환"
+        case .connectionFailed: "연결 실패"
+        case .sleep: "잠자기"
+        case .appUpdate: "앱 업데이트"
+        @unknown default: "알 수 없음"
+        }
     }
 }
 
@@ -436,6 +449,8 @@ private final class TunnelRuntime: @unchecked Sendable {
     private var _interface: String?
     private var _interfaceKnown = false
     private var _pathPeer: String?
+    /// 예전 Go 상태 정리를 이 프로세스에서 이미 했는가(`reset()`이 지우지 않는다).
+    private var _legacyCleaned = false
 
     private func locked<T>(_ body: () -> T) -> T {
         lock.lock()
@@ -466,8 +481,6 @@ private final class TunnelRuntime: @unchecked Sendable {
         }
     }
 
-    func forgetPathPeer() { locked { _pathPeer = nil } }
-
     func setStatus(_ status: CoreStatus) { locked { _status = status } }
     func setLastError(_ message: String?) { locked { _lastError = message } }
 
@@ -477,6 +490,15 @@ private final class TunnelRuntime: @unchecked Sendable {
             guard _interface != name || !_interfaceKnown else { return false }
             _interface = name
             _interfaceKnown = true
+            return true
+        }
+    }
+
+    /// 처음 부르면 `true`.
+    func markLegacyCleanup() -> Bool {
+        locked {
+            guard !_legacyCleaned else { return false }
+            _legacyCleaned = true
             return true
         }
     }

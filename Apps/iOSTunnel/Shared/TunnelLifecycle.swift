@@ -3,10 +3,10 @@ import Foundation
 /// 터널 확장의 시작·종료 순서를 한곳에서 정한다(docs/tunnel.md "터널 확장(Swift)의 책임" 1·5).
 ///
 /// - `startTunnel`은 `begin()`으로 세대를 받고, 단계마다 `isCurrent(_:)`를 확인한다.
-/// - `rd_start`는 `startNode(generation:start:stop:)` 안에서, `coreQueue`(직렬)에서 부른다.
+/// - 노드 시작는 `startNode(generation:start:stop:)` 안에서, `coreQueue`(직렬)에서 부른다.
 ///   시작하는 동안 종료 요청이 왔으면 방금 만든 노드를 그 자리에서 멈추고 `stoppedDuringStart`를 던진다.
 /// - `stopTunnel`은 `requestStop()`으로 노드와 정리 작업을 가져간 뒤, `coreQueue`에서 `drainOnCoreQueue(stop:)`를 부른다.
-///   `rd_start`가 진행 중이었다면 그것이 끝난 뒤에 실행되므로 종료가 시작을 앞지르지 않는다.
+///   노드 시작가 진행 중이었다면 그것이 끝난 뒤에 실행되므로 종료가 시작을 앞지르지 않는다.
 /// - 종료 요청 뒤에는 단계가 `.stopping`에서 바뀌지 않는다(노드 저장·실패 표시가 덮어쓰지 않는다).
 ///
 /// 이 파일은 앱 대상에도 컴파일되어 단위 테스트한다(가짜 노드).
@@ -90,7 +90,7 @@ final class TunnelLifecycle<Node: Sendable>: @unchecked Sendable {
         }
     }
 
-    /// `coreQueue`에서 부른다(진행 중인 `rd_start`가 끝난 뒤). `requestStop()` 뒤에 남은 노드가 있으면 멈춘다.
+    /// `coreQueue`에서 부른다(진행 중인 노드 시작가 끝난 뒤). `requestStop()` 뒤에 남은 노드가 있으면 멈춘다.
     /// `requestStop()`이 이미 가져간 노드는 `extra`로 넘긴다. 같은 노드를 두 번 멈추지 않는다.
     func drainOnCoreQueue(extra: Node?, stop: (Node) -> Void) {
         let leftover = locked { () -> Node? in

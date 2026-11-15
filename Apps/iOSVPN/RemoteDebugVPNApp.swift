@@ -104,14 +104,6 @@ final class VPNServices {
         return "\(info["CFBundleShortVersionString"] as? String ?? "?") (\(info["CFBundleVersion"] as? String ?? "?"))"
     }()
 
-    /// 공용 저장소에 Tailscale 로그인(기기 정보)이 있는가. 없으면 이 앱에서 켤 때 새 기기로 로그인하게 된다.
-    var hasSharedLogin: Bool {
-        guard let support = SharedContainer.groupSupportDirectory() else { return true }
-        // RemoteDebug 앱의 터널이 한 번 켜져야 페어링한 예전 기기 정보가 공용 저장소로 온다.
-        guard SharedContainer.defaults.bool(forKey: SharedContainer.storeMigratedKey) else { return false }
-        return SharedContainer.hasState(support.appendingPathComponent("RemoteDebug/tailscale", isDirectory: true))
-    }
-
     /// 이 앱의 터널을 켠다. 다른 앱이 켜 둔 VPN은 iOS가 끄고 이 앱의 것으로 바꾼다.
     func connect() async {
         notice = nil
@@ -199,9 +191,7 @@ struct VPNScreen: View {
                 } header: {
                     Text("VPN")
                 } footer: {
-                    Text(services.hasSharedLogin
-                        ? "기기 이름 \(tunnel.settings.hostname). RemoteDebug 앱과 같은 tailnet 기기로 연결합니다."
-                        : "RemoteDebug 앱을 쓰던 iPhone이면 먼저 기기 정보를 가져오세요. 그래야 Mac 페어링이 그대로 유지됩니다. 새 기기로 시작하면 Tailscale 로그인과 Mac 페어링을 다시 합니다.")
+                    Text("기기 이름 \(tunnel.settings.hostname). RemoteDebug 앱과 같은 tailnet 기기로 연결합니다.")
                 }
                 Section {
                     actions
@@ -251,13 +241,6 @@ struct VPNScreen: View {
         if !tunnel.isAvailable {
             Text(TunnelStateMapping.simulatorUnavailableMessage).font(.subheadline)
         } else if ownActive {
-            if !services.hasSharedLogin {
-                Button {
-                    Task { await services.openStore(.connect, returning: true) }
-                } label: {
-                    Label("RemoteDebug 앱에서 기기 정보 가져오기", systemImage: "square.and.arrow.down.on.square")
-                }
-            }
             if case .needsLogin(let url) = tunnel.state, let url {
                 Button {
                     Task { _ = await services.opener.open(url) }
@@ -287,18 +270,6 @@ struct VPNScreen: View {
                 } label: {
                     Label("RemoteDebug 앱에서 VPN 끄기", systemImage: "power")
                 }
-            }
-        } else if !services.hasSharedLogin {
-            // 공용 저장소에 기기 정보가 아직 없다. RemoteDebug 앱을 쓰던 기기면 그 앱의 터널이 한 번 켜질 때 옮겨 온다.
-            Button {
-                Task { await services.openStore(.connect, returning: true) }
-            } label: {
-                Label("RemoteDebug 앱에서 기기 정보 가져오기", systemImage: "square.and.arrow.down.on.square")
-            }
-            Button {
-                Task { await services.connect() }
-            } label: {
-                Label("새 기기로 시작하기", systemImage: "power")
             }
         } else {
             Button {

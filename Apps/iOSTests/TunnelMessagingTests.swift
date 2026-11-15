@@ -9,21 +9,23 @@ import Testing
 struct TunnelProviderConfigTests {
     @Test("인코드·디코드 왕복, authKey 키 없음")
     func roundTripWithoutAuthKey() throws {
-        let config = TunnelProviderConfig(hostname: "rd-phone-0a1b2c3d", controlURL: "https://control.example.com", goMemLimitMiB: 28, logging: true)
+        let config = TunnelProviderConfig(hostname: "rd-phone-0a1b2c3d", controlURL: "https://control.example.com")
         let dictionary = try config.providerConfiguration()
         let data = try #require(dictionary[TunnelProviderConfig.providerConfigurationKey] as? Data)
         let json = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
-        #expect(Set(json.keys) == ["hostname", "controlURL", "goMemLimitMiB", "logging"])
+        #expect(Set(json.keys) == ["hostname", "controlURL"])
         #expect(json["authKey"] == nil)
         #expect(!String(decoding: data, as: UTF8.self).lowercased().contains("authkey"))
         #expect(TunnelProviderConfig(providerConfiguration: dictionary) == config)
     }
 
-    @Test("기본값: 제어 서버 빈 값, 메모리 한도 28, 로그 끔")
+    @Test("기본값: 제어 서버 빈 값. 예전 구성의 goMemLimitMiB·logging은 무시한다")
     func defaults() throws {
         let data = Data(#"{"hostname":"rd-phone-12345678"}"#.utf8)
         let config = try #require(TunnelProviderConfig(providerConfiguration: [TunnelProviderConfig.providerConfigurationKey: data]))
-        #expect(config == TunnelProviderConfig(hostname: "rd-phone-12345678", controlURL: "", goMemLimitMiB: 28, logging: false))
+        #expect(config == TunnelProviderConfig(hostname: "rd-phone-12345678", controlURL: ""))
+        let legacy = Data(#"{"hostname":"rd-phone-12345678","controlURL":"","goMemLimitMiB":28,"logging":true}"#.utf8)
+        #expect(TunnelProviderConfig(providerConfiguration: [TunnelProviderConfig.providerConfigurationKey: legacy]) == config)
     }
 
     @Test("구성이 없거나 깨졌으면 nil")
@@ -94,7 +96,7 @@ struct TunnelMessageTests {
         #expect(TunnelController.onDemandDomains(enabled: true, host: " ") == nil)
     }
 
-    @Test("응답은 rd_status + physFootprintMiB + 단계")
+    @Test("응답은 CoreStatus + physFootprintMiB + 단계")
     func replyRoundTrip() throws {
         let status = CoreStatus(
             backendState: .needsLogin,

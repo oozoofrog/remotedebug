@@ -10,7 +10,7 @@
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- 코어(Go, libRDCore.a)가 stat·fstat·fstatat·lstat로 확장 컨테이너 안의 상태·로그 파일을 읽는다 -->
+		<!-- 확장 컨테이너 안의 상태 파일(Swiftail 상태 폴더)의 속성을 읽는다 -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
@@ -19,7 +19,7 @@
 				<string>C617.1</string>
 			</array>
 		</dict>
-		<!-- Go 런타임의 단조 시계(mach_absolute_time): 타이머·경과 시간 측정 -->
+		<!-- 단조 시계(ContinuousClock): 타이머·경과 시간 측정 -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
