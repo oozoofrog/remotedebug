@@ -284,6 +284,9 @@ struct GuidanceCard: View {
             Text(guidance.message)
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
+            if guidance.kind == .needsLockSignature, let wait = model.status?.lockWait {
+                LockSignCommand(command: wait.signCommand)
+            }
             HStack {
                 switch guidance.action {
                 case .start where showsStartActions:
@@ -303,5 +306,34 @@ struct GuidanceCard: View {
             }
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// Tailnet Lock 서명 명령을 보여 주고 복사한다.
+struct LockSignCommand: View {
+    let command: String
+    @State private var copied = false
+
+    static let copyTitle = String(localized: "서명 명령 복사")
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(command)
+                .font(.callout.monospaced())
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack {
+                Button(Self.copyTitle) {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(command, forType: .string)
+                    copied = true
+                }
+                if copied {
+                    Label("복사했습니다", systemImage: "checkmark")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
     }
 }

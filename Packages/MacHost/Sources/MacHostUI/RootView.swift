@@ -426,6 +426,7 @@ struct GuidanceLabel: View {
         case .stopped: "pause.circle"
         case .starting, .issuingCertificate, .waitingForLoginURL: "clock"
         case .needsLogin, .needsMachineAuth: "person.badge.key"
+        case .needsLockSignature: "signature"
         case .certificatesDisabled, .magicDNSDisabled: "lock.slash"
         case .error, .unknown: "exclamationmark.triangle.fill"
         }
@@ -435,7 +436,7 @@ struct GuidanceLabel: View {
         switch kind {
         case .ready: .green
         case .stopped, .starting, .issuingCertificate, .waitingForLoginURL: .secondary
-        case .needsLogin, .needsMachineAuth, .certificatesDisabled, .magicDNSDisabled: .orange
+        case .needsLogin, .needsMachineAuth, .needsLockSignature, .certificatesDisabled, .magicDNSDisabled: .orange
         case .error, .unknown: .red
         }
     }

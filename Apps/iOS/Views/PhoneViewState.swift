@@ -34,6 +34,8 @@ struct PhoneViewState {
     var directConnected = false
     /// 이 앱의 터널에서 페어링한 Mac까지 가는 경로. 모르거나 다른 앱의 VPN이면 `nil`.
     var peerPath: PeerPath?
+    /// Tailnet Lock 서명을 기다리는 중이면 서명에 넣을 값.
+    var lockWait: LockWait?
     /// Mac이 보낸 파일.
     var resources: [ResourceDescriptor] = []
     /// 이 iPhone에 받아 둔 파일.

@@ -17323,6 +17323,34 @@
         }
       }
     },
+    "복사했습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コピーしました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷贝"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝"
+          }
+        }
+      }
+    },
     "붙일 화면 사진" : {
       "localizations" : {
         "en" : {
@@ -18741,6 +18769,34 @@
         }
       }
     },
+    "서명 명령 복사" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy Signing Command"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名コマンドをコピー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷贝签名命令"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷貝簽署指令"
+          }
+        }
+      }
+    },
     "서명 팀" : {
       "localizations" : {
         "en" : {
@@ -18765,6 +18821,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "簽署團隊"
+          }
+        }
+      }
+    },
+    "서명 필요" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signature Required"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "署名が必要"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要签名"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "需要簽署"
           }
         }
       }
@@ -23835,6 +23919,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此 iPhone 尚未獲得 Mac 核准。請重新配對。"
+          }
+        }
+      }
+    },
+    "이 계정은 Tailnet Lock이 켜져 있어, 서명 전에는 Mac과 통신하지 못합니다. 이미 서명된 기기의 터미널에서 아래 명령을 실행하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This account has Tailnet Lock on, so this iPhone can’t reach the Mac until it is signed. Run the command below in Terminal on a device that is already signed."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このアカウントは Tailnet Lock がオンのため、署名されるまで Mac と通信できません。すでに署名済みのデバイスのターミナルで下のコマンドを実行してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此账户已开启 Tailnet Lock，签名之前无法与 Mac 通信。请在已签名设备的终端中运行下面的命令。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此帳號已開啟 Tailnet Lock，簽署之前無法與 Mac 通訊。請在已簽署裝置的終端機中執行下面的指令。"
+          }
+        }
+      }
+    },
+    "이 계정은 Tailnet Lock이 켜져 있어, 서명 전에는 이 Mac이 다른 기기와 통신하지 못합니다. 이미 서명된 기기의 터미널에서 아래 명령을 실행하세요. 서명되면 자동으로 이어집니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This account has Tailnet Lock on, so this Mac can’t reach other devices until it is signed. Run the command below in Terminal on a device that is already signed. It continues automatically once signed."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このアカウントは Tailnet Lock がオンのため、署名されるまでこの Mac はほかのデバイスと通信できません。すでに署名済みのデバイスのターミナルで下のコマンドを実行してください。署名されると自動的に続行します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此账户已开启 Tailnet Lock，签名之前这台 Mac 无法与其他设备通信。请在已签名设备的终端中运行下面的命令。签名后会自动继续。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此帳號已開啟 Tailnet Lock，簽署之前此 Mac 無法與其他裝置通訊。請在已簽署裝置的終端機中執行下面的指令。簽署後會自動繼續。"
           }
         }
       }

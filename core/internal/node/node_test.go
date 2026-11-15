@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -58,18 +59,43 @@ func TestNeedLoginKick(t *testing.T) {
 		raw     string
 		authURL string
 		authKey bool
+		idle    time.Time // since when NeedsLogin without a URL
 		now     time.Time
 		want    bool
 	}{
-		{"expired key, no URL", "NeedsLogin", "", false, later, true},
-		{"too soon", "NeedsLogin", "", false, later.Add(-time.Second), false},
-		{"URL present", "NeedsLogin", "https://login.example/a", false, later, false},
-		{"auth key logs in itself", "NeedsLogin", "", true, later, false},
-		{"running", "Running", "", false, later, false},
+		{"expired key, no URL", "NeedsLogin", "", false, t0, later, true},
+		{"too soon", "NeedsLogin", "", false, t0, later.Add(-time.Second), false},
+		{"URL present", "NeedsLogin", "https://login.example/a", false, t0, later, false},
+		{"auth key logs in itself", "NeedsLogin", "", true, t0, later, false},
+		{"running", "Running", "", false, t0, later, false},
+		// A login just succeeded: the URL is gone but the first netmap has not arrived.
+		{"login just finished", "NeedsLogin", "", false, later.Add(-2 * time.Second), later, false},
+		{"state not seen yet", "NeedsLogin", "", false, time.Time{}, later, false},
+		{"no URL for the grace period", "NeedsLogin", "", false, later.Add(-loginKickGrace), later, true},
 	}
 	for _, c := range cases {
-		if got := needLoginKick(c.raw, c.authURL, c.authKey, t0, c.now); got != c.want {
+		if got := needLoginKick(c.raw, c.authURL, c.authKey, c.idle, t0, c.now); got != c.want {
 			t.Errorf("%s: got %v", c.name, got)
+		}
+	}
+}
+
+func TestLockWaitFrom(t *testing.T) {
+	nodeKey := key.NewNode().Public()
+	lockKey := key.NewNLPrivate().Public()
+	waiting := &ipnstate.NetworkLockStatus{Enabled: true, NodeKey: &nodeKey, PublicKey: lockKey}
+	got := lockWaitFrom(waiting)
+	if got == nil || !strings.HasPrefix(got.NodeKey, "nodekey:") || !strings.HasPrefix(got.LockKey, "tlpub:") {
+		t.Fatalf("waiting node: got %+v", got)
+	}
+	for name, ls := range map[string]*ipnstate.NetworkLockStatus{
+		"nil":      nil,
+		"lock off": {Enabled: false, NodeKey: &nodeKey, PublicKey: lockKey},
+		"signed":   {Enabled: true, NodeKeySigned: true, NodeKey: &nodeKey, PublicKey: lockKey},
+		"no key":   {Enabled: true, PublicKey: lockKey},
+	} {
+		if got := lockWaitFrom(ls); got != nil {
+			t.Errorf("%s: got %+v", name, got)
 		}
 	}
 }

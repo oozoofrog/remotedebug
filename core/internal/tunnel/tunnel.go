@@ -184,6 +184,9 @@ func (n *Node) Login(ctx context.Context) (err error) {
 // LocalStatus returns the backend status without peers.
 func (n *Node) LocalStatus() *ipnstate.Status { return n.lb.StatusWithoutPeers() }
 
+// LockStatus returns the tailnet lock status of this node.
+func (n *Node) LockStatus() *ipnstate.NetworkLockStatus { return n.lb.NetworkLockStatus() }
+
 // FullStatus returns the backend status with peers (their current address
 // and relay). It is heavier than LocalStatus: call it only when a peer's path
 // is wanted.

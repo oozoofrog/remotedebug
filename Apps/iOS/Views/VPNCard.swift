@@ -1,6 +1,7 @@
 import PhoneClientKit
 import RDModels
 import SwiftUI
+import UIKit
 
 /// VPN 상태와 켜기·끄기·로그인.
 struct VPNCard: View {
@@ -37,6 +38,10 @@ struct VPNCard: View {
                 Text(detail)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+            }
+
+            if let wait = state.lockWait {
+                LockSignNote(command: wait.signCommand)
             }
 
             if state.tunnelAvailable {
@@ -129,7 +134,9 @@ struct VPNCard: View {
         case .connecting: return String(localized: "연결 중")
         case .disconnecting: return String(localized: "끄는 중")
         case .needsLogin: return String(localized: "로그인 필요")
-        case .connected: return VPNStatusText.connected(holder: state.vpnPair.owner, path: state.peerPath)
+        case .connected:
+            if state.lockWait != nil { return String(localized: "서명 필요") }
+            return VPNStatusText.connected(holder: state.vpnPair.owner, path: state.peerPath)
         case .failed: return String(localized: "오류")
         }
     }
@@ -169,7 +176,7 @@ struct VPNCard: View {
         case .connecting: return .blue
         case .disconnecting: return .secondary
         case .needsLogin: return .orange
-        case .connected: return .green
+        case .connected: return state.lockWait == nil ? .green : .orange
         case .failed: return .red
         }
     }
@@ -222,5 +229,26 @@ struct AuthKeySheet: View {
         guard !trimmed.isEmpty else { return }
         submit(trimmed)
         key = ""
+    }
+}
+
+/// Tailnet Lock 서명 안내: 서명 전에는 다른 기기와 통신하지 못한다. 명령을 복사해 서명 기기에서 실행한다.
+struct LockSignNote: View {
+    let command: String
+    @State private var copied = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("이 계정은 Tailnet Lock이 켜져 있어, 서명 전에는 Mac과 통신하지 못합니다. 이미 서명된 기기의 터미널에서 아래 명령을 실행하세요.", systemImage: "signature")
+                .font(.subheadline)
+                .foregroundStyle(.orange)
+            Text(command)
+                .font(.caption.monospaced())
+                .textSelection(.enabled)
+            Button(copied ? String(localized: "복사했습니다") : String(localized: "서명 명령 복사")) {
+                UIPasteboard.general.string = command
+                copied = true
+            }
+        }
     }
 }

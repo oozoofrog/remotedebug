@@ -95,7 +95,8 @@ final class SwiftailTunnelEngine: TunnelEngine, @unchecked Sendable {
                 dnsMatchDomains: settings?.dnsMatchDomains ?? [],
                 mtu: settings?.mtu ?? 0,
                 peerCount: status.peerCount),
-            peerPath: path)
+            peerPath: path,
+            lockWait: status.tailnetLock.signingRequest.map { LockWait(nodeKey: $0.nodeKey, lockKey: $0.lockKey) })
     }
 
     /// Swiftail에는 경로 소켓 감시가 없어 만족된 경로마다 그대로 넘긴다.

@@ -169,6 +169,8 @@ public struct CoreStatus: Codable, Sendable, Hashable {
     public var peerPaths: [String: PeerPath]?
     /// docs/protocol-addenda.md O: 같은 네트워크 직접 연결 리스너. 이번 실행에서 한 번도 켜지 않았으면 없다.
     public var direct: DirectStatus?
+    /// docs/protocol-addenda.md Q: tailnet lock이 켜져 있고 이 노드가 아직 서명되지 않았을 때만 있다.
+    public var lockWait: LockWait?
 
     public init(
         backendState: BackendState,
@@ -186,7 +188,8 @@ public struct CoreStatus: Codable, Sendable, Hashable {
         tunnel: TunnelStatus? = nil,
         peerPath: PeerPath? = nil,
         peerPaths: [String: PeerPath]? = nil,
-        direct: DirectStatus? = nil
+        direct: DirectStatus? = nil,
+        lockWait: LockWait? = nil
     ) {
         self.backendState = backendState
         self.authURL = authURL
@@ -204,12 +207,13 @@ public struct CoreStatus: Codable, Sendable, Hashable {
         self.peerPath = peerPath
         self.peerPaths = peerPaths
         self.direct = direct
+        self.lockWait = lockWait
     }
 
     enum CodingKeys: String, CodingKey {
         case backendState, authURL, hostname, fqdn, tailscaleIPs, certDomains
         case tlsReady, listening, publishedBuilds, pairedDevices, rssMiB
-        case errorMessage, tunnel, peerPath, peerPaths, direct
+        case errorMessage, tunnel, peerPath, peerPaths, direct, lockWait
     }
 
     public init(from decoder: any Decoder) throws {
@@ -231,7 +235,24 @@ public struct CoreStatus: Codable, Sendable, Hashable {
         peerPath = (try? c.decodeIfPresent(PeerPath.self, forKey: .peerPath)) ?? nil
         peerPaths = (try? c.decodeIfPresent([String: PeerPath].self, forKey: .peerPaths)) ?? nil
         direct = (try? c.decodeIfPresent(DirectStatus.self, forKey: .direct)) ?? nil
+        lockWait = (try? c.decodeIfPresent(LockWait.self, forKey: .lockWait)) ?? nil
     }
+}
+
+/// docs/protocol-addenda.md Q `rd_status.lockWait`: 서명 기기에서 이 노드에 서명할 때 넣는 공개 키 둘.
+public struct LockWait: Codable, Sendable, Hashable {
+    /// `nodekey:<hex>`
+    public var nodeKey: String
+    /// `tlpub:<hex>`
+    public var lockKey: String
+
+    public init(nodeKey: String, lockKey: String) {
+        self.nodeKey = nodeKey
+        self.lockKey = lockKey
+    }
+
+    /// 서명 기기의 터미널에서 실행할 명령.
+    public var signCommand: String { "tailscale lock sign \(nodeKey) \(lockKey)" }
 }
 
 /// docs/protocol-addenda.md O `rd_status.direct`: 같은 네트워크 직접 연결 리스너.

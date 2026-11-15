@@ -902,3 +902,17 @@ Mac 앱이 `https://api.sandbox.push.apple.com/3/device/<token>`으로 HTTP/2 PO
 - 앱이 꺼진 상태에서 알림이나 동작 버튼을 눌러 시작하는 경우, 파일 알림의 **받기** 버튼, 스위치를 껐을 때 Mac에서 토큰이 지워지는지.
 - 실제 iPhone(iOS 27.2)에서 확인한 것: 알림 도착, 본문을 눌러 탭 이동, **링크 열기**와 **설치** 버튼.
 - 코어의 등록·삭제 경로는 두 리스너에서 단위 시험으로 확인했다.
+
+## Q. Tailnet Lock 서명 대기 (`rd_status.lockWait`)
+
+tailnet에 Tailnet Lock이 켜져 있고 이 노드의 키가 아직 서명되지 않았으면, 다른 노드가 이 노드의 통신을 버린다. 백엔드 상태는 `Running`인 채다. 코어는 그동안 `rd_status`에 `lockWait`를 넣는다.
+
+```json
+{"backendState": "Running", "lockWait": {"nodeKey": "nodekey:<hex 64>", "lockKey": "tlpub:<hex 64>"}}
+```
+
+- `nodeKey`, `lockKey`는 공개 키다. 서명 기기에서 `tailscale lock sign <nodeKey> <lockKey>`에 그대로 넣는다.
+- 있는 때: lock이 켜져 있고(`Enabled`) 이 노드가 서명되지 않았고(`NodeKeySigned == false`) 백엔드가 `Running`일 때만. 그 밖에는 필드가 없다.
+- 코어는 `Running`인 동안 상태를 물을 때마다 lock 상태를 다시 읽고, 서명되면 필드를 빼고 `state` 사건을 낸다. 서명된 뒤에는 그 실행에서 다시 묻지 않는다.
+- 호스트 모드와 터널 모드 모두 같다.
+- Mac 앱: 안내 종류 "서명 필요"와 서명 명령 복사. iPhone 앱: VPN 카드에 같은 안내와 명령 복사.

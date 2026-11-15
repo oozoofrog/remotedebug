@@ -131,6 +131,7 @@ struct RootView: View {
         }
         state.vpnAutoStartReady = tunnel.autoStartConfiguration == .ready
         state.peerPath = tunnel.peerPath
+        state.lockWait = tunnel.lockWait
         state.vpnPair.owner = tunnel.vpnHolder
         state.vpnPair.installed = updaterInstalled
         state.vpnPair.present = updaterPresent

@@ -52,6 +52,11 @@ type Options struct {
 const (
 	listenFailLimit   = 3                // consecutive host listener failures before "Error"
 	loginKickInterval = 30 * time.Second // NeedsLogin without authURL: StartLoginInteractive at most this often
+	// loginKickGrace is how long NeedsLogin without authURL must last before a
+	// kick. Right after a login succeeds the backend clears the URL and stays
+	// in NeedsLogin until the first netmap; a kick in that window starts a
+	// second login with a new node key and the finished login is never saved.
+	loginKickGrace = 10 * time.Second
 	certRetryMin      = 30 * time.Second
 	certRetryMax      = 10 * time.Minute
 	listenTLSTimeout  = 30 * time.Second
@@ -86,6 +91,17 @@ type Status struct {
 	// Direct is the same-network listener (docs/protocol-addenda.md O). Host
 	// mode only; absent until it was turned on once in this run.
 	Direct *DirectStatus `json:"direct,omitempty"`
+	// LockWait is set while tailnet lock is on and this node's key is not
+	// signed yet: peers drop its traffic until a signing node signs it
+	// (docs/protocol-addenda.md Q). Absent otherwise.
+	LockWait *LockWait `json:"lockWait,omitempty"`
+}
+
+// LockWait is status.lockWait: the two public keys a signing node passes to
+// `tailscale lock sign <nodeKey> <lockKey>`.
+type LockWait struct {
+	NodeKey string `json:"nodeKey"` // nodekey:<hex>
+	LockKey string `json:"lockKey"` // tlpub:<hex>
 }
 
 // DirectStatus is status.direct. The host app advertises ID on Port over
@@ -235,6 +251,9 @@ type Node struct {
 	listenFails int
 	listenErr   string // set after listenFailLimit consecutive listener failures
 	loginKick   time.Time
+	loginIdle   time.Time // since when the backend has been in NeedsLogin without an authURL; zero otherwise
+	lockWait    *LockWait // tailnet lock is on and this node is not signed
+	lockSettled bool      // lock is off or this node is signed: stop asking
 	authURL     string
 	fqdn        string
 	selfID      string
@@ -479,8 +498,12 @@ func publicState(raw, backendErr, listenErr string) (string, string) {
 // needLoginKick reports whether to call StartLoginInteractive: the backend
 // wants a login, has no URL to show (e.g. the node key expired), no auth key
 // can log in by itself, and the last kick was long enough ago.
-func needLoginKick(raw, authURL string, hasAuthKey bool, last, now time.Time) bool {
-	return raw == "NeedsLogin" && authURL == "" && !hasAuthKey && now.Sub(last) >= loginKickInterval
+// The state must also have lasted loginKickGrace (idleSince), so a login that
+// just succeeded is not restarted.
+func needLoginKick(raw, authURL string, hasAuthKey bool, idleSince, last, now time.Time) bool {
+	return raw == "NeedsLogin" && authURL == "" && !hasAuthKey &&
+		!idleSince.IsZero() && now.Sub(idleSince) >= loginKickGrace &&
+		now.Sub(last) >= loginKickInterval
 }
 
 // tsLogf receives tsnet logs; they go to logPath only.
@@ -501,6 +524,43 @@ func (n *Node) logLockStatus(lc *local.Client) {
 	}
 	n.logf("info", "tailnet lock: enabled=%t headEmpty=%t nodeKeySigned=%t trustedKeys=%d filteredPeers=%d",
 		ls.Enabled, ls.Head == nil, ls.NodeKeySigned, len(ls.TrustedKeys), len(ls.FilteredPeers))
+}
+
+// lockWaitFrom returns the keys to sign while lock is on and the node is not
+// signed, and nil otherwise.
+func lockWaitFrom(ls *ipnstate.NetworkLockStatus) *LockWait {
+	if ls == nil || !ls.Enabled || ls.NodeKeySigned || ls.NodeKey == nil {
+		return nil
+	}
+	return &LockWait{NodeKey: ls.NodeKey.String(), LockKey: ls.PublicKey.CLIString()}
+}
+
+// refreshLock asks the backend whether this node waits for a tailnet lock
+// signature. It runs on every poll while Running until lock is off or the node
+// is signed; the answer goes to status.lockWait.
+func (n *Node) refreshLock(get func() (*ipnstate.NetworkLockStatus, error)) {
+	n.mu.Lock()
+	settled := n.lockSettled
+	n.mu.Unlock()
+	if settled {
+		return
+	}
+	ls, err := get()
+	if err != nil || ls == nil {
+		return
+	}
+	wait := lockWaitFrom(ls)
+	n.mu.Lock()
+	was := n.lockWait
+	n.lockWait = wait
+	// Lock that is off can be turned on later; keep asking only while waiting.
+	n.lockSettled = wait == nil && ls.Enabled
+	n.mu.Unlock()
+	if was != nil && wait == nil {
+		n.logf("info", "tailnet lock: this node is signed")
+	} else if was == nil && wait != nil {
+		n.logf("info", "tailnet lock: waiting for a signature")
+	}
 }
 
 func (n *Node) logf(level, format string, args ...any) {
@@ -648,6 +708,9 @@ func (n *Node) refresh() {
 			st = n.tun.LocalStatus()
 			peers = n.tun.PeerCount() // the only netmap copy per tick
 		}
+		if st.BackendState == "Running" {
+			n.refreshLock(func() (*ipnstate.NetworkLockStatus, error) { return n.tun.LockStatus(), nil })
+		}
 	} else {
 		lc, err := n.srv.LocalClient()
 		if err != nil {
@@ -670,6 +733,11 @@ func (n *Node) refresh() {
 		paths = pathsToDevices(st, ids)
 		if st.BackendState == "Running" {
 			n.lockDiag.Do(func() { n.logLockStatus(lc) })
+			n.refreshLock(func() (*ipnstate.NetworkLockStatus, error) {
+				ctx, cancel := context.WithTimeout(n.ctx, 3*time.Second)
+				defer cancel()
+				return lc.NetworkLockStatus(ctx)
+			})
 		}
 	}
 	n.mu.Lock()
@@ -679,6 +747,13 @@ func (n *Node) refresh() {
 	n.peerPaths = paths
 	n.backend = st.BackendState
 	n.authURL = st.AuthURL
+	if st.BackendState == "NeedsLogin" && st.AuthURL == "" {
+		if n.loginIdle.IsZero() {
+			n.loginIdle = time.Now()
+		}
+	} else {
+		n.loginIdle = time.Time{}
+	}
 	n.ips = n.ips[:0]
 	for _, ip := range st.TailscaleIPs {
 		n.ips = append(n.ips, ip.String())
@@ -752,7 +827,7 @@ func (n *Node) directInfo() (host.DirectInfo, bool) {
 func (n *Node) kickLogin() {
 	n.mu.Lock()
 	now := time.Now()
-	kick := needLoginKick(n.backend, n.authURL, n.cfg.AuthKey != "", n.loginKick, now)
+	kick := needLoginKick(n.backend, n.authURL, n.cfg.AuthKey != "", n.loginIdle, n.loginKick, now)
 	if kick {
 		n.loginKick = now
 	}
@@ -881,6 +956,10 @@ func (n *Node) Status() Status {
 	}
 	if n.directID != nil {
 		st.Direct = &DirectStatus{Listening: n.directSrv != nil && !n.closed, Port: n.directID.Port(), ID: n.directID.ID()}
+	}
+	if n.lockWait != nil && st.BackendState == "Running" {
+		w := *n.lockWait
+		st.LockWait = &w
 	}
 	peers := n.peerCount
 	if n.peerPath != nil && st.BackendState == "Running" {

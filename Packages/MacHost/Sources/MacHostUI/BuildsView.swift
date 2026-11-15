@@ -45,10 +45,9 @@ struct BuildsView: View {
                     }
                 }
             } else {
-                VStack(spacing: 0) {
-                    header
-                    list
-                }
+                // 머리(현황과 시작하기 카드)는 목록의 첫 줄로 넣어 함께 스크롤한다.
+                // 목록 위에 따로 두면 낮은 창에서 높이 합이 창을 넘어 화면 전체가 위로 밀린다.
+                list
             }
         }
         .navigationTitle("빌드")
@@ -133,6 +132,12 @@ struct BuildsView: View {
     private var list: some View {
         List {
             Group {
+            Section {
+                VStack(spacing: 0) { header }
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
             if model.watchedFolder != nil || model.watchProblem != nil {
                 Section("감시 폴더") {
                     WatchedFolderRow(chooseFolder: { choosingFolder = true })

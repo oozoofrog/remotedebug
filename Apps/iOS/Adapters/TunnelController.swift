@@ -95,6 +95,12 @@ final class TunnelController: TunnelControlling {
         return lastReply?.status?.peerPath
     }
 
+    /// 이 앱의 터널이 Tailnet Lock 서명을 기다리는 중이면 서명에 넣을 값. 아니면 `nil`.
+    var lockWait: LockWait? {
+        guard vpnStatus == .connected, state == .connected else { return nil }
+        return lastReply?.status?.lockWait
+    }
+
     /// 저장된 구성에 주문형 연결 규칙이 켜져 있는가.
     private(set) var onDemandActive = false
 

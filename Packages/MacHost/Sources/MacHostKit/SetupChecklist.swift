@@ -31,7 +31,7 @@ public struct SetupChecklist: Sendable, Hashable {
     public static func make(guidance: StatusGuidance, fqdn: String?, devices: Int, builds: Int) -> SetupChecklist {
         let connected: Bool
         switch guidance.kind {
-        case .stopped, .starting, .needsLogin, .waitingForLoginURL, .needsMachineAuth, .unknown: connected = false
+        case .stopped, .starting, .needsLogin, .waitingForLoginURL, .needsMachineAuth, .needsLockSignature, .unknown: connected = false
         case .certificatesDisabled, .magicDNSDisabled, .issuingCertificate, .ready, .error: connected = true
         }
         let ready = guidance.kind == .ready

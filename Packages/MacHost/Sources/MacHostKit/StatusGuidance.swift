@@ -9,6 +9,7 @@ public struct StatusGuidance: Sendable, Hashable {
         case needsLogin
         case waitingForLoginURL
         case needsMachineAuth
+        case needsLockSignature
         case certificatesDisabled
         case magicDNSDisabled
         case issuingCertificate
@@ -80,6 +81,11 @@ public struct StatusGuidance: Sendable, Hashable {
                 kind: .needsMachineAuth, title: String(localized: "기기 승인 필요"),
                 message: String(localized: "tailnet 관리자가 이 Mac을 승인해야 합니다. Tailscale 관리 콘솔의 Machines에서 \(status.hostname.isEmpty ? String(localized: "이 Mac") : status.hostname)을 승인하세요."))
         case .running:
+            if status.lockWait != nil {
+                return StatusGuidance(
+                    kind: .needsLockSignature, title: String(localized: "서명 필요"),
+                    message: String(localized: "이 계정은 Tailnet Lock이 켜져 있어, 서명 전에는 이 Mac이 다른 기기와 통신하지 못합니다. 이미 서명된 기기의 터미널에서 아래 명령을 실행하세요. 서명되면 자동으로 이어집니다."))
+            }
             if status.certDomains.isEmpty { return certificatesOff }
             if !status.tlsReady {
                 return StatusGuidance(
