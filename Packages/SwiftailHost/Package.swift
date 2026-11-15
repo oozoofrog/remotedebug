@@ -15,16 +15,22 @@ let package = Package(
     name: "SwiftailHost",
     platforms: [.macOS("26.0")],
     products: [
+        .library(name: "RDHostLogic", targets: ["RDHostLogic"]),
         .library(name: "SwiftailHostServer", targets: ["SwiftailHostServer"]),
         .executable(name: "rd-swiftail-host", targets: ["rd-swiftail-host"]),
     ],
     dependencies: [
         .package(path: swiftailPath),
+        .package(path: "../RemoteDebugKit"),
     ],
     targets: [
+        // 호스트 로직: 경로·페어링·세션·게시. Swiftail도 소켓도 쓰지 않는다(전송과의 접점은 HostHTTP.swift).
+        .target(name: "RDHostLogic", dependencies: [.product(name: "RDModels", package: "RemoteDebugKit")]),
+        .testTarget(name: "RDHostLogicTests", dependencies: ["RDHostLogic"]),
         .target(
             name: "SwiftailHostServer",
             dependencies: [
+                "RDHostLogic",
                 .product(name: "Swiftail", package: "Swiftail"),
                 .product(name: "SwiftailBase", package: "Swiftail"),
                 .product(name: "SwiftailControl", package: "Swiftail"),
