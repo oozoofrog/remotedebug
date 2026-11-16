@@ -8,8 +8,19 @@ struct SetupChecklistCard: View {
     @Environment(\.showPairing) private var showPairing
     @Environment(\.showNetwork) private var showNetwork
     @Environment(\.showPhoneInstall) private var showPhoneInstall
-    @AppStorage("setupChecklistHidden") private var hidden = false
+    @AppStorage(SetupChecklistCard.hiddenKey) private var hidden = false
     let showImporter: () -> Void
+
+    static let hiddenKey = "setupChecklistHidden"
+
+    /// 카드가 보이고 지금 할 일이 공유 연결 단계라 공유 문제와 그 버튼을 카드가 이미 보여 준다.
+    @MainActor
+    static func coversSharing(_ model: HostModel, hidden: Bool) -> Bool {
+        guard !hidden else { return false }
+        let list = SetupChecklist.make(guidance: model.guidance, fqdn: model.status?.fqdn, devices: model.devices.count, builds: model.builds.count)
+        guard let current = list.current else { return false }
+        return current.step == .tailnet || current.step == .address
+    }
 
     private var checklist: SetupChecklist {
         SetupChecklist.make(guidance: model.guidance, fqdn: model.status?.fqdn, devices: model.devices.count, builds: model.builds.count)

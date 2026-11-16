@@ -73,7 +73,7 @@ struct BuildIcon: View {
     }
 }
 
-/// 앱 아이콘 모양(꺾쇠와 위쪽 화살표). 사이드바와 요약 판에 쓴다.
+/// 앱 아이콘 모양(꺾쇠와 위쪽 화살표). 사이드바 위에 쓴다.
 struct AppMark: View {
     var size: CGFloat = 34
 
@@ -143,128 +143,5 @@ struct Chip: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background(color.opacity(0.12), in: Capsule())
-    }
-}
-
-/// 공유 중일 때 천천히 번지는 점.
-struct LiveDot: View {
-    let active: Bool
-    var color: Color = .green
-    @State private var pulse = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        Circle()
-            .fill(active ? color : Color.secondary.opacity(0.5))
-            .frame(width: 9, height: 9)
-            .background {
-                if active && !reduceMotion {
-                    Circle().stroke(color.opacity(0.6), lineWidth: 2)
-                        .scaleEffect(pulse ? 2.6 : 1)
-                        .opacity(pulse ? 0 : 0.9)
-                        .animation(.easeOut(duration: 1.6).repeatForever(autoreverses: false), value: pulse)
-                }
-            }
-            .onAppear { pulse = true }
-            .accessibilityHidden(true)
-    }
-}
-
-/// 빌드 화면 위의 요약 판: 공유 상태, 이 Mac의 주소, 빌드·기기·프로젝트 수.
-struct OverviewHero: View {
-    @Environment(HostModel.self) private var model
-    @Environment(ProjectsModel.self) private var projects: ProjectsModel?
-    @Environment(\.showNetwork) private var showNetwork
-
-    private var address: String? {
-        model.installPageURL?.host()
-    }
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: 18) {
-                identity
-                Spacer(minLength: 12)
-                stats
-            }
-            // 창이 좁으면 수치를 아래 줄로 내린다.
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(alignment: .center, spacing: 18) {
-                    identity
-                    Spacer(minLength: 0)
-                }
-                stats
-            }
-        }
-        .padding(20)
-        .background {
-            RDTheme.cardShape.fill(RDTheme.hero)
-                .overlay(alignment: .trailing) {
-                    // 바탕 무늬(아이콘의 꺾쇠).
-                    Image(systemName: "chevron.left.forwardslash.chevron.right")
-                        .font(.system(size: 150, weight: .black))
-                        .foregroundStyle(.white.opacity(0.05))
-                        .offset(x: -300)
-                        .accessibilityHidden(true)
-                }
-                .clipShape(RDTheme.cardShape)
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    @ViewBuilder private var identity: some View {
-            AppMark(size: 58)
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 8) {
-                    LiveDot(active: model.isRunning, color: RDTheme.glow)
-                    Text(model.guidance.title)
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(.white)
-                }
-                if let address {
-                    Text(address)
-                        .font(.callout.monospaced())
-                        .foregroundStyle(.white.opacity(0.75))
-                        .textSelection(.enabled)
-                } else {
-                    Button("네트워크에서 상태 보기") { showNetwork() }
-                        .buttonStyle(.link)
-                        .tint(RDTheme.glow)
-                }
-            }
-    }
-
-    private var stats: some View {
-        HStack(spacing: 10) {
-            Stat(value: model.builds.count, label: String(localized: "빌드"), symbol: "shippingbox.fill")
-            Stat(value: model.devices.count, label: String(localized: "기기"), symbol: "iphone")
-            if let projects, !HostEdition.isSandboxed {
-                Stat(value: projects.projects.count, label: String(localized: "프로젝트"), symbol: "hammer.fill")
-            }
-        }
-    }
-
-    private struct Stat: View {
-        let value: Int
-        let label: String
-        let symbol: String
-
-        var body: some View {
-            VStack(spacing: 2) {
-                Text("\(value)")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .contentTransition(.numericText())
-                    .foregroundStyle(.white)
-                Label(label, systemImage: symbol)
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.7))
-            }
-            .frame(minWidth: 68)
-            .padding(.vertical, 10)
-            .padding(.horizontal, 8)
-            .background(.white.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("\(label) \(value)개")
-        }
     }
 }

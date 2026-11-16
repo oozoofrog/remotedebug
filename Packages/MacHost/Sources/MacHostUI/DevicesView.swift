@@ -34,8 +34,9 @@ struct DevicesView: View {
                         Text("iPhone을 페어링하면 이 Mac의 빌드를 설치할 수 있습니다.")
                     }
                 } actions: {
+                    // 공유가 꺼져 있으면 창 위 배너에 공유 시작이 있다.
                     if !model.isRunning {
-                        SharingButton()
+                        EmptyView()
                     } else if pairingReason == nil {
                         Button("iPhone 페어링…") { showPairing() }
                             .buttonStyle(.borderedProminent)

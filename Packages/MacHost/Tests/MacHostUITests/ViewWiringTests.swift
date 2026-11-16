@@ -134,7 +134,7 @@ extension ScreenTests {
         defer { stoppedWindow.close() }
         let stoppedView = try root(stoppedWindow)
         try #require(try await until { !AXTree.buttons("공유 시작", in: stoppedView).isEmpty })
-        #expect(AXTree.buttons("공유 시작", in: stoppedView).count == 2, "사이드바 아래와 입력란 옆에만 있어야 한다")
+        #expect(AXTree.buttons("공유 시작", in: stoppedView).count == 1, "네트워크 화면에는 문제 배너를 띄우지 않고 안내 카드의 버튼 하나만 둔다")
 
         let failed = await model(.error, tmp)
         #expect(failed.guidance.action == .restart)
@@ -144,6 +144,58 @@ extension ScreenTests {
         try #require(try await until { !AXTree.buttons("공유 다시 시작", in: failedView).isEmpty })
         #expect(AXTree.buttons("공유 다시 시작", in: failedView).count == 1)
         await failed.shutdown()
+    }
+
+    /// 공유에 문제가 있으면 창 위 배너가 원인과 버튼 하나를 보이고, 정상이면 사이드바 아래 상태 한 줄만 남는다.
+    @Test(.timeLimit(.minutes(1)))
+    func sharingIssueBannerOnlyWhenSomethingIsWrong() async throws {
+        let tmp = try UITempDir("issuebanner")
+        let stopped = await model(.empty, tmp)
+        let stoppedWindow = host(RootView(selection: .devices).environment(stopped))
+        defer { stoppedWindow.close() }
+        let stoppedView = try root(stoppedWindow)
+        try #require(try await until { AXTree.texts(in: stoppedView).contains { $0.contains(stopped.guidance.message) } })
+        #expect(AXTree.buttons("공유 시작", in: stoppedView).count == 1, "배너에만 있어야 한다")
+
+        // 빌드 화면에서는 시작하기 카드가 같은 원인과 버튼을 보이므로 배너를 띄우지 않는다.
+        let buildsWindow = host(RootView(selection: .builds).environment(stopped))
+        defer { buildsWindow.close() }
+        let buildsView = try root(buildsWindow)
+        try #require(try await until { !AXTree.buttons("공유 시작", in: buildsView).isEmpty })
+        #expect(AXTree.buttons("공유 시작", in: buildsView).count == 1)
+
+        let sharing = await model(.sharing, tmp)
+        #expect(!SharingIssueBanner.shows(sharing.guidance, selection: .builds))
+        let sharingWindow = host(RootView(selection: .builds).environment(sharing))
+        defer { sharingWindow.close() }
+        let sharingView = try root(sharingWindow)
+        let shown = try await until { AXTree.texts(in: sharingView).contains { $0.contains("iPhone에서 받을 수 있음") } }
+        #expect(shown, "\(AXTree.texts(in: sharingView))")
+        #expect(AXTree.buttons("공유 시작", in: sharingView).isEmpty)
+        #expect(AXTree.buttons("공유 중지", in: sharingView).isEmpty, "공유 중지는 메뉴 안에만 있다")
+        await sharing.shutdown()
+
+        for kind in [StatusGuidance.Kind.starting, .issuingCertificate, .waitingForLoginURL, .ready] {
+            #expect(!SharingIssueBanner.shows(StatusGuidance(kind: kind, title: "", message: ""), selection: .builds), "\(kind)")
+        }
+        #expect(!SharingIssueBanner.shows(StatusGuidance(kind: .stopped, title: "", message: ""), selection: .network))
+    }
+
+    /// 공유 중지는 iPhone이 받고 있는 설치가 있을 때만 먼저 묻는다.
+    @Test(.timeLimit(.minutes(1)))
+    func stopSharingAsksOnlyWhileInstallsAreRunning() async throws {
+        let tmp = try UITempDir("stopconfirm")
+        let model = makeRecordingModel(RecordingCore(), tmp)
+        await model.start()
+        #expect(!StopSharingMenu.needsConfirmation(model))
+        model.handle(.session(SessionEvent(sessionId: "s_1", buildId: "b_1", nodeName: "rd-phone-1", state: .downloading,
+                                           userAgent: "", bytesServed: 10)))
+        #expect(StopSharingMenu.needsConfirmation(model))
+        #expect(StopSharingMenu.confirmationMessage(installs: model.installsInProgress.count).contains("설치 1건이 끊깁니다"))
+        model.handle(.session(SessionEvent(sessionId: "s_1", buildId: "b_1", nodeName: "rd-phone-1", state: .completed,
+                                           userAgent: "", bytesServed: 20)))
+        #expect(!StopSharingMenu.needsConfirmation(model), "끝난 설치는 묻지 않는다")
+        await model.shutdown()
     }
 
     /// 입력란이 없는 곳에서는 안내 카드가 시작·다시 시작 버튼을 보여 준다(UI-R4).

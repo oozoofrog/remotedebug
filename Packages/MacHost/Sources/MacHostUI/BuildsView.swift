@@ -45,7 +45,7 @@ struct BuildsView: View {
                     }
                 }
             } else {
-                // 머리(현황과 시작하기 카드)는 목록의 첫 줄로 넣어 함께 스크롤한다.
+                // 머리(시작하기 카드)는 목록의 첫 줄로 넣어 함께 스크롤한다.
                 // 목록 위에 따로 두면 낮은 창에서 높이 합이 창을 넘어 화면 전체가 위로 밀린다.
                 list
             }
@@ -103,11 +103,8 @@ struct BuildsView: View {
     }
 
     @ViewBuilder private var header: some View {
-        OverviewHero()
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 6)
         SetupChecklistCard(showImporter: showImporter)
+            .padding(.top, 12)
     }
 
     private var emptyState: some View {
@@ -151,9 +148,6 @@ struct BuildsView: View {
                 }
             }
             Section {
-                if !model.isRunning && !model.builds.isEmpty {
-                    NotSharingRow()
-                }
                 if model.builds.isEmpty {
                     HStack {
                         Text("게시할 빌드가 없습니다.").foregroundStyle(.secondary)
@@ -204,17 +198,6 @@ struct BuildsView: View {
         .animation(reduceMotion ? nil : .snappy, value: model.builds.map(\.id))
         .animation(reduceMotion ? nil : .snappy, value: columns)
         .animation(reduceMotion ? nil : .snappy, value: expandedApps)
-    }
-}
-
-private struct NotSharingRow: View {
-    var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Label("공유가 꺼져 있어 iPhone에서 이 빌드를 볼 수 없습니다.", systemImage: "pause.circle")
-                .foregroundStyle(.secondary)
-            Spacer()
-            SharingButton()
-        }
     }
 }
 

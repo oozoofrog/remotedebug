@@ -557,16 +557,20 @@ public final class HostModel {
         }
     }
 
-    /// 공유를 멈추면 열린 설치 세션은 모두 실패한다(addenda C.3). 이벤트가 오지 않은 세션도 실패로 바꾼다.
-    private func failOpenSessions() {
-        let open: [SessionEvent] = activity.compactMap {
+    /// iPhone이 받고 있는 설치(시작했지만 끝나지 않은 세션). 공유를 멈추면 끊긴다.
+    public var installsInProgress: [SessionEvent] {
+        activity.compactMap {
             guard case .session(let e) = $0.kind else { return nil }
             switch e.state {
             case .created, .manifestServed, .downloading: return e
             case .completed, .expired, .failed: return nil
             }
         }
-        for var e in open {
+    }
+
+    /// 공유를 멈추면 열린 설치 세션은 모두 실패한다(addenda C.3). 이벤트가 오지 않은 세션도 실패로 바꾼다.
+    private func failOpenSessions() {
+        for var e in installsInProgress {
             e.state = .failed
             handle(.session(e))
         }

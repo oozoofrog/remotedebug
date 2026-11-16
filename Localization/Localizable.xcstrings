@@ -385,40 +385,6 @@
         }
       }
     },
-    "%@ %lld개" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$lld"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$lld件"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$lld개"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$lld 个"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$lld 個"
-          }
-        }
-      }
-    },
     "%@ (%@)" : {
       "localizations" : {
         "en" : {
@@ -3167,34 +3133,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 行 · 非 JSON 格式"
-          }
-        }
-      }
-    },
-    "%lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
           }
         }
       }
@@ -9899,6 +9837,34 @@
         }
       }
     },
+    "iPhone에서 받을 수 있음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Available on iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneで受け取れます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可在 iPhone 上获取"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可在 iPhone 上取得"
+          }
+        }
+      }
+    },
     "iPhone에서 이 Mac의 빌드를 볼 수 없습니다. 공유를 시작하면 이 Mac이 tailnet에 연결됩니다." : {
       "localizations" : {
         "en" : {
@@ -10231,6 +10197,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iPhone 的開發者模式已關閉。請開啟「設定」>「隱私權與安全性」>「開發者模式」，並重新啟動 iPhone。"
+          }
+        }
+      }
+    },
+    "iPhone이 받고 있는 설치 %lld건이 끊깁니다. 공유를 다시 시작할 때까지 iPhone에서 빌드와 파일을 받을 수 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld installs in progress on iPhone will be interrupted. iPhone can't get builds or files until you start sharing again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneで受信中のインストール%lld件が中断されます。共有を再開するまで、iPhoneはビルドやファイルを受け取れません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 正在接收的 %lld 个安装将中断。在重新开始共享之前，iPhone 无法获取构建和文件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 正在接收的 %lld 個安裝將中斷。在重新開始分享之前，iPhone 無法取得建置和檔案。"
           }
         }
       }
@@ -12505,6 +12499,62 @@
         }
       }
     },
+    "공유 메뉴" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sharing Menu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有メニュー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享菜单"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享選單"
+          }
+        }
+      }
+    },
+    "공유 문제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sharing Problem"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有の問題"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享问题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享問題"
+          }
+        }
+      }
+    },
     "공유 상태: %@" : {
       "localizations" : {
         "en" : {
@@ -12931,34 +12981,6 @@
         }
       }
     },
-    "공유가 꺼져 있어 iPhone에서 이 빌드를 볼 수 없습니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sharing is off, so iPhone can't see this build."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "共有がオフのため、iPhoneからこのビルドを表示できません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "共享已关闭，iPhone 看不到此构建。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "共享已關閉，iPhone 看不到這個建置。"
-          }
-        }
-      }
-    },
     "공유가 꺼져 있어 iPhone의 요청이 도착하지 않습니다." : {
       "localizations" : {
         "en" : {
@@ -13095,6 +13117,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這會停止分享，並刪除此 Mac 的登入資訊和已配對的 %lld 台 iPhone。"
+          }
+        }
+      }
+    },
+    "공유를 멈출까요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop sharing?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有を停止しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要停止共享吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要停止分享嗎？"
           }
         }
       }
@@ -14311,34 +14361,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "開啟網路畫面"
-          }
-        }
-      }
-    },
-    "네트워크에서 상태 보기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View Status in Network"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ネットワークで状態を表示"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在网络中查看状态"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在網路中查看狀態"
           }
         }
       }
