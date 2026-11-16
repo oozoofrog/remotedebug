@@ -12,11 +12,17 @@ private final class FakeBuilder: ProjectBuilding {
         var built: [String] = []
         var onBuild: (@Sendable () throws -> Void)?
         var products: [URL] = []
+        /// 스킴을 돌려주기 전에 부른다(느린 읽기를 흉내 낸다).
+        var onSchemes: (@Sendable () async throws -> Void)?
     }
 
     let state = Mutex(State())
 
-    func schemes(container: URL) async throws -> [String] { state.withLock { $0.schemes } }
+    func schemes(container: URL) async throws -> [String] {
+        let hook = state.withLock { $0.onSchemes }
+        try await hook?()
+        return state.withLock { $0.schemes }
+    }
 
     func build(container: URL, scheme: String, log: URL) async throws {
         let (failure, onBuild) = state.withLock { s -> (ProjectBuildFailure?, (@Sendable () throws -> Void)?) in
@@ -174,6 +180,75 @@ struct ProjectsModelTests {
         #expect(w.imported.withLock { $0 } == ["App.app"])
         await w.model.scanXcode()
         #expect(w.imported.withLock { $0.count } == 1)
+    }
+
+    /// 앱 목록이 빌드를 만든 프로젝트를 찾는다: 빌드 결과 폴더에 있는 원본이나, 그 프로젝트에서 게시한 번들 ID.
+    @Test func publishedBuildsKnowTheirProject() async throws {
+        let w = try World()
+        let project = try w.makeProject("App")
+        let dir = try w.makeDerived(for: project)
+        let app = dir.appendingPathComponent("Build/Products/Debug-iphoneos/App.app")
+        w.builder.state.withLock {
+            $0.schemes = ["App"]
+            $0.onBuild = { try makeFakeApp(at: app) }
+            $0.products = [app]
+        }
+        await w.model.connectAndBuild(project)
+        let connected = try #require(w.model.projects.first)
+        #expect(w.model.owner(sourcePath: app.path, bundleId: "com.example.Unknown")?.id == connected.id, "빌드 결과 폴더")
+        #expect(w.model.owner(sourcePath: "/elsewhere/App.app", bundleId: "com.example.App")?.id == connected.id, "게시한 번들 ID")
+        #expect(w.model.owner(sourcePath: "/elsewhere/Other.app", bundleId: "com.example.Other") == nil)
+
+        // 다시 열면 검사 전에도 번들 ID로 찾는다.
+        let reopened = ProjectsModel(root: w.tmp.path("state"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived)) { _ in nil }
+        reopened.load()
+        #expect(reopened.owner(sourcePath: "/elsewhere/App.app", bundleId: "com.example.App")?.id == connected.id)
+
+        w.model.remove(connected)
+        #expect(w.model.owner(sourcePath: app.path, bundleId: "com.example.App") == nil)
+    }
+
+    /// 프로젝트 폴더가 사라지면 검사와 스킴 읽기가 그것을 알린다.
+    @Test func missingProjectFolderIsNoticed() async throws {
+        let w = try World()
+        let project = try w.makeProject("App")
+        let connected = try #require(await w.model.connect(project))
+        await w.model.scanXcode()
+        #expect(w.model.missingProjects.isEmpty)
+
+        try FileManager.default.removeItem(at: project.deletingLastPathComponent())
+        await w.model.scanXcode()
+        #expect(w.model.missingProjects == [connected.id])
+
+        let other = try #require(await w.model.connect(try w.makeProject("Gone")))
+        try FileManager.default.removeItem(at: other.containerURL.deletingLastPathComponent())
+        w.builder.state.withLock { $0.onSchemes = { throw ProjectBuildFailure(message: "스킴 목록을 읽지 못했습니다.") } }
+        #expect(await w.model.loadSchemes(for: other).isEmpty)
+        #expect(w.model.missingProjects.contains(other.id))
+        w.model.remove(other)
+        #expect(!w.model.missingProjects.contains(other.id))
+    }
+
+    /// 오래 걸리는 스킴 읽기를 멈추고 다시 읽는다. 멈춘 읽기는 상태를 건드리지 않는다.
+    @Test(.timeLimit(.minutes(1)))
+    func slowSchemeLoadCanBeRetried() async throws {
+        let w = try World()
+        let connected = try #require(await w.model.connect(try w.makeProject("App")))
+        w.builder.state.withLock {
+            $0.schemes = ["App"]
+            $0.onSchemes = { try await Task.sleep(for: .seconds(60)) }
+        }
+        let first = Task { await w.model.loadSchemes(for: connected) }
+        while w.model.schemeLoadStarted[connected.id] == nil { await Task.yield() }
+        #expect(w.model.phases[connected.id] == .loadingSchemes)
+
+        w.builder.state.withLock { $0.onSchemes = nil }
+        #expect(await w.model.retrySchemes(for: connected) == ["App"])
+        _ = await first.value
+        #expect(w.model.schemes[connected.id] == ["App"])
+        #expect(w.model.phases[connected.id] == nil)
+        #expect(w.model.schemeLoadStarted[connected.id] == nil)
+        #expect(w.model.reports[connected.id] == nil, "멈춘 읽기의 오류를 남기지 않는다")
     }
 
     @Test func dismissedProjectIsNotSuggestedAgain() async throws {

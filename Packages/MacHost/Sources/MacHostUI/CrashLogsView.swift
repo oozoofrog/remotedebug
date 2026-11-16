@@ -27,7 +27,7 @@ struct CrashLogsView: View {
                 ContentUnavailableView {
                     Label("받은 크래시·피드백 없음", systemImage: "exclamationmark.triangle")
                 } description: {
-                    Text("RemoteDebug iPhone 앱이 비정상 종료되면 다시 열 때 기록을 보냅니다. 다른 앱의 기록은 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 열고, 공유 버튼으로 RemoteDebug에 넘기면 여기로 들어옵니다. 프로젝트 화면의 \"크래시·피드백 보내기 추가\"대로 패키지를 넣은 앱은 자기 크래시와 피드백을 직접 보냅니다.")
+                    Text("RemoteDebug iPhone 앱이 비정상 종료되면 다시 열 때 기록을 보냅니다. 다른 앱의 기록은 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 열고, 공유 버튼으로 RemoteDebug에 넘기면 여기로 들어옵니다. 앱 화면의 더 보기 메뉴 > \"크래시·피드백 보내기 추가\"대로 패키지를 넣은 앱은 자기 크래시와 피드백을 직접 보냅니다.")
                 }
             } else {
                 HSplitView {

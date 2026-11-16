@@ -134,7 +134,7 @@ extension ScreenTests {
         defer { stoppedWindow.close() }
         let stoppedView = try root(stoppedWindow)
         try #require(try await until { !AXTree.buttons("공유 시작", in: stoppedView).isEmpty })
-        #expect(AXTree.buttons("공유 시작", in: stoppedView).count == 2, "사이드바 아래와 입력란 옆에만 있어야 한다")
+        #expect(AXTree.buttons("공유 시작", in: stoppedView).count == 1, "네트워크 화면에는 문제 배너를 띄우지 않고 안내 카드의 버튼 하나만 둔다")
 
         let failed = await model(.error, tmp)
         #expect(failed.guidance.action == .restart)
@@ -144,6 +144,84 @@ extension ScreenTests {
         try #require(try await until { !AXTree.buttons("공유 다시 시작", in: failedView).isEmpty })
         #expect(AXTree.buttons("공유 다시 시작", in: failedView).count == 1)
         await failed.shutdown()
+    }
+
+    /// 공유에 문제가 있으면 창 위 배너가 원인과 버튼 하나를 보이고, 정상이면 사이드바 아래 상태 한 줄만 남는다.
+    @Test(.timeLimit(.minutes(1)))
+    func sharingIssueBannerOnlyWhenSomethingIsWrong() async throws {
+        let tmp = try UITempDir("issuebanner")
+        let stopped = await model(.empty, tmp)
+        let stoppedWindow = host(RootView(selection: .devices).environment(stopped))
+        defer { stoppedWindow.close() }
+        let stoppedView = try root(stoppedWindow)
+        try #require(try await until { AXTree.texts(in: stoppedView).contains { $0.contains(stopped.guidance.message) } })
+        #expect(AXTree.buttons("공유 시작", in: stoppedView).count == 1, "배너에만 있어야 한다")
+
+        // 빌드 화면에서는 시작하기 카드가 같은 원인과 버튼을 보이므로 배너를 띄우지 않는다.
+        let buildsWindow = host(RootView(selection: .apps).environment(stopped))
+        defer { buildsWindow.close() }
+        let buildsView = try root(buildsWindow)
+        try #require(try await until { !AXTree.buttons("공유 시작", in: buildsView).isEmpty })
+        #expect(AXTree.buttons("공유 시작", in: buildsView).count == 1)
+
+        let sharing = await model(.sharing, tmp)
+        #expect(!SharingIssueBanner.shows(sharing.guidance, selection: .apps))
+        let sharingWindow = host(RootView(selection: .apps).environment(sharing))
+        defer { sharingWindow.close() }
+        let sharingView = try root(sharingWindow)
+        let shown = try await until { AXTree.texts(in: sharingView).contains { $0.contains("iPhone에서 받을 수 있음") } }
+        #expect(shown, "\(AXTree.texts(in: sharingView))")
+        #expect(AXTree.buttons("공유 시작", in: sharingView).isEmpty)
+        #expect(AXTree.buttons("공유 중지", in: sharingView).isEmpty, "공유 중지는 메뉴 안에만 있다")
+        await sharing.shutdown()
+
+        for kind in [StatusGuidance.Kind.starting, .issuingCertificate, .waitingForLoginURL, .ready] {
+            #expect(!SharingIssueBanner.shows(StatusGuidance(kind: kind, title: "", message: ""), selection: .apps), "\(kind)")
+        }
+        #expect(!SharingIssueBanner.shows(StatusGuidance(kind: .stopped, title: "", message: ""), selection: .network))
+    }
+
+    /// 앱 화면: 연결한 프로젝트와 게시한 빌드가 각각 한 줄이다. 게시 취소는 줄에 드러나지 않고 더 보기 메뉴에 있다.
+    @Test(.timeLimit(.minutes(1)))
+    func appsScreenShowsProjectsAndBuildsAsRows() async throws {
+        let tmp = try UITempDir("apps")
+        let model = await model(.sharing, tmp)
+        let container = tmp.url.appendingPathComponent("src/Demo/Demo.xcodeproj")
+        try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
+        let projects = ProjectsModel(root: tmp.url.appendingPathComponent("projects", isDirectory: true), builder: UIFakeBuilder(),
+                                     scanner: DerivedDataScanner(root: tmp.url.appendingPathComponent("DerivedData"))) { _ in nil }
+        _ = try #require(await projects.connect(container))
+        #expect(AppsView.entries(model: model, projects: projects).map(AppRow.title) == ["Demo", "Sample", "Notes"])
+
+        let window = host(RootView(selection: .apps).environment(model).environment(projects))
+        defer { window.close() }
+        let view = try root(window)
+        let ready = try await until { AXTree.buttons("Demo 빌드해서 게시", in: view).contains(where: AXTree.isEnabled) }
+        #expect(ready, "스킴을 읽으면 빌드 버튼이 켜진다")
+        let texts = AXTree.texts(in: view)
+        #expect(texts.contains("아직 게시한 빌드 없음"))
+        #expect(texts.contains { $0.hasPrefix("1.4.0 (128) · 게시 ") })
+        #expect(texts.filter { $0.hasPrefix("프로필 만료") }.count == 1, "만료가 30일 안인 빌드만 보인다: \(texts)")
+        #expect(!texts.contains { $0.contains("Debug-iphoneos 폴더") }, "구성 근거는 빌드 정보에만 있다")
+        #expect(AXTree.buttons("게시 취소", in: view).isEmpty, "게시 취소는 더 보기 메뉴 안에 있다")
+        await model.shutdown()
+    }
+
+    /// 공유 중지는 iPhone이 받고 있는 설치가 있을 때만 먼저 묻는다.
+    @Test(.timeLimit(.minutes(1)))
+    func stopSharingAsksOnlyWhileInstallsAreRunning() async throws {
+        let tmp = try UITempDir("stopconfirm")
+        let model = makeRecordingModel(RecordingCore(), tmp)
+        await model.start()
+        #expect(!StopSharingMenu.needsConfirmation(model))
+        model.handle(.session(SessionEvent(sessionId: "s_1", buildId: "b_1", nodeName: "rd-phone-1", state: .downloading,
+                                           userAgent: "", bytesServed: 10)))
+        #expect(StopSharingMenu.needsConfirmation(model))
+        #expect(StopSharingMenu.confirmationMessage(installs: model.installsInProgress.count).contains("설치 1건이 끊깁니다"))
+        model.handle(.session(SessionEvent(sessionId: "s_1", buildId: "b_1", nodeName: "rd-phone-1", state: .completed,
+                                           userAgent: "", bytesServed: 20)))
+        #expect(!StopSharingMenu.needsConfirmation(model), "끝난 설치는 묻지 않는다")
+        await model.shutdown()
     }
 
     /// 입력란이 없는 곳에서는 안내 카드가 시작·다시 시작 버튼을 보여 준다(UI-R4).
@@ -182,7 +260,7 @@ extension ScreenTests {
         let tmp = try UITempDir("watchrow")
         let model = await model(.watchProblem, tmp)
         let problem = try #require(model.watchProblem)
-        let window = host(RootView(selection: .builds).environment(model))
+        let window = host(RootView(selection: .apps).environment(model))
         defer { window.close() }
         let view = try root(window)
         try #require(try await until { !AXTree.buttons("폴더 다시 고르기", in: view).isEmpty })
@@ -218,7 +296,7 @@ extension ScreenTests {
         let identity = BuildIdentity(content: .ipa(FileDigest(size: 1, sha256: "a")), bundleId: "com.example.shown", version: "1.4", buildNumber: "128")
         await queue.importURLs([missing, second]) { _, _ in .needsConfirmation(identity) }
 
-        let window = host(RootView(selection: .builds, importQueue: queue).environment(model))
+        let window = host(RootView(selection: .apps, importQueue: queue).environment(model))
         defer { window.close() }
         try #require(try await until { window.attachedSheet != nil })
         let sheet = try #require(window.attachedSheet?.contentView)
@@ -280,17 +358,24 @@ extension ScreenTests {
         #expect(texts.contains { $0.contains("알림에 이름을 넣지 않기") }, "\(texts)")
     }
 
-    /// 네트워크 화면에 알림 섹션이 들어 있다.
+    /// 알림 키는 설정 창의 알림 탭에 있고, 네트워크 화면에는 없다.
     @Test(.timeLimit(.minutes(1)))
-    func networkScreenHasThePushSection() async throws {
+    func notificationSettingsHaveThePushSection() async throws {
         let tmp = try UITempDir("push-network")
         let model = makeRecordingModel(RecordingCore(), tmp)
         let push = try makePush(model, withKey: false)
-        let window = host(RootView(selection: .network).environment(model).environment(push))
+        let window = host(NotificationSettings().environment(model).environment(push))
         defer { window.close() }
         let view = try root(window)
         let shown = try await until { !AXTree.buttons("키 파일 고르기…", in: view).isEmpty }
         #expect(shown, "\(AXTree.texts(in: view))")
+
+        let network = host(RootView(selection: .network).environment(model).environment(push))
+        defer { network.close() }
+        let networkView = try root(network)
+        try #require(try await until { !AXTree.buttons("설정 열기…", in: networkView).isEmpty })
+        #expect(AXTree.buttons("키 파일 고르기…", in: networkView).isEmpty)
+        #expect(!AXTree.texts(in: networkView).contains("제어 서버와 진단"), "제어 서버는 설정 > 고급에 있다")
     }
 
     /// 기기 줄에 알림 등록 상태가 보인다.
@@ -312,6 +397,44 @@ extension ScreenTests {
     }
 }
 
+extension ScreenTests {
+    /// 이름이 같은 기기를 이 Mac이 마지막으로 연락받은 시각으로 구분한다. 모르면 보이지 않는다.
+    @Test(.timeLimit(.minutes(1)))
+    func devicesShowTheLastContactTheMacKnows() async throws {
+        let tmp = try UITempDir("lastcontact")
+        let model = makeRecordingModel(RecordingCore(), tmp)
+        let paired = Date(timeIntervalSince1970: 1_800_000_000)
+        let first = DeviceEntry(id: "d_1", name: "시험용 iPhone", nodeStableId: "n1", nodeName: "rd-phone-1", loginName: "", pairedAt: paired)
+        let second = DeviceEntry(id: "d_2", name: "시험용 iPhone", nodeStableId: "n2", nodeName: "rd-phone-2", loginName: "", pairedAt: paired)
+        #expect(model.lastContact(with: first) == nil)
+        model.handle(.session(SessionEvent(sessionId: "s_1", buildId: "b_1", nodeName: "rd-phone-1", state: .completed,
+                                           userAgent: "", bytesServed: 1)))
+        let contact = try #require(model.lastContact(with: first))
+        #expect(model.lastContact(with: second) == nil, "다른 기기의 연락으로 바꾸지 않는다")
+
+        let window = host(VStack {
+            DeviceRow(device: first, lastContact: contact, remove: {})
+            DeviceRow(device: second, remove: {})
+        })
+        defer { window.close() }
+        let view = try root(window)
+        let shown = try await until { AXTree.texts(in: view).contains(DeviceRow.lastContactText(contact)) }
+        #expect(shown, "\(AXTree.texts(in: view))")
+        #expect(AXTree.texts(in: view).filter { $0.hasPrefix("최근 연락") }.count == 1)
+    }
+
+    /// 네트워크 화면의 다시 연결은 다른 다시 시작 버튼이 없을 때만 따로 보인다.
+    @Test func networkOffersReconnectOnlyWithoutAnotherRestart() async throws {
+        let tmp = try UITempDir("reconnect")
+        let expectations: [(PreviewScenario, Bool)] = [(.sharing, true), (.empty, false), (.error, false), (.needsLogin, false)]
+        for (scenario, shows) in expectations {
+            let model = await model(scenario, tmp)
+            #expect(NetworkView.showsReconnect(model) == shows, "\(scenario)")
+            await model.shutdown()
+        }
+    }
+}
+
 /// 보내지 않는 APNs 전송(화면 시험용).
 struct NoAPNsTransport: APNsTransport {
     func send(_ request: URLRequest) async throws -> (status: Int, body: Data) { (200, Data()) }
@@ -327,4 +450,11 @@ final class UIMemoryDefaults: UserDefaults, @unchecked Sendable {
     override func set(_ value: Any?, forKey key: String) { values[key] = value }
     override func set(_ value: Bool, forKey key: String) { values[key] = value }
     override func removeObject(forKey key: String) { values[key] = nil }
+}
+
+/// 스킴 하나를 돌려주는 가짜 빌더. 빌드는 하지 않는다.
+struct UIFakeBuilder: ProjectBuilding {
+    func schemes(container: URL) async throws -> [String] { [container.deletingPathExtension().lastPathComponent] }
+    func build(container: URL, scheme: String, log: URL) async throws {}
+    func products(container: URL, scheme: String) async throws -> [URL] { [] }
 }

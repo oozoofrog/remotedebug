@@ -427,7 +427,7 @@ public final class AgentDesk {
             session = previous.session
         }
         guard let target = projects.first(where: { $0.id == projectID }) else {
-            return .failure(Failure(message: String(localized: "프로젝트를 찾지 못했습니다. Mac 앱의 프로젝트 화면에서 연결했는지 확인하세요.")))
+            return .failure(Failure(message: String(localized: "프로젝트를 찾지 못했습니다. Mac 앱의 앱 화면에서 프로젝트를 연결했는지 확인하세요.")))
         }
         guard let tool else { return .failure(Failure(message: String(localized: "이 Mac에서 claude나 codex 명령을 찾지 못했습니다."))) }
         guard tools.contains(tool) else { return .failure(Failure(message: String(localized: "이 Mac에서 \(tool.rawValue) 명령을 찾지 못했습니다."))) }

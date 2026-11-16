@@ -16,7 +16,7 @@ struct UpdatePageSection: View {
                     }
                 } else {
                     LabeledContent("올린 빌드") {
-                        Text("없음: 프로젝트 화면에서 RemoteDebugPhone 스킴을 빌드해 게시하면 자동으로 올립니다.")
+                        Text("없음: 앱 화면에서 RemoteDebugPhone 스킴을 빌드해 게시하면 자동으로 올립니다.")
                             .foregroundStyle(.secondary)
                     }
                 }

@@ -34,8 +34,9 @@ struct DevicesView: View {
                         Text("iPhone을 페어링하면 이 Mac의 빌드를 설치할 수 있습니다.")
                     }
                 } actions: {
+                    // 공유가 꺼져 있으면 창 위 배너에 공유 시작이 있다.
                     if !model.isRunning {
-                        SharingButton()
+                        EmptyView()
                     } else if pairingReason == nil {
                         Button("iPhone 페어링…") { showPairing() }
                             .buttonStyle(.borderedProminent)
@@ -80,7 +81,8 @@ struct DevicesView: View {
                             Text("허용한 기기가 없습니다.").foregroundStyle(.secondary)
                         }
                         ForEach(model.devices) { device in
-                            DeviceRow(device: device, path: model.status?.peerPaths?[device.nodeStableId]) { deviceToRemove = device }
+                            DeviceRow(device: device, path: model.status?.peerPaths?[device.nodeStableId],
+                                      lastContact: model.lastContact(with: device)) { deviceToRemove = device }
                         }
                     }
                 }
@@ -128,7 +130,14 @@ struct DeviceRow: View {
     }
     /// 이 기기까지 가는 경로. 최근에 주고받은 것이 없으면 `nil`.
     var path: PeerPath?
+    /// 이 Mac이 마지막으로 이 기기의 연락을 받은 시각. 이름이 같은 기기를 구분하는 데 쓴다. 모르면 `nil`.
+    var lastContact: Date?
     let remove: () -> Void
+
+    /// `최근 연락 3분 전`.
+    static func lastContactText(_ date: Date) -> String {
+        String(localized: "최근 연락 \(date.formatted(.relative(presentation: .named)))")
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -145,8 +154,15 @@ struct DeviceRow: View {
                 if !device.loginName.isEmpty {
                     Text(device.loginName).font(.callout).foregroundStyle(.secondary)
                 }
-                Text("등록 \(device.pairedAt.formatted(date: .abbreviated, time: .shortened))")
-                    .font(.callout)
+                HStack(spacing: 10) {
+                    Text("등록 \(device.pairedAt.formatted(date: .abbreviated, time: .shortened))")
+                    if let lastContact {
+                        Text(Self.lastContactText(lastContact))
+                            .foregroundStyle(.secondary)
+                            .help(lastContact.formatted(date: .abbreviated, time: .standard))
+                    }
+                }
+                .font(.callout)
                 if device.isDirectEnrolled {
                     Label("같은 네트워크 직접 연결 등록됨", systemImage: "wifi")
                         .font(.callout)

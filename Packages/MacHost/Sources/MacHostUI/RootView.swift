@@ -5,14 +5,13 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case builds, projects, agent, files, devices, network, activity, logs, crashes
+    case apps, agent, files, devices, network, activity, logs, crashes
 
     public var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .builds: String(localized: "빌드")
-        case .projects: String(localized: "프로젝트")
+        case .apps: String(localized: "앱")
         case .agent: String(localized: "에이전트")
         case .files: String(localized: "보낸 파일")
         case .devices: String(localized: "기기")
@@ -23,10 +22,16 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable 
         }
     }
 
+    /// 매일 쓰는 화면: 앱을 게시하고, 파일을 보내고, iPhone을 연결한다.
+    static let daily: [SidebarItem] = [.apps, .files, .devices]
+    /// 가끔 보는 화면: 기록과 연결 상태. 에이전트 요청은 기능을 켰을 때만 보인다.
+    static var occasional: [SidebarItem] {
+        [.crashes, .logs, .activity, .network] + (AgentFeature.isEnabled ? [.agent] : [])
+    }
+
     var symbol: String {
         switch self {
-        case .builds: "shippingbox"
-        case .projects: "hammer"
+        case .apps: "square.grid.2x2"
         case .agent: "terminal"
         case .files: "doc.on.doc"
         case .devices: "iphone"
@@ -66,8 +71,9 @@ public struct RootView: View {
     @State private var importQueue: ImportQueue
     @State private var authKey = AuthKeyDraft()
     @State private var seenRequests: [PairRequestEvent] = []
+    @AppStorage(SetupChecklistCard.hiddenKey) private var checklistHidden = false
 
-    public init(selection: SidebarItem = .builds) {
+    public init(selection: SidebarItem = .apps) {
         self.init(selection: selection, importQueue: ImportQueue())
     }
 
@@ -78,10 +84,13 @@ public struct RootView: View {
 
     public var body: some View {
         NavigationSplitView {
-            List(SidebarItem.allCases.filter { ($0 != .agent || AgentFeature.isEnabled) }, selection: $selection) { item in
-                Label(item.title, systemImage: item.symbol)
-                    .badge(badge(for: item))
-                    .tag(item)
+            List(selection: $selection) {
+                Section {
+                    ForEach(SidebarItem.daily) { sidebarRow($0) }
+                }
+                Section("기록과 연결") {
+                    ForEach(SidebarItem.occasional) { sidebarRow($0) }
+                }
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 220)
             .safeAreaInset(edge: .top) {
@@ -108,6 +117,11 @@ public struct RootView: View {
                         if let request = Self.noticeRequest(model: model, selection: selection, showingPairing: showingPairing) {
                             PairRequestNotice(request: request) { selection = .devices }
                         }
+                        // 빌드 화면의 시작하기 카드가 같은 원인과 버튼을 보여 주는 동안에는 띄우지 않는다.
+                        if SharingIssueBanner.shows(model.guidance, selection: selection),
+                           !(selection == .apps && SetupChecklistCard.coversSharing(model, hidden: checklistHidden)) {
+                            SharingIssueBanner(guidance: model.guidance)
+                        }
                         if let message = model.lastError {
                             ErrorBanner(message: message) { model.lastError = nil }
                         }
@@ -117,7 +131,7 @@ public struct RootView: View {
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: BuildFileTypes.importable,
                       allowsMultipleSelection: true) { result in
             guard case .success(let urls) = result else { return }
-            selection = .builds
+            selection = .apps
             Task { await importQueue.importURLs(urls, using: importer) }
         }
         // 대화상자는 줄의 첫 항목을 보여 주고, 버튼은 보여 준 그 항목(id)에만 답한다. 닫힐 때 SwiftUI가 부르는
@@ -160,7 +174,7 @@ public struct RootView: View {
             if HostEdition.isSandboxed {
                 // 샌드박스판은 빌드하지 않고 등록만 한다. 프로젝트 파일을 놓았으면 그 폴더를 등록한다.
                 guard let linkedProjects else { return }
-                selection = .projects
+                selection = .apps
                 Task {
                     for url in urls {
                         let isContainer = ["xcodeproj", "xcworkspace"].contains(url.pathExtension)
@@ -170,11 +184,15 @@ public struct RootView: View {
                 return
             }
             guard let projects else { return }
-            selection = .projects
+            selection = .apps
             Task { for url in urls { await projects.connectAndBuild(url) } }
         })
         .onChange(of: projects?.suggestions.count ?? 0) { old, new in
-            if new > old { selection = .projects }
+            if new > old { selection = .apps }
+        }
+        // 도움말 메뉴에서 시작하기를 다시 열면 그 카드가 있는 앱 화면으로 간다.
+        .onChange(of: checklistHidden) { _, hidden in
+            if !hidden { selection = .apps }
         }
         .focusedSceneValue(\.importBuilds, ImportBuildsAction { showingImporter = true })
     }
@@ -185,15 +203,7 @@ public struct RootView: View {
 
     @ViewBuilder private var detail: some View {
         switch selection {
-        case .builds: BuildsView(showImporter: { showingImporter = true })
-        case .projects:
-            if HostEdition.isSandboxed, let linkedProjects {
-                LinkedProjectsView(projects: linkedProjects)
-            } else if let projects {
-                ProjectsView(projects: projects)
-            } else {
-                ContentUnavailableView("프로젝트를 쓸 수 없습니다", systemImage: "hammer")
-            }
+        case .apps: AppsView(showImporter: { showingImporter = true })
         case .agent: AgentView()
         case .files: FilesView()
         case .devices: DevicesView()
@@ -222,11 +232,16 @@ public struct RootView: View {
         }
     }
 
+    private func sidebarRow(_ item: SidebarItem) -> some View {
+        Label(item.title, systemImage: item.symbol)
+            .badge(badge(for: item))
+            .tag(item)
+    }
+
     private func badge(for item: SidebarItem) -> Int {
         switch item {
         case .devices: model.pendingPairRequests.count
-        case .builds: importQueue.pending.count
-        case .projects: projects?.suggestions.count ?? 0
+        case .apps: importQueue.pending.count + (projects?.suggestions.count ?? 0)
         case .agent: agentDesk?.jobs.count { !$0.state.isFinished } ?? 0
         default: 0
         }
@@ -320,45 +335,143 @@ struct PairRequestNotice: View {
     }
 }
 
-/// 사이드바 아래: 공유 상태와 공유 시작·중지.
+/// 사이드바 아래: 공유 상태 한 줄. 공유 중지는 옆의 메뉴에 둔다. 시작·복구 버튼은 문제가 있을 때 창 위 배너에 나온다.
 struct SharingStatusFooter: View {
     @Environment(HostModel.self) private var model
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        HStack(spacing: 6) {
             GuidanceLabel(guidance: model.guidance)
                 .font(.callout)
-            SharingButton()
-                .controlSize(.large)
-                .frame(maxWidth: .infinity)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if model.isRunning || model.isStarting {
+                StopSharingMenu()
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(.background.secondary, in: RDTheme.cardShape)
-        .overlay(RDTheme.cardShape.strokeBorder(.separator.opacity(0.5), lineWidth: 0.5))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 }
 
-/// 공유 시작 / 공유 중지. 시작하는 중에도 중지할 수 있다. 네트워크 화면에 입력한 인증 키가 있으면 그 키로 시작하고 지운다.
+/// 사이드바 아래 상태 줄 옆의 메뉴. 받고 있는 설치가 있으면 멈추기 전에 묻는다.
+struct StopSharingMenu: View {
+    @Environment(HostModel.self) private var model
+    @State private var confirming = false
+
+    static let title = String(localized: "공유 중지")
+
+    /// 멈추기 전에 확인을 받아야 하는가(iPhone이 받고 있는 설치가 있다).
+    static func needsConfirmation(_ model: HostModel) -> Bool { !model.installsInProgress.isEmpty }
+
+    var body: some View {
+        Menu {
+            Button(Self.title) {
+                if Self.needsConfirmation(model) {
+                    confirming = true
+                } else {
+                    Task { await model.stop() }
+                }
+            }
+        } label: {
+            Label("공유 메뉴", systemImage: "ellipsis.circle")
+        }
+        .labelStyle(.iconOnly)
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("공유 중지")
+        .confirmationDialog("공유를 멈출까요?", isPresented: $confirming) {
+            Button(Self.title, role: .destructive) { Task { await model.stop() } }
+            Button("돌아가기", role: .cancel) {}
+        } message: {
+            Text(Self.confirmationMessage(installs: model.installsInProgress.count))
+        }
+    }
+
+    static func confirmationMessage(installs: Int) -> String {
+        String(localized: "iPhone이 받고 있는 설치 \(installs)건이 끊깁니다. 공유를 다시 시작할 때까지 iPhone에서 빌드와 파일을 받을 수 없습니다.")
+    }
+}
+
+/// 공유 시작. 시작하는 동안에는 진행 표시만 보인다(중지는 사이드바 아래 메뉴에 있다).
+/// 네트워크 화면에 입력한 인증 키가 있으면 그 키로 시작하고 지운다.
 struct SharingButton: View {
     @Environment(HostModel.self) private var model
     @Environment(AuthKeyDraft.self) private var authKey
 
     var body: some View {
-        if model.isRunning || model.isStarting {
-            Button {
-                Task { await model.stop() }
-            } label: {
-                Label("공유 중지", systemImage: "stop.fill").frame(maxWidth: .infinity)
+        if model.isStarting {
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("공유 시작 중").foregroundStyle(.secondary)
             }
-        } else {
+        } else if !model.isRunning {
             Button {
                 SharingActions.start(model, authKey: authKey)
             } label: {
-                Label("공유 시작", systemImage: "play.fill").frame(maxWidth: .infinity)
+                Label("공유 시작", systemImage: "play.fill")
             }
             .buttonStyle(.borderedProminent)
             .disabled(authKey.isRestarting)
+        }
+    }
+}
+
+/// 공유에 문제가 있을 때 창 위에 띄우는 배너: 원인과 고칠 버튼 하나. 네트워크 화면에는 같은 내용이 있어 띄우지 않는다.
+struct SharingIssueBanner: View {
+    @Environment(HostModel.self) private var model
+    @Environment(\.showNetwork) private var showNetwork
+    let guidance: StatusGuidance
+
+    /// 사용자가 손써야 하는 상태에서만 띄운다. 시작 중·인증서 발급 중처럼 기다리면 되는 상태는 사이드바 아래 상태 줄만 바뀐다.
+    static func shows(_ guidance: StatusGuidance, selection: SidebarItem) -> Bool {
+        guard selection != .network else { return false }
+        switch guidance.kind {
+        case .ready, .starting, .issuingCertificate, .waitingForLoginURL: return false
+        case .stopped, .needsLogin, .needsMachineAuth, .needsLockSignature, .certificatesDisabled, .magicDNSDisabled, .error, .unknown: return true
+        }
+    }
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: GuidanceLabel.symbol(guidance.kind))
+                .foregroundStyle(GuidanceLabel.tint(guidance.kind))
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(guidance.title).font(.headline)
+                Text(guidance.message)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            action
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.bar)
+        .overlay(alignment: .bottom) { Divider() }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("공유 문제")
+    }
+
+    @ViewBuilder private var action: some View {
+        if guidance.kind == .certificatesDisabled || guidance.kind == .magicDNSDisabled,
+           let url = URL(string: StatusGuidance.dnsConsoleURL) {
+            Button("DNS 설정 페이지 열기") { NSWorkspace.shared.open(url) }
+        } else {
+            switch guidance.action {
+            case .start: SharingButton()
+            case .openLoginPage:
+                Button("로그인 페이지 열기") { model.openLoginPage() }
+                    .buttonStyle(.borderedProminent)
+            case .restart: RestartSharingButton()
+            case nil:
+                Button("네트워크 화면 열기") { showNetwork() }
+            }
         }
     }
 }
@@ -401,13 +514,18 @@ enum SharingActions {
     }
 }
 
-/// 공유 상태 제목과 상태별 기호(색만으로 구분하지 않는다).
+/// 공유 상태 한 줄과 상태별 기호(색만으로 구분하지 않는다).
 struct GuidanceLabel: View {
     let guidance: StatusGuidance
 
+    /// 상태 한 줄. 정상이면 사용자가 할 수 있는 일로 말한다.
+    static func title(_ guidance: StatusGuidance) -> String {
+        guidance.kind == .ready ? String(localized: "iPhone에서 받을 수 있음") : guidance.title
+    }
+
     var body: some View {
         Label {
-            Text(guidance.title)
+            Text(Self.title(guidance))
         } icon: {
             if guidance.kind == .starting || guidance.kind == .issuingCertificate || guidance.kind == .waitingForLoginURL {
                 ProgressView().controlSize(.small)
@@ -417,7 +535,7 @@ struct GuidanceLabel: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("공유 상태: \(guidance.title)")
+        .accessibilityLabel("공유 상태: \(Self.title(guidance))")
     }
 
     static func symbol(_ kind: StatusGuidance.Kind) -> String {
@@ -498,6 +616,23 @@ struct ImportBuildsAction {
 
 extension FocusedValues {
     @Entry var importBuilds: ImportBuildsAction?
+}
+
+/// 도움말 > 시작하기 보기: 숨긴 시작하기 카드를 다시 연다.
+public struct SetupChecklistCommand: View {
+    @Environment(\.openWindow) private var openWindow
+    let windowID: String
+
+    public init(windowID: String) {
+        self.windowID = windowID
+    }
+
+    public var body: some View {
+        Button("시작하기 보기") {
+            SetupChecklistCard.reopen()
+            openWindow(id: windowID)
+        }
+    }
 }
 
 /// 메뉴 막대의 파일 > 빌드 가져오기… (⌘O).

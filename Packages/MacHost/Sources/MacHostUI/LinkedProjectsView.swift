@@ -1,7 +1,7 @@
 import MacHostKit
 import SwiftUI
 
-/// 샌드박스판의 프로젝트 화면. 프로젝트 폴더를 등록하면 Xcode에서 한 최근 Debug 기기용 빌드를 찾아 게시한다.
+/// 샌드박스판의 등록한 프로젝트(앱 화면의 가져오기 메뉴에서 연다). 프로젝트 폴더를 등록하면 Xcode에서 한 최근 Debug 기기용 빌드를 찾아 게시한다.
 struct LinkedProjectsView: View {
     let projects: LinkedProjectsModel
 

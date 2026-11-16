@@ -249,40 +249,6 @@
         }
       }
     },
-    "%@ %@ (%@) 게시됨" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$@ (%3$@) published"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$@ (%3$@)を公開しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@ (%3$@) 게시됨"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$@（%3$@）已发布"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$@ (%3$@) 已發布"
-          }
-        }
-      }
-    },
     "%@ %@ (%@): iPhone의 빌드 목록에서 빠지고, 진행 중인 설치는 끊깁니다. 원본 파일은 그대로 둡니다." : {
       "localizations" : {
         "en" : {
@@ -385,40 +351,6 @@
         }
       }
     },
-    "%@ %lld개" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$lld"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$lld件"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$lld개"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$lld 个"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ %2$lld 個"
-          }
-        }
-      }
-    },
     "%@ (%@)" : {
       "localizations" : {
         "en" : {
@@ -449,6 +381,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "%@ (%@) · 게시 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ (%2$@) · published %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ (%2$@) · %3$@に公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$@) · 게시 %3$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ (%2$@) · %3$@发布"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ (%2$@) · %3$@發布"
           }
         }
       }
@@ -1123,34 +1089,6 @@
         }
       }
     },
-    "%@ 게시 취소" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unpublish %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@の公開を取り消す"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消发布 %@"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消發布 %@"
-          }
-        }
-      }
-    },
     "%@ 공유를 다시 시작하세요." : {
       "localizations" : {
         "en" : {
@@ -1207,6 +1145,34 @@
         }
       }
     },
+    "%@ 더 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More for %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@のその他"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 的更多操作"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 的更多操作"
+          }
+        }
+      }
+    },
     "%@ 등록 해제" : {
       "localizations" : {
         "en" : {
@@ -1259,6 +1225,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "要清除 %@ 記錄嗎？"
+          }
+        }
+      }
+    },
+    "%@ 빌드해서 게시" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Build and Publish %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@をビルドして公開"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "构建并发布 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建置並發布 %@"
           }
         }
       }
@@ -1371,34 +1365,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在為 Debug 裝置建置 %@ Scheme"
-          }
-        }
-      }
-    },
-    "%@ 앱에서 VPN을 켜고 이 Mac과 같은 Tailscale 계정으로 로그인한 뒤, 페어링 QR을 찍고 여기서 허용합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ In the app, turn on VPN, log in with the same Tailscale account as this Mac, then scan the pairing QR code and allow it here."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@アプリで VPN をオンにし、この Mac と同じ Tailscale アカウントでログインしてから、ペアリング用 QR コードを読み取り、ここで許可します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 在 App 中打开 VPN，使用与这台 Mac 相同的 Tailscale 账户登录，然后扫描配对二维码并在此处允许。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 在 App 中開啟 VPN，使用與這台 Mac 相同的 Tailscale 帳號登入，然後掃描配對 QR Code 並在此允許。"
           }
         }
       }
@@ -1803,6 +1769,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@/秒"
+          }
+        }
+      }
+    },
+    "%@: %@, %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@, %3$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@, %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@、%3$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@，%3$@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@，%3$@"
           }
         }
       }
@@ -3171,34 +3171,6 @@
         }
       }
     },
-    "%lld" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld"
-          }
-        }
-      }
-    },
     "%lld × %lld 픽셀" : {
       "localizations" : {
         "en" : {
@@ -3487,6 +3459,34 @@
         }
       }
     },
+    "%lld단계" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Step %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステップ%lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %lld 步"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %lld 步"
+          }
+        }
+      }
+    },
     "%lld대" : {
       "localizations" : {
         "en" : {
@@ -3543,58 +3543,86 @@
         }
       }
     },
-    "'iPhone 앱 설치…'의 명령을 터미널에서 실행해 앱을 설치합니다." : {
+    "'iPhone 앱 설치…'의 명령을 터미널에서 실행해 iPhone에 RemoteDebug 앱을 설치합니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Run the command from \"Install iPhone App…\" in Terminal to install the app."
+            "value" : "Run the command from Install iPhone App… in Terminal to install the RemoteDebug app on iPhone."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「iPhoneアプリをインストール…」のコマンドをTerminalで実行して、アプリをインストールします。"
+            "value" : "「iPhoneアプリをインストール…」のコマンドをターミナルで実行し、iPhoneにRemoteDebugアプリをインストールします。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在终端中运行“安装 iPhone App…”的命令来安装 App。"
+            "value" : "在终端中运行“安装 iPhone App…”中的命令，将 RemoteDebug App 安装到 iPhone 上。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在終端機執行「iPhone App 安裝…」的指令來安裝 App。"
+            "value" : "在終端機中執行「iPhone App 安裝…」裡的命令，將 RemoteDebug App 安裝到 iPhone 上。"
           }
         }
       }
     },
-    "(7일 안에 만료)" : {
+    "'프로젝트 추가…'로 Xcode 프로젝트를 고르거나 이 창에 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "(expires within 7 days)"
+            "value" : "Choose an Xcode project with Add Project… or drag it into this window to build it for Debug devices and publish it. Then tap Install in the iPhone app's build list."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "(7日以内に期限切れ)"
+            "value" : "「プロジェクトを追加…」でXcodeプロジェクトを選ぶか、このウインドウにドラッグ&ドロップすると、Debugデバイス用にビルドして公開します。iPhoneアプリのビルド一覧で「インストール」をタップしてください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "（7 天内到期）"
+            "value" : "通过“添加项目…”选择 Xcode 项目，或将其拖到此窗口，会为 Debug 设备构建并发布。在 iPhone App 的构建列表中点按“安装”即可。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "(7 天內到期)"
+            "value" : "使用「加入專案…」選擇 Xcode 專案，或將它拖放到這個視窗，就會為 Debug 裝置建置並發布。在 iPhone App 的建置列表中點一下「安裝」即可。"
+          }
+        }
+      }
+    },
+    "'프로젝트 추가…'로 프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 한 최근 Debug 빌드를 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Register a project folder with Add Project… and the latest Debug build made for iPhone in Xcode is published. Then tap Install in the iPhone app's build list."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「プロジェクトを追加…」でプロジェクトフォルダを登録すると、XcodeでiPhone用に作成した最新のDebugビルドを公開します。iPhoneアプリのビルド一覧で「インストール」をタップしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过“添加项目…”注册项目文件夹后，会发布最近一次在 Xcode 中为 iPhone 构建的 Debug 构建。在 iPhone App 的构建列表中点按“安装”即可。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用「加入專案…」註冊專案檔案夾後，會發布在 Xcode 中為 iPhone 建置的最近 Debug 建置。在 iPhone App 的建置列表中點一下「安裝」即可。"
           }
         }
       }
@@ -3875,34 +3903,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "CRC 不符：%@"
-          }
-        }
-      }
-    },
-    "Claude Code와 Codex에 RemoteDebug MCP 서버와 스킬을 설치합니다" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Installs the RemoteDebug MCP server and skill for Claude Code and Codex"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Claude CodeとCodexにRemoteDebugのMCPサーバとスキルをインストールします"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 Claude Code 和 Codex 中安装 RemoteDebug MCP 服务器和技能"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在 Claude Code 與 Codex 安裝 RemoteDebug MCP 伺服器與技能"
           }
         }
       }
@@ -6455,30 +6455,30 @@
         }
       }
     },
-    "RemoteDebug iPhone 앱이 비정상 종료되면 다시 열 때 기록을 보냅니다. 다른 앱의 기록은 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 열고, 공유 버튼으로 RemoteDebug에 넘기면 여기로 들어옵니다. 프로젝트 화면의 \"크래시·피드백 보내기 추가\"대로 패키지를 넣은 앱은 자기 크래시와 피드백을 직접 보냅니다." : {
+    "RemoteDebug iPhone 앱이 비정상 종료되면 다시 열 때 기록을 보냅니다. 다른 앱의 기록은 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 열고, 공유 버튼으로 RemoteDebug에 넘기면 여기로 들어옵니다. 앱 화면의 더 보기 메뉴 > \"크래시·피드백 보내기 추가\"대로 패키지를 넣은 앱은 자기 크래시와 피드백을 직접 보냅니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "If the RemoteDebug iPhone app quits unexpectedly, it sends the report when reopened. To get another app's report, open it in iPhone Settings > Privacy & Security > Analytics & Improvements > Analytics Data, then pass it to RemoteDebug with the Share button and it arrives here. Apps that include the package as described in \"Add Crash & Feedback Sending\" on the Projects screen send their own crashes and feedback directly."
+            "value" : "If the RemoteDebug iPhone app quits unexpectedly, it sends the report when reopened. To get another app's report, open it in iPhone Settings > Privacy & Security > Analytics & Improvements > Analytics Data, then pass it to RemoteDebug with the Share button and it arrives here. Apps that include the package as described in the Apps screen's More menu > \"Add Crash and Feedback Sending\" send their own crashes and feedback directly."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebugのiPhoneアプリが異常終了した場合は、次に開いたときに記録を送信します。他のアプリの記録は、iPhoneの「設定」>「プライバシーとセキュリティ」>「解析と改善」>「解析データ」で開き、共有ボタンからRemoteDebugに渡すと、ここに届きます。プロジェクト画面の「クラッシュ・フィードバック送信を追加」の手順でパッケージを組み込んだアプリは、自身のクラッシュとフィードバックを直接送信します。"
+            "value" : "RemoteDebugのiPhoneアプリが異常終了した場合は、次に開いたときに記録を送信します。他のアプリの記録は、iPhoneの「設定」>「プライバシーとセキュリティ」>「解析と改善」>「解析データ」で開き、共有ボタンからRemoteDebugに渡すと、ここに届きます。アプリ画面のその他メニュー >「クラッシュ・フィードバックの送信を追加」の手順でパッケージを組み込んだアプリは、自身のクラッシュとフィードバックを直接送信します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebug iPhone App 异常退出后，再次打开时会发送日志。其他 App 的日志请在 iPhone“设置 > 隐私与安全性 > 分析与改进 > 分析数据”中打开，再通过共享按钮交给 RemoteDebug，即可进入这里。按项目界面中“添加发送崩溃与反馈”的方式加入软件包的 App，会直接发送自己的崩溃和反馈。"
+            "value" : "RemoteDebug iPhone App 异常退出后，再次打开时会发送日志。其他 App 的日志请在 iPhone“设置 > 隐私与安全性 > 分析与改进 > 分析数据”中打开，再通过共享按钮交给 RemoteDebug，即可进入这里。按 App 界面的更多菜单 >“添加崩溃和反馈发送”的方式加入软件包的 App，会直接发送自己的崩溃和反馈。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebug iPhone App 異常結束時，會在重新開啟時傳送記錄。其他 App 的記錄請在 iPhone「設定」>「隱私權與安全性」>「分析與改進」>「分析資料」中開啟，並用分享按鈕傳給 RemoteDebug，就會進到這裡。依照專案畫面中「加入傳送當機記錄與回饋」安裝套件的 App，會直接傳送自己的當機記錄與回饋。"
+            "value" : "RemoteDebug iPhone App 異常結束時，會在重新開啟時傳送記錄。其他 App 的記錄請在 iPhone「設定」>「隱私權與安全性」>「分析與改進」>「分析資料」中開啟，並用分享按鈕傳給 RemoteDebug，就會進到這裡。依照 App 畫面的更多選單 >「新增當機與回饋傳送」安裝套件的 App，會直接傳送自己的當機記錄與回饋。"
           }
         }
       }
@@ -6983,6 +6983,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "RemoteDebug 尚未準備好。"
+          }
+        }
+      }
+    },
+    "RemoteDebug가 준비되지 않았습니다. 앱을 다시 열어 보세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteDebug isn't ready. Try reopening the app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteDebugの準備ができていません。アプリを開き直してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteDebug 尚未就绪。请重新打开 App。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteDebug 尚未就緒。請重新開啟 App。"
           }
         }
       }
@@ -7543,34 +7571,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "需要登入 Tailscale。登入後請再安裝一次。"
-          }
-        }
-      }
-    },
-    "Tailscale 세부 설정 보기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show Tailscale details"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tailscaleの詳細設定を表示"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示 Tailscale 详细设置"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "顯示 Tailscale 詳細設定"
           }
         }
       }
@@ -8695,34 +8695,6 @@
         }
       }
     },
-    "Xcode 프로젝트 폴더를 이 창에 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag an Xcode project folder into this window to build it for Debug devices and publish it. Then tap Install in the iPhone app's build list."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xcodeのプロジェクトフォルダをこのウインドウにドラッグ&ドロップすると、Debugデバイス用にビルドして公開します。iPhoneアプリのビルド一覧で「インストール」をタップしてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将 Xcode 项目文件夹拖到此窗口，会为 Debug 设备构建并发布。在 iPhone App 的构建列表中点按“安装”即可。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "將 Xcode 專案檔案夾拖放到這個視窗，就會為 Debug 裝置建置並發布。在 iPhone App 的建置列表中點一下「安裝」即可。"
-          }
-        }
-      }
-    },
     "Xcode 프로젝트(.xcodeproj)가 있는 폴더를 고르세요." : {
       "localizations" : {
         "en" : {
@@ -8779,6 +8751,34 @@
         }
       }
     },
+    "Xcode 프로젝트를 추가하거나 창으로 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add an Xcode project or drag it into the window to build it for Debug devices and publish it."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xcodeプロジェクトを追加するか、ウインドウにドラッグ&ドロップすると、Debugデバイス用にビルドして公開します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加 Xcode 项目或将其拖到窗口中，会为 Debug 设备构建并发布。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入 Xcode 專案或將它拖放到視窗中，就會為 Debug 裝置建置並發布。"
+          }
+        }
+      }
+    },
     "Xcode를 설치하고 Settings > Accounts에서 Apple 계정으로 로그인합니다." : {
       "localizations" : {
         "en" : {
@@ -8831,34 +8831,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Xcode 中沒有這個團隊的 Apple 帳號。請在 Xcode >「Settings」>「Accounts」加入帳號後再安裝一次。"
-          }
-        }
-      }
-    },
-    "Xcode에서 Debug 구성으로 기기용으로 빌드한 .app이나 .ipa를 가져오세요. 창으로 끌어 놓아도 됩니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import an .app or .ipa built for devices with the Debug configuration in Xcode. You can also drag it into the window."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "XcodeでDebug構成のデバイス用にビルドした.appまたは.ipaを読み込んでください。ウインドウにドラッグ&ドロップすることもできます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请导入在 Xcode 中用 Debug 配置为设备构建的 .app 或 .ipa。也可以拖到窗口中。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請匯入在 Xcode 中以 Debug 組態為裝置建置的 .app 或 .ipa。也可以拖放到視窗中。"
           }
         }
       }
@@ -9479,6 +9451,34 @@
         }
       }
     },
+    "iPhone 알림, iPhone 자동 연결, 같은 네트워크 직접 연결, 노드·IP, 제어 서버" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone notifications, iPhone auto-connect, direct connection on the same network, node and IP, control server"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone通知、iPhone自動接続、同じネットワークでの直接接続、ノード・IP、コントロールサーバ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 通知、iPhone 自动连接、同一网络直接连接、节点与 IP、控制服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 通知、iPhone 自動連線、同一網路直接連線、節點與 IP、控制伺服器"
+          }
+        }
+      }
+    },
     "iPhone 앱 빌드" : {
       "localizations" : {
         "en" : {
@@ -9587,6 +9587,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iPhone App 更新 (官方 Tailscale)"
+          }
+        }
+      }
+    },
+    "iPhone 앱에서 VPN을 켜고 이 Mac과 같은 Tailscale 계정으로 로그인합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In the iPhone app, turn on the VPN and sign in with the same Tailscale account as this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneアプリでVPNをオンにし、このMacと同じTailscaleアカウントでログインします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone App 中打开 VPN，并使用与这台 Mac 相同的 Tailscale 账户登录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone App 中開啟 VPN，並使用與這台 Mac 相同的 Tailscale 帳號登入。"
           }
         }
       }
@@ -9787,6 +9815,34 @@
         }
       }
     },
+    "iPhone에 RemoteDebug 앱을 설치하고 이 Mac과 페어링합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install the RemoteDebug app on iPhone and pair it with this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneにRemoteDebugアプリをインストールし、このMacとペアリングします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 上安装 RemoteDebug App，并与这台 Mac 配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 上安裝 RemoteDebug App，並與這台 Mac 配對。"
+          }
+        }
+      }
+    },
     "iPhone에 닿지 못했습니다. 케이블로 연결하고 잠금을 푼 뒤 '이 컴퓨터를 신뢰'를 허용하세요." : {
       "localizations" : {
         "en" : {
@@ -9895,6 +9951,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法儲存到 iPhone。請檢查儲存空間。"
+          }
+        }
+      }
+    },
+    "iPhone에서 받을 수 있음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Available on iPhone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneで受け取れます"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可在 iPhone 上获取"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可在 iPhone 上取得"
           }
         }
       }
@@ -10011,30 +10095,30 @@
         }
       }
     },
-    "iPhone을 케이블로 연결하고 'iPhone 앱 설치…'로 앱을 설치합니다." : {
+    "iPhone을 케이블로 연결하고 RemoteDebug 앱을 설치합니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Connect the iPhone with a cable and install the app with \"Install iPhone App…\"."
+            "value" : "Connect iPhone with a cable and install the RemoteDebug app."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhoneをケーブルで接続し、「iPhoneアプリをインストール…」でアプリをインストールします。"
+            "value" : "iPhoneをケーブルで接続し、RemoteDebugアプリをインストールします。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用线缆连接 iPhone，通过“安装 iPhone App…”安装 App。"
+            "value" : "用数据线连接 iPhone，并安装 RemoteDebug App。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用傳輸線連接 iPhone，並以「iPhone App 安裝…」安裝 App。"
+            "value" : "用傳輸線連接 iPhone，並安裝 RemoteDebug App。"
           }
         }
       }
@@ -10231,6 +10315,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iPhone 的開發者模式已關閉。請開啟「設定」>「隱私權與安全性」>「開發者模式」，並重新啟動 iPhone。"
+          }
+        }
+      }
+    },
+    "iPhone이 받고 있는 설치 %lld건이 끊깁니다. 공유를 다시 시작할 때까지 iPhone에서 빌드와 파일을 받을 수 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld installs in progress on iPhone will be interrupted. iPhone can't get builds or files until you start sharing again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneで受信中のインストール%lld件が中断されます。共有を再開するまで、iPhoneはビルドやファイルを受け取れません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 正在接收的 %lld 个安装将中断。在重新开始共享之前，iPhone 无法获取构建和文件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 正在接收的 %lld 個安裝將中斷。在重新開始分享之前，iPhone 無法取得建置和檔案。"
+          }
+        }
+      }
+    },
+    "iPhone이 받는 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone receiving"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneが受信中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 正在接收"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 正在接收"
+          }
+        }
+      }
+    },
+    "iPhone이 이 Mac에 닿지 않으면 공유를 멈췄다가 다시 시작합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If iPhone can't reach this Mac, stops sharing and starts it again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneがこのMacに接続できないときは、共有を停止してから再開します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果 iPhone 无法连接这台 Mac，会停止共享后重新开始。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果 iPhone 無法連到這台 Mac，會停止分享後重新開始。"
           }
         }
       }
@@ -11345,6 +11513,34 @@
         }
       }
     },
+    "가져오기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み込む"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯入"
+          }
+        }
+      }
+    },
     "가져오지 않기" : {
       "localizations" : {
         "en" : {
@@ -11369,34 +11565,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不匯入"
-          }
-        }
-      }
-    },
-    "가져온 빌드 없음" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No imported builds"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "読み込んだビルドはありません"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有已导入的构建"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒有已匯入的建置"
           }
         }
       }
@@ -11799,6 +11967,62 @@
         }
       }
     },
+    "거부한 접근" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denied access"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拒否したアクセス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拒绝的访问"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拒絕的存取"
+          }
+        }
+      }
+    },
+    "게시" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Published"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发布"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "發布"
+          }
+        }
+      }
+    },
     "게시 %@" : {
       "localizations" : {
         "en" : {
@@ -11883,6 +12107,34 @@
         }
       }
     },
+    "게시 취소…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unpublish…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "公開を取り消す…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消发布…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消發布…"
+          }
+        }
+      }
+    },
     "게시 폴더 밖의 파일은 게시할 수 없습니다. 빌드를 다시 가져오세요." : {
       "localizations" : {
         "en" : {
@@ -11935,68 +12187,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這是未發布的建置。"
-          }
-        }
-      }
-    },
-    "게시된 빌드 %lld개" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Published builds: %lld"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "公開済みのビルド: %lld件"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld 个已发布的构建"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已發布的建置 %lld 個"
-          }
-        }
-      }
-    },
-    "게시된 앱 %lld개 · 빌드 %lld개" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Published apps: %1$lld · Builds: %2$lld"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "公開済みのアプリ: %1$lld件 · ビルド: %2$lld件"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "게시된 앱 %1$lld개 · 빌드 %2$lld개"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld 个已发布的 App · %2$lld 个构建"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已發布的 App %1$lld 個 · 建置 %2$lld 個"
           }
         }
       }
@@ -12113,30 +12303,30 @@
         }
       }
     },
-    "게시할 빌드가 없습니다." : {
+    "게시할 앱이 없습니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No builds to publish."
+            "value" : "No apps to publish."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "公開するビルドがありません。"
+            "value" : "公開するアプリがありません。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "没有可发布的构建。"
+            "value" : "没有可发布的 App。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "沒有可發布的建置。"
+            "value" : "沒有可發布的 App。"
           }
         }
       }
@@ -12253,30 +12443,30 @@
         }
       }
     },
-    "고른 폴더의 빌드를 가져오고, 새로 빌드되는 앱도 자동으로 가져옵니다" : {
+    "고급" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Imports builds from the chosen folder, and automatically imports newly built apps too"
+            "value" : "Advanced"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選択したフォルダのビルドを読み込み、新しくビルドされるアプリも自動で読み込みます"
+            "value" : "詳細"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "导入所选文件夹中的构建，并自动导入新构建的 App"
+            "value" : "高级"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "匯入所選檔案夾中的建置，新建置的 App 也會自動匯入"
+            "value" : "進階"
           }
         }
       }
@@ -12501,6 +12691,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重新開始共享"
+          }
+        }
+      }
+    },
+    "공유 메뉴" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sharing Menu"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有メニュー"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享菜单"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享選單"
+          }
+        }
+      }
+    },
+    "공유 문제" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sharing Problem"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有の問題"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共享问题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分享問題"
           }
         }
       }
@@ -12931,34 +13177,6 @@
         }
       }
     },
-    "공유가 꺼져 있어 iPhone에서 이 빌드를 볼 수 없습니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sharing is off, so iPhone can't see this build."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "共有がオフのため、iPhoneからこのビルドを表示できません。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "共享已关闭，iPhone 看不到此构建。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "共享已關閉，iPhone 看不到這個建置。"
-          }
-        }
-      }
-    },
     "공유가 꺼져 있어 iPhone의 요청이 도착하지 않습니다." : {
       "localizations" : {
         "en" : {
@@ -13095,6 +13313,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "這會停止分享，並刪除此 Mac 的登入資訊和已配對的 %lld 台 iPhone。"
+          }
+        }
+      }
+    },
+    "공유를 멈출까요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stop sharing?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有を停止しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要停止共享吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要停止分享嗎？"
+          }
+        }
+      }
+    },
+    "공유를 시작하면 Tailscale 로그인 페이지가 열립니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starting sharing opens the Tailscale sign-in page."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有を開始するとTailscaleのログインページが開きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始共享后会打开 Tailscale 登录页面。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開始分享後會開啟 Tailscale 登入頁面。"
           }
         }
       }
@@ -13291,6 +13565,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通用"
+          }
+        }
+      }
+    },
+    "구성" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Configuration"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "構成"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "組態"
           }
         }
       }
@@ -13631,6 +13933,34 @@
         }
       }
     },
+    "기기 추가" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Device added"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デバイス追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已添加设备"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已加入裝置"
+          }
+        }
+      }
+    },
     "기기를 제거할까요?" : {
       "localizations" : {
         "en" : {
@@ -13795,6 +14125,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法讀取記錄檔案。"
+          }
+        }
+      }
+    },
+    "기록과 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records and Connection"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記録と接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录与连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記錄與連線"
           }
         }
       }
@@ -14311,34 +14669,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "開啟網路畫面"
-          }
-        }
-      }
-    },
-    "네트워크에서 상태 보기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View Status in Network"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ネットワークで状態を表示"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在网络中查看状态"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在網路中查看狀態"
           }
         }
       }
@@ -15435,6 +15765,34 @@
         }
       }
     },
+    "등록한 프로젝트…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Registered Projects…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登録したプロジェクト…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已注册的项目…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已註冊的專案…"
+          }
+        }
+      }
+    },
     "디버그 빌드가 아니라 게시할 수 없습니다." : {
       "localizations" : {
         "en" : {
@@ -15655,6 +16013,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "登出後，開始分享即可重新登入。"
+          }
+        }
+      }
+    },
+    "로그인" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign In"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログイン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登入"
           }
         }
       }
@@ -17373,6 +17759,34 @@
         }
       }
     },
+    "번들 ID" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bundle ID"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "バンドルID"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bundle ID"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bundle ID"
+          }
+        }
+      }
+    },
     "번들 ID 앞부분" : {
       "localizations" : {
         "en" : {
@@ -18113,34 +18527,6 @@
         }
       }
     },
-    "빌드 가져오기 (⌘O)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Import Build (⌘O)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ビルドをインポート (⌘O)"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "导入构建 (⌘O)"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "匯入建置 (⌘O)"
-          }
-        }
-      }
-    },
     "빌드 가져오기…" : {
       "localizations" : {
         "en" : {
@@ -18393,6 +18779,34 @@
         }
       }
     },
+    "빌드 정보…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Build Info…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ビルド情報…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "构建信息…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建置資訊…"
+          }
+        }
+      }
+    },
     "빌드 탭에서 Mac과 페어링하면 Mac의 에이전트에 요청을 보낼 수 있습니다." : {
       "localizations" : {
         "en" : {
@@ -18473,6 +18887,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在「建置」分頁開啟 RemoteDebug VPN 後，即可傳送請求。"
+          }
+        }
+      }
+    },
+    "빌드 파일(.app, .ipa) 가져오기와 폴더 감시" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import build files (.app, .ipa) and watch folders"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ビルドファイル（.app、.ipa）の読み込みとフォルダの監視"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "导入构建文件（.app、.ipa）和监视文件夹"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "匯入建置檔案（.app、.ipa）與監視檔案夾"
           }
         }
       }
@@ -18669,6 +19111,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "找不到建置的 App。請查看記錄。"
+          }
+        }
+      }
+    },
+    "빌드할 스킴이 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No schemes to build."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ビルドできるスキームがありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有可构建的 scheme。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有可建置的 Scheme。"
           }
         }
       }
@@ -19553,6 +20023,34 @@
         }
       }
     },
+    "설정 열기…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定を開く…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟設定…"
+          }
+        }
+      }
+    },
     "설정에서 RemoteDebug의 카메라 접근을 허용하거나, 이전 화면에서 주소와 코드를 직접 입력하세요." : {
       "localizations" : {
         "en" : {
@@ -19665,6 +20163,34 @@
         }
       }
     },
+    "설치 만료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install expired"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール期限切れ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装已过期"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安裝已過期"
+          }
+        }
+      }
+    },
     "설치 세션을 확인할 수 없습니다. 다시 설치하세요." : {
       "localizations" : {
         "en" : {
@@ -19745,6 +20271,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安裝工作階段已過期。請重新安裝。"
+          }
+        }
+      }
+    },
+    "설치 실패" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール失敗"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装失败"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安裝失敗"
+          }
+        }
+      }
+    },
+    "설치 완료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install completed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装完成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安裝完成"
           }
         }
       }
@@ -19941,6 +20523,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "準備安裝"
+          }
+        }
+      }
+    },
+    "설치 진행 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install in progress"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在安裝"
           }
         }
       }
@@ -20685,6 +21295,34 @@
         }
       }
     },
+    "스킴을 읽는 데 오래 걸리고 있습니다. xcodebuild가 Swift 패키지를 받거나 프로젝트를 여는 중일 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reading schemes is taking a while. xcodebuild may be fetching Swift packages or opening the project."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキームの読み込みに時間がかかっています。xcodebuildがSwiftパッケージを取得しているか、プロジェクトを開いている可能性があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "读取 scheme 花费的时间较长。xcodebuild 可能正在获取 Swift 软件包或打开项目。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "讀取 Scheme 花費的時間較長。xcodebuild 可能正在取得 Swift 套件或開啟專案。"
+          }
+        }
+      }
+    },
     "스킴을 읽는 중" : {
       "localizations" : {
         "en" : {
@@ -20709,34 +21347,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在讀取 Scheme"
-          }
-        }
-      }
-    },
-    "스킴을 읽지 못했습니다. 더 보기 메뉴에서 다시 읽으세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't read the schemes. Reload them from the More menu."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スキームを読み込めませんでした。その他メニューから再読み込みしてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法读取 scheme。请从“更多”菜单中重新读取。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法讀取 Scheme。請從「更多」選單重新讀取。"
           }
         }
       }
@@ -20859,30 +21469,58 @@
         }
       }
     },
-    "시작하기 목록을 숨깁니다" : {
+    "시작하기 목록을 숨깁니다. 도움말 메뉴의 ‘시작하기 보기’로 다시 엽니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hide the Get Started list"
+            "value" : "Hides the Get Started list. Reopen it from Help > Show Get Started."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「はじめに」リストを非表示にします"
+            "value" : "「はじめに」リストを隠します。ヘルプメニューの「はじめにを表示」で再表示します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "隐藏“开始使用”列表"
+            "value" : "隐藏“开始使用”列表。可通过帮助菜单中的“显示开始使用”再次打开。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "隱藏開始使用列表"
+            "value" : "隱藏「開始使用」列表。可從輔助說明選單的「顯示開始使用」再次開啟。"
+          }
+        }
+      }
+    },
+    "시작하기 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Get Started"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はじめにを表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示开始使用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示開始使用"
           }
         }
       }
@@ -21051,6 +21689,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "將以下指令貼到終端機並執行。"
+          }
+        }
+      }
+    },
+    "아직 게시한 빌드 없음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No builds published yet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "まだ公開したビルドはありません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未发布构建"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未發布建置"
           }
         }
       }
@@ -21481,6 +22147,34 @@
         }
       }
     },
+    "알림과 고급 설정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications and Advanced Settings"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知と詳細設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知与高级设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知與進階設定"
+          }
+        }
+      }
+    },
     "알림에 이름을 넣지 않기" : {
       "localizations" : {
         "en" : {
@@ -21505,6 +22199,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通知中不包含名稱"
+          }
+        }
+      }
+    },
+    "알림을 설정할 수 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications Can't Be Set Up"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知を設定できません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法设置通知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法設定通知"
           }
         }
       }
@@ -21705,6 +22427,62 @@
         }
       }
     },
+    "앱" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App"
+          }
+        }
+      }
+    },
+    "앱 %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld Apps"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリ %lld件"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个 App"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 個 App"
+          }
+        }
+      }
+    },
     "앱 딥 링크는 그 스킴을 등록한 앱이 설치돼 있어야 열립니다." : {
       "localizations" : {
         "en" : {
@@ -21789,30 +22567,58 @@
         }
       }
     },
-    "앱 없이 Safari로 설치" : {
+    "앱 없음" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Install with Safari, no app"
+            "value" : "No Apps"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アプリを使わず Safari でインストール"
+            "value" : "アプリなし"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "不通过 App，使用 Safari 安装"
+            "value" : "没有 App"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "不使用 App,改用 Safari 安裝"
+            "value" : "沒有 App"
+          }
+        }
+      }
+    },
+    "앱 화면의 프로젝트 추가로 프로젝트를 연결하면 그 폴더에서 에이전트를 실행합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect a project with Add Project on the Apps screen and the agent runs in that folder."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリ画面の「プロジェクトを追加」でプロジェクトを接続すると、そのフォルダでエージェントを実行します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 App 界面通过“添加项目”连接项目后，会在该文件夹中运行智能体。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 App 畫面使用「加入專案」連結專案後，會在該檔案夾中執行代理程式。"
           }
         }
       }
@@ -21981,6 +22787,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "若 App 無法執行，請確認「設定」>「隱私權與安全性」>「開發者模式」是否已開啟。"
+          }
+        }
+      }
+    },
+    "앱이 없을 때: Safari로 설치" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without the app: install with Safari"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリがないとき: Safariでインストール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有 App 时：使用 Safari 安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有 App 時：使用 Safari 安裝"
           }
         }
       }
@@ -22349,30 +23183,30 @@
         }
       }
     },
-    "없음: 프로젝트 화면에서 RemoteDebugPhone 스킴을 빌드해 게시하면 자동으로 올립니다." : {
+    "없음: 앱 화면에서 RemoteDebugPhone 스킴을 빌드해 게시하면 자동으로 올립니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "None: build and publish the RemoteDebugPhone scheme from the Projects screen to upload it automatically."
+            "value" : "None: build and publish the RemoteDebugPhone scheme from the Apps screen to upload it automatically."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "なし: プロジェクト画面で RemoteDebugPhone スキームをビルドして公開すると、自動でアップロードされます。"
+            "value" : "なし: アプリ画面でRemoteDebugPhoneスキームをビルドして公開すると、自動でアップロードされます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无：在项目屏幕中构建并发布 RemoteDebugPhone scheme 后会自动上传。"
+            "value" : "无：在 App 界面构建并发布 RemoteDebugPhone scheme 后会自动上传。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無：在專案畫面建置並發布 RemoteDebugPhone Scheme 後，會自動上傳。"
+            "value" : "無：在 App 畫面建置並發布 RemoteDebugPhone Scheme 後，會自動上傳。"
           }
         }
       }
@@ -23077,62 +23911,6 @@
         }
       }
     },
-    "연결한 프로젝트 %lld개" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connected projects: %lld"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続したプロジェクト %lld 件"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已连接 %lld 个项目"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已連結 %lld 個專案"
-          }
-        }
-      }
-    },
-    "연결한 프로젝트 없음" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No connected projects"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続したプロジェクトはありません"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有已连接的项目"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒有已連結的專案"
-          }
-        }
-      }
-    },
     "열 수 있는 로그인 주소가 아직 없습니다." : {
       "localizations" : {
         "en" : {
@@ -23609,6 +24387,34 @@
         }
       }
     },
+    "원본" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Source"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "元のファイル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原始文件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "原始檔案"
+          }
+        }
+      }
+    },
     "웹 주소나 앱 딥 링크를 iPhone으로 보내기" : {
       "localizations" : {
         "en" : {
@@ -24057,6 +24863,34 @@
         }
       }
     },
+    "이 Mac의 tailnet 주소" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac's tailnet address"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このMacのtailnetアドレス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台 Mac 的 tailnet 地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這台 Mac 的 tailnet 位址"
+          }
+        }
+      }
+    },
     "이 Mac의 설치 주소가 아직 열리지 않았습니다. 잠시 뒤 다시 시도하세요." : {
       "localizations" : {
         "en" : {
@@ -24141,30 +24975,30 @@
         }
       }
     },
-    "이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 되고, 태그는 위와 같은 태그를 고릅니다(태그가 목록에 없으면 정책 파일의 tagOwners에 먼저 추가). 기기 읽기 권한을 함께 주면 이 Mac이 같은 tailnet인지 확인합니다. 페어링 QR을 열 때마다 15분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣으므로, QR을 다른 사람에게 보여 주지 마세요." : {
+    "이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 됩니다. 태그는 위와 같은 태그를 고르고, 목록에 없으면 정책 파일의 tagOwners에 먼저 추가하세요. 기기 읽기 권한을 함께 주면 이 Mac이 같은 tailnet인지 확인합니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In the admin console of the tailnet this Mac is logged in to, create an OAuth client. It needs only one permission, write on Auth Keys (auth_keys), and choose the same tag as above (if the tag isn't listed, first add it to tagOwners in the policy file). If you also grant read permission on devices, this Mac verifies it's on the same tailnet. Each time the pairing QR is opened, a key that works only once for 15 minutes is created and put in the QR, so don't show the QR to anyone else."
+            "value" : "Create an OAuth client in the admin console of the tailnet this Mac is signed in to. The only permission it needs is Auth Keys write (auth_keys). Choose the same tags as above; if they're not listed, add them to tagOwners in the policy file first. If you also grant Devices read, this Mac checks that it's the same tailnet."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この Mac がログインしている tailnet の管理コンソールで OAuth クライアントを作成してください。権限は Auth Keys の書き込み(auth_keys)のみで足り、タグは上と同じタグを選びます(タグがリストにない場合は、ポリシーファイルの tagOwners に先に追加してください)。デバイスの読み取り権限も付与すると、この Mac が同じ tailnet かどうかを確認します。ペアリング QR を開くたびに、15 分間に 1 回だけ使えるキーを作成して QR に含めるため、QR を他の人に見せないでください。"
+            "value" : "このMacがログインしているtailnetの管理コンソールでOAuthクライアントを作成してください。権限はAuth Keysの書き込み（auth_keys）だけで十分です。タグは上と同じタグを選び、一覧にない場合は先にポリシーファイルのtagOwnersに追加してください。デバイスの読み取り権限も付与すると、このMacが同じtailnetかどうかを確認します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请在这台 Mac 所登录 tailnet 的管理控制台中创建 OAuth 客户端。权限只需要 Auth Keys 写入（auth_keys）一项，标签请选择与上方相同的标签（如果列表中没有该标签，请先在策略文件的 tagOwners 中添加）。如果同时授予设备读取权限，将会确认这台 Mac 属于同一 tailnet。每次打开配对 QR 码时，都会生成一个 15 分钟内仅可使用一次的密钥并放入 QR 码，因此请勿向他人展示 QR 码。"
+            "value" : "请在这台 Mac 登录的 tailnet 管理控制台中创建 OAuth 客户端。只需要 Auth Keys 写入（auth_keys）权限。标签请选择与上面相同的标签；如果列表中没有，请先在策略文件的 tagOwners 中添加。如果同时授予设备读取权限，这台 Mac 会确认是否为同一个 tailnet。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "請在此 Mac 所登入 tailnet 的管理主控台中建立 OAuth 用戶端。權限只需要 Auth Keys 寫入(auth_keys)，標籤請選擇與上方相同的標籤(若標籤不在列表中，請先加入政策檔的 tagOwners)。若同時授予裝置讀取權限，會確認此 Mac 是否屬於同一個 tailnet。每次開啟配對 QR 時，都會建立一把 15 分鐘內只能使用一次的金鑰並放入 QR,請勿將 QR 給他人看。"
+            "value" : "請在這台 Mac 登入的 tailnet 管理主控台中建立 OAuth 用戶端。只需要 Auth Keys 寫入（auth_keys）權限。標籤請選擇與上方相同的標籤；若列表中沒有，請先在原則檔案的 tagOwners 中加入。若同時授予裝置讀取權限，這台 Mac 會確認是否為同一個 tailnet。"
           }
         }
       }
@@ -24819,30 +25653,30 @@
         }
       }
     },
-    "이 앱은 크래시 기록과 피드백을 Mac에 보내지 않습니다." : {
+    "이 앱은 크래시 기록과 피드백을 Mac에 보내지 않습니다. 눌러서 추가 방법을 봅니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This app doesn't send crash logs or feedback to the Mac."
+            "value" : "This app doesn't send crash logs or feedback to the Mac. Click to see how to add it."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このアプリはクラッシュ履歴とフィードバックを Mac に送信しません。"
+            "value" : "このアプリはクラッシュ履歴とフィードバックをMacに送信しません。クリックすると追加方法を表示します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此 App 不会向 Mac 发送崩溃记录和反馈。"
+            "value" : "此 App 不会向 Mac 发送崩溃记录和反馈。点按查看添加方法。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此 App 不會將當機記錄與回饋傳送至 Mac。"
+            "value" : "此 App 不會將當機記錄與回饋傳送至 Mac。按一下查看加入方式。"
           }
         }
       }
@@ -25581,6 +26415,62 @@
         }
       }
     },
+    "이전 빌드 %lld개 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show %lld Earlier Builds"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以前のビルド%lld件を表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示 %lld 个早期构建"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示 %lld 個先前的建置"
+          }
+        }
+      }
+    },
+    "이전 빌드 숨기기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide Earlier Builds"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以前のビルドを隠す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏早期构建"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隱藏先前的建置"
+          }
+        }
+      }
+    },
     "이후 페어링 QR에는 Tailscale 키가 들어가지 않아 iPhone에서 Tailscale 로그인이 필요합니다. 관리 콘솔의 클라이언트는 그대로 남습니다." : {
       "localizations" : {
         "en" : {
@@ -25633,34 +26523,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "驗證金鑰"
-          }
-        }
-      }
-    },
-    "인증 키 로그인, QR 한 번으로 iPhone 연결, iPhone 앱 업데이트, 이 Mac의 주소, 제어 서버 설정입니다. 켜지 않아도 연결과 설치는 됩니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auth key sign-in, connecting an iPhone with one QR scan, iPhone app updates, this Mac’s addresses, and the control server. Connecting and installing work without turning this on."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "認証キーでのログイン、QR一回でのiPhone接続、iPhone アプリのアップデート、この Macのアドレス、コントロールサーバの設定です。オンにしなくても接続とインストールはできます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "包括使用认证密钥登录、扫一次二维码连接 iPhone、iPhone App 更新、这台 Mac 的地址以及控制服务器设置。不打开也可以连接和安装。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "包括使用驗證金鑰登入、掃一次 QR 碼連接 iPhone、iPhone App 更新、此 Mac 的位址以及控制伺服器設定。不開啟也可以連線和安裝。"
           }
         }
       }
@@ -26609,34 +27471,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打開完整記錄"
-          }
-        }
-      }
-    },
-    "접힘" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Collapsed"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "折りたたみ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已折叠"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已收合"
           }
         }
       }
@@ -27929,6 +28763,34 @@
         }
       }
     },
+    "최근 연락 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last contact %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最終連絡 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近联系 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近聯絡 %@"
+          }
+        }
+      }
+    },
     "최근 진단 로그 붙이기" : {
       "localizations" : {
         "en" : {
@@ -27957,30 +28819,30 @@
         }
       }
     },
-    "추가 방법" : {
+    "추가 방법을 엽니다" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "How to add"
+            "value" : "Opens the setup steps"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "追加方法"
+            "value" : "追加方法を開きます"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "添加方法"
+            "value" : "打开添加方法"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新增方式"
+            "value" : "開啟加入方式"
           }
         }
       }
@@ -28961,6 +29823,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "新增當機與回饋傳送…"
+          }
+        }
+      }
+    },
+    "크래시·피드백을 보내지 않음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Doesn't send crashes or feedback"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クラッシュ・フィードバックを送信しない"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不发送崩溃和反馈"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不傳送當機與回饋"
           }
         }
       }
@@ -30181,6 +31071,62 @@
         }
       }
     },
+    "페어링 QR을 iPhone 앱으로 찍은 뒤, 이 Mac에 온 요청을 허용합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan the pairing QR with the iPhone app, then allow the request on this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングQRをiPhoneアプリで読み取ってから、このMacに届いたリクエストを許可します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 iPhone App 扫描配对二维码，然后在这台 Mac 上允许收到的请求。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 iPhone App 掃描配對 QR 碼，然後在這台 Mac 上允許收到的請求。"
+          }
+        }
+      }
+    },
+    "페어링 QR을 열 때마다 15분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣습니다. QR을 다른 사람에게 보여 주지 마세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each time the pairing QR opens, a key usable once within 15 minutes is created and put in the QR. Don't show the QR to anyone else."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングQRを開くたびに、15分間に1回だけ使えるキーを作成してQRに入れます。QRを他の人に見せないでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次打开配对二维码时，都会创建一个 15 分钟内只能使用一次的密钥并放入二维码。请勿向他人展示二维码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次開啟配對 QR 碼時，都會建立一把 15 分鐘內只能使用一次的金鑰並放入 QR 碼。請勿向他人展示 QR 碼。"
+          }
+        }
+      }
+    },
     "페어링 결과, 설치 진행, 거부된 접근이 여기에 기록됩니다." : {
       "localizations" : {
         "en" : {
@@ -30205,6 +31151,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "配對結果、安裝進度與被拒絕的存取會記錄在這裡。"
+          }
+        }
+      }
+    },
+    "페어링 결정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing decision"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングの決定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对决定"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配對決定"
           }
         }
       }
@@ -31189,34 +32163,6 @@
         }
       }
     },
-    "펼침" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Expanded"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "展開"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已展开"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已展開"
-          }
-        }
-      }
-    },
     "포트" : {
       "localizations" : {
         "en" : {
@@ -31381,6 +32327,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法讀取檔案夾，或其中沒有 Xcode 專案。請取消註冊後重新加入。"
+          }
+        }
+      }
+    },
+    "폴더를 찾을 수 없음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Folder not found"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォルダが見つかりません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到文件夹"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到檔案夾"
           }
         }
       }
@@ -31755,34 +32729,6 @@
         }
       }
     },
-    "프로젝트 폴더나 .xcodeproj, .xcworkspace를 창으로 끌어 놓으세요. Debug 기기용으로 빌드해 게시합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag a project folder, .xcodeproj, or .xcworkspace into the window. It's built for a Debug device and published."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プロジェクトフォルダ、.xcodeproj、.xcworkspace をウインドウにドラッグ&ドロップしてください。Debug のデバイス用にビルドして公開します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将项目文件夹或 .xcodeproj、.xcworkspace 拖到窗口中。将为 Debug 设备构建并发布。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請將專案檔案夾或 .xcodeproj、.xcworkspace 拖移到視窗中。會以 Debug 裝置用途建置並發布。"
-          }
-        }
-      }
-    },
     "프로젝트 폴더나 Xcode 프로젝트 파일을 고릅니다" : {
       "localizations" : {
         "en" : {
@@ -31839,6 +32785,34 @@
         }
       }
     },
+    "프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 한 최근 Debug 빌드를 게시합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Register a project folder and the latest Debug build made for iPhone in Xcode is published."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロジェクトフォルダを登録すると、XcodeでiPhone用に作成した最新のDebugビルドを公開します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "注册项目文件夹后，会发布最近一次在 Xcode 中为 iPhone 构建的 Debug 构建。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "註冊專案檔案夾後，會發布在 Xcode 中為 iPhone 建置的最近 Debug 建置。"
+          }
+        }
+      }
+    },
     "프로젝트 폴더의 파일을 고친다. 그 밖의 명령은 에이전트 설정에서 허용한 것만 실행한다." : {
       "localizations" : {
         "en" : {
@@ -31867,114 +32841,58 @@
         }
       }
     },
-    "프로젝트 화면에서 프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 한 최근 Debug 빌드를 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다." : {
+    "프로젝트를 찾지 못했습니다. Mac 앱의 앱 화면에서 프로젝트를 연결했는지 확인하세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Register a project folder on the Projects screen and the latest Debug build made for iPhone in Xcode is published. Just tap Install in the iPhone app's build list."
+            "value" : "Couldn't find the project. Check that it's connected on the Mac app's Apps screen."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "プロジェクト画面でプロジェクトフォルダを登録すると、Xcode で iPhone 用に作成した最新の Debug ビルドを公開します。iPhone アプリのビルドリストで「インストール」をタップしてください。"
+            "value" : "プロジェクトが見つかりませんでした。Macアプリのアプリ画面でプロジェクトを接続したか確認してください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在项目屏幕中注册项目文件夹后，会发布最近一次在 Xcode 中为 iPhone 构建的 Debug 构建。在 iPhone App 的构建列表中点按“安装”即可。"
+            "value" : "未找到项目。请确认已在 Mac App 的 App 界面中连接项目。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在專案畫面註冊專案檔案夾後，會發布在 Xcode 中為 iPhone 建置的最近 Debug 建置。在 iPhone App 的建置列表中點一下安裝即可。"
+            "value" : "找不到專案。請確認是否已在 Mac App 的 App 畫面中連結專案。"
           }
         }
       }
     },
-    "프로젝트 화면에서 프로젝트를 연결하면 그 폴더에서 에이전트를 실행합니다." : {
+    "프로필" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Connect a project on the Projects screen and the agent runs in that folder."
+            "value" : "Profile"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "プロジェクト画面でプロジェクトを接続すると、そのフォルダでエージェントを実行します。"
+            "value" : "プロファイル"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在项目屏幕中连接项目后，会在该文件夹中运行智能体。"
+            "value" : "描述文件"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在專案畫面連結專案後，會在該檔案夾中執行代理程式。"
-          }
-        }
-      }
-    },
-    "프로젝트를 쓸 수 없습니다" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The project can't be used"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プロジェクトを使用できません"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法使用该项目"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法使用專案"
-          }
-        }
-      }
-    },
-    "프로젝트를 찾지 못했습니다. Mac 앱의 프로젝트 화면에서 연결했는지 확인하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't find the project. Check that it's connected on the Mac app's Projects screen."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プロジェクトが見つかりませんでした。Mac アプリのプロジェクト画面で接続したか確認してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未找到项目。请确认已在 Mac App 的项目屏幕中连接。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "找不到專案。請確認是否已在 Mac App 的專案畫面中連結。"
+            "value" : "描述檔"
           }
         }
       }
@@ -32031,6 +32949,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "描述檔到期"
+          }
+        }
+      }
+    },
+    "프로필 만료 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile expires %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロファイルの有効期限 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "描述文件到期 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "描述檔到期 %@"
+          }
+        }
+      }
+    },
+    "프로필 만료됨(%@)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Profile expired (%@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロファイルの有効期限切れ（%@）"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "描述文件已过期（%@）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "描述檔已過期（%@）"
           }
         }
       }

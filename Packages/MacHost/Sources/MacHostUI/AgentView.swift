@@ -100,7 +100,7 @@ private struct AgentDeskView: View {
                 Button("새 요청으로") { self.continuing = nil }
             }
         } else if desk.projects.isEmpty {
-            Label("프로젝트 화면에서 프로젝트를 연결하면 그 폴더에서 에이전트를 실행합니다.", systemImage: "hammer")
+            Label("앱 화면의 프로젝트 추가로 프로젝트를 연결하면 그 폴더에서 에이전트를 실행합니다.", systemImage: "hammer")
                 .foregroundStyle(.secondary)
         } else {
             Picker("프로젝트", selection: Binding(get: { selectedProject }, set: { projectID = $0 })) {

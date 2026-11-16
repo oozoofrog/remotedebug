@@ -42,7 +42,8 @@ struct ActivityView: View {
                         .font(.callout.monospacedDigit())
                         .foregroundStyle(.secondary)
                 }
-                .accessibilityElement(children: .combine)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Self.accessibilityText(item))
             }
         }
     }
@@ -63,6 +64,26 @@ struct ActivityView: View {
                         .textSelection(.enabled)
                 }
             }
+        }
+    }
+
+    /// VoiceOver가 읽을 한 줄: 종류(기호와 색이 나타내는 것), 내용, 시각.
+    static func accessibilityText(_ item: ActivityItem) -> String {
+        String(localized: "\(kindName(item.kind)): \(item.text), \(item.date.formatted(date: .omitted, time: .standard))")
+    }
+
+    static func kindName(_ kind: ActivityItem.Kind) -> String {
+        switch kind {
+        case .denied: String(localized: "거부한 접근")
+        case .session(let e):
+            switch e.state {
+            case .completed: String(localized: "설치 완료")
+            case .failed: String(localized: "설치 실패")
+            case .expired: String(localized: "설치 만료")
+            case .created, .manifestServed, .downloading: String(localized: "설치 진행 중")
+            }
+        case .pairDecided: String(localized: "페어링 결정")
+        case .deviceAdded: String(localized: "기기 추가")
         }
     }
 

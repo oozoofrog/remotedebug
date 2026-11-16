@@ -13,6 +13,12 @@ struct PairingSheet: View {
     @State private var creating = false
     @State private var hadCode = false
     @State private var lastRequest: PairRequestEvent?
+    /// 앱 없이 Safari로 설치하는 부분을 펼쳤는가. 기본은 접힘(앱 QR만 보인다).
+    @State private var showsBrowserInstall: Bool
+
+    init(showsBrowserInstall: Bool = false) {
+        _showsBrowserInstall = State(initialValue: showsBrowserInstall)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -92,8 +98,12 @@ struct PairingSheet: View {
                     CodePanel(code: code, link: model.pairingLink)
                     PairingKeyNote(dismiss: { dismiss() })
                     Divider().padding(.vertical, 4)
-                    Label(BrowserInstallPanel.heading, systemImage: "safari").font(.headline)
-                    BrowserInstallPanel(link: page)
+                    DisclosureGroup(isExpanded: $showsBrowserInstall) {
+                        BrowserInstallPanel(link: page)
+                            .padding(.top, 8)
+                    } label: {
+                        Label(BrowserInstallPanel.heading, systemImage: "safari").font(.headline)
+                    }
                 }
             } else {
                 VStack(alignment: .leading, spacing: 12) {
@@ -191,7 +201,7 @@ private struct CodePanel: View {
 struct BrowserInstallPanel: View {
     let link: URL
 
-    static let heading = String(localized: "앱 없이 Safari로 설치")
+    static let heading = String(localized: "앱이 없을 때: Safari로 설치")
     static let copyTitle = String(localized: "링크 복사")
     static let copyAnnouncement = String(localized: "설치 페이지 링크를 복사했습니다.")
     static let facts = String(localized: "iPhone의 Tailscale 앱이 이 Mac과 같은 tailnet에 로그인되어 있고 VPN이 켜져 있어야 열립니다. 링크에는 위와 같은 코드가 들어 있습니다. 요청이 오면 이 Mac에서 허용하거나 거부하세요.")
