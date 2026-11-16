@@ -302,6 +302,10 @@ public final class ClientModel {
     @ObservationIgnored private var resumeTask: Task<Void, Never>?
     @ObservationIgnored private var tunnelObserver: Task<Void, Never>?
     @ObservationIgnored private var refreshesInFlight = 0
+    /// 앱이 백그라운드에 있다(`stopPolling`과 `resumePolling` 사이). 이때 끝난 새로고침 실패는 화면에 올리지 않는다.
+    @ObservationIgnored private var isBackgrounded = false
+    /// 백그라운드로 간 횟수. 새로고침 도중에 다녀왔는지 가린다.
+    @ObservationIgnored private var backgroundCount = 0
     /// 호스트가 바뀔 때(복원·다른 호스트 승인·잊기)마다 늘어난다. 기다리는 동안 값이 바뀐 작업은 결과를 쓰지 않는다.
     @ObservationIgnored private var hostGeneration = 0
     @ObservationIgnored private var autoStartTask: Task<Bool, Never>?
@@ -645,6 +649,7 @@ public final class ClientModel {
     public func refresh() async {
         guard let current = host, makeAPI(current.fqdn) != nil else { return }
         let generation = hostGeneration
+        let backgroundsAtStart = backgroundCount
         refreshesInFlight += 1
         isRefreshing = true
         defer {
@@ -692,6 +697,11 @@ public final class ClientModel {
             return
         } catch {
             guard !(error is CancellationError), generation == hostGeneration else { return }
+            // 백그라운드에서는 iOS가 앱을 멈춰 요청이 끊긴다. 앱으로 돌아오면 다시 받으므로 오류로 올리지 않는다.
+            guard !isBackgrounded, backgroundCount == backgroundsAtStart else {
+                log(.debug, "builds", "백그라운드에서 끊긴 목록 받기: \(Self.message(for: error))")
+                return
+            }
             failRefresh(Self.message(for: error))
             return
         }
@@ -1144,6 +1154,8 @@ public final class ClientModel {
     /// 진행 확인(페어링 승인·설치 진행)을 멈춘다. 앱이 백그라운드로 가거나 화면이 사라질 때 부른다.
     /// 상태는 그대로 두고 `resumePolling()`으로 이어 간다.
     public func stopPolling() {
+        isBackgrounded = true
+        backgroundCount += 1
         pairing?.task.cancel()
         pairing = nil
         // 요청을 보내기 전·응답 전이면 이어 갈 것이 없으므로 페어링 전 상태로 돌린다.
@@ -1158,6 +1170,7 @@ public final class ClientModel {
     public func resumePolling() {
         // 앱이 다시 활성이 됐다. 네트워크가 바뀌었을 수 있으니 직접 경로를 다시 찾는다.
         noteNetworkChange()
+        isBackgrounded = false
         if pairing == nil, let poll = pairingPoll, let api = makeAPI(poll.link.host) {
             let token = UUID()
             pairing = PairingRun(token: token, link: poll.link, task: Task { [weak self] in

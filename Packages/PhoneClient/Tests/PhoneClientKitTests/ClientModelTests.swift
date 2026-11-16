@@ -597,6 +597,20 @@ private let otherInfo = Examples.info
         #expect(h.model.phase == .paired)
     }
 
+    /// 백그라운드에서 끊긴 새로고침은 오류로 올리지 않고, 앱으로 돌아와 실패하면 올린다.
+    @Test func refreshFailureInBackgroundStaysQuiet() async {
+        let h = Harness(storedHost: Harness.pairedHost)
+        h.transport.on("GET", "/v1/info", .fail(.networkConnectionLost), .fail(.networkConnectionLost))
+        h.model.stopPolling()
+        await h.model.restore()
+        #expect(h.model.lastError == nil)
+        #expect(h.model.refreshError == nil)
+        h.model.resumePolling()
+        await h.model.refresh()
+        #expect(h.model.refreshError != nil)
+        #expect(h.model.refreshError == h.model.lastError)
+    }
+
     @Test func refreshDetectsDifferentHost() async {
         let h = Harness(storedHost: Harness.pairedHost)
         h.transport.on("GET", "/v1/info", .json(Examples.info.replacingOccurrences(of: "h_4be0c7a1", with: "h_other000")))
