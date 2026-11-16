@@ -61,4 +61,15 @@ public enum ConnectionStatus: Equatable, Sendable {
         if case .problem(let problem) = self { return problem }
         return nil
     }
+
+    /// 페어링 전 첫 화면에 보일지. 페어링 전에는 VPN이 꺼져 있거나 연결 중인 것이 정상 경로이므로
+    /// (페어링을 시작하면 앱이 VPN을 켠다) 사용자가 해야 할 일이 생겼을 때만 보인다.
+    /// - Parameter vpnNeeded: 페어링 요청이 VPN을 기다리는 중이거나 VPN이 필요하다는 안내가 떠 있다.
+    public func isShownBeforePairing(vpnNeeded: Bool) -> Bool {
+        switch self {
+        case .ready, .standby, .working: false
+        case .problem(.vpnOff): vpnNeeded
+        case .problem: true
+        }
+    }
 }

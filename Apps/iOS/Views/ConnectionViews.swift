@@ -103,7 +103,7 @@ extension PhoneViewState {
 // MARK: - 맨 위 연결 칸
 
 /// 연결 요약. 정상이면 Mac 이름과 상태 한 줄, 해야 할 일이 있으면 원인과 버튼 하나.
-/// 페어링 전에는 VPN 칸을 그대로 보인다.
+/// 페어링 전에는 사용자가 해야 할 일이 생겼을 때만 보인다(페어링을 시작하면 앱이 VPN을 켠다).
 struct ConnectionSection: View {
     var state: PhoneViewState
     var actions: PhoneActions
@@ -123,8 +123,9 @@ struct ConnectionSection: View {
                     }
                 }
             }
-        } else {
-            VPNCard(state: state, actions: actions)
+        } else if status.isShownBeforePairing(vpnNeeded: state.needsTunnel || state.queuedPairingHost != nil),
+                  let problem = status.problem {
+            ConnectionProblemCard(problem: problem, state: state, actions: actions, pairAnotherMac: pairAnotherMac)
         }
     }
 }

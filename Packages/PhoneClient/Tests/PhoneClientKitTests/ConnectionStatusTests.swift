@@ -48,4 +48,15 @@ import Testing
         #expect(status(.failed(message: "x"), direct: true) == .problem(.failed(running: false)))
         #expect(status(.needsLogin(authURL: nil), direct: true) == .problem(.needsLogin(hasURL: false)))
     }
+
+    @Test func 페어링_전에는_VPN이_필요해진_뒤에야_VPN_꺼짐을_보인다() {
+        #expect(!ConnectionStatus.problem(.vpnOff).isShownBeforePairing(vpnNeeded: false))
+        #expect(ConnectionStatus.problem(.vpnOff).isShownBeforePairing(vpnNeeded: true))
+        #expect(!ConnectionStatus.standby.isShownBeforePairing(vpnNeeded: true))
+        #expect(!ConnectionStatus.working.isShownBeforePairing(vpnNeeded: true))
+        #expect(!ConnectionStatus.ready.isShownBeforePairing(vpnNeeded: true))
+        #expect(ConnectionStatus.problem(.needsLogin(hasURL: true)).isShownBeforePairing(vpnNeeded: false))
+        #expect(ConnectionStatus.problem(.failed(running: false)).isShownBeforePairing(vpnNeeded: false))
+        #expect(ConnectionStatus.problem(.unavailable).isShownBeforePairing(vpnNeeded: false))
+    }
 }

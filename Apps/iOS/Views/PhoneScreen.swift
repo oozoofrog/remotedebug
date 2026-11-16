@@ -31,7 +31,7 @@ struct PhoneScreen: View {
 
                 if state.host == nil, !state.isPairingInFlight, state.queuedPairingHost == nil {
                     Section {
-                        PairingForm(pair: actions.pair, handleScanned: actions.handleScanned, onSubmit: {})
+                        PairingForm(pair: actions.pair, handleScanned: actions.handleScanned, onSubmit: {}, collapsesManualEntry: true)
                     } header: {
                         Text("Mac 페어링")
                     } footer: {

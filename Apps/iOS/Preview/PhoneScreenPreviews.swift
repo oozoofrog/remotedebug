@@ -102,6 +102,13 @@ private func screen(_ state: PhoneViewState) -> some View {
     screen(PhoneViewState(tunnel: .off))
 }
 
+#Preview("①-1 미페어링 · 페어링이 VPN을 기다림") {
+    var state = PhoneViewState(tunnel: .off)
+    state.queuedPairingHost = "preview-mac.example.ts.net"
+    state.needsTunnel = true
+    return screen(state)
+}
+
 #Preview("② 승인 대기") {
     screen(PhoneViewState(
         phase: .waitingApproval(deviceName: "iPhone"),

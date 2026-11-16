@@ -7,6 +7,8 @@ struct PairingForm: View {
     var handleScanned: (_ text: String) -> String?
     /// 페어링을 시작한 뒤(시트를 닫을 때) 부른다.
     var onSubmit: () -> Void
+    /// `true`면 QR 스캔이 주 동작이고, 주소와 코드 입력은 접어 둔다(페어링 전 첫 화면).
+    var collapsesManualEntry = false
 
     @State private var host = ""
     @State private var code = ""
@@ -16,13 +18,34 @@ struct PairingForm: View {
     private enum Field { case host, code }
 
     var body: some View {
-        Button {
-            showsScanner = true
-        } label: {
-            Label("QR 코드 스캔", systemImage: "qrcode.viewfinder")
-        }
-        .bold()
+        scanButton
+            .sheet(isPresented: $showsScanner) {
+                QRScannerSheet(handleScanned: handleScanned) {
+                    showsScanner = false
+                    onSubmit()
+                }
+            }
 
+        if collapsesManualEntry {
+            DisclosureGroup("주소와 코드로 입력") { manualEntry }
+        } else {
+            manualEntry
+        }
+    }
+
+    @ViewBuilder private var scanButton: some View {
+        let label = Label("QR 코드 스캔", systemImage: "qrcode.viewfinder").frame(maxWidth: .infinity, alignment: collapsesManualEntry ? .center : .leading)
+        if collapsesManualEntry {
+            Button { showsScanner = true } label: { label }
+                .bold()
+                .buttonStyle(.borderedProminent)
+        } else {
+            Button { showsScanner = true } label: { label }
+                .bold()
+        }
+    }
+
+    @ViewBuilder private var manualEntry: some View {
         TextField("Mac 주소 (예: my-mac.example.ts.net)", text: $host)
             .textContentType(.URL)
             .keyboardType(.URL)
@@ -44,12 +67,6 @@ struct PairingForm: View {
 
         Button("페어링 요청", action: submit)
             .disabled(!canSubmit)
-        .sheet(isPresented: $showsScanner) {
-            QRScannerSheet(handleScanned: handleScanned) {
-                showsScanner = false
-                onSubmit()
-            }
-        }
     }
 
     private var canSubmit: Bool {
