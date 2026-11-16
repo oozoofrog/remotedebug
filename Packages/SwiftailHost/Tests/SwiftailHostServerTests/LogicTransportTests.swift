@@ -248,10 +248,13 @@ struct LogicTransportTests {
         let client = try await Self.startStalledDownload(server, target: target)
 
         // 보내는 도중 스냅숏(전송 사본과 같은 inode)을 줄인다. 전송이 파일을 읽지 못하면 세션은 `failed`가 된다.
+        // 전송 사본(`transfer-…`)은 로직이 곧 지우므로 목록을 읽은 사이에 없어질 수 있다. 없어진 것은 건너뛴다.
+        var truncated = 0
         for path in harness.snapshotFiles {
             chmod(path, 0o600)
-            #expect(truncate(path, 0) == 0)
+            if truncate(path, 0) == 0 { truncated += 1 } else { #expect(errno == ENOENT) }
         }
+        #expect(truncated > 0)
         #expect(await client.waitForClose(seconds: 10))
         try await waitUntil { harness.events.sessionStates(sessionID).contains(.failed) }
         #expect(!harness.events.sessionStates(sessionID).contains(.completed))
