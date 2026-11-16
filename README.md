@@ -145,7 +145,7 @@ Sending needs the RemoteDebug VPN on the iPhone. Without it the app keeps the re
 
 ## Current status
 
-"Confirmed" means only the scope written in the row. Real-device checks used one iPhone (iOS 27.2) on 2026-11-12. Test rows were last run on 2026-11-16 against Swiftail revision `151942f`.
+"Confirmed" means only the scope written in the row. Real-device checks used one iPhone (iOS 27.2) on 2026-11-12. Test rows were last run on 2026-11-16 against Swiftail revision `400ec44`.
 
 | Scope | Status | How to reproduce |
 | --- | --- | --- |
