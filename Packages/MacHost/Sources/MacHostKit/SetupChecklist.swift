@@ -83,9 +83,9 @@ public struct SetupChecklist: Sendable, Hashable {
         case .build:
             if isDone { return String(localized: "빌드 \(String(builds))개 게시됨") }
             if HostEdition.isSandboxed {
-                return String(localized: "프로젝트 화면에서 프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 한 최근 Debug 빌드를 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다.")
+                return String(localized: "'프로젝트 추가…'로 프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 한 최근 Debug 빌드를 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다.")
             }
-            return String(localized: "Xcode 프로젝트 폴더를 이 창에 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다.")
+            return String(localized: "'프로젝트 추가…'로 Xcode 프로젝트를 고르거나 이 창에 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다.")
         }
     }
 }

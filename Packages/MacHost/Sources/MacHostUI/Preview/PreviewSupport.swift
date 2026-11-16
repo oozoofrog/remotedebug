@@ -281,7 +281,7 @@ public struct PairingSheetPreviewHost: View {
 }
 
 #Preview("① 빈 상태·로그인 전") {
-    PreviewHost(scenario: .empty, selection: .builds)
+    PreviewHost(scenario: .empty, selection: .apps)
 }
 
 #Preview("② 로그인 필요") {
@@ -293,7 +293,7 @@ public struct PairingSheetPreviewHost: View {
 }
 
 #Preview("③ 공유 중: 빌드 목록·페어링 요청 알림") {
-    PreviewHost(scenario: .sharing, selection: .builds)
+    PreviewHost(scenario: .sharing, selection: .apps)
 }
 
 #Preview("③ 공유 중: 페어링 코드·Safari 설치 페이지") {
@@ -305,7 +305,7 @@ public struct PairingSheetPreviewHost: View {
 }
 
 #Preview("④ 거부된 빌드") {
-    PreviewHost(scenario: .rejected, selection: .builds)
+    PreviewHost(scenario: .rejected, selection: .apps)
 }
 
 #Preview("⑤ HTTPS 인증서 꺼짐") {
@@ -321,6 +321,6 @@ public struct PairingSheetPreviewHost: View {
 }
 
 #Preview("감시 폴더를 열 수 없음") {
-    PreviewHost(scenario: .watchProblem, selection: .builds)
+    PreviewHost(scenario: .watchProblem, selection: .apps)
 }
 #endif

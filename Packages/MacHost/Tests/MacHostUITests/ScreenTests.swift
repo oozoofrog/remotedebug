@@ -166,12 +166,12 @@ struct ScreenTests {
         let tmp = try UITempDir("notice")
         let model = await model(.sharing, tmp)
         let pending = try await waitForPending(model)
-        #expect(RootView.noticeRequest(model: model, selection: .builds, showingPairing: false) == pending)
+        #expect(RootView.noticeRequest(model: model, selection: .apps, showingPairing: false) == pending)
         #expect(RootView.noticeRequest(model: model, selection: .network, showingPairing: false) == pending)
         #expect(RootView.noticeRequest(model: model, selection: .devices, showingPairing: false) == nil, "기기 화면에는 목록이 있다")
-        #expect(RootView.noticeRequest(model: model, selection: .builds, showingPairing: true) == nil, "시트가 열려 있으면 띄우지 않는다")
+        #expect(RootView.noticeRequest(model: model, selection: .apps, showingPairing: true) == nil, "시트가 열려 있으면 띄우지 않는다")
         await model.deny(pending.requestId)
-        #expect(RootView.noticeRequest(model: model, selection: .builds, showingPairing: false) == nil)
+        #expect(RootView.noticeRequest(model: model, selection: .apps, showingPairing: false) == nil)
         await model.shutdown()
     }
 
@@ -311,7 +311,7 @@ struct ScreenTests {
     @Test func rejectedListShowsTheFilesAndReasons() async throws {
         let tmp = try UITempDir("rejectedlist")
         let model = await model(.rejected, tmp)
-        #expect(!BuildsView.showsEmptyState(model: model, pendingCount: 0))
+        #expect(!AppsView.showsEmptyState(model: model, pendingCount: 0))
         let texts = model.rejected.map(RejectedBuildRow.accessibilityText)
         #expect(texts.contains { $0.hasPrefix("거부됨: Sample.app.") && $0.contains("Debug 구성 빌드가 아닙니다") })
         #expect(texts.contains { $0.hasPrefix("거부됨: AdHocSample.app.") && $0.contains("개발용 프로필이 아닙니다") })
@@ -320,10 +320,10 @@ struct ScreenTests {
     @Test func emptyBuildsScreenOnlyWithNothingToShow() async throws {
         let tmp = try UITempDir("emptybuilds")
         let empty = await model(.empty, tmp)
-        #expect(BuildsView.showsEmptyState(model: empty, pendingCount: 0))
-        #expect(!BuildsView.showsEmptyState(model: empty, pendingCount: 1), "대기 항목이 있으면 목록을 보여 준다")
+        #expect(AppsView.showsEmptyState(model: empty, pendingCount: 0))
+        #expect(!AppsView.showsEmptyState(model: empty, pendingCount: 1), "대기 항목이 있으면 목록을 보여 준다")
         let stale = await model(.watchProblem, tmp)
-        #expect(!BuildsView.showsEmptyState(model: stale, pendingCount: 0))
+        #expect(!AppsView.showsEmptyState(model: stale, pendingCount: 0))
     }
 
     @Test func devicesScreenOffersTheMatchingRecovery() async throws {
@@ -372,7 +372,7 @@ struct ScreenTests {
         #expect(model.pairRequests.count == 1)
         let window = NSWindow(contentRect: NSRect(x: -4000, y: -4000, width: 960, height: 640), styleMask: [.titled], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: RootView(selection: .builds).environment(model))
+        window.contentView = NSHostingView(rootView: RootView(selection: .apps).environment(model))
         window.orderBack(nil)
         defer { window.close() }
         for _ in 0..<100 where !model.pairRequests.isEmpty {
@@ -399,8 +399,39 @@ struct ScreenTests {
 
     @Test func buildEvidenceText() {
         let builds = PreviewFactory.sampleBuilds()
-        #expect(PublishedBuildRow.evidence(builds[0].descriptor) == "Debug · Debug-iphoneos 폴더")
-        #expect(PublishedBuildRow.evidence(builds[1].descriptor) == "Debug · debug.dylib 있음")
+        #expect(BuildInfoSheet.evidence(builds[0].descriptor) == "Debug · Debug-iphoneos 폴더")
+        #expect(BuildInfoSheet.evidence(builds[1].descriptor) == "Debug · debug.dylib 있음")
+    }
+
+    /// 빌드 묶음과 연결한 프로젝트가 한 목록이 된다. 빌드 버튼은 프로젝트마다 한 줄에만 있다.
+    @Test func appListJoinsProjectsAndBuilds() {
+        let builds = PreviewFactory.sampleBuilds()
+        let t = Date()
+        let sample = ConnectedProject(container: "/src/Sample/Sample.xcodeproj", addedAt: t.addingTimeInterval(-10_000))
+        let fresh = ConnectedProject(container: "/src/Fresh/Fresh.xcodeproj", addedAt: t.addingTimeInterval(-60))
+        var previous = builds[0]
+        previous.descriptor.id = "previous"
+        previous.descriptor.publishedAt = t.addingTimeInterval(-7_200)
+        let entries = AppList.entries(builds: builds + [previous], projects: [sample, fresh]) {
+            $0.descriptor.bundleId == "com.example.app.Sample" ? sample : nil
+        }
+        #expect(entries.map(AppRow.title) == ["Fresh", "Sample", "Notes"], "최근에 연결하거나 게시한 것이 위에 온다")
+        #expect(entries[0].group == nil && entries[0].showsProjectControls)
+        #expect(entries[1].project == sample && entries[1].showsProjectControls)
+        #expect(entries[1].group?.older.map(\.id) == ["previous"], "같은 앱의 이전 빌드는 한 줄에 묶인다")
+        #expect(entries[2].project == nil && !entries[2].showsProjectControls)
+
+        let both = AppList.entries(builds: builds, projects: [sample]) { _ in sample }
+        #expect(both.map(\.showsProjectControls) == [true, false])
+        #expect(AppRow.projectCaption(both[1]) == "Sample", "앱 이름과 다르면 프로젝트 이름을 보조로 보인다")
+        #expect(AppRow.projectCaption(both[0]) == nil)
+    }
+
+    @Test func profileExpiryShowsOnlyWithin30Days() {
+        let t = Date(timeIntervalSince1970: 1_900_000_000)
+        #expect(AppRow.profileNotice(t.addingTimeInterval(31 * 86_400), now: t) == nil)
+        #expect(AppRow.profileNotice(t.addingTimeInterval(10 * 86_400), now: t)?.hasPrefix("프로필 만료 ") == true)
+        #expect(AppRow.profileNotice(t.addingTimeInterval(-86_400), now: t)?.hasPrefix("프로필 만료됨") == true)
     }
 
     @Test func qrCodeRenders() {

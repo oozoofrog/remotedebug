@@ -56,7 +56,7 @@ MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 
 - **크래시 기록**: iPhone 앱이 비정상 종료되면 다음 실행 때 기록을 Mac에 보낸다. 다른 앱의 기록은 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 열어 공유로 RemoteDebug에 넘긴다. iPhone 앱의 설정과 Mac의 **크래시** 화면에서 보고 공유한다.
 - **설치된 버전**: iPhone 빌드 목록에 그 앱이 지금 어떤 버전으로 설치돼 있는지 보인다(iOS 비공개 API를 써서 읽지 못하는 기기에서는 보이지 않는다).
 - **iPhone 앱 없이 설치**: Mac은 `https://<Mac의 FQDN>/`에서 설치 웹 페이지도 내준다. 공식 Tailscale 앱을 켠 iPhone이 Safari로 열어 페어링 코드를 넣고, Mac에서 허용받은 뒤 설치한다. 실제 iPhone에서는 아직 열어 보지 않았다([설정 문서](docs/setup.md#iphone에서-앱-없이-설치웹-페이지)).
-- **시작하기**: Mac 빌드 화면의 **시작하기** 목록이 순서를 보여 준다. Tailscale 연결, 설치 주소 열기, iPhone 연결, 첫 빌드 게시.
+- **시작하기**: Mac 앱 화면의 **시작하기** 목록이 순서를 보여 준다. Tailscale 연결, 설치 주소 열기, iPhone 연결, 첫 빌드 게시.
 
 ## 빠른 시작
 
@@ -123,7 +123,7 @@ iOS는 VPN을 한 번에 하나만 켠다. 한 앱이 켜면 다른 앱의 것�
 RemoteDebug로 설치한 앱에서 생긴 문제를 Mac에서 바로 볼 수 있다. 받은 것은 Mac 앱의 **크래시·피드백** 화면과 에이전트 도구 `remotedebug_crash_logs`에 모인다.
 
 - RemoteDebug iPhone 앱: 비정상 종료되면 다음 실행 때 기록을 보낸다. 설정 > 크래시·피드백에서 피드백을 적어 보낼 수 있다.
-- 내 앱: 저장소 주소(`https://github.com/oozoofrog/remotedebug`)를 Swift 패키지로 추가해 `RemoteDebugFeedback`을 넣는다. Mac 앱의 프로젝트 화면에서 **추가 방법**을 누르면 Mac 주소가 든 코드가 나온다.
+- 내 앱: 저장소 주소(`https://github.com/oozoofrog/remotedebug`)를 Swift 패키지로 추가해 `RemoteDebugFeedback`을 넣는다. Mac 앱 화면에서 그 앱 줄의 더 보기 메뉴 > **크래시·피드백 보내기 추가…**를 누르면 Mac 주소가 든 코드가 나온다.
 
 ```swift
 import RemoteDebugFeedback

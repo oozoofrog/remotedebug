@@ -145,6 +145,9 @@ public final class ProjectsModel {
         var dismissed: [String] = []
         /// 이미 가져온 빌드의 지문(`.app` 경로 → 지문).
         var imported: [String: BuildFingerprint] = [:]
+        /// 프로젝트에서 게시한 앱의 번들 ID(프로젝트 경로 → 번들 ID). 앱 목록에서 빌드를 프로젝트 행에 붙인다.
+        /// 이 항목이 생기기 전의 파일에는 없다.
+        var bundleIds: [String: [String]]?
     }
 
     public private(set) var projects: [ConnectedProject] = []
@@ -153,6 +156,15 @@ public final class ProjectsModel {
     public private(set) var phases: [String: Phase] = [:]
     public private(set) var reports: [String: Report] = [:]
     public var lastError: String?
+    /// 폴더를 찾을 수 없는 연결한 프로젝트(id).
+    public private(set) var missingProjects: Set<String> = []
+    /// 스킴을 읽기 시작한 시각(읽는 중인 프로젝트만).
+    public private(set) var schemeLoadStarted: [String: Date] = [:]
+    /// 스킴 읽기가 이보다 오래 걸리면 이유와 다시 시도를 보여 준다.
+    public static let slowSchemeLoad: TimeInterval = 10
+    /// 프로젝트별로 빌드 결과(.app)가 놓이는 폴더. 검사·빌드할 때 채운다.
+    @ObservationIgnored private var productFolders: [String: Set<String>] = [:]
+    @ObservationIgnored private var schemeTasks: [String: Task<[String], any Error>] = [:]
     /// Xcode 빌드 폴더(DerivedData) 읽기가 10초 넘게 끝나지 않고 있다.
     public private(set) var scanStalled = false
     public var derivedDataPath: String { scanner.root.path }
@@ -259,7 +271,30 @@ public final class ProjectsModel {
         projects.removeAll { $0.id == project.id }
         schemes[project.id] = nil
         reports[project.id] = nil
+        missingProjects.remove(project.id)
+        productFolders[project.id] = nil
+        stored.bundleIds?[project.container] = nil
         save()
+    }
+
+    /// 게시한 빌드를 만든 연결한 프로젝트. 원본(.app)이 그 프로젝트의 빌드 결과 폴더에 있거나,
+    /// 그 프로젝트에서 게시한 적 있는 번들 ID면 그 프로젝트다. 모르면 nil(직접 가져온 빌드 등).
+    public func owner(sourcePath: String, bundleId: String) -> ConnectedProject? {
+        let folder = URL(fileURLWithPath: sourcePath).deletingLastPathComponent().standardizedFileURL.path
+        if let project = projects.first(where: { productFolders[$0.id]?.contains(folder) == true }) { return project }
+        return projects.first { stored.bundleIds?[$0.container]?.contains(bundleId) == true }
+    }
+
+    private func noteProducts(_ apps: [URL], of project: ConnectedProject) {
+        guard !apps.isEmpty else { return }
+        productFolders[project.id, default: []].formUnion(apps.map { $0.deletingLastPathComponent().standardizedFileURL.path })
+    }
+
+    private func notePublished(_ bundleId: String, by project: ConnectedProject) {
+        var map = stored.bundleIds ?? [:]
+        guard map[project.container]?.contains(bundleId) != true else { return }
+        map[project.container, default: []].append(bundleId)
+        stored.bundleIds = map
     }
 
     /// 마지막에 쓴 스킴, 스킴이 하나면 그것, 아니면 프로젝트와 이름이 같은 스킴.
@@ -278,15 +313,43 @@ public final class ProjectsModel {
     public func loadSchemes(for project: ConnectedProject) async -> [String] {
         guard phases[project.id] == nil else { return schemes[project.id] ?? [] }
         phases[project.id] = .loadingSchemes
-        defer { phases[project.id] = nil }
-        do {
-            let list = try await builder.schemes(container: project.containerURL)
+        schemeLoadStarted[project.id] = now()
+        let builder = self.builder
+        let container = project.containerURL
+        let task = Task.detached(priority: .userInitiated) { try await builder.schemes(container: container) }
+        schemeTasks[project.id] = task
+        let result = await task.result
+        // 다시 시도로 바뀐 읽기면 상태를 새 읽기에 맡긴다.
+        guard schemeTasks[project.id] == task else { return schemes[project.id] ?? [] }
+        schemeTasks[project.id] = nil
+        schemeLoadStarted[project.id] = nil
+        phases[project.id] = nil
+        switch result {
+        case .success(let list):
             schemes[project.id] = list
+            missingProjects.remove(project.id)
+            if reports[project.id]?.scheme == nil, reports[project.id]?.ok == false { reports[project.id] = nil }
             return list
-        } catch {
+        case .failure(let error):
+            let path = project.container
+            if await Self.offMain({ !FileManager.default.fileExists(atPath: path) }) {
+                missingProjects.insert(project.id)
+            }
             reports[project.id] = Report(ok: false, message: HostErrorText.message(for: error))
             return []
         }
+    }
+
+    /// 읽고 있는 스킴 읽기를 멈추고 처음부터 다시 읽는다.
+    @discardableResult
+    public func retrySchemes(for project: ConnectedProject) async -> [String] {
+        if let running = schemeTasks[project.id] {
+            running.cancel()
+            schemeTasks[project.id] = nil
+            schemeLoadStarted[project.id] = nil
+            if phases[project.id] == .loadingSchemes { phases[project.id] = nil }
+        }
+        return await loadSchemes(for: project)
     }
 
     // MARK: 빌드
@@ -309,6 +372,7 @@ public final class ProjectsModel {
             try await builder.build(container: project.containerURL, scheme: scheme, log: log)
             phases[project.id] = .importing
             let built = try await builder.products(container: project.containerURL, scheme: scheme)
+            noteProducts(built, of: project)
             report = await importProducts(of: project, finished: true, built: built)
             report.scheme = scheme
         } catch let failure as ProjectBuildFailure {
@@ -338,6 +402,7 @@ public final class ProjectsModel {
                     return Candidate(app: app, fingerprint: fingerprint, signed: signature.map { $0 >= fingerprint.executableModified } ?? false)
                 }
         }
+        noteProducts(candidates.map(\.app), of: project)
         var report = Report(ok: true)
         var sawApp = false
         var rejections: [String] = []
@@ -355,6 +420,7 @@ public final class ProjectsModel {
             switch outcome {
             case .accepted(let build):
                 let d = build.descriptor
+                notePublished(d.bundleId, by: project)
                 report.published.append(Published(buildId: d.id, bundleId: d.bundleId, name: d.displayName, version: d.version, buildNumber: d.buildNumber))
             case .rejected(let rejected):
                 rejections.append("\(app.lastPathComponent): " + rejected.reasons.map(RejectionText.sentence(for:)).joined(separator: " "))
@@ -414,10 +480,14 @@ public final class ProjectsModel {
     public func scanXcode() async {
         load()
         let scanner = self.scanner
-        let (entries, existing) = await Self.offMain { () -> ([DerivedDataEntry], Set<String>) in
+        let containers = projects.map(\.container)
+        let (entries, existing, missing) = await Self.offMain { () -> ([DerivedDataEntry], Set<String>, Set<String>) in
             let entries = scanner.entries()
-            return (entries, Set(entries.map(\.workspacePath).filter { FileManager.default.fileExists(atPath: $0) }))
+            let missing = Set(containers.filter { !FileManager.default.fileExists(atPath: $0) })
+            return (entries, Set(entries.map(\.workspacePath).filter { FileManager.default.fileExists(atPath: $0) }), missing)
         }
+        let nowMissing = Set(projects.filter { missing.contains($0.container) }.map(\.id))
+        if nowMissing != missingProjects { missingProjects = nowMissing }
         for entry in entries where entry.hasDeviceDebug {
             if projects.contains(where: { $0.container == entry.workspacePath }) { continue }
             guard let activity = entry.activity else { continue }

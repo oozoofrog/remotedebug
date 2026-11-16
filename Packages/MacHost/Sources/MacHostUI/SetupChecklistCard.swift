@@ -2,7 +2,7 @@ import AppKit
 import MacHostKit
 import SwiftUI
 
-/// 빌드 화면 위의 시작 순서. 네 단계를 다 마치면 사라진다. "나중에"를 누르면 숨긴다.
+/// 앱 화면 위의 시작 순서. 네 단계를 다 마치면 사라진다. "나중에"를 누르면 숨긴다.
 struct SetupChecklistCard: View {
     @Environment(HostModel.self) private var model
     @Environment(\.showPairing) private var showPairing
@@ -10,6 +10,7 @@ struct SetupChecklistCard: View {
     @Environment(\.showPhoneInstall) private var showPhoneInstall
     @AppStorage(SetupChecklistCard.hiddenKey) private var hidden = false
     let showImporter: () -> Void
+    var addProject: () -> Void = {}
 
     static let hiddenKey = "setupChecklistHidden"
 
@@ -116,8 +117,9 @@ struct SetupChecklistCard: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(model.pairingAvailability != .ready)
             case .build:
-                Button("빌드 가져오기…", action: showImporter)
+                Button("프로젝트 추가…", action: addProject)
                     .buttonStyle(.borderedProminent)
+                Button("빌드 가져오기…", action: showImporter)
             }
         }
         .controlSize(.small)

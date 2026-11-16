@@ -158,15 +158,15 @@ extension ScreenTests {
         #expect(AXTree.buttons("공유 시작", in: stoppedView).count == 1, "배너에만 있어야 한다")
 
         // 빌드 화면에서는 시작하기 카드가 같은 원인과 버튼을 보이므로 배너를 띄우지 않는다.
-        let buildsWindow = host(RootView(selection: .builds).environment(stopped))
+        let buildsWindow = host(RootView(selection: .apps).environment(stopped))
         defer { buildsWindow.close() }
         let buildsView = try root(buildsWindow)
         try #require(try await until { !AXTree.buttons("공유 시작", in: buildsView).isEmpty })
         #expect(AXTree.buttons("공유 시작", in: buildsView).count == 1)
 
         let sharing = await model(.sharing, tmp)
-        #expect(!SharingIssueBanner.shows(sharing.guidance, selection: .builds))
-        let sharingWindow = host(RootView(selection: .builds).environment(sharing))
+        #expect(!SharingIssueBanner.shows(sharing.guidance, selection: .apps))
+        let sharingWindow = host(RootView(selection: .apps).environment(sharing))
         defer { sharingWindow.close() }
         let sharingView = try root(sharingWindow)
         let shown = try await until { AXTree.texts(in: sharingView).contains { $0.contains("iPhone에서 받을 수 있음") } }
@@ -176,9 +176,35 @@ extension ScreenTests {
         await sharing.shutdown()
 
         for kind in [StatusGuidance.Kind.starting, .issuingCertificate, .waitingForLoginURL, .ready] {
-            #expect(!SharingIssueBanner.shows(StatusGuidance(kind: kind, title: "", message: ""), selection: .builds), "\(kind)")
+            #expect(!SharingIssueBanner.shows(StatusGuidance(kind: kind, title: "", message: ""), selection: .apps), "\(kind)")
         }
         #expect(!SharingIssueBanner.shows(StatusGuidance(kind: .stopped, title: "", message: ""), selection: .network))
+    }
+
+    /// 앱 화면: 연결한 프로젝트와 게시한 빌드가 각각 한 줄이다. 게시 취소는 줄에 드러나지 않고 더 보기 메뉴에 있다.
+    @Test(.timeLimit(.minutes(1)))
+    func appsScreenShowsProjectsAndBuildsAsRows() async throws {
+        let tmp = try UITempDir("apps")
+        let model = await model(.sharing, tmp)
+        let container = tmp.url.appendingPathComponent("src/Demo/Demo.xcodeproj")
+        try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
+        let projects = ProjectsModel(root: tmp.url.appendingPathComponent("projects", isDirectory: true), builder: UIFakeBuilder(),
+                                     scanner: DerivedDataScanner(root: tmp.url.appendingPathComponent("DerivedData"))) { _ in nil }
+        _ = try #require(await projects.connect(container))
+        #expect(AppsView.entries(model: model, projects: projects).map(AppRow.title) == ["Demo", "Sample", "Notes"])
+
+        let window = host(RootView(selection: .apps).environment(model).environment(projects))
+        defer { window.close() }
+        let view = try root(window)
+        let ready = try await until { AXTree.buttons("Demo 빌드해서 게시", in: view).contains(where: AXTree.isEnabled) }
+        #expect(ready, "스킴을 읽으면 빌드 버튼이 켜진다")
+        let texts = AXTree.texts(in: view)
+        #expect(texts.contains("아직 게시한 빌드 없음"))
+        #expect(texts.contains { $0.hasPrefix("1.4.0 (128) · 게시 ") })
+        #expect(texts.filter { $0.hasPrefix("프로필 만료") }.count == 1, "만료가 30일 안인 빌드만 보인다: \(texts)")
+        #expect(!texts.contains { $0.contains("Debug-iphoneos 폴더") }, "구성 근거는 빌드 정보에만 있다")
+        #expect(AXTree.buttons("게시 취소", in: view).isEmpty, "게시 취소는 더 보기 메뉴 안에 있다")
+        await model.shutdown()
     }
 
     /// 공유 중지는 iPhone이 받고 있는 설치가 있을 때만 먼저 묻는다.
@@ -234,7 +260,7 @@ extension ScreenTests {
         let tmp = try UITempDir("watchrow")
         let model = await model(.watchProblem, tmp)
         let problem = try #require(model.watchProblem)
-        let window = host(RootView(selection: .builds).environment(model))
+        let window = host(RootView(selection: .apps).environment(model))
         defer { window.close() }
         let view = try root(window)
         try #require(try await until { !AXTree.buttons("폴더 다시 고르기", in: view).isEmpty })
@@ -270,7 +296,7 @@ extension ScreenTests {
         let identity = BuildIdentity(content: .ipa(FileDigest(size: 1, sha256: "a")), bundleId: "com.example.shown", version: "1.4", buildNumber: "128")
         await queue.importURLs([missing, second]) { _, _ in .needsConfirmation(identity) }
 
-        let window = host(RootView(selection: .builds, importQueue: queue).environment(model))
+        let window = host(RootView(selection: .apps, importQueue: queue).environment(model))
         defer { window.close() }
         try #require(try await until { window.attachedSheet != nil })
         let sheet = try #require(window.attachedSheet?.contentView)
@@ -379,4 +405,11 @@ final class UIMemoryDefaults: UserDefaults, @unchecked Sendable {
     override func set(_ value: Any?, forKey key: String) { values[key] = value }
     override func set(_ value: Bool, forKey key: String) { values[key] = value }
     override func removeObject(forKey key: String) { values[key] = nil }
+}
+
+/// 스킴 하나를 돌려주는 가짜 빌더. 빌드는 하지 않는다.
+struct UIFakeBuilder: ProjectBuilding {
+    func schemes(container: URL) async throws -> [String] { [container.deletingPathExtension().lastPathComponent] }
+    func build(container: URL, scheme: String, log: URL) async throws {}
+    func products(container: URL, scheme: String) async throws -> [URL] { [] }
 }

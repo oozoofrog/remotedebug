@@ -5,14 +5,13 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case builds, projects, agent, files, devices, network, activity, logs, crashes
+    case apps, agent, files, devices, network, activity, logs, crashes
 
     public var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .builds: String(localized: "빌드")
-        case .projects: String(localized: "프로젝트")
+        case .apps: String(localized: "앱")
         case .agent: String(localized: "에이전트")
         case .files: String(localized: "보낸 파일")
         case .devices: String(localized: "기기")
@@ -25,8 +24,7 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable 
 
     var symbol: String {
         switch self {
-        case .builds: "shippingbox"
-        case .projects: "hammer"
+        case .apps: "square.grid.2x2"
         case .agent: "terminal"
         case .files: "doc.on.doc"
         case .devices: "iphone"
@@ -68,7 +66,7 @@ public struct RootView: View {
     @State private var seenRequests: [PairRequestEvent] = []
     @AppStorage(SetupChecklistCard.hiddenKey) private var checklistHidden = false
 
-    public init(selection: SidebarItem = .builds) {
+    public init(selection: SidebarItem = .apps) {
         self.init(selection: selection, importQueue: ImportQueue())
     }
 
@@ -111,7 +109,7 @@ public struct RootView: View {
                         }
                         // 빌드 화면의 시작하기 카드가 같은 원인과 버튼을 보여 주는 동안에는 띄우지 않는다.
                         if SharingIssueBanner.shows(model.guidance, selection: selection),
-                           !(selection == .builds && SetupChecklistCard.coversSharing(model, hidden: checklistHidden)) {
+                           !(selection == .apps && SetupChecklistCard.coversSharing(model, hidden: checklistHidden)) {
                             SharingIssueBanner(guidance: model.guidance)
                         }
                         if let message = model.lastError {
@@ -123,7 +121,7 @@ public struct RootView: View {
         .fileImporter(isPresented: $showingImporter, allowedContentTypes: BuildFileTypes.importable,
                       allowsMultipleSelection: true) { result in
             guard case .success(let urls) = result else { return }
-            selection = .builds
+            selection = .apps
             Task { await importQueue.importURLs(urls, using: importer) }
         }
         // 대화상자는 줄의 첫 항목을 보여 주고, 버튼은 보여 준 그 항목(id)에만 답한다. 닫힐 때 SwiftUI가 부르는
@@ -166,7 +164,7 @@ public struct RootView: View {
             if HostEdition.isSandboxed {
                 // 샌드박스판은 빌드하지 않고 등록만 한다. 프로젝트 파일을 놓았으면 그 폴더를 등록한다.
                 guard let linkedProjects else { return }
-                selection = .projects
+                selection = .apps
                 Task {
                     for url in urls {
                         let isContainer = ["xcodeproj", "xcworkspace"].contains(url.pathExtension)
@@ -176,11 +174,11 @@ public struct RootView: View {
                 return
             }
             guard let projects else { return }
-            selection = .projects
+            selection = .apps
             Task { for url in urls { await projects.connectAndBuild(url) } }
         })
         .onChange(of: projects?.suggestions.count ?? 0) { old, new in
-            if new > old { selection = .projects }
+            if new > old { selection = .apps }
         }
         .focusedSceneValue(\.importBuilds, ImportBuildsAction { showingImporter = true })
     }
@@ -191,15 +189,7 @@ public struct RootView: View {
 
     @ViewBuilder private var detail: some View {
         switch selection {
-        case .builds: BuildsView(showImporter: { showingImporter = true })
-        case .projects:
-            if HostEdition.isSandboxed, let linkedProjects {
-                LinkedProjectsView(projects: linkedProjects)
-            } else if let projects {
-                ProjectsView(projects: projects)
-            } else {
-                ContentUnavailableView("프로젝트를 쓸 수 없습니다", systemImage: "hammer")
-            }
+        case .apps: AppsView(showImporter: { showingImporter = true })
         case .agent: AgentView()
         case .files: FilesView()
         case .devices: DevicesView()
@@ -231,8 +221,7 @@ public struct RootView: View {
     private func badge(for item: SidebarItem) -> Int {
         switch item {
         case .devices: model.pendingPairRequests.count
-        case .builds: importQueue.pending.count
-        case .projects: projects?.suggestions.count ?? 0
+        case .apps: importQueue.pending.count + (projects?.suggestions.count ?? 0)
         case .agent: agentDesk?.jobs.count { !$0.state.isFinished } ?? 0
         default: 0
         }

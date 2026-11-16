@@ -56,7 +56,7 @@ Rules for agents:
 - **Crash reports**: when the iPhone app crashes, it sends the report to the Mac the next time it runs. For other apps, open the report under iPhone Settings > Privacy & Security > Analytics & Improvements > Analytics Data and share it to RemoteDebug. Both the iPhone app's settings and the Mac's **크래시** (Crashes) screen show and share them.
 - **Installed version**: the iPhone build list shows which version of each app is installed now. This uses a private iOS API, so nothing is shown on devices where it returns no value.
 - **Without the iPhone app**: the Mac also serves an install web page at `https://<Mac FQDN>/`. An iPhone running the official Tailscale app opens it in Safari, enters a pairing code, and installs after you approve on the Mac. Not yet tried on a real iPhone ([setup](docs/setup.md#iphone에서-앱-없이-설치웹-페이지)).
-- **Getting started**: the Mac's build screen shows a **시작하기** (Get started) checklist: connect to Tailscale, open the install address, connect an iPhone, publish the first build.
+- **Getting started**: the Mac's **앱** (Apps) screen shows a **시작하기** (Get started) checklist: connect to Tailscale, open the install address, connect an iPhone, publish the first build.
 
 ## Quick start
 
@@ -123,7 +123,7 @@ Switching the VPN between the two apps, sharing the paired Mac, and installing f
 Problems in apps installed through RemoteDebug show up on the Mac, in the Mac app's crash and feedback screen and in the agent tool `remotedebug_crash_logs`.
 
 - RemoteDebug iPhone app: after an abnormal exit it sends the record on the next launch. Settings has a form for sending feedback about RemoteDebug.
-- Your app: add this repository (`https://github.com/oozoofrog/remotedebug`) as a Swift package and link `RemoteDebugFeedback`. The Mac app's project screen shows the code with the Mac address filled in.
+- Your app: add this repository (`https://github.com/oozoofrog/remotedebug`) as a Swift package and link `RemoteDebugFeedback`. On the Mac's **앱** (Apps) screen, the app row's More menu > **크래시·피드백 보내기 추가…** (Add crash and feedback reporting) shows the code with the Mac address filled in.
 
 ```swift
 import RemoteDebugFeedback
