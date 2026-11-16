@@ -54,7 +54,8 @@ public enum ProjectLocator {
 
     private static func children(of dir: URL) -> [URL] {
         let items = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
-        return items.filter { !$0.lastPathComponent.hasPrefix(".") }.sorted { $0.path < $1.path }
+        // 폴더 목록은 `/var` 같은 곳에서 `/private`이 붙은 경로를 돌려준다. 받은 경로와 같은 꼴로 맞춘다.
+        return items.map(\.standardizedFileURL).filter { !$0.lastPathComponent.hasPrefix(".") }.sorted { $0.path < $1.path }
     }
 }
 

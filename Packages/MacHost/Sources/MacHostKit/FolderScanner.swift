@@ -108,6 +108,6 @@ public struct FolderScanner: Sendable {
         return items.filter {
             guard let v = try? $0.resourceValues(forKeys: Set(keys)) else { return false }
             return v.isDirectory == true && v.isSymbolicLink != true
-        }
+        }.map(\.standardizedFileURL)  // 목록이 붙인 `/private`을 떼어 받은 경로와 같은 꼴로 맞춘다.
     }
 }
