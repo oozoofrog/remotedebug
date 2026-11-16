@@ -358,17 +358,24 @@ extension ScreenTests {
         #expect(texts.contains { $0.contains("알림에 이름을 넣지 않기") }, "\(texts)")
     }
 
-    /// 네트워크 화면에 알림 섹션이 들어 있다.
+    /// 알림 키는 설정 창의 알림 탭에 있고, 네트워크 화면에는 없다.
     @Test(.timeLimit(.minutes(1)))
-    func networkScreenHasThePushSection() async throws {
+    func notificationSettingsHaveThePushSection() async throws {
         let tmp = try UITempDir("push-network")
         let model = makeRecordingModel(RecordingCore(), tmp)
         let push = try makePush(model, withKey: false)
-        let window = host(RootView(selection: .network).environment(model).environment(push))
+        let window = host(NotificationSettings().environment(model).environment(push))
         defer { window.close() }
         let view = try root(window)
         let shown = try await until { !AXTree.buttons("키 파일 고르기…", in: view).isEmpty }
         #expect(shown, "\(AXTree.texts(in: view))")
+
+        let network = host(RootView(selection: .network).environment(model).environment(push))
+        defer { network.close() }
+        let networkView = try root(network)
+        try #require(try await until { !AXTree.buttons("설정 열기…", in: networkView).isEmpty })
+        #expect(AXTree.buttons("키 파일 고르기…", in: networkView).isEmpty)
+        #expect(!AXTree.texts(in: networkView).contains("제어 서버와 진단"), "제어 서버는 설정 > 고급에 있다")
     }
 
     /// 기기 줄에 알림 등록 상태가 보인다.
@@ -387,6 +394,44 @@ extension ScreenTests {
         let view = try root(window)
         let shown = try await until { AXTree.texts(in: view).contains { $0.contains(expected) } }
         #expect(shown, "\(AXTree.texts(in: view))")
+    }
+}
+
+extension ScreenTests {
+    /// 이름이 같은 기기를 이 Mac이 마지막으로 연락받은 시각으로 구분한다. 모르면 보이지 않는다.
+    @Test(.timeLimit(.minutes(1)))
+    func devicesShowTheLastContactTheMacKnows() async throws {
+        let tmp = try UITempDir("lastcontact")
+        let model = makeRecordingModel(RecordingCore(), tmp)
+        let paired = Date(timeIntervalSince1970: 1_800_000_000)
+        let first = DeviceEntry(id: "d_1", name: "시험용 iPhone", nodeStableId: "n1", nodeName: "rd-phone-1", loginName: "", pairedAt: paired)
+        let second = DeviceEntry(id: "d_2", name: "시험용 iPhone", nodeStableId: "n2", nodeName: "rd-phone-2", loginName: "", pairedAt: paired)
+        #expect(model.lastContact(with: first) == nil)
+        model.handle(.session(SessionEvent(sessionId: "s_1", buildId: "b_1", nodeName: "rd-phone-1", state: .completed,
+                                           userAgent: "", bytesServed: 1)))
+        let contact = try #require(model.lastContact(with: first))
+        #expect(model.lastContact(with: second) == nil, "다른 기기의 연락으로 바꾸지 않는다")
+
+        let window = host(VStack {
+            DeviceRow(device: first, lastContact: contact, remove: {})
+            DeviceRow(device: second, remove: {})
+        })
+        defer { window.close() }
+        let view = try root(window)
+        let shown = try await until { AXTree.texts(in: view).contains(DeviceRow.lastContactText(contact)) }
+        #expect(shown, "\(AXTree.texts(in: view))")
+        #expect(AXTree.texts(in: view).filter { $0.hasPrefix("최근 연락") }.count == 1)
+    }
+
+    /// 네트워크 화면의 다시 연결은 다른 다시 시작 버튼이 없을 때만 따로 보인다.
+    @Test func networkOffersReconnectOnlyWithoutAnotherRestart() async throws {
+        let tmp = try UITempDir("reconnect")
+        let expectations: [(PreviewScenario, Bool)] = [(.sharing, true), (.empty, false), (.error, false), (.needsLogin, false)]
+        for (scenario, shows) in expectations {
+            let model = await model(scenario, tmp)
+            #expect(NetworkView.showsReconnect(model) == shows, "\(scenario)")
+            await model.shutdown()
+        }
     }
 }
 

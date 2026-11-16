@@ -434,6 +434,43 @@ struct ScreenTests {
         #expect(AppRow.profileNotice(t.addingTimeInterval(-86_400), now: t)?.hasPrefix("프로필 만료됨") == true)
     }
 
+    /// 사이드바: 매일 쓰는 화면과 가끔 보는 화면을 나눈다. 숨긴 에이전트 화면은 넣지 않는다.
+    @Test func sidebarGroupsDailyAndOccasionalScreens() {
+        #expect(SidebarItem.daily == [.apps, .files, .devices])
+        #expect(SidebarItem.occasional.contains(.agent) == AgentFeature.isEnabled)
+        let shown = SidebarItem.daily + SidebarItem.occasional
+        #expect(Set(shown).count == shown.count, "한 화면은 한 번만")
+        #expect(Set(shown) == Set(SidebarItem.allCases.filter { $0 != .agent || AgentFeature.isEnabled }))
+    }
+
+    /// 활동 줄은 기호와 색이 나타내는 종류를 글로 읽어 준다.
+    @Test func activityRowsReadTheKindAloud() {
+        let t = Date(timeIntervalSince1970: 1_900_000_000)
+        let failed = ActivityItem(date: t, kind: .session(SessionEvent(sessionId: "s", buildId: "b", nodeName: "rd-phone-1", state: .failed,
+                                                                     userAgent: "", bytesServed: 0)), text: "Sample 설치가 실패했습니다.")
+        let text = ActivityView.accessibilityText(failed)
+        #expect(text.hasPrefix("설치 실패: Sample 설치가 실패했습니다., "), "\(text)")
+        #expect(text.hasSuffix(t.formatted(date: .omitted, time: .standard)))
+    }
+
+    /// 숨긴 시작하기 카드는 도움말 메뉴로 다시 열고, 다 마친 목록도 다시 연 동안에는 보인다.
+    @Test func setupChecklistReopensFromTheHelpMenu() {
+        let pending = SetupChecklist.make(guidance: StatusGuidance.make(for: nil), fqdn: nil, devices: 0, builds: 0)
+        let ready = StatusGuidance.make(for: PreviewFactory.runningStatus())
+        let done = SetupChecklist.make(guidance: ready, fqdn: PreviewFactory.fqdn, devices: 1, builds: 1)
+        #expect(done.isComplete)
+        #expect(SetupChecklistCard.isShown(pending, hidden: false, reopened: false))
+        #expect(!SetupChecklistCard.isShown(pending, hidden: true, reopened: false))
+        #expect(!SetupChecklistCard.isShown(done, hidden: false, reopened: false))
+        #expect(SetupChecklistCard.isShown(done, hidden: false, reopened: true))
+
+        let defaults = UIMemoryDefaults()
+        defaults.set(true, forKey: SetupChecklistCard.hiddenKey)
+        SetupChecklistCard.reopen(defaults)
+        #expect(!defaults.bool(forKey: SetupChecklistCard.hiddenKey))
+        #expect(defaults.bool(forKey: SetupChecklistCard.reopenedKey))
+    }
+
     @Test func qrCodeRenders() {
         let image = QRCodeView.makeImage("remotedebug://pair?host=rd-mac-ab12cd34.example.ts.net&code=K7M29QXD")
         #expect(image != nil)

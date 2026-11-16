@@ -557,6 +557,16 @@ public final class HostModel {
         }
     }
 
+    /// 이 Mac이 마지막으로 그 기기의 연락을 받은 시각: iPhone 로그를 받았거나 설치 세션이 바뀐 때. 모르면 nil.
+    public func lastContact(with device: DeviceEntry) -> Date? {
+        let log = deviceLogs.device(id: device.id)?.lastReceived
+        let session = activity.first { item in
+            if case .session(let e) = item.kind { return e.nodeName == device.nodeName }
+            return false
+        }?.date
+        return [log, session].compactMap(\.self).max()
+    }
+
     /// iPhone이 받고 있는 설치(시작했지만 끝나지 않은 세션). 공유를 멈추면 끊긴다.
     public var installsInProgress: [SessionEvent] {
         activity.compactMap {

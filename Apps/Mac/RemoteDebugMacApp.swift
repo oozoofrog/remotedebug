@@ -58,6 +58,19 @@ struct RemoteDebugMacApp: App {
             CommandGroup(replacing: .newItem) {
                 ImportCommand()
             }
+            CommandGroup(after: .help) {
+                SetupChecklistCommand(windowID: "main")
+            }
+        }
+
+        // 설정 창(⌘,): 알림과 고급(직접 연결, iPhone 자동 연결, 이 Mac의 주소, 제어 서버).
+        Settings {
+            if let model = appDelegate.model {
+                SettingsView()
+                    .environment(model)
+                    .environment(appDelegate.push)
+                    .environment(appDelegate.updatePage)
+            }
         }
 
         // 창을 닫아도 앱은 메뉴 막대에 남아 공유와 Xcode 감시를 계속한다.

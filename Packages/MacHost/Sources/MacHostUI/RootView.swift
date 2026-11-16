@@ -22,6 +22,13 @@ public enum SidebarItem: String, CaseIterable, Identifiable, Hashable, Sendable 
         }
     }
 
+    /// 매일 쓰는 화면: 앱을 게시하고, 파일을 보내고, iPhone을 연결한다.
+    static let daily: [SidebarItem] = [.apps, .files, .devices]
+    /// 가끔 보는 화면: 기록과 연결 상태. 에이전트 요청은 기능을 켰을 때만 보인다.
+    static var occasional: [SidebarItem] {
+        [.crashes, .logs, .activity, .network] + (AgentFeature.isEnabled ? [.agent] : [])
+    }
+
     var symbol: String {
         switch self {
         case .apps: "square.grid.2x2"
@@ -77,10 +84,13 @@ public struct RootView: View {
 
     public var body: some View {
         NavigationSplitView {
-            List(SidebarItem.allCases.filter { ($0 != .agent || AgentFeature.isEnabled) }, selection: $selection) { item in
-                Label(item.title, systemImage: item.symbol)
-                    .badge(badge(for: item))
-                    .tag(item)
+            List(selection: $selection) {
+                Section {
+                    ForEach(SidebarItem.daily) { sidebarRow($0) }
+                }
+                Section("기록과 연결") {
+                    ForEach(SidebarItem.occasional) { sidebarRow($0) }
+                }
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 220)
             .safeAreaInset(edge: .top) {
@@ -180,6 +190,10 @@ public struct RootView: View {
         .onChange(of: projects?.suggestions.count ?? 0) { old, new in
             if new > old { selection = .apps }
         }
+        // 도움말 메뉴에서 시작하기를 다시 열면 그 카드가 있는 앱 화면으로 간다.
+        .onChange(of: checklistHidden) { _, hidden in
+            if !hidden { selection = .apps }
+        }
         .focusedSceneValue(\.importBuilds, ImportBuildsAction { showingImporter = true })
     }
 
@@ -216,6 +230,12 @@ public struct RootView: View {
         if hasNew, let app = NSApp, !app.isActive {
             app.requestUserAttention(.informationalRequest)
         }
+    }
+
+    private func sidebarRow(_ item: SidebarItem) -> some View {
+        Label(item.title, systemImage: item.symbol)
+            .badge(badge(for: item))
+            .tag(item)
     }
 
     private func badge(for item: SidebarItem) -> Int {
@@ -596,6 +616,23 @@ struct ImportBuildsAction {
 
 extension FocusedValues {
     @Entry var importBuilds: ImportBuildsAction?
+}
+
+/// 도움말 > 시작하기 보기: 숨긴 시작하기 카드를 다시 연다.
+public struct SetupChecklistCommand: View {
+    @Environment(\.openWindow) private var openWindow
+    let windowID: String
+
+    public init(windowID: String) {
+        self.windowID = windowID
+    }
+
+    public var body: some View {
+        Button("시작하기 보기") {
+            SetupChecklistCard.reopen()
+            openWindow(id: windowID)
+        }
+    }
 }
 
 /// 메뉴 막대의 파일 > 빌드 가져오기… (⌘O).

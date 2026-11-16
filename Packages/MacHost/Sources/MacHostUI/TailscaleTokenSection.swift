@@ -1,7 +1,7 @@
 import MacHostKit
 import SwiftUI
 
-/// 네트워크 화면: Tailscale OAuth 클라이언트. 넣으면 페어링 QR에 1회용 키가 들어가 iPhone은 Tailscale 로그인 없이 연결된다.
+/// 설정 > 고급: Tailscale OAuth 클라이언트. 넣으면 페어링 QR에 1회용 키가 들어가 iPhone은 Tailscale 로그인 없이 연결된다.
 struct TailscaleTokenSection: View {
     @Environment(HostModel.self) private var model
     @State private var clientID = ""
@@ -56,7 +56,12 @@ struct TailscaleTokenSection: View {
         } header: {
             Text("iPhone 자동 연결")
         } footer: {
-            Text("이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 되고, 태그는 위와 같은 태그를 고릅니다(태그가 목록에 없으면 정책 파일의 tagOwners에 먼저 추가). 기기 읽기 권한을 함께 주면 이 Mac이 같은 tailnet인지 확인합니다. 페어링 QR을 열 때마다 15분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣으므로, QR을 다른 사람에게 보여 주지 마세요.")
+            // 긴 설명이 한 줄로 잘리지 않게 줄을 바꿔 다 보인다.
+            VStack(alignment: .leading, spacing: 6) {
+                Text("이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 됩니다. 태그는 위와 같은 태그를 고르고, 목록에 없으면 정책 파일의 tagOwners에 먼저 추가하세요. 기기 읽기 권한을 함께 주면 이 Mac이 같은 tailnet인지 확인합니다.")
+                Text("페어링 QR을 열 때마다 15분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣습니다. QR을 다른 사람에게 보여 주지 마세요.")
+            }
+            .fixedSize(horizontal: false, vertical: true)
         }
         .confirmationDialog("Tailscale OAuth 클라이언트를 지울까요?", isPresented: $confirmsClear) {
             Button("클라이언트 지우기", role: .destructive) { model.clearTailscaleClient() }
@@ -70,7 +75,7 @@ struct TailscaleTokenSection: View {
 /// 페어링 시트: QR에 Tailscale 키가 들어 있는지와 다음 행동.
 struct PairingKeyNote: View {
     @Environment(HostModel.self) private var model
-    @Environment(\.showNetwork) private var showNetwork
+    @Environment(\.openSettings) private var openSettings
     let dismiss: () -> Void
 
     var body: some View {
@@ -97,10 +102,10 @@ struct PairingKeyNote: View {
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Button("설정하기…") {
-                    // 이 설정은 네트워크 화면의 세부 설정 안에 있다.
-                    UserDefaults.standard.set(true, forKey: NetworkView.detailsKey)
+                    // 이 설정은 설정 창의 고급 탭에 있다.
+                    UserDefaults.standard.set(SettingsView.Tab.advanced.rawValue, forKey: SettingsView.tabKey)
                     dismiss()
-                    showNetwork()
+                    openSettings()
                 }
             }
         }

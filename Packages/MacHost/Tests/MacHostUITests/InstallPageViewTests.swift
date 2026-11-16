@@ -45,13 +45,29 @@ extension ScreenTests {
         }
     }
 
-    /// 시트: 두 번째 QR·링크 글자·사실 문장이 보이고, "링크 복사"는 링크만 클립보드에 넣고 알린다.
+    /// 시트는 앱 QR만 펼쳐 보이고, Safari 설치는 "앱이 없을 때"로 접어 둔다.
+    @Test(.timeLimit(.minutes(1)))
+    func pairingSheetFoldsTheSafariInstall() async throws {
+        let tmp = try UITempDir("installfold")
+        let model = await pairingModel(.sharing, tmp)
+        let window = host(PairingSheet().environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, CopyLog().copier))
+        defer { window.close() }
+        let view = try root(window)
+        try #require(try await until { !AXTree.buttons("페어링 링크 복사", in: view).isEmpty })
+        let texts = AXTree.texts(in: view)
+        #expect(texts.contains(BrowserInstallPanel.heading), "\(texts)")
+        #expect(AXTree.buttons(BrowserInstallPanel.copyTitle, in: view).isEmpty, "Safari 설치는 접혀 있다")
+        #expect(!texts.contains(Self.pageLink))
+        await model.shutdown()
+    }
+
+    /// 시트를 펼치면 두 번째 QR·링크 글자·사실 문장이 보이고, "링크 복사"는 링크만 클립보드에 넣고 알린다.
     @Test(.timeLimit(.minutes(1)))
     func pairingSheetCopiesTheInstallPageLink() async throws {
         let tmp = try UITempDir("installsheet")
         let model = await pairingModel(.sharing, tmp)
         let log = CopyLog()
-        let window = host(PairingSheet().environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, log.copier))
+        let window = host(PairingSheet(showsBrowserInstall: true).environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, log.copier))
         defer { window.close() }
         let view = try root(window)
         try #require(try await until { !AXTree.buttons(BrowserInstallPanel.copyTitle, in: view).isEmpty })
@@ -80,7 +96,7 @@ extension ScreenTests {
     func pairingSheetDropsTheInstallPageWhenTheCodeIsUsed() async throws {
         let tmp = try UITempDir("installused")
         let model = await pairingModel(.sharing, tmp)
-        let window = host(PairingSheet().environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, CopyLog().copier))
+        let window = host(PairingSheet(showsBrowserInstall: true).environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, CopyLog().copier))
         defer { window.close() }
         let view = try root(window)
         try #require(try await until { !AXTree.buttons(BrowserInstallPanel.copyTitle, in: view).isEmpty })
@@ -95,9 +111,6 @@ extension ScreenTests {
     @Test(.timeLimit(.minutes(1)))
     func networkScreenShowsAndCopiesTheInstallPageAddress() async throws {
         let tmp = try UITempDir("installnet")
-        // 주소 줄은 세부 설정을 펼쳤을 때 보인다.
-        UserDefaults.standard.set(true, forKey: NetworkView.detailsKey)
-        defer { UserDefaults.standard.removeObject(forKey: NetworkView.detailsKey) }
         let sharing = await pairingModel(.sharing, tmp)
         let log = CopyLog()
         let window = host(RootView(selection: .network).environment(sharing).environment(\.linkCopier, log.copier))

@@ -387,12 +387,6 @@
     },
     "%@ (%@) · 게시 %@" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$@) · 게시 %3$@"
-          }
-        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -403,6 +397,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@ (%2$@) · %3$@に公開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ (%2$@) · 게시 %3$@"
           }
         },
         "zh-Hans" : {
@@ -1369,34 +1369,6 @@
         }
       }
     },
-    "%@ 앱에서 VPN을 켜고 이 Mac과 같은 Tailscale 계정으로 로그인한 뒤, 페어링 QR을 찍고 여기서 허용합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ In the app, turn on VPN, log in with the same Tailscale account as this Mac, then scan the pairing QR code and allow it here."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@アプリで VPN をオンにし、この Mac と同じ Tailscale アカウントでログインしてから、ペアリング用 QR コードを読み取り、ここで許可します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 在 App 中打开 VPN，使用与这台 Mac 相同的 Tailscale 账户登录，然后扫描配对二维码并在此处允许。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 在 App 中開啟 VPN，使用與這台 Mac 相同的 Tailscale 帳號登入，然後掃描配對 QR Code 並在此允許。"
-          }
-        }
-      }
-    },
     "%@ 이전 빌드 %lld개" : {
       "localizations" : {
         "en" : {
@@ -1797,6 +1769,40 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@/秒"
+          }
+        }
+      }
+    },
+    "%@: %@, %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@, %3$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@, %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@: %2$@、%3$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@，%3$@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@，%3$@"
           }
         }
       }
@@ -3453,6 +3459,34 @@
         }
       }
     },
+    "%lld단계" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Step %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ステップ%lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %lld 步"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "第 %lld 步"
+          }
+        }
+      }
+    },
     "%lld대" : {
       "localizations" : {
         "en" : {
@@ -3509,30 +3543,30 @@
         }
       }
     },
-    "'iPhone 앱 설치…'의 명령을 터미널에서 실행해 앱을 설치합니다." : {
+    "'iPhone 앱 설치…'의 명령을 터미널에서 실행해 iPhone에 RemoteDebug 앱을 설치합니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Run the command from \"Install iPhone App…\" in Terminal to install the app."
+            "value" : "Run the command from Install iPhone App… in Terminal to install the RemoteDebug app on iPhone."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「iPhoneアプリをインストール…」のコマンドをTerminalで実行して、アプリをインストールします。"
+            "value" : "「iPhoneアプリをインストール…」のコマンドをターミナルで実行し、iPhoneにRemoteDebugアプリをインストールします。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在终端中运行“安装 iPhone App…”的命令来安装 App。"
+            "value" : "在终端中运行“安装 iPhone App…”中的命令，将 RemoteDebug App 安装到 iPhone 上。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在終端機執行「iPhone App 安裝…」的指令來安裝 App。"
+            "value" : "在終端機中執行「iPhone App 安裝…」裡的命令，將 RemoteDebug App 安裝到 iPhone 上。"
           }
         }
       }
@@ -6953,6 +6987,34 @@
         }
       }
     },
+    "RemoteDebug가 준비되지 않았습니다. 앱을 다시 열어 보세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteDebug isn't ready. Try reopening the app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteDebugの準備ができていません。アプリを開き直してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteDebug 尚未就绪。请重新打开 App。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteDebug 尚未就緒。請重新開啟 App。"
+          }
+        }
+      }
+    },
     "RemoteDebug를 업데이트하는 앱입니다. 여기서 설치하거나 새 빌드로 올립니다." : {
       "localizations" : {
         "en" : {
@@ -7509,34 +7571,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "需要登入 Tailscale。登入後請再安裝一次。"
-          }
-        }
-      }
-    },
-    "Tailscale 세부 설정 보기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show Tailscale details"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tailscaleの詳細設定を表示"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "显示 Tailscale 详细设置"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "顯示 Tailscale 詳細設定"
           }
         }
       }
@@ -9417,6 +9451,34 @@
         }
       }
     },
+    "iPhone 알림, iPhone 자동 연결, 같은 네트워크 직접 연결, 노드·IP, 제어 서버" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone notifications, iPhone auto-connect, direct connection on the same network, node and IP, control server"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone通知、iPhone自動接続、同じネットワークでの直接接続、ノード・IP、コントロールサーバ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 通知、iPhone 自动连接、同一网络直接连接、节点与 IP、控制服务器"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone 通知、iPhone 自動連線、同一網路直接連線、節點與 IP、控制伺服器"
+          }
+        }
+      }
+    },
     "iPhone 앱 빌드" : {
       "localizations" : {
         "en" : {
@@ -9525,6 +9587,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iPhone App 更新 (官方 Tailscale)"
+          }
+        }
+      }
+    },
+    "iPhone 앱에서 VPN을 켜고 이 Mac과 같은 Tailscale 계정으로 로그인합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In the iPhone app, turn on the VPN and sign in with the same Tailscale account as this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneアプリでVPNをオンにし、このMacと同じTailscaleアカウントでログインします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone App 中打开 VPN，并使用与这台 Mac 相同的 Tailscale 账户登录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone App 中開啟 VPN，並使用與這台 Mac 相同的 Tailscale 帳號登入。"
           }
         }
       }
@@ -9721,6 +9811,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iPhone 配對…"
+          }
+        }
+      }
+    },
+    "iPhone에 RemoteDebug 앱을 설치하고 이 Mac과 페어링합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install the RemoteDebug app on iPhone and pair it with this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneにRemoteDebugアプリをインストールし、このMacとペアリングします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 上安装 RemoteDebug App，并与这台 Mac 配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 上安裝 RemoteDebug App，並與這台 Mac 配對。"
           }
         }
       }
@@ -9977,30 +10095,30 @@
         }
       }
     },
-    "iPhone을 케이블로 연결하고 'iPhone 앱 설치…'로 앱을 설치합니다." : {
+    "iPhone을 케이블로 연결하고 RemoteDebug 앱을 설치합니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Connect the iPhone with a cable and install the app with \"Install iPhone App…\"."
+            "value" : "Connect iPhone with a cable and install the RemoteDebug app."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhoneをケーブルで接続し、「iPhoneアプリをインストール…」でアプリをインストールします。"
+            "value" : "iPhoneをケーブルで接続し、RemoteDebugアプリをインストールします。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用线缆连接 iPhone，通过“安装 iPhone App…”安装 App。"
+            "value" : "用数据线连接 iPhone，并安装 RemoteDebug App。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用傳輸線連接 iPhone，並以「iPhone App 安裝…」安裝 App。"
+            "value" : "用傳輸線連接 iPhone，並安裝 RemoteDebug App。"
           }
         }
       }
@@ -10253,6 +10371,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "iPhone 正在接收"
+          }
+        }
+      }
+    },
+    "iPhone이 이 Mac에 닿지 않으면 공유를 멈췄다가 다시 시작합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If iPhone can't reach this Mac, stops sharing and starts it again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneがこのMacに接続できないときは、共有を停止してから再開します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果 iPhone 无法连接这台 Mac，会停止共享后重新开始。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果 iPhone 無法連到這台 Mac，會停止分享後重新開始。"
           }
         }
       }
@@ -11821,6 +11967,34 @@
         }
       }
     },
+    "거부한 접근" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denied access"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拒否したアクセス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拒绝的访问"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拒絕的存取"
+          }
+        }
+      }
+    },
     "게시" : {
       "localizations" : {
         "en" : {
@@ -12265,6 +12439,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "路徑"
+          }
+        }
+      }
+    },
+    "고급" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Advanced"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "詳細"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "高级"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "進階"
           }
         }
       }
@@ -13143,6 +13345,34 @@
         }
       }
     },
+    "공유를 시작하면 Tailscale 로그인 페이지가 열립니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starting sharing opens the Tailscale sign-in page."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有を開始するとTailscaleのログインページが開きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始共享后会打开 Tailscale 登录页面。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開始分享後會開啟 Tailscale 登入頁面。"
+          }
+        }
+      }
+    },
     "공유를 시작하면 켜집니다" : {
       "localizations" : {
         "en" : {
@@ -13703,6 +13933,34 @@
         }
       }
     },
+    "기기 추가" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Device added"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デバイス追加"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已添加设备"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已加入裝置"
+          }
+        }
+      }
+    },
     "기기를 제거할까요?" : {
       "localizations" : {
         "en" : {
@@ -13867,6 +14125,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法讀取記錄檔案。"
+          }
+        }
+      }
+    },
+    "기록과 연결" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Records and Connection"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記録と接続"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记录与连接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記錄與連線"
           }
         }
       }
@@ -15727,6 +16013,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "登出後，開始分享即可重新登入。"
+          }
+        }
+      }
+    },
+    "로그인" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign In"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログイン"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登录"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登入"
           }
         }
       }
@@ -19709,6 +20023,34 @@
         }
       }
     },
+    "설정 열기…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Settings…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定を開く…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开设置…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟設定…"
+          }
+        }
+      }
+    },
     "설정에서 RemoteDebug의 카메라 접근을 허용하거나, 이전 화면에서 주소와 코드를 직접 입력하세요." : {
       "localizations" : {
         "en" : {
@@ -19821,6 +20163,34 @@
         }
       }
     },
+    "설치 만료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install expired"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール期限切れ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装已过期"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安裝已過期"
+          }
+        }
+      }
+    },
     "설치 세션을 확인할 수 없습니다. 다시 설치하세요." : {
       "localizations" : {
         "en" : {
@@ -19901,6 +20271,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安裝工作階段已過期。請重新安裝。"
+          }
+        }
+      }
+    },
+    "설치 실패" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install failed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール失敗"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装失败"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安裝失敗"
+          }
+        }
+      }
+    },
+    "설치 완료" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install completed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール完了"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装完成"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安裝完成"
           }
         }
       }
@@ -20097,6 +20523,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "準備安裝"
+          }
+        }
+      }
+    },
+    "설치 진행 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install in progress"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストール中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在安裝"
           }
         }
       }
@@ -21015,30 +21469,58 @@
         }
       }
     },
-    "시작하기 목록을 숨깁니다" : {
+    "시작하기 목록을 숨깁니다. 도움말 메뉴의 ‘시작하기 보기’로 다시 엽니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hide the Get Started list"
+            "value" : "Hides the Get Started list. Reopen it from Help > Show Get Started."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「はじめに」リストを非表示にします"
+            "value" : "「はじめに」リストを隠します。ヘルプメニューの「はじめにを表示」で再表示します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "隐藏“开始使用”列表"
+            "value" : "隐藏“开始使用”列表。可通过帮助菜单中的“显示开始使用”再次打开。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "隱藏開始使用列表"
+            "value" : "隱藏「開始使用」列表。可從輔助說明選單的「顯示開始使用」再次開啟。"
+          }
+        }
+      }
+    },
+    "시작하기 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show Get Started"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "はじめにを表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "显示开始使用"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "顯示開始使用"
           }
         }
       }
@@ -21665,6 +22147,34 @@
         }
       }
     },
+    "알림과 고급 설정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications and Advanced Settings"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知と詳細設定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知与高级设置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知與進階設定"
+          }
+        }
+      }
+    },
     "알림에 이름을 넣지 않기" : {
       "localizations" : {
         "en" : {
@@ -21689,6 +22199,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通知中不包含名稱"
+          }
+        }
+      }
+    },
+    "알림을 설정할 수 없습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications Can't Be Set Up"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知を設定できません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法设置通知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法設定通知"
           }
         }
       }
@@ -22057,34 +22595,6 @@
         }
       }
     },
-    "앱 없이 Safari로 설치" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Install with Safari, no app"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリを使わず Safari でインストール"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不通过 App，使用 Safari 安装"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不使用 App,改用 Safari 安裝"
-          }
-        }
-      }
-    },
     "앱 화면의 프로젝트 추가로 프로젝트를 연결하면 그 폴더에서 에이전트를 실행합니다." : {
       "localizations" : {
         "en" : {
@@ -22277,6 +22787,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "若 App 無法執行，請確認「設定」>「隱私權與安全性」>「開發者模式」是否已開啟。"
+          }
+        }
+      }
+    },
+    "앱이 없을 때: Safari로 설치" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Without the app: install with Safari"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリがないとき: Safariでインストール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有 App 时：使用 Safari 安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有 App 時：使用 Safari 安裝"
           }
         }
       }
@@ -24325,6 +24863,34 @@
         }
       }
     },
+    "이 Mac의 tailnet 주소" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac's tailnet address"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このMacのtailnetアドレス"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台 Mac 的 tailnet 地址"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這台 Mac 的 tailnet 位址"
+          }
+        }
+      }
+    },
     "이 Mac의 설치 주소가 아직 열리지 않았습니다. 잠시 뒤 다시 시도하세요." : {
       "localizations" : {
         "en" : {
@@ -24409,30 +24975,30 @@
         }
       }
     },
-    "이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 되고, 태그는 위와 같은 태그를 고릅니다(태그가 목록에 없으면 정책 파일의 tagOwners에 먼저 추가). 기기 읽기 권한을 함께 주면 이 Mac이 같은 tailnet인지 확인합니다. 페어링 QR을 열 때마다 15분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣으므로, QR을 다른 사람에게 보여 주지 마세요." : {
+    "이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 됩니다. 태그는 위와 같은 태그를 고르고, 목록에 없으면 정책 파일의 tagOwners에 먼저 추가하세요. 기기 읽기 권한을 함께 주면 이 Mac이 같은 tailnet인지 확인합니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "In the admin console of the tailnet this Mac is logged in to, create an OAuth client. It needs only one permission, write on Auth Keys (auth_keys), and choose the same tag as above (if the tag isn't listed, first add it to tagOwners in the policy file). If you also grant read permission on devices, this Mac verifies it's on the same tailnet. Each time the pairing QR is opened, a key that works only once for 15 minutes is created and put in the QR, so don't show the QR to anyone else."
+            "value" : "Create an OAuth client in the admin console of the tailnet this Mac is signed in to. The only permission it needs is Auth Keys write (auth_keys). Choose the same tags as above; if they're not listed, add them to tagOwners in the policy file first. If you also grant Devices read, this Mac checks that it's the same tailnet."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この Mac がログインしている tailnet の管理コンソールで OAuth クライアントを作成してください。権限は Auth Keys の書き込み(auth_keys)のみで足り、タグは上と同じタグを選びます(タグがリストにない場合は、ポリシーファイルの tagOwners に先に追加してください)。デバイスの読み取り権限も付与すると、この Mac が同じ tailnet かどうかを確認します。ペアリング QR を開くたびに、15 分間に 1 回だけ使えるキーを作成して QR に含めるため、QR を他の人に見せないでください。"
+            "value" : "このMacがログインしているtailnetの管理コンソールでOAuthクライアントを作成してください。権限はAuth Keysの書き込み（auth_keys）だけで十分です。タグは上と同じタグを選び、一覧にない場合は先にポリシーファイルのtagOwnersに追加してください。デバイスの読み取り権限も付与すると、このMacが同じtailnetかどうかを確認します。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请在这台 Mac 所登录 tailnet 的管理控制台中创建 OAuth 客户端。权限只需要 Auth Keys 写入（auth_keys）一项，标签请选择与上方相同的标签（如果列表中没有该标签，请先在策略文件的 tagOwners 中添加）。如果同时授予设备读取权限，将会确认这台 Mac 属于同一 tailnet。每次打开配对 QR 码时，都会生成一个 15 分钟内仅可使用一次的密钥并放入 QR 码，因此请勿向他人展示 QR 码。"
+            "value" : "请在这台 Mac 登录的 tailnet 管理控制台中创建 OAuth 客户端。只需要 Auth Keys 写入（auth_keys）权限。标签请选择与上面相同的标签；如果列表中没有，请先在策略文件的 tagOwners 中添加。如果同时授予设备读取权限，这台 Mac 会确认是否为同一个 tailnet。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "請在此 Mac 所登入 tailnet 的管理主控台中建立 OAuth 用戶端。權限只需要 Auth Keys 寫入(auth_keys)，標籤請選擇與上方相同的標籤(若標籤不在列表中，請先加入政策檔的 tagOwners)。若同時授予裝置讀取權限，會確認此 Mac 是否屬於同一個 tailnet。每次開啟配對 QR 時，都會建立一把 15 分鐘內只能使用一次的金鑰並放入 QR,請勿將 QR 給他人看。"
+            "value" : "請在這台 Mac 登入的 tailnet 管理主控台中建立 OAuth 用戶端。只需要 Auth Keys 寫入（auth_keys）權限。標籤請選擇與上方相同的標籤；若列表中沒有，請先在原則檔案的 tagOwners 中加入。若同時授予裝置讀取權限，這台 Mac 會確認是否為同一個 tailnet。"
           }
         }
       }
@@ -25957,34 +26523,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "驗證金鑰"
-          }
-        }
-      }
-    },
-    "인증 키 로그인, QR 한 번으로 iPhone 연결, iPhone 앱 업데이트, 이 Mac의 주소, 제어 서버 설정입니다. 켜지 않아도 연결과 설치는 됩니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auth key sign-in, connecting an iPhone with one QR scan, iPhone app updates, this Mac’s addresses, and the control server. Connecting and installing work without turning this on."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "認証キーでのログイン、QR一回でのiPhone接続、iPhone アプリのアップデート、この Macのアドレス、コントロールサーバの設定です。オンにしなくても接続とインストールはできます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "包括使用认证密钥登录、扫一次二维码连接 iPhone、iPhone App 更新、这台 Mac 的地址以及控制服务器设置。不打开也可以连接和安装。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "包括使用驗證金鑰登入、掃一次 QR 碼連接 iPhone、iPhone App 更新、此 Mac 的位址以及控制伺服器設定。不開啟也可以連線和安裝。"
           }
         }
       }
@@ -28221,6 +28759,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近 %lld 行記錄"
+          }
+        }
+      }
+    },
+    "최근 연락 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last contact %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最終連絡 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近联系 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近聯絡 %@"
           }
         }
       }
@@ -30505,6 +31071,62 @@
         }
       }
     },
+    "페어링 QR을 iPhone 앱으로 찍은 뒤, 이 Mac에 온 요청을 허용합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan the pairing QR with the iPhone app, then allow the request on this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングQRをiPhoneアプリで読み取ってから、このMacに届いたリクエストを許可します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 iPhone App 扫描配对二维码，然后在这台 Mac 上允许收到的请求。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 iPhone App 掃描配對 QR 碼，然後在這台 Mac 上允許收到的請求。"
+          }
+        }
+      }
+    },
+    "페어링 QR을 열 때마다 15분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣습니다. QR을 다른 사람에게 보여 주지 마세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each time the pairing QR opens, a key usable once within 15 minutes is created and put in the QR. Don't show the QR to anyone else."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングQRを開くたびに、15分間に1回だけ使えるキーを作成してQRに入れます。QRを他の人に見せないでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次打开配对二维码时，都会创建一个 15 分钟内只能使用一次的密钥并放入二维码。请勿向他人展示二维码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次開啟配對 QR 碼時，都會建立一把 15 分鐘內只能使用一次的金鑰並放入 QR 碼。請勿向他人展示 QR 碼。"
+          }
+        }
+      }
+    },
     "페어링 결과, 설치 진행, 거부된 접근이 여기에 기록됩니다." : {
       "localizations" : {
         "en" : {
@@ -30529,6 +31151,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "配對結果、安裝進度與被拒絕的存取會記錄在這裡。"
+          }
+        }
+      }
+    },
+    "페어링 결정" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing decision"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングの決定"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对决定"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配對決定"
           }
         }
       }
