@@ -102,6 +102,13 @@ private func screen(_ state: PhoneViewState) -> some View {
     screen(PhoneViewState(tunnel: .off))
 }
 
+#Preview("①-1 미페어링 · 페어링이 VPN을 기다림") {
+    var state = PhoneViewState(tunnel: .off)
+    state.queuedPairingHost = "preview-mac.example.ts.net"
+    state.needsTunnel = true
+    return screen(state)
+}
+
 #Preview("② 승인 대기") {
     screen(PhoneViewState(
         phase: .waitingApproval(deviceName: "iPhone"),
@@ -147,11 +154,31 @@ private func screen(_ state: PhoneViewState) -> some View {
     return screen(state)
 }
 
-#Preview("⑦-2 업데이트 앱 설치 전 VPN 넘겨받는 중") {
+#Preview("⑦-2 RD 업데이트 설치 전 VPN 가져오는 중") {
     var state = PreviewFixtures.paired(builds: [PreviewFixtures.buildA])
     state.vpnPair = VPNPairState(owner: .pairedApp)
     state.installPreparations = [PreviewFixtures.buildA.id: .working("VPN을 이 앱으로 옮기는 중")]
     return screen(state)
+}
+
+#Preview("⑦-3 RD 업데이트가 VPN을 쓰는 중") {
+    var state = PreviewFixtures.paired(builds: [PreviewFixtures.buildA, PreviewFixtures.buildB])
+    state.vpnPair = VPNPairState(owner: .pairedApp, installed: InstalledApp(version: "0.2.0", buildNumber: "20"))
+    return screen(state)
+}
+
+#Preview("⑦-4 VPN 꺼짐 · 필요할 때 자동으로 켬") {
+    var state = PreviewFixtures.paired(.off, builds: [PreviewFixtures.buildA, PreviewFixtures.buildB])
+    state.vpnAutoStartReady = true
+    return screen(state)
+}
+
+#Preview("⑦-5 연결 상세") {
+    var state = PreviewFixtures.paired(builds: [PreviewFixtures.buildA])
+    state.vpnPair = VPNPairState(owner: .pairedApp, installed: InstalledApp(version: "0.2.0", buildNumber: "20"))
+    return NavigationStack {
+        ConnectionDetailView(state: state, actions: PreviewFixtures.actions, pairAnotherMac: {})
+    }
 }
 
 #Preview("⑧ 설치 진행") {

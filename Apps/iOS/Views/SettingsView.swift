@@ -204,17 +204,17 @@ struct SettingsView: View {
             Button {
                 Task { updaterOpenFailed = await !actions.openUpdaterApp() }
             } label: {
-                Label("업데이트 앱 열기", systemImage: "arrow.up.forward.app")
+                Label("RD 업데이트 열기", systemImage: "arrow.up.forward.app")
             }
             if updaterOpenFailed {
-                Label("업데이트 앱을 열지 못했습니다. RD 업데이트 빌드 칸에서 설치하세요.", systemImage: "exclamationmark.triangle.fill")
+                Label("RD 업데이트를 열지 못했습니다. 빌드 목록의 RD 업데이트 빌드에서 설치하세요.", systemImage: "exclamationmark.triangle.fill")
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
         } header: {
             Text("이 앱")
         } footer: {
-            Text("이 앱의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 업데이트 앱이 없으면 RD 업데이트 빌드 칸에서 설치하세요.")
+            Text("이 앱의 새 빌드는 RD 업데이트에서 설치합니다. RD 업데이트가 없으면 빌드 목록의 RD 업데이트 빌드에서 설치하세요.")
         }
     }
 

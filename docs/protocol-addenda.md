@@ -486,7 +486,7 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 
 ## M. iPhone 앱 두 개와 공용 VPN 신원
 
-iPhone 앱은 둘이다. RemoteDebug(스킴 `RemoteDebugPhone`)와 업데이트 앱(스킴 `RemoteDebugVPN`, 홈 화면 이름 "RD 업데이트", 앱 안 제목 "RemoteDebug 업데이트"). 두 앱은 각자 터널 확장을 갖고, 두 확장은 같은 소스(`Apps/iOSTunnel`)로 빌드한다.
+iPhone 앱은 둘이다. RemoteDebug(스킴 `RemoteDebugPhone`)와 업데이트 앱(스킴 `RemoteDebugVPN`, 홈 화면 이름과 앱 안 제목 "RD 업데이트"). 두 앱은 각자 터널 확장을 갖고, 두 확장은 같은 소스(`Apps/iOSTunnel`)로 빌드한다.
 
 - RemoteDebug: 다른 앱의 빌드 설치, 파일, 크래시·피드백, Mac 페어링. 자기 번들 ID의 빌드는 목록에서 뺀다.
 - 업데이트 앱: Mac의 빌드 목록에서 RemoteDebug 앱의 번들 ID인 빌드만 보여 주고 설치한다. VPN 켜기·끄기와 로그인도 한다. 페어링 화면은 없다.

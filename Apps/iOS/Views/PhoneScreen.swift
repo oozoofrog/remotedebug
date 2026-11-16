@@ -15,10 +15,6 @@ struct PhoneScreen: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    PhoneHero(hostName: state.host?.hostName)
-                }
-
                 if let message = state.lastError {
                     ErrorBanner(message: message, dismiss: actions.clearError)
                 }
@@ -27,17 +23,15 @@ struct PhoneScreen: View {
                     TailnetMismatchSection(phone: mismatch.phone, mac: mismatch.mac, relogin: actions.reloginTunnel)
                 }
 
-                VPNCard(state: state, actions: actions)
-
-                VPNPairSection(pair: state.vpnPair, actions: actions)
+                ConnectionSection(state: state, actions: actions, pairAnotherMac: { showsPairingSheet = true })
 
                 if state.host != nil {
-                    UpdaterBuildsSection(state: state, actions: actions)
+                    UpdateNoticeSection(pair: state.vpnPair, actions: actions)
                 }
 
                 if state.host == nil, !state.isPairingInFlight, state.queuedPairingHost == nil {
                     Section {
-                        PairingForm(pair: actions.pair, handleScanned: actions.handleScanned, onSubmit: {})
+                        PairingForm(pair: actions.pair, handleScanned: actions.handleScanned, onSubmit: {}, collapsesManualEntry: true)
                     } header: {
                         Text("Mac 페어링")
                     } footer: {
@@ -47,25 +41,9 @@ struct PhoneScreen: View {
 
                 PairingProgressSection(state: state, cancel: actions.cancelPairing)
 
-                if let host = state.host {
-                    Section {
-                        LabeledContent {
-                            Button("다른 Mac과 페어링") { showsPairingSheet = true }
-                                .font(.subheadline)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(host.hostName).font(.headline)
-                                Text(host.fqdn)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .textSelection(.enabled)
-                            }
-                        }
-                    } header: {
-                        Text("페어링한 Mac")
-                    }
-
+                if state.host != nil {
                     BuildListSection(state: state, actions: actions)
+                    UpdaterBuildsSection(state: state, actions: actions)
                 }
             }
             .listStyle(.insetGrouped)
@@ -201,85 +179,5 @@ struct TailnetMismatchSection: View {
         } footer: {
             Text("이 iPhone에 저장된 Tailscale 로그인을 지우고 VPN을 다시 켭니다. 로그인 페이지가 나오면 Mac과 같은 계정을 고르세요.")
         }
-    }
-}
-
-/// 업데이트 앱(RD 업데이트)의 상태와, 두 앱 사이에서 VPN을 옮기는 동작. RemoteDebug의 새 빌드는 업데이트 앱에서 설치한다.
-struct VPNPairSection: View {
-    var pair: VPNPairState
-    var actions: PhoneActions
-    @State private var working = false
-    @State private var openFailed = false
-
-    private var updaterAvailable: Bool { pair.installed != nil || pair.present || pair.owner == .pairedApp }
-
-    var body: some View {
-        Section {
-            Label(title, systemImage: pair.owner == .pairedApp ? "checkmark.shield.fill" : "shield.lefthalf.filled")
-                .foregroundStyle(pair.owner == .pairedApp ? Color.green : Color.primary)
-            if pair.hasNewerStoreBuild {
-                Label("새 RemoteDebug 빌드가 있습니다. 업데이트 앱에서 설치하세요.", systemImage: "arrow.down.app")
-                    .font(.subheadline)
-            }
-            if updaterAvailable || pair.hasNewerStoreBuild {
-                button("업데이트 앱 열기", "arrow.up.forward.app") { openFailed = await !actions.openUpdaterApp() }
-            }
-            if openFailed {
-                Label("업데이트 앱을 열지 못했습니다. 아래 RD 업데이트 빌드 칸에서 설치하세요.", systemImage: "exclamationmark.triangle.fill")
-                    .font(.footnote)
-                    .foregroundStyle(.orange)
-            }
-            if updaterAvailable {
-                switch pair.owner {
-                case .thisApp:
-                    button("업데이트 앱으로 VPN 옮기기", "arrow.left.arrow.right", actions.moveVPNToUpdater)
-                case .pairedApp:
-                    button("이 앱으로 VPN 넘겨받기", "arrow.left.arrow.right", actions.takeOverVPN)
-                case .none:
-                    button("업데이트 앱에서 VPN 켜기", "power", actions.moveVPNToUpdater)
-                case .other:
-                    EmptyView()
-                }
-            }
-        } header: {
-            Text("업데이트 앱")
-        } footer: {
-            Text(footer)
-        }
-        .disabled(working)
-    }
-
-    private func button(_ title: LocalizedStringKey, _ symbol: String, _ action: @escaping @MainActor () async -> Void) -> some View {
-        Button {
-            working = true
-            Task {
-                await action()
-                working = false
-            }
-        } label: {
-            Label(title, systemImage: symbol)
-        }
-    }
-
-    private var title: String {
-        switch pair.owner {
-        case .pairedApp: return String(localized: "업데이트 앱이 VPN을 켜 두었습니다")
-        case .thisApp: return pair.installed == nil ? (pair.present ? String(localized: "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 설치됨") : String(localized: "이 앱이 VPN을 켜 두었습니다")) : String(localized: "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 \(version)")
-        case .other: return String(localized: "다른 앱의 VPN이 켜져 있습니다")
-        case .none: return pair.installed == nil ? (pair.present ? String(localized: "업데이트 앱 설치됨") : String(localized: "업데이트 앱이 설치되어 있지 않습니다")) : String(localized: "업데이트 앱 \(version) 설치됨")
-        }
-    }
-
-    private var version: String {
-        pair.installed.map { "\($0.version) (\($0.buildNumber))" } ?? ""
-    }
-
-    private var footer: String {
-        if !updaterAvailable {
-            return pair.published == nil
-                ? String(localized: "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. Mac에서 RemoteDebugVPN 스킴을 게시하면 아래 RD 업데이트 빌드 칸에서 설치할 수 있습니다.")
-                : String(localized: "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 아래 RD 업데이트 빌드 칸에서 설치하세요.")
-        }
-        return String(localized: "RemoteDebug의 새 빌드는 업데이트 앱에서, 업데이트 앱의 새 빌드는 아래 빌드 목록에서 설치합니다. 두 앱은 같은 tailnet 기기로 연결하고, 한 번에 한 앱만 VPN을 켭니다.")
     }
 }

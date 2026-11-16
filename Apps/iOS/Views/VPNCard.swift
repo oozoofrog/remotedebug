@@ -7,6 +7,8 @@ import UIKit
 struct VPNCard: View {
     var state: PhoneViewState
     var actions: PhoneActions
+    /// 업데이트 앱(RD 업데이트)으로 VPN을 옮기는 단추를 보일지. 페어링 전에는 보이지 않는다.
+    var showsUpdaterHandover = false
 
     @State private var busy = false
     @State private var showsAuthKeySheet = false
@@ -14,27 +16,27 @@ struct VPNCard: View {
     var body: some View {
         Section {
             HStack(spacing: 12) {
-                Image(systemName: symbol)
+                Image(systemName: state.vpnSymbol)
                     .font(.title2)
-                    .foregroundStyle(tint)
+                    .foregroundStyle(state.vpnTint)
                     .frame(width: 32)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("VPN").font(.headline)
-                    Text(statusLabel)
+                    Text(state.vpnStatusLabel)
                         .font(.subheadline)
-                        .foregroundStyle(tint)
+                        .foregroundStyle(state.vpnTint)
                 }
                 Spacer()
                 if isWorking {
                     ProgressView()
-                        .accessibilityLabel("VPN \(statusLabel)")
+                        .accessibilityLabel("VPN \(state.vpnStatusLabel)")
                 }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("VPN \(statusLabel)")
+            .accessibilityLabel("VPN \(state.vpnStatusLabel)")
 
-            if let detail {
+            if let detail = state.vpnDetail {
                 Text(detail)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -46,6 +48,10 @@ struct VPNCard: View {
 
             if state.tunnelAvailable {
                 controls
+            }
+
+            if showsUpdaterHandover, state.tunnelAvailable {
+                handoverButton
             }
         }
         .disabled(busy)
@@ -113,71 +119,32 @@ struct VPNCard: View {
     private var isWorking: Bool {
         switch state.tunnel {
         case .connecting, .disconnecting: true
-        default: isAutoStarting
+        default: state.isAutoStartingVPN
         }
     }
 
-    /// 앱이 VPN을 켜고 연결을 기다리는 중이다.
-    private var isAutoStarting: Bool {
-        guard state.vpnAutoStarting else { return false }
-        switch state.tunnel {
-        case .off, .connecting, .disconnecting: return true
-        default: return false
+    /// VPN을 가진 쪽에 따라 RD 업데이트와 VPN을 주고받는 단추 하나. RD 업데이트가 없으면 없다.
+    @ViewBuilder private var handoverButton: some View {
+        let pair = state.vpnPair
+        if pair.installed != nil || pair.present || pair.owner == .pairedApp {
+            switch pair.owner {
+            case .thisApp:
+                handover("RD 업데이트로 VPN 옮기기", actions.moveVPNToUpdater)
+            case .pairedApp:
+                handover("이 앱으로 VPN 가져오기", actions.takeOverVPN)
+            case .none:
+                handover("RD 업데이트에서 VPN 켜기", actions.moveVPNToUpdater)
+            case .other:
+                EmptyView()
+            }
         }
     }
 
-    private var statusLabel: String {
-        if !state.tunnelAvailable { return String(localized: "사용할 수 없음") }
-        if isAutoStarting { return VPNStatusText.autoStarting }
-        switch state.tunnel {
-        case .off: return state.directConnected ? VPNStatusText.direct : String(localized: "꺼짐")
-        case .connecting: return String(localized: "연결 중")
-        case .disconnecting: return String(localized: "끄는 중")
-        case .needsLogin: return String(localized: "로그인 필요")
-        case .connected:
-            if state.lockWait != nil { return String(localized: "서명 필요") }
-            return VPNStatusText.connected(holder: state.vpnPair.owner, path: state.peerPath)
-        case .failed: return String(localized: "오류")
-        }
-    }
-
-    private var detail: String? {
-        switch state.tunnel {
-        case .off:
-            state.directConnected ? VPNStatusText.directDetail
-                : state.vpnAutoStartReady
-                ? String(localized: "Mac에 연결할 때 자동으로 켜고, 쓰지 않으면 30초 뒤에 끕니다.")
-                : String(localized: "Mac과 통신하려면 VPN이 켜져 있어야 합니다. 여기서 한 번 켜 두면 다음부터는 필요할 때 자동으로 켭니다.")
-        case .connecting, .disconnecting: nil
-        case .needsLogin(let url): url == nil ? String(localized: "tailnet 로그인 주소를 받는 중입니다.") : String(localized: "tailnet에 로그인해야 합니다. 로그인하면 자동으로 연결됩니다.")
-        case .connected:
-            state.vpnAutoStarted ? String(localized: "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다.")
-                : state.directConnected ? VPNStatusText.directWithVPNDetail : nil
-        case .failed(let message): message
-        }
-    }
-
-    private var symbol: String {
-        if !state.tunnelAvailable { return "network.slash" }
-        switch state.tunnel {
-        case .off: return state.directConnected ? "wifi" : "network.slash"
-        case .connecting: return "network"
-        case .disconnecting: return "network.slash"
-        case .needsLogin: return "person.badge.key"
-        case .connected: return "checkmark.shield.fill"
-        case .failed: return "exclamationmark.triangle.fill"
-        }
-    }
-
-    private var tint: Color {
-        if !state.tunnelAvailable { return .secondary }
-        switch state.tunnel {
-        case .off: return state.directConnected ? .green : .secondary
-        case .connecting: return .blue
-        case .disconnecting: return .secondary
-        case .needsLogin: return .orange
-        case .connected: return state.lockWait == nil ? .green : .orange
-        case .failed: return .red
+    private func handover(_ title: LocalizedStringKey, _ work: @escaping @MainActor @Sendable () async -> Void) -> some View {
+        Button {
+            run(work)
+        } label: {
+            Label(title, systemImage: "arrow.left.arrow.right")
         }
     }
 }
