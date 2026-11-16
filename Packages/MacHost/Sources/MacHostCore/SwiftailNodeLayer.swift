@@ -30,6 +30,8 @@ protocol HostNodeLayer: Sendable {
     func run() async throws
     func snapshot() async -> NodeSnapshot
     func certificateSnapshot() async -> CertificateSnapshot?
+    /// 안정 ID로 꼽은 피어까지의 지금 경로. netmap에 없거나 경로가 없는 피어는 뺀다.
+    func peerPaths(to stableIDs: [String]) async -> [String: RDModels.PeerPath]
     var serving: ServingState { get }
     /// 조건을 기다리거나 물러난 인증서 발급을 곧바로 다시 본다.
     func retryCertificates() async
@@ -70,6 +72,18 @@ struct SwiftailRuntimeLayer: HostNodeLayer {
         )
     }
 
+    func peerPaths(to stableIDs: [String]) async -> [String: RDModels.PeerPath] {
+        var paths: [String: RDModels.PeerPath] = [:]
+        for id in stableIDs {
+            switch await runtime.node.path(toPeerWithStableID: id) {
+            case .direct(let endpoint)?: paths[id] = RDModels.PeerPath(direct: true, addr: endpoint.description)
+            case .relayed(let region)?: paths[id] = RDModels.PeerPath(direct: false, relay: region == 0 ? nil : String(region))
+            case nil: break
+            }
+        }
+        return paths
+    }
+
     func certificateSnapshot() async -> CertificateSnapshot? {
         guard let certificates = runtime.certificates else { return nil }
         let status = await certificates.status
@@ -79,4 +93,9 @@ struct SwiftailRuntimeLayer: HostNodeLayer {
     var serving: ServingState { runtime.serving }
 
     func retryCertificates() async { await runtime.retryCertificates() }
+}
+
+extension HostNodeLayer {
+    /// 경로를 모르는 노드 층(시험용 가짜)의 기본값.
+    func peerPaths(to stableIDs: [String]) async -> [String: RDModels.PeerPath] { [:] }
 }

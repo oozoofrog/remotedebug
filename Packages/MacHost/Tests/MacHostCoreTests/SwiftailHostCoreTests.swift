@@ -177,6 +177,15 @@ struct CoreStatusMappingTests {
     let running = NodeSnapshot(state: .running, addresses: ["100.64.0.1", "fd7a:115c:a1e0::1"], fqdn: "rd-mac-1a2b3c4d.tail0001.ts.net",
                                stableID: "nSTABLE", certDomains: ["rd-mac-1a2b3c4d.tail0001.ts.net"], peerCount: 2)
 
+    @Test func peerPathsAreOmittedWhenEmpty() {
+        var input = CoreStatusMapping.Input(phase: .running, node: running, certificate: nil,
+                                            serving: ServingState(listening: true, tlsReady: true), hostname: "rd-mac-1a2b3c4d",
+                                            counts: (0, 1), direct: nil, rssMiB: 0)
+        #expect(CoreStatusMapping.status(input).peerPaths == nil)
+        input.peerPaths = ["nPHONE1": RDModels.PeerPath(direct: false, relay: "7")]
+        #expect(CoreStatusMapping.status(input).peerPaths == ["nPHONE1": RDModels.PeerPath(direct: false, relay: "7")])
+    }
+
     @Test func nodeStatesMapToBackendStates() throws {
         #expect(status(node: NodeSnapshot(state: .starting)).backendState == .starting)
         let login = status(node: NodeSnapshot(state: .needsLogin(try #require(URL(string: "https://login.example.com/a/1")))))

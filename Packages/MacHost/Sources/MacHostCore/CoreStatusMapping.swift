@@ -101,6 +101,8 @@ enum CoreStatusMapping {
         var hostname: String
         var counts: (builds: Int, devices: Int)
         var direct: DirectStatus?
+        /// 페어링한 기기(안정 ID)까지의 경로(addenda N). 비면 상태에 싣지 않는다.
+        var peerPaths: [String: RDModels.PeerPath] = [:]
         var rssMiB: Double
     }
 
@@ -115,9 +117,7 @@ enum CoreStatusMapping {
         status.pairedDevices = input.counts.devices
         status.direct = input.direct
         status.rssMiB = input.rssMiB
-        // shortcut: `peerPaths`(페어링한 기기까지의 경로, addenda N)는 내지 않는다. Swiftail은 이름으로만 경로를 묻고
-        // (`path(toPeerNamed:)`) 허용 목록은 안정 ID다. 필요해지는 시점: 기기 화면에 경로 표시를 되살릴 때(연결의
-        // `whoIs` 이름을 안정 ID와 함께 기억하거나 Swiftail에 안정 ID 조회가 생기면).
+        status.peerPaths = input.peerPaths.isEmpty ? nil : input.peerPaths
 
         switch input.phase {
         case .ended(let end):

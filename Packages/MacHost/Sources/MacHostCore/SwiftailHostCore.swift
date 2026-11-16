@@ -56,6 +56,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
         var phase: NodePhase = .running
         var snapshot = NodeSnapshot()
         var certificate: CertificateSnapshot?
+        var peerPaths: [String: RDModels.PeerPath] = [:]
         var direct: DirectIdentity?
         var directListener: HTTPListener?
         var lastEmitted: CoreStatus?
@@ -477,22 +478,24 @@ public final class SwiftailHostCore: HostCore, Sendable {
     private func refresh(_ session: Session) async {
         let snapshot = await session.node.snapshot()
         let certificate = await session.node.certificateSnapshot()
+        let peerPaths = await session.node.peerPaths(to: session.logic.deviceStableIDs())
         session.lock.withLock { value in
             value.snapshot = snapshot
             value.certificate = certificate
+            value.peerPaths = peerPaths
         }
         infoBox()?.update(fqdn: snapshot.fqdn, selfID: snapshot.stableID)
     }
 
     private func makeStatus(_ session: Session) -> CoreStatus {
-        let (phase, snapshot, certificate, direct, listening) = session.lock.withLock {
-            ($0.phase, $0.snapshot, $0.certificate, $0.direct, $0.directListener != nil && !$0.stopped)
+        let (phase, snapshot, certificate, peerPaths, direct, listening) = session.lock.withLock {
+            ($0.phase, $0.snapshot, $0.certificate, $0.peerPaths, $0.direct, $0.directListener != nil && !$0.stopped)
         }
         return CoreStatusMapping.status(CoreStatusMapping.Input(
             phase: phase, node: snapshot, certificate: certificate, serving: session.node.serving,
             hostname: session.config.hostname, counts: session.logic.counts(),
             direct: direct.map { DirectStatus(listening: listening, port: $0.port, id: $0.id) },
-            rssMiB: Self.residentMiB()
+            peerPaths: peerPaths, rssMiB: Self.residentMiB()
         ))
     }
 

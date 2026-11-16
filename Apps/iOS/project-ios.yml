@@ -8,7 +8,7 @@
 packages:
   Swiftail:
     url: https://github.com/oozoofrog/Swiftail
-    revision: b407e5ccad103c6049586436e0169d244c8592af
+    revision: 151942fe2ff1907834433b0b4595335820bc5b61
 targets:
   RemoteDebugPhone:
     type: application

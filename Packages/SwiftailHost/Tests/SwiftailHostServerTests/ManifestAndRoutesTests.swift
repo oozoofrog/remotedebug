@@ -1,4 +1,5 @@
 import RDHostLogic
+import Swiftail
 import Testing
 
 @testable import SwiftailHostServer
@@ -59,5 +60,16 @@ struct ManifestAndRoutesTests {
         let post = await handler.handle(HostRequest(method: "POST", target: "/", headers: [], body: nil, contentLength: 0,
                                                    origin: .direct(remoteIP: "127.0.0.1")))
         #expect(post.status == 405 && post.headers.contains { $0.name == "Allow" })
+    }
+
+    /// 다리가 알려 준 신원 → 로직의 상대. 이름은 MagicDNS 이름의 첫 레이블, 없으면 표시용 이름.
+    @Test func bridgeIdentityBecomesHostPeer() {
+        let named = PeerIdentity(stableID: "nPHONE1", name: "rd-phone-1a2b3c4d.tail0001.ts.net.", computedName: "phone",
+                                 loginName: "user@example.com")
+        #expect(HTTPListener.peer(named) == HostPeer(stableID: "nPHONE1", nodeName: "rd-phone-1a2b3c4d", loginName: "user@example.com"))
+        let unnamed = PeerIdentity(stableID: "nPHONE2", name: "", computedName: "phone", loginName: "")
+        #expect(HTTPListener.peer(unnamed) == HostPeer(stableID: "nPHONE2", nodeName: "phone", loginName: ""))
+        let dotOnly = PeerIdentity(stableID: "nPHONE3", name: ".tail0001.ts.net", computedName: "phone", loginName: "")
+        #expect(HTTPListener.peer(dotOnly).nodeName == "phone")
     }
 }

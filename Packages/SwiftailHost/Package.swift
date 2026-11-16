@@ -7,7 +7,7 @@ import PackageDescription
 import Foundation
 
 let swiftail: Package.Dependency = ProcessInfo.processInfo.environment["SWIFTAIL_PATH"].map { .package(path: $0) }
-    ?? .package(url: "https://github.com/oozoofrog/Swiftail", revision: "b407e5ccad103c6049586436e0169d244c8592af")
+    ?? .package(url: "https://github.com/oozoofrog/Swiftail", revision: "151942fe2ff1907834433b0b4595335820bc5b61")
 
 let package = Package(
     name: "SwiftailHost",
