@@ -145,18 +145,18 @@ RemoteDebugFeedback.start(.init(
 
 ## 현재 상태
 
-"확인함"은 그 행에 적은 범위까지만 뜻한다. 실기기 확인은 2026-11-12에 iPhone 한 대(iOS 27.2)로 했다.
+"확인함"은 그 행에 적은 범위까지만 뜻한다. 실기기 확인은 2026-11-12에 iPhone 한 대(iOS 27.2)로 했다. 시험 행은 2026-11-16에 Swiftail revision `151942f`로 마지막으로 돌렸다.
 
 | 범위 | 상태 | 재현 방법 |
 | --- | --- | --- |
-| Mac 호스트 로직(`RDHostLogic`): 경로, 페어링과 허용 목록, 설치 세션, 공유 파일, 기기 로그, 크래시, 푸시 토큰, 에이전트 보드, 설치 페이지 파일, 같은 네트워크 등록 | 시험 있음, 결과는 여기에 기록하지 않음 | `swift test --package-path Packages/SwiftailHost`(`RDHostLogicTests`의 `SessionTests`, `PairingTests`, `ResourceTests`, `DirectTests`, `PushTests`, `AgentTests`, `HardeningTests`, `WebTests` 등) |
-| Mac 호스트 HTTP 전송(`SwiftailHostServer`): 요청 해석, 바이트 범위, 연결 유지, 매니페스트와 경로, 같은 네트워크 리스너, 업데이트 페이지 서버 | 시험 있음, 결과는 여기에 기록하지 않음 | `swift test --package-path Packages/SwiftailHost`(`HTTPRequestParserTests`, `ByteRangeTests`, `HTTPTransportTests`, `ManifestAndRoutesTests`, `DirectListenerTests`, `UpdatePageTests`) |
-| 같은 네트워크 직접 연결: iPhone 쪽 경로 선택을 가짜 전송으로 | 시험 있음, 결과는 여기에 기록하지 않음 | `swift test --package-path Packages/PhoneClient` |
+| Mac 호스트 로직(`RDHostLogic`): 경로, 페어링과 허용 목록, 설치 세션, 공유 파일, 기기 로그, 크래시, 푸시 토큰, 에이전트 보드, 설치 페이지 파일, 같은 네트워크 등록 | 확인함(시험 통과) | `swift test --package-path Packages/SwiftailHost`(`RDHostLogicTests`의 `SessionTests`, `PairingTests`, `ResourceTests`, `DirectTests`, `PushTests`, `AgentTests`, `HardeningTests`, `WebTests` 등) |
+| Mac 호스트 HTTP 전송(`SwiftailHostServer`): 요청 해석, 바이트 범위, 연결 유지, 매니페스트와 경로, 같은 네트워크 리스너, 업데이트 페이지 서버 | 확인함(시험 통과). 단 `readFailureFailsTheSession`은 네 번에 한 번쯤 실패한다 | `swift test --package-path Packages/SwiftailHost`(`HTTPRequestParserTests`, `ByteRangeTests`, `HTTPTransportTests`, `ManifestAndRoutesTests`, `DirectListenerTests`, `UpdatePageTests`) |
+| 같은 네트워크 직접 연결: iPhone 쪽 경로 선택을 가짜 전송으로 | 확인함(시험 통과) | `swift test --package-path Packages/PhoneClient` |
 | 실제 Mac과 iPhone 사이의 같은 네트워크 직접 연결 | 확인하지 않음 | [O.9](docs/protocol-addenda.md#o9-보안-속성과-확인하지-못한-것) |
-| 새 빌드·파일 알림(APNs): 토큰 등록·삭제 경로 | 시험 있음, 결과는 여기에 기록하지 않음 | `swift test --package-path Packages/SwiftailHost`(`PushTests`) |
+| 새 빌드·파일 알림(APNs): 토큰 등록·삭제 경로 | 확인함(시험 통과) | `swift test --package-path Packages/SwiftailHost`(`PushTests`) |
 | 실제 iPhone에 알림이 도착하고 눌러서 탭이 바뀌는지, 알림의 **설치**·**링크 열기** 버튼 | 확인함(iOS 27.2) | [P.9](docs/protocol-addenda.md#p9-확인하지-못한-것) |
 | 디버그 빌드 검사와 IPA 묶기: 단위 시험, 픽스처, 작성 환경의 실제 Debug 빌드 | 확인함 | `swift test --package-path Packages/RemoteDebugKit`, `scripts/check-ipa-roundtrip.sh`, `scripts/check-real-builds.sh` |
-| Mac 호스트 코어(`SwiftailHostCore`)를 가짜 노드 층으로, 그리고 Mac 모델·코어·로직·HTTP 전송을 루프백 가짜 tailnet으로(`MacHostE2ETests`의 `pairInstallRevokeAndShutdown`). Swiftail 노드, TLS, 인증서는 이 시험에 없다 | 시험 있음, 결과는 여기에 기록하지 않음 | `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost` |
+| Mac 호스트 코어(`SwiftailHostCore`)를 가짜 노드 층으로, 그리고 Mac 모델·코어·로직·HTTP 전송을 루프백 가짜 tailnet으로(`MacHostE2ETests`의 `pairInstallRevokeAndShutdown`). Swiftail 노드, TLS, 인증서는 이 시험에 없다 | 확인함(시험 통과) | `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost` |
 | iPhone 로직과 앱: 단위 시험, 시뮬레이터 빌드·시험, 기기용 컴파일(서명 없음) | 확인함 | `swift test --package-path Packages/PhoneClient`, [설정 문서의 xcodebuild 명령](docs/setup.md#명령줄-빌드와-시험) |
 | 프로젝트 연결 로직(프로젝트 찾기, 스킴, 가짜 빌더, DerivedData 등록 제안, 에이전트 명령, 스킬·`AGENTS.md`) | 확인함 | `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost` |
 | 실제 iPhone의 RemoteDebug 앱(2026-11-12에 이전 터널 엔진으로 빌드한 앱으로 확인함, Swiftail 빌드는 기록 없음): Tailscale 로그인, VPN, 페어링, 빌드 목록, 다른 앱 설치(실제 TLS, `itms-services`), 진단 로그, 파일 받기 | 일부 확인함 | 작성자가 사용함. 큰 파일은 앱이 백그라운드로 가면 끊겼고, 백그라운드 받기 수정은 확인하지 않음. [실기기 확인 절차](docs/device-test.md)를 모두 거치지는 않음 |
@@ -165,7 +165,7 @@ RemoteDebugFeedback.start(.init(
 | Mac 앱 화면을 직접 조작: 공유 시작, 페어링 시트, 요청 허용, 네트워크 화면, 설치 창 | 일부 확인함 | 창 캡처와 손쉬운 사용 클릭. VoiceOver, 다크 모드, 다이내믹 타입은 보지 않음 |
 | Mac 앱이 실제 `xcodebuild`로 다른 프로젝트 빌드 | 확인함 | 작성자의 에이전트가 게시한 빌드 |
 | Xcode 빌드 감지와 알림, 메뉴 막대 상주와 로그인 항목, Dock 아이콘에 끌어 놓기 | 확인하지 않음 | 절차 없음 |
-| 설치 웹 페이지: 파일 제공과 경로(`WebTests`), JavaScriptCore의 `logic.js`·`install.js`. 브라우저 엔진 시험은 없다 | 시험 있음, 결과는 여기에 기록하지 않음 | `swift test --package-path Packages/SwiftailHost`, `swift test --package-path Packages/WebPage` |
+| 설치 웹 페이지: 파일 제공과 경로(`WebTests`), JavaScriptCore의 `logic.js`·`install.js`. 브라우저 엔진 시험은 없다 | 확인함(시험 통과) | `swift test --package-path Packages/SwiftailHost`, `swift test --package-path Packages/WebPage` |
 | 설치 웹 페이지를 공식 Tailscale 앱으로 실제 iPhone의 Safari에서 열기 | 확인하지 않음 | [D14](docs/device-test.md#d14-설치-웹-페이지공식-tailscale-앱) |
 | 페어링 QR의 1회용 Tailscale 키(OAuth 클라이언트, 실제 Tailscale API) | 확인하지 않음 | 가짜 API로 로직만 시험 |
 | Mac 앱이 케이블로 연결한 iPhone에 iPhone 앱 설치 | 확인하지 않음 | 가짜 도구로 로직 시험, 앞부분별 번들 ID는 `xcodebuild -showBuildSettings`로 확인 |

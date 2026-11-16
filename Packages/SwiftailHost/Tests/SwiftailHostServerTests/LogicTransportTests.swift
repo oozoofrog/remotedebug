@@ -257,6 +257,25 @@ struct LogicTransportTests {
         #expect(!harness.events.sessionStates(sessionID).contains(.completed))
     }
 
+    /// iPhone 앱의 실제 전송(공개 키 고정 `URLSession`)은 맞는 고정 값일 때만 직접 연결 리스너의 TLS를 지난다.
+    @Test func pinnedTransportPassesDirectListenerTLSOnlyWithTheRightPin() async throws {
+        let directory = try makeTestDirectory("direct-pin")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let identity = try DirectIdentity(directory: directory)
+        let harness = try LogicHarness()
+        let direct = try await DirectListener.start(identity: identity, handler: harness.logic, loopbackOnly: true)
+        defer { direct.close() }
+        let request = URLRequest(url: try #require(URL(string: "https://127.0.0.1:\(direct.port)/v1/info")))
+
+        // 맞는 고정 값: TLS를 지나 호스트의 답을 받는다(토큰 없는 요청이라 로직이 거절한다).
+        let (_, response) = try await PinnedURLSessionTransport(pin: identity.spki, maximumTimeout: 10).send(request)
+        #expect(response.statusCode == 403)
+        // 틀린 고정 값: TLS에서 끊겨 답을 받지 못한다.
+        await #expect(throws: (any Error).self) {
+            _ = try await PinnedURLSessionTransport(pin: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=", maximumTimeout: 10).send(request)
+        }
+    }
+
     /// iPhone 앱이 실제로 보내는 요청(`HostAPI`)과 설치 페이지의 같은 출처 요청이 tailnet 모양 리스너와 직접 연결 리스너
     /// 양쪽에서 받아들여지고, 다른 출처 요청은 막힌다. 리스너는 `host`·`origin`·`sec-fetch-site`·`content-type`을 그대로 넘긴다.
     @Test func phoneAndInstallPageRequestsPassOriginChecksOnBothListeners() async throws {
