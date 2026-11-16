@@ -1751,6 +1751,40 @@
         }
       }
     },
+    "%@, %@" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@, %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@、%2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@，%2$@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@，%2$@"
+          }
+        }
+      }
+    },
     "%@. 만료되기 전에 기기 화면에서 허용하거나 거부하세요." : {
       "localizations" : {
         "en" : {
@@ -6371,6 +6405,68 @@
         }
       }
     },
+    "RD 업데이트" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RD Update"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RDアップデート"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RD 更新"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RD 更新"
+          }
+        }
+      }
+    },
+    "RD 업데이트 %@ (%@) 설치됨" : {
+      "localizations" : {
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "RD 업데이트 %1$@ (%2$@) 설치됨"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RD Update %1$@ (%2$@) installed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RDアップデート %1$@ (%2$@) をインストール済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安装 RD 更新 %1$@ (%2$@)"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安裝 RD 更新 %1$@ (%2$@)"
+          }
+        }
+      }
+    },
     "RD 업데이트 빌드" : {
       "localizations" : {
         "en" : {
@@ -6395,6 +6491,174 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "RD 更新建置"
+          }
+        }
+      }
+    },
+    "RD 업데이트 설치됨" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RD Update installed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RDアップデートをインストール済み"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安装 RD 更新"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安裝 RD 更新"
+          }
+        }
+      }
+    },
+    "RD 업데이트 열기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open RD Update"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RDアップデートを開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开 RD 更新"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開 RD 更新"
+          }
+        }
+      }
+    },
+    "RD 업데이트가 설치되어 있지 않습니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RD Update is not installed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RDアップデートがインストールされていません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未安装 RD 更新"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未安裝 RD 更新"
+          }
+        }
+      }
+    },
+    "RD 업데이트로 VPN 옮기기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move VPN to RD Update"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPNをRDアップデートに移す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将 VPN 移到 RD 更新"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將 VPN 移到 RD 更新"
+          }
+        }
+      }
+    },
+    "RD 업데이트를 열지 못했습니다. 아래 RD 업데이트 빌드 칸에서 설치하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't open RD Update. Install it from the RD Update build section below."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RDアップデートを開けませんでした。下のRDアップデートビルドの欄からインストールしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开 RD 更新。请在下方的 RD 更新构建栏中安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法打開 RD 更新。請在下方的 RD 更新建置欄中安裝。"
+          }
+        }
+      }
+    },
+    "RD 업데이트에서 VPN 켜기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn On VPN in RD Update"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RDアップデートでVPNをオンにする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 RD 更新中打开 VPN"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 RD 更新中開啟 VPN"
           }
         }
       }
@@ -7015,86 +7279,86 @@
         }
       }
     },
-    "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. Mac에서 RemoteDebugVPN 스킴을 게시하면 아래 RD 업데이트 빌드 칸에서 설치할 수 있습니다." : {
+    "RemoteDebug의 새 빌드는 RD 업데이트에서 설치합니다. Mac에서 RD 업데이트를 게시하면 빌드 목록의 RD 업데이트 빌드에서 설치할 수 있습니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Install new RemoteDebug builds in the update app (RD Update). Once you publish the RemoteDebugVPN scheme on the Mac, you can install it in the RD Update Build field below."
+            "value" : "Install new RemoteDebug builds from RD Update. Once you publish RD Update from the Mac, you can install it from the RD Update build in the build list."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebugの新しいビルドは、アップデート用アプリ(RDアップデート)からインストールします。MacでRemoteDebugVPNスキームを公開すると、下の「RDアップデートビルド」欄からインストールできます。"
+            "value" : "RemoteDebugの新しいビルドはRDアップデートからインストールします。MacでRDアップデートを公開すると、ビルド一覧のRDアップデートビルドからインストールできます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebug 的新构建通过更新 App（RD 更新）安装。在 Mac 上发布 RemoteDebugVPN 方案后，即可在下方的“RD 更新构建”栏中安装。"
+            "value" : "新的 RemoteDebug 构建要在 RD 更新中安装。在 Mac 上发布 RD 更新后，即可在构建列表的 RD 更新构建中安装。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebug 的新建置要從更新 App (RD 更新) 安裝。在 Mac 上發布 RemoteDebugVPN Scheme 後，即可在下方的 RD 更新建置欄位安裝。"
+            "value" : "新的 RemoteDebug 建置要在 RD 更新中安裝。在 Mac 上發布 RD 更新後，即可在建置列表的 RD 更新建置中安裝。"
           }
         }
       }
     },
-    "RemoteDebug의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 아래 RD 업데이트 빌드 칸에서 설치하세요." : {
+    "RemoteDebug의 새 빌드는 RD 업데이트에서 설치합니다. 빌드 목록의 RD 업데이트 빌드에서 설치하세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Install new RemoteDebug builds in the update app (RD Update). Install in the RD Update Build field below."
+            "value" : "Install new RemoteDebug builds from RD Update. Install RD Update from the RD Update build in the build list."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebugの新しいビルドは、アップデート用アプリ(RDアップデート)からインストールします。下の「RDアップデートビルド」欄からインストールしてください。"
+            "value" : "RemoteDebugの新しいビルドはRDアップデートからインストールします。RDアップデートはビルド一覧のRDアップデートビルドからインストールしてください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebug 的新构建通过更新 App（RD 更新）安装。请在下方的“RD 更新构建”栏中安装。"
+            "value" : "新的 RemoteDebug 构建要在 RD 更新中安装。请在构建列表的 RD 更新构建中安装 RD 更新。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebug 的新建置要從更新 App (RD 更新) 安裝。請在下方的 RD 更新建置欄位安裝。"
+            "value" : "新的 RemoteDebug 建置要在 RD 更新中安裝。請在建置列表的 RD 更新建置中安裝 RD 更新。"
           }
         }
       }
     },
-    "RemoteDebug의 새 빌드는 업데이트 앱에서, 업데이트 앱의 새 빌드는 아래 빌드 목록에서 설치합니다. 두 앱은 같은 tailnet 기기로 연결하고, 한 번에 한 앱만 VPN을 켭니다." : {
+    "RemoteDebug의 새 빌드는 RD 업데이트에서, RD 업데이트의 새 빌드는 빌드 목록에서 설치합니다. VPN은 한 번에 한 앱만 켤 수 있습니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Install new RemoteDebug builds in the update app, and new builds of the update app from the build list below. Both apps connect as devices on the same tailnet, and only one app turns on VPN at a time."
+            "value" : "Install new RemoteDebug builds from RD Update, and new RD Update builds from the build list. Only one app can run the VPN at a time."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebugの新しいビルドはアップデート用アプリから、アップデート用アプリの新しいビルドは下のビルド一覧からインストールします。2つのアプリは同じtailnetデバイスとして接続し、VPNは一度に1つのアプリだけオンにします。"
+            "value" : "RemoteDebugの新しいビルドはRDアップデートから、RDアップデートの新しいビルドはビルド一覧からインストールします。VPNを同時にオンにできるアプリは1つだけです。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebug 的新构建在更新 App 中安装，更新 App 的新构建在下方的构建列表中安装。两个 App 作为同一 tailnet 的设备连接，同一时间只能有一个 App 打开 VPN。"
+            "value" : "新的 RemoteDebug 构建在 RD 更新中安装，新的 RD 更新构建在构建列表中安装。VPN 同一时间只能由一个 App 开启。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "RemoteDebug 的新建置從更新 App 安裝，更新 App 的新建置則從下方的建置列表安裝。兩個 App 都以相同的 tailnet 節點連線，且同一時間只能有一個 App 開啟 VPN。"
+            "value" : "新的 RemoteDebug 建置在 RD 更新中安裝，新的 RD 更新建置在建置列表中安裝。VPN 同一時間只能由一個 App 開啟。"
           }
         }
       }
@@ -7935,6 +8199,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "VPN 已關閉"
+          }
+        }
+      }
+    },
+    "VPN 꺼짐 · 필요할 때 자동으로 켭니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN off · Turns on automatically when needed"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPNオフ · 必要なときに自動でオンにします"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 已关闭 · 需要时自动打开"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "VPN 已關閉 · 需要時自動開啟"
           }
         }
       }
@@ -18869,30 +19161,30 @@
         }
       }
     },
-    "새 RemoteDebug 빌드가 있습니다. 업데이트 앱에서 설치하세요." : {
+    "새 RemoteDebug 빌드가 있습니다. RD 업데이트에서 설치하세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A new RemoteDebug build is available. Install it from the Update app."
+            "value" : "A new RemoteDebug build is available. Install it from RD Update."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新しい RemoteDebug ビルドがあります。アップデートアプリからインストールしてください。"
+            "value" : "RemoteDebugの新しいビルドがあります。RDアップデートからインストールしてください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "有新的 RemoteDebug 构建。请在更新 App 中安装。"
+            "value" : "有新的 RemoteDebug 构建。请在 RD 更新中安装。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "有新的 RemoteDebug 建置。請在更新 App 中安裝。"
+            "value" : "有新的 RemoteDebug 建置。請在 RD 更新中安裝。"
           }
         }
       }
@@ -22013,90 +22305,6 @@
         }
       }
     },
-    "업데이트 앱" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update App"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アップデートアプリ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更新 App"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更新 App"
-          }
-        }
-      }
-    },
-    "업데이트 앱 %@ 설치됨" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update app %@ installed"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アップデートアプリ%@ をインストール済み"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已安装更新 App %@"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已安裝更新 App %@"
-          }
-        }
-      }
-    },
-    "업데이트 앱 설치됨" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Update app installed"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アップデートアプリをインストール済み"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已安装更新 App"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已安裝更新 App"
-          }
-        }
-      }
-    },
     "업데이트 앱 열기" : {
       "localizations" : {
         "en" : {
@@ -22125,62 +22333,6 @@
         }
       }
     },
-    "업데이트 앱에서 VPN 켜기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Turn On VPN in Update App"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アップデートアプリで VPN をオン"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在更新 App 中打开 VPN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在更新 App 中開啟 VPN"
-          }
-        }
-      }
-    },
-    "업데이트 앱으로 VPN 옮기기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move VPN to Update App"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VPN をアップデートアプリに移す"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将 VPN 转移到更新 App"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "將 VPN 移至更新 App"
-          }
-        }
-      }
-    },
     "업데이트 앱을 열지 못했습니다. RD 업데이트 빌드 칸에서 설치하세요." : {
       "localizations" : {
         "en" : {
@@ -22205,90 +22357,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法開啟更新 App。請在「RD 更新」建置欄中安裝。"
-          }
-        }
-      }
-    },
-    "업데이트 앱을 열지 못했습니다. 아래 RD 업데이트 빌드 칸에서 설치하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't open the Update app. Install it from the RD Update build row below."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アップデートアプリを開けませんでした。下の RD アップデートのビルド欄からインストールしてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法打开更新 App。请在下方的“RD 更新”构建栏中安装。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法開啟更新 App。請在下方「RD 更新」建置欄中安裝。"
-          }
-        }
-      }
-    },
-    "업데이트 앱이 VPN을 켜 두었습니다" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The Update app has turned on the VPN"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アップデートアプリが VPN をオンにしています"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更新 App 已打开 VPN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更新 App 已開啟 VPN"
-          }
-        }
-      }
-    },
-    "업데이트 앱이 설치되어 있지 않습니다" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The Update app isn't installed"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アップデートアプリがインストールされていません"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未安装更新 App"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "尚未安裝更新 App"
           }
         }
       }
@@ -22933,6 +23001,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已連線"
+          }
+        }
+      }
+    },
+    "연결됨 · RD 업데이트의 VPN" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected · RD Update's VPN"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続済み · RDアップデートのVPN"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接 · RD 更新的 VPN"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已連線 · RD 更新的 VPN"
+          }
+        }
+      }
+    },
+    "연결됨 · 다른 앱의 VPN" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected · Another app's VPN"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続済み · 別のアプリのVPN"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已连接 · 其他 App 的 VPN"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已連線 · 其他 App 的 VPN"
           }
         }
       }
@@ -24763,30 +24887,30 @@
         }
       }
     },
-    "이 앱으로 VPN 넘겨받기" : {
+    "이 앱으로 VPN 가져오기" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Take Over VPN in This App"
+            "value" : "Take VPN Over in This App"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このアプリで VPN を引き継ぐ"
+            "value" : "VPNをこのアプリに切り替える"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "由此 App 接管 VPN"
+            "value" : "将 VPN 接管到此 App"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "將 VPN 接手至此 App"
+            "value" : "將 VPN 接管到此 App"
           }
         }
       }
@@ -24983,90 +25107,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此 App 的新建置要從更新 App(RD 更新)安裝。若沒有更新 App,請在「RD 更新」建置欄中安裝。"
-          }
-        }
-      }
-    },
-    "이 앱이 VPN을 켜 두었습니다" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This app has turned on the VPN"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このアプリが VPN をオンにしています"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此 App 已打开 VPN"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此 App 已開啟 VPN"
-          }
-        }
-      }
-    },
-    "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This app has turned on the VPN · Update app %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このアプリが VPN をオンにしています · アップデートアプリ%@"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此 App 已打开 VPN · 更新 App %@"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此 App 已開啟 VPN · 更新 App %@"
-          }
-        }
-      }
-    },
-    "이 앱이 VPN을 켜 두었습니다 · 업데이트 앱 설치됨" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This app has turned on the VPN · Update app installed"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このアプリが VPN をオンにしています · アップデートアプリをインストール済み"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此 App 已打开 VPN · 已安装更新 App"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此 App 已開啟 VPN · 已安裝更新 App"
           }
         }
       }

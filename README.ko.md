@@ -110,9 +110,9 @@ iPhone에는 앱을 두 개 설치한다. 둘 다 같은 VPN을 켤 수 있고, 
 
 iOS는 VPN을 한 번에 하나만 켠다. 한 앱이 켜면 다른 앱의 것은 꺼지고, 기기 정보가 같아서 Mac 페어링은 그대로다. iOS는 앱을 설치하는 동안 그 앱과 그 앱의 VPN을 끝내므로, 각 앱은 상대 앱이 설치한다.
 
-- RemoteDebug를 업데이트할 때: RD 업데이트를 열고 RemoteDebug 빌드의 **업데이트**를 누른다. VPN이 RD 업데이트의 것이 아니면 먼저 RD 업데이트로 옮긴 뒤 설치하고, 그 단계를 화면에 보여 준다. 새 빌드가 있으면 RemoteDebug의 **업데이트 앱** 칸에 안내와 **업데이트 앱 열기**가 나온다.
+- RemoteDebug를 업데이트할 때: RD 업데이트를 열고 RemoteDebug 빌드의 **업데이트**를 누른다. VPN이 RD 업데이트의 것이 아니면 먼저 RD 업데이트로 옮긴 뒤 설치하고, 그 단계를 화면에 보여 준다. 새 빌드가 있으면 RemoteDebug의 빌드 목록 위에 안내와 **RD 업데이트 열기**가 나온다.
 - RD 업데이트를 업데이트할 때: RemoteDebug의 "RD 업데이트 빌드" 칸에서 설치한다. RD 업데이트가 VPN을 켜 두었으면 RemoteDebug가 먼저 VPN을 넘겨받은 뒤 설치한다.
-- RemoteDebug의 **업데이트 앱** 칸에서 VPN을 RD 업데이트로 옮기거나 넘겨받을 수도 있다. 버튼을 누르면 상대 앱이 열려 VPN을 켜고 돌아온다.
+- RemoteDebug의 상태 한 줄(Mac 이름과 연결 상태)을 눌러 나오는 연결 화면에서 VPN을 RD 업데이트로 옮기거나 가져올 수도 있다. 버튼을 누르면 상대 앱이 열려 VPN을 켜고 돌아온다.
 - 처음 설치할 때: 먼저 RemoteDebug에서 페어링한 뒤 "RD 업데이트 빌드" 칸에서 RD 업데이트를 설치한다. 두 앱은 App Group으로 Tailscale 로그인과 페어링한 Mac을 함께 쓴다.
 - RD 업데이트 없이 RemoteDebug를 업데이트하려면 공식 Tailscale을 켜고 Mac의 업데이트 페이지를 Safari로 연다([설정 문서](docs/setup.md#iphone-앱-업데이트)).
 
