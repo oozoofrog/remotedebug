@@ -106,7 +106,7 @@ Mac과 iPhone이 같은 Wi-Fi에 있으면 iPhone 앱이 VPN 없이 Mac과 직�
 iPhone에는 앱을 두 개 설치한다. 둘 다 같은 VPN을 켤 수 있고, 같은 tailnet 기기로 보인다(App Group에 Tailscale 상태와 페어링한 Mac을 함께 둔다).
 
 - **RemoteDebug**(스킴 `RemoteDebugPhone`): 다른 앱의 빌드 설치, 파일, 크래시·피드백. Mac 페어링도 여기서 한다. RemoteDebug 자신의 빌드는 목록에 나오지 않는다.
-- **RD 업데이트**(스킴 `RemoteDebugVPN`, 앱 안 제목은 "RemoteDebug 업데이트"): Mac에 게시된 RemoteDebug의 빌드만 보여 주고 설치한다. VPN 켜기·끄기와 로그인도 한다.
+- **RD 업데이트**(스킴 `RemoteDebugVPN`): Mac에 게시된 RemoteDebug의 빌드만 보여 주고 설치한다. VPN 켜기·끄기와 로그인도 한다.
 
 iOS는 VPN을 한 번에 하나만 켠다. 한 앱이 켜면 다른 앱의 것은 꺼지고, 기기 정보가 같아서 Mac 페어링은 그대로다. iOS는 앱을 설치하는 동안 그 앱과 그 앱의 VPN을 끝내므로, 각 앱은 상대 앱이 설치한다.
 

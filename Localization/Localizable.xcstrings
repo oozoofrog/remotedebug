@@ -5341,30 +5341,30 @@
         }
       }
     },
-    "Mac에 게시된 RemoteDebug 빌드가 없습니다. Mac에서 RemoteDebugPhone 스킴을 게시한 뒤 새로고침하세요." : {
+    "Mac에 게시된 RemoteDebug 빌드가 없습니다. Mac에서 RemoteDebug를 게시한 뒤 새로고침하세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "No RemoteDebug builds are published on the Mac. Publish the RemoteDebugPhone scheme on the Mac, then reload."
+            "value" : "No RemoteDebug build is published on the Mac. Publish RemoteDebug from the Mac, then refresh."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Macに公開されているRemoteDebugのビルドがありません。MacでRemoteDebugPhoneスキームを公開してから、再読み込みしてください。"
+            "value" : "MacにRemoteDebugのビルドが公開されていません。MacでRemoteDebugを公開してから更新してください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac 上没有已发布的 RemoteDebug 构建。请在 Mac 上发布 RemoteDebugPhone 方案后刷新。"
+            "value" : "Mac 上没有已发布的 RemoteDebug 构建。请在 Mac 上发布 RemoteDebug 后刷新。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac 上沒有已發布的 RemoteDebug 建置。請在 Mac 上發布 RemoteDebugPhone Scheme 後重新整理。"
+            "value" : "Mac 上沒有已發布的 RemoteDebug 建置。請在 Mac 上發布 RemoteDebug 後重新整理。"
           }
         }
       }
@@ -6607,6 +6607,34 @@
         }
       }
     },
+    "RD 업데이트를 열지 못했습니다. 빌드 목록의 RD 업데이트 빌드에서 설치하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't open RD Update. Install it from the RD Update build in the build list."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RDアップデートを開けませんでした。ビルド一覧のRDアップデートビルドからインストールしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开 RD 更新。请在构建列表的 RD 更新构建中安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法打開 RD 更新。請在建置列表的 RD 更新建置中安裝。"
+          }
+        }
+      }
+    },
     "RD 업데이트를 열지 못했습니다. 아래 RD 업데이트 빌드 칸에서 설치하세요." : {
       "localizations" : {
         "en" : {
@@ -6967,34 +6995,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "RemoteDebug App 已結束，因此中斷。"
-          }
-        }
-      }
-    },
-    "RemoteDebug 업데이트" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "RemoteDebug Update"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "RemoteDebugアップデート"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "RemoteDebug 更新"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "RemoteDebug 更新"
           }
         }
       }
@@ -22305,62 +22305,6 @@
         }
       }
     },
-    "업데이트 앱 열기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Update App"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アップデートアプリを開く"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开更新 App"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打開更新 App"
-          }
-        }
-      }
-    },
-    "업데이트 앱을 열지 못했습니다. RD 업데이트 빌드 칸에서 설치하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couldn't open the Update app. Install it from the RD Update build row."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アップデートアプリを開けませんでした。RD アップデートのビルド欄からインストールしてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法打开更新 App。请在“RD 更新”构建栏中安装。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法開啟更新 App。請在「RD 更新」建置欄中安裝。"
-          }
-        }
-      }
-    },
     "업데이트 페이지를 열지 못했습니다: %@" : {
       "localizations" : {
         "en" : {
@@ -24915,34 +24859,6 @@
         }
       }
     },
-    "이 앱으로 VPN 옮기기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move VPN to This App"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "VPN をこのアプリに移す"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将 VPN 转移到此 App"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "將 VPN 移至此 App"
-          }
-        }
-      }
-    },
     "이 앱은 크래시 기록과 피드백을 Mac에 보내지 않습니다." : {
       "localizations" : {
         "en" : {
@@ -25055,58 +24971,58 @@
         }
       }
     },
-    "이 앱의 새 빌드는 RemoteDebug 앱의 빌드 목록에서 설치합니다. 그때는 RemoteDebug 앱이 VPN을 넘겨받습니다." : {
+    "이 앱의 새 빌드는 RD 업데이트에서 설치합니다. RD 업데이트가 없으면 빌드 목록의 RD 업데이트 빌드에서 설치하세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Install new builds of this app from the build list in the RemoteDebug app. The RemoteDebug app then takes over the VPN."
+            "value" : "Install new builds of this app from RD Update. If you do not have RD Update, install it from the RD Update build in the build list."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このアプリの新しいビルドは、RemoteDebug アプリのビルドリストからインストールします。その際、RemoteDebug アプリが VPN を引き継ぎます。"
+            "value" : "このアプリの新しいビルドはRDアップデートからインストールします。RDアップデートがない場合は、ビルド一覧のRDアップデートビルドからインストールしてください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此 App 的新构建需在 RemoteDebug App 的构建列表中安装。届时 RemoteDebug App 会接管 VPN。"
+            "value" : "此 App 的新构建要在 RD 更新中安装。如果没有 RD 更新，请在构建列表的 RD 更新构建中安装。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此 App 的新建置要從 RemoteDebug App 的建置列表安裝。屆時 RemoteDebug App 會接手 VPN。"
+            "value" : "此 App 的新建置要在 RD 更新中安裝。如果沒有 RD 更新，請在建置列表的 RD 更新建置中安裝。"
           }
         }
       }
     },
-    "이 앱의 새 빌드는 업데이트 앱(RD 업데이트)에서 설치합니다. 업데이트 앱이 없으면 RD 업데이트 빌드 칸에서 설치하세요." : {
+    "이 앱의 새 빌드는 RemoteDebug 앱의 빌드 목록에서 설치합니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Install new builds of this app from the Update app (RD Update). If the Update app isn't installed, install it from the RD Update build row."
+            "value" : "Install new builds of this app from the build list in the RemoteDebug app."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このアプリの新しいビルドは、アップデートアプリ(RD アップデート)からインストールします。アップデートアプリがない場合は、RD アップデートのビルド欄からインストールしてください。"
+            "value" : "このアプリの新しいビルドは、RemoteDebugアプリのビルド一覧からインストールします。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此 App 的新构建需在更新 App（RD 更新）中安装。如果没有更新 App，请在“RD 更新”构建栏中安装。"
+            "value" : "此 App 的新构建要在 RemoteDebug App 的构建列表中安装。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此 App 的新建置要從更新 App(RD 更新)安裝。若沒有更新 App,請在「RD 更新」建置欄中安裝。"
+            "value" : "此 App 的新建置要在 RemoteDebug App 的建置列表中安裝。"
           }
         }
       }
@@ -27321,34 +27237,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "中央目錄已被截斷"
-          }
-        }
-      }
-    },
-    "지금 연결은 RemoteDebug 앱의 터널입니다. RemoteDebug를 설치할 때 이 앱의 터널로 옮깁니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The current connection is the RemoteDebug app's tunnel. It moves to this app's tunnel when RemoteDebug is installed."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "現在の接続は RemoteDebug アプリのトンネルです。RemoteDebug をインストールするときに、このアプリのトンネルに移します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "当前连接是 RemoteDebug App 的隧道。安装 RemoteDebug 时会转移到此 App 的隧道。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "目前的連線是 RemoteDebug App 的通道。安裝 RemoteDebug 時會移至此 App 的通道。"
           }
         }
       }

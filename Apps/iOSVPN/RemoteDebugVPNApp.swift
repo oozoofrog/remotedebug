@@ -204,10 +204,10 @@ struct VPNScreen: View {
                     }
                     LabeledContent("버전", value: services.appVersion)
                 } footer: {
-                    Text("이 앱의 새 빌드는 RemoteDebug 앱의 빌드 목록에서 설치합니다. 그때는 RemoteDebug 앱이 VPN을 넘겨받습니다.")
+                    Text("이 앱의 새 빌드는 RemoteDebug 앱의 빌드 목록에서 설치합니다.")
                 }
             }
-            .navigationTitle("RemoteDebug 업데이트")
+            .navigationTitle("RD 업데이트")
             .navigationBarTitleDisplayMode(.inline)
         }
         .task {
@@ -262,7 +262,7 @@ struct VPNScreen: View {
             Button {
                 Task { await services.connect() }
             } label: {
-                Label("이 앱으로 VPN 옮기기", systemImage: "arrow.left.arrow.right")
+                Label("이 앱으로 VPN 가져오기", systemImage: "arrow.left.arrow.right")
             }
             if tunnel.pairedAppOwnsVPN {
                 Button(role: .destructive) {
@@ -299,8 +299,7 @@ struct VPNScreen: View {
 
     private var detail: String? {
         if !ownActive, tunnel.externalVPNActive {
-            return tunnel.pairedAppOwnsVPN ? String(localized: "지금 연결은 RemoteDebug 앱의 터널입니다. RemoteDebug를 설치할 때 이 앱의 터널로 옮깁니다.")
-                : String(localized: "tailnet 주소를 가진 다른 VPN입니다.")
+            return tunnel.pairedAppOwnsVPN ? nil : String(localized: "tailnet 주소를 가진 다른 VPN입니다.")
         }
         if case .failed(let message) = tunnel.state { return message }
         if let message = tunnel.disconnectMessage { return message }

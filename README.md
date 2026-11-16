@@ -106,7 +106,7 @@ None of this has been verified on a real iPhone; only unit tests and simulator b
 Install two apps on the iPhone. Both can run the same VPN and appear as the same tailnet device (the Tailscale state and the paired Mac live in a shared App Group).
 
 - **RemoteDebug** (scheme `RemoteDebugPhone`): installs builds of other apps, receives files, collects crashes and feedback. Pairing with the Mac happens here. Its own builds are not listed.
-- **RD 업데이트** (scheme `RemoteDebugVPN`, titled "RemoteDebug 업데이트" inside the app): the updater. It lists only the RemoteDebug builds published on the paired Mac and installs them. It also turns the VPN on and off and handles the Tailscale login.
+- **RD 업데이트** (scheme `RemoteDebugVPN`): the updater. It lists only the RemoteDebug builds published on the paired Mac and installs them. It also turns the VPN on and off and handles the Tailscale login.
 
 iOS runs one VPN at a time. When one app turns its VPN on the other one stops, and the Mac pairing stays because the device identity is the same. iOS stops an app and its VPN while that app is being installed, so each app is installed by the other one.
 
