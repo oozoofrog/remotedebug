@@ -109,7 +109,7 @@ case "$cmd" in
 esac
 ```
 
-`scripts/check-real-builds.sh`는 스크립트에 고정된 작성 환경의 Xcode DerivedData 위치에서 Debug 빌드만 찾는다. 그 위치가 없는 Mac에서는 수락할 빌드가 없어 종료 코드 3으로 끝난다.
+`scripts/check-real-builds.sh`는 Xcode 기본 DerivedData 위치(`~/Library/Developer/Xcode/DerivedData`)에서 Debug 빌드를 찾는다. Xcode에서 위치를 바꿨으면 `RD_DERIVED_DATA=<폴더>`로 준다. 수락할 빌드가 없으면 종료 코드 3으로 끝난다.
 
 ### 명령줄 빌드와 시험
 

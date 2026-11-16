@@ -25,9 +25,6 @@ final class TempDir {
         var base: URL
         if let p = env["EYEBUILD_DIR"] ?? env["RD_TEST_TMPDIR"] {
             base = URL(fileURLWithPath: p, isDirectory: true)
-        } else if FileManager.default.fileExists(atPath: "/Volumes/eyedisk/build/remotedebug") {
-            // `eyebuild -p remotedebug dir kit-tmp`와 같은 위치(내장 디스크를 쓰지 않는다).
-            base = URL(fileURLWithPath: "/Volumes/eyedisk/build/remotedebug/kit-tmp", isDirectory: true)
         } else {
             base = FileManager.default.temporaryDirectory
         }

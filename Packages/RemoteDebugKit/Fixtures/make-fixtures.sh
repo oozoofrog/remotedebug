@@ -2,7 +2,7 @@
 # 정책 검사용 합성 .app 픽스처를 만든다(Fixtures/apps 아래, 저장소에 커밋).
 # - iOS arm64 최소 Mach-O (clang + iPhoneOS SDK), ad hoc 서명(`codesign --sign -`)
 # - 프로필: 합성 plist를 일회용 자체 서명 인증서로 `openssl smime -sign` 해 CMS로 감싼다.
-# 작업 폴더는 eyebuild가 정한 /Volumes/eyedisk/build 아래이고 끝나면 지운다. 인증서·키는 저장소에 남지 않는다.
+# 작업 폴더는 eyebuild가 정한 빌드 폴더 아래이고 끝나면 지운다. 인증서·키는 저장소에 남지 않는다.
 # 모든 UDID·팀 ID·이름은 가짜다.
 # 새 픽스처는 작업 폴더에 모두 만든 뒤에만 기존 Fixtures/apps와 바꾼다. 중간에 실패하면 기존 픽스처는 그대로 남는다.
 # 결정성: plist 내용(UUID·날짜 포함)과 파일 목록은 매번 같다. 프로필의 CMS 서명은 서명 속성 없이(-noattr) 만들지만

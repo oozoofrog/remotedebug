@@ -7,13 +7,14 @@ import SwiftUI
 import Testing
 @testable import MacHostUI
 
-/// 임시 폴더는 /Volumes/eyedisk/build 아래에 둔다(내장 디스크를 쓰지 않는다).
+/// 임시 폴더: `RD_TEST_TMPDIR`이나 `EYEBUILD_DIR`을 주면 그 아래, 없으면 시스템 임시 폴더.
 final class UITempDir: @unchecked Sendable {
     let url: URL
 
     init(_ label: String) throws {
         let env = ProcessInfo.processInfo.environment
-        let base = URL(fileURLWithPath: env["RD_TEST_TMPDIR"] ?? "/Volumes/eyedisk/build/remotedebug/mac-host-tmp", isDirectory: true)
+        let base = (env["RD_TEST_TMPDIR"] ?? env["EYEBUILD_DIR"]).map { URL(fileURLWithPath: $0, isDirectory: true) }
+            ?? FileManager.default.temporaryDirectory.appendingPathComponent("remotedebug-mac-host-tmp", isDirectory: true)
         url = base.appendingPathComponent("ui-\(label)-\(UUID().uuidString.prefix(8))", isDirectory: true)
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
     }

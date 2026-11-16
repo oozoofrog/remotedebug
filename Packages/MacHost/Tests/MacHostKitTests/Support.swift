@@ -5,7 +5,7 @@ import RDModels
 import Synchronization
 @testable import MacHostKit
 
-// MARK: 임시 폴더 (내장 디스크를 쓰지 않는다)
+// MARK: 임시 폴더 (`RD_TEST_TMPDIR`이나 `EYEBUILD_DIR`을 주면 그 아래, 없으면 시스템 임시 폴더)
 
 final class TempDir: @unchecked Sendable {
     let url: URL
@@ -13,10 +13,10 @@ final class TempDir: @unchecked Sendable {
     init(_ label: String = "t") throws {
         let env = ProcessInfo.processInfo.environment
         let base: URL
-        if let p = env["RD_TEST_TMPDIR"] {
+        if let p = env["RD_TEST_TMPDIR"] ?? env["EYEBUILD_DIR"] {
             base = URL(fileURLWithPath: p, isDirectory: true)
         } else {
-            base = URL(fileURLWithPath: "/Volumes/eyedisk/build/remotedebug/mac-host-tmp", isDirectory: true)
+            base = FileManager.default.temporaryDirectory.appendingPathComponent("remotedebug-mac-host-tmp", isDirectory: true)
         }
         try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         url = base.appendingPathComponent("mh-\(label)-\(UUID().uuidString)", isDirectory: true)

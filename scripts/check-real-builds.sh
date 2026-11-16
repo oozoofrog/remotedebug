@@ -20,12 +20,14 @@ cd "$ROOT" || exit 1
 
 shopt -s nullglob
 APPS=()
-for app in /Volumes/eyedisk/build/Xcode/DerivedData/*/Build/Products/Debug-iphoneos/*.app; do
+# DerivedData 위치: Xcode에서 위치를 바꿨으면 RD_DERIVED_DATA로 준다.
+DERIVED="${RD_DERIVED_DATA:-$HOME/Library/Developer/Xcode/DerivedData}"
+for app in "$DERIVED"/*/Build/Products/Debug-iphoneos/*.app; do
     case "$app" in *-Runner.app) continue ;; esac
     APPS+=("$app")
 done
 if [ "${#APPS[@]}" -eq 0 ]; then
-    echo "NO-REAL-BUILD 실제 개발 서명 빌드가 없습니다(/Volumes/eyedisk/build/Xcode/DerivedData/*/Build/Products/Debug-iphoneos/*.app). Xcode로 기기용 Debug 빌드를 먼저 만드세요."
+    echo "NO-REAL-BUILD 실제 개발 서명 빌드가 없습니다(<DerivedData>/*/Build/Products/Debug-iphoneos/*.app, 위치는 RD_DERIVED_DATA). Xcode로 기기용 Debug 빌드를 먼저 만드세요."
     exit 3
 fi
 
