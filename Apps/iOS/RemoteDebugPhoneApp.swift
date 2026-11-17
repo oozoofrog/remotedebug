@@ -79,12 +79,14 @@ final class AppServices {
         crashDiagnostics = diagnostics
         // 페어링 링크(QR)에 Mac이 넣은 1회용 Tailscale 키가 있으면 로그인 없이 VPN을 켠다.
         // 앱이 링크로 처음 열릴 때도 쓰이도록 화면보다 먼저 연결한다.
+        // 페어링을 그만두면 이 작업이 취소된다. 취소됐으면 VPN을 켜지 않고 키도 넘기지 않는다.
         model.connectWithAuthKey = { [weak model] key in
-            guard let model else { return }
+            guard let model, !Task.isCancelled else { return }
             if tunnel.isTunnelActive {
                 await model.disconnectTunnel()
                 await tunnel.waitUntilStopped()
             }
+            guard !Task.isCancelled else { return }
             tunnel.setPendingAuthKey(key)
             await model.connectTunnel()
             tunnel.setPendingAuthKey("")

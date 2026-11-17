@@ -38,6 +38,7 @@ struct PairingForm: View {
 struct PairingProgressSection: View {
     var state: PhoneViewState
     var cancel: () -> Void
+    var takeOverVPN: @MainActor @Sendable () async -> Void = {}
 
     var body: some View {
         if let queued = state.queuedPairingHost {
@@ -46,6 +47,11 @@ struct PairingProgressSection: View {
                     Text("VPN이 연결되면 \(queued)에 페어링을 요청합니다.")
                 } icon: {
                     Image(systemName: "clock")
+                }
+                if state.vpnPair.owner == .other {
+                    // 다른 VPN(공식 Tailscale 앱 등)이 켜져 있다. 페어링은 이 앱의 터널로만 맺는다.
+                    Button("이 앱으로 VPN 가져오기") { Task { await takeOverVPN() } }
+                        .bold()
                 }
                 Button("페어링 취소", role: .destructive, action: cancel)
             }

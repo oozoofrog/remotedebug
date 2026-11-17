@@ -160,7 +160,7 @@ import Testing
         #expect(emojiCut == String(repeating: "👨‍👩‍👧", count: 3))
     }
 
-    // MARK: 예전 코드 경로가 쓰는 코드와 호스트 정책
+    // MARK: 설치 웹 페이지의 코드 페어링이 쓰는 코드와 호스트 정책
 
     @Test func crockfordAliases() throws {
         #expect(PairingCode("o1il-abcd")?.normalized == "0111ABCD")

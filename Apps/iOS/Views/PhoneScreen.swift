@@ -39,7 +39,7 @@ struct PhoneScreen: View {
                     }
                 }
 
-                PairingProgressSection(state: state, cancel: actions.cancelPairing)
+                PairingProgressSection(state: state, cancel: actions.cancelPairing, takeOverVPN: actions.takeOverVPN)
 
                 if state.host != nil {
                     BuildListSection(state: state, actions: actions)

@@ -49,7 +49,7 @@ private let otherInfo = Examples.info
         #expect(h.tunnel.prepareCount == 0)
         #expect(h.transport.count("GET", "/v1/info") >= 1)
         #expect(h.transport.requests.allSatisfy { $0.url?.host == hostFQDN && $0.url?.scheme == "https" })
-        // 예전 코드 페어링 경로는 더 부르지 않는다.
+        // 설치 웹 페이지의 코드 페어링 경로는 앱이 부르지 않는다.
         #expect(h.transport.requests.allSatisfy { !($0.url?.path.hasPrefix("/v1/pair") ?? false) })
     }
 
@@ -451,6 +451,10 @@ private let otherInfo = Examples.info
         #expect(h.model.pendingConfirmation == nil)
         await h.waitUntil { h.pairing.calls.count == 2 }
         #expect(h.pairing.calls.count == 2)
+        // 바꾼 QR의 확인 숫자와 승인 대기 화면도 나온다.
+        await h.waitUntil { h.model.confirmationCode != nil }
+        #expect(h.model.confirmationCode == "482915")
+        #expect(h.model.phase == .waitingApproval(deviceName: "내 iPhone"))
         h.model.cancelPairing()
         await h.waitUntil { h.pairing.cancelledJoins == 2 }
         #expect(h.pairing.cancelledJoins == 2)

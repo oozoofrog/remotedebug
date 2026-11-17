@@ -299,6 +299,8 @@ public final class ClientModel {
 
     @ObservationIgnored private var refreshQueued = false
     @ObservationIgnored private var pairing: PairingRun?
+    /// 페어링이 기다리는 VPN을 준비하는 작업(인증 키로 켜기, 자동으로 켜기). 페어링을 그만두면 함께 취소한다.
+    @ObservationIgnored private var pairingPrep: Task<Void, Never>?
     /// 확인 숫자를 받을 수 있는 짝 맺기의 토큰. 짝 맺기가 끝나면 비운다(늦게 온 숫자를 버리는 데 쓴다).
     @ObservationIgnored private var approvalToken: UUID?
     /// 마지막으로 승인된 제안의 지문. 같은 QR이 다시 들어오면(1회용이라 다시 보내면 거절된다) 무시한다.
@@ -385,6 +387,7 @@ public final class ClientModel {
         autoStartTask?.cancel()
         idleTask?.cancel()
         pairing?.task.cancel()
+        pairingPrep?.cancel()
         for running in installTasks.values { running.task.cancel() }
         for task in downloadTasks.values { task.cancel() }
     }
@@ -459,6 +462,8 @@ public final class ClientModel {
     public func cancelPairing() {
         pairing?.task.cancel()
         pairing = nil
+        pairingPrep?.cancel()
+        pairingPrep = nil
         approvalToken = nil
         pairingExpiresAt = nil
         confirmationCode = nil
@@ -504,22 +509,38 @@ public final class ClientModel {
         cancelPairing()
         lastError = nil
         log(.info, "pairing", "페어링 시작: \(proposal.host)")
-        // 제안에 Tailscale 키가 있으면 로그인 없이 VPN을 켠다. 이미 연결돼 있으면 쓰지 않는다. 페어링은 VPN이 연결되면 이어 간다.
-        let startsWithKey = proposal.authKey != nil && tunnelController.currentState() != .connected && connectWithAuthKey != nil
-        guard ensureTunnel(queue: .pair(proposal)) else {
-            if startsWithKey, let key = proposal.authKey, let connect = connectWithAuthKey {
+        tunnel = tunnelController.currentState()
+        guard ownTunnelConnected else {
+            // 이 앱의 터널이 연결되면 이어 간다. 바깥 VPN(공식 Tailscale 앱 등)이 연결돼 있어도 같다.
+            needsTunnel = true
+            queuedPairing = proposal
+            lastError = Self.pairingTunnelMessage(for: tunnel)
+            // 제안에 Tailscale 키가 있으면 로그인 없이 이 앱의 VPN을 켠다.
+            if let key = proposal.authKey, let connect = connectWithAuthKey {
                 log(.info, "vpn", "페어링 제안의 Tailscale 키로 VPN 켜는 중")
                 lastError = nil
-                Task { await connect(key) }
+                pairingPrep = Task { await connect(key) }
             } else {
-                autoStartForQueuedWork()
+                pairingPrep = autoStartForQueuedWork()
             }
             return
         }
+        needsTunnel = false
+        idle.noteNeed()
         let token = UUID()
         pairing = PairingRun(token: token, proposal: proposal, task: Task { [weak self] in
             await self?.runPairing(proposal, token: token)
         })
+    }
+
+    /// 앱용 페어링이 지나갈 수 있는 터널이 연결돼 있다: 이 앱의 터널이거나, 같은 Swiftail 노드를 쓰는 짝 앱의 터널.
+    /// 바깥 tailnet VPN(공식 Tailscale 앱 등)은 다른 노드라 Mac이 승인한 기기와 이 앱의 터널이 달라진다.
+    private var ownTunnelConnected: Bool {
+        guard tunnelController.currentState() == .connected else { return false }
+        switch tunnelController.vpnHolder {
+        case .thisApp, .pairedApp: return true
+        case .none, .other: return false
+        }
     }
 
     private var isWaitingApproval: Bool {
@@ -537,7 +558,7 @@ public final class ClientModel {
     private func runPairing(_ proposal: PairingProposal, token: UUID) async {
         defer {
             if pairing?.token == token { pairing = nil }
-            if approvalToken == token { approvalToken = nil }
+            endApproval(token)
         }
         phase = .requestingPairing
         confirmationCode = nil
@@ -549,12 +570,12 @@ public final class ClientModel {
                 Task { @MainActor in self?.receiveConfirmationCode(code, token: token) }
             }
         } catch {
-            approvalToken = nil
+            endApproval(token)
             guard ownsPairing(token) else { return }
             if let message = error.userMessage { failPairing(message) } else { endPairingQuietly() }
             return
         }
-        approvalToken = nil
+        endApproval(token)
         guard ownsPairing(token) else { return }
         // 짝을 맺은 주소는 제안의 주소와 같아야 한다.
         guard joined.host == proposal.host else {
@@ -566,6 +587,11 @@ public final class ClientModel {
         pairingExpiresAt = nil
         log(.info, "pairing", "짝 맺기 승인됨: \(joined.host)")
         await finishPairing(joined, proposal: proposal, token: token)
+    }
+
+    /// 이 시도의 확인 숫자 수신을 끝낸다. 그사이 다른 시도가 시작됐으면 그 시도의 토큰은 건드리지 않는다.
+    private func endApproval(_ token: UUID) {
+        if approvalToken == token { approvalToken = nil }
     }
 
     /// Mac이 확인된 뒤 받은 확인 숫자를 화면에 올린다.
@@ -1154,7 +1180,8 @@ public final class ClientModel {
     public func stopPolling() {
         isBackgrounded = true
         backgroundCount += 1
-        if pairing != nil {
+        // 진행 중인 짝 맺기뿐 아니라 VPN을 기다리는 제안도 그만둔다(1회용 비밀이라 쥐고 있지 않는다).
+        if pairing != nil || queuedPairing != nil {
             cancelPairing()
             lastError = Self.pairingInterruptedMessage
         }
@@ -1279,6 +1306,7 @@ public final class ClientModel {
 
     /// VPN 구성을 확인(`prepare`)한 뒤 VPN을 켠다.
     public func connectTunnel() async {
+        guard !Task.isCancelled else { return }
         vpnAutoStarted = false
         do {
             try await tunnelController.prepare()
@@ -1288,6 +1316,8 @@ public final class ClientModel {
             lastError = Self.tunnelPrepareFailedMessage
             return
         }
+        // 구성을 저장하는 동안 이 동작이 취소됐으면 VPN을 켜지 않는다.
+        guard !Task.isCancelled else { return }
         do {
             try await tunnelController.connect()
         } catch {
@@ -1392,10 +1422,11 @@ public final class ClientModel {
         return tunnelController.currentState() == .connected
     }
 
-    /// VPN을 기다리게 된 페어링·새로고침을 위해 VPN을 자동으로 켠다. 켤 수 없으면 아무것도 하지 않는다.
-    private func autoStartForQueuedWork() {
-        guard autoStartTask != nil || autoStartDecision(tunnelController.currentState()) == .start else { return }
-        Task { [weak self] in
+    /// VPN을 기다리게 된 페어링을 위해 VPN을 자동으로 켠다. 켤 수 없으면 아무것도 하지 않는다.
+    /// 돌려주는 작업은 페어링을 그만두면 취소된다.
+    private func autoStartForQueuedWork() -> Task<Void, Never>? {
+        guard autoStartTask != nil || autoStartDecision(tunnelController.currentState()) == .start else { return nil }
+        return Task { [weak self] in
             guard let self, !(await self.autoStartTunnel()) else { return }
             if self.queuedPairing != nil || self.refreshQueued { self.lastError = Self.tunnelMessage(for: self.tunnel) }
         }
@@ -1475,10 +1506,21 @@ public final class ClientModel {
         tunnel = state
         guard state == .connected else { return }
         guard needsTunnel || queuedPairing != nil || refreshQueued else { return }
-        needsTunnel = false
+        // 앱이 화면에 없는 동안 연결된 것으로는 1회용 제안을 보내지 않는다.
+        if queuedPairing != nil, isBackgrounded {
+            cancelPairing()
+            lastError = Self.pairingInterruptedMessage
+        }
+        // 앱용 페어링은 이 앱의 터널이 연결됐을 때만 이어 간다. 바깥 VPN만 연결돼 있으면 그대로 기다린다.
+        let waitsForOwnTunnel = queuedPairing != nil && !ownTunnelConnected
+        needsTunnel = waitsForOwnTunnel
         if let message = lastError, Self.tunnelMessages.contains(message) { lastError = nil }
-        let queued = queuedPairing
-        queuedPairing = nil
+        if waitsForOwnTunnel { lastError = Self.pairingNeedsOwnTunnelMessage }
+        var queued: PairingProposal?
+        if !waitsForOwnTunnel {
+            queued = queuedPairing
+            queuedPairing = nil
+        }
         let runRefresh = refreshQueued
         refreshQueued = false
         if let queued { startPairing(queued) }
@@ -1491,10 +1533,10 @@ public final class ClientModel {
         }
     }
 
-    private enum Deferred { case pair(PairingProposal), refresh }
+    private enum Deferred { case refresh }
 
     /// VPN이 연결돼 있으면 `true`. 아니면 안내를 띄우고, 연결되면 이어 할 동작을 기억한다.
-    /// 페어링과 새로고침은 따로 기억하므로 서로 지우지 않는다.
+    /// 앱용 페어링은 `startPairing`이 따로 기억한다.
     private func ensureTunnel(queue action: Deferred?) -> Bool {
         tunnel = tunnelController.currentState()
         if tunnel == .connected {
@@ -1504,7 +1546,6 @@ public final class ClientModel {
         }
         needsTunnel = true
         switch action {
-        case .pair(let proposal): queuedPairing = proposal
         case .refresh: refreshQueued = true
         case nil: break
         }
@@ -1842,7 +1883,8 @@ public final class ClientModel {
     public nonisolated static let tunnelConnectingMessage = String(localized: "VPN을 연결하는 중입니다. 연결되면 이어서 진행합니다.")
     public nonisolated static let tunnelNeedsLoginMessage = String(localized: "tailnet 로그인이 필요합니다. 로그인한 뒤 VPN을 켜세요.")
     public nonisolated static let tunnelFailedMessage = String(localized: "VPN 연결에 실패했습니다. ‘다시 연결’을 누르세요.")
-    public nonisolated static let tunnelMessages: Set<String> = [tunnelOffMessage, tunnelConnectingMessage, tunnelNeedsLoginMessage, tunnelFailedMessage]
+    public nonisolated static let pairingNeedsOwnTunnelMessage = String(localized: "다른 VPN이 켜져 있습니다. 이 앱의 VPN을 켜면 페어링을 이어서 진행합니다.")
+    public nonisolated static let tunnelMessages: Set<String> = [tunnelOffMessage, tunnelConnectingMessage, tunnelNeedsLoginMessage, tunnelFailedMessage, pairingNeedsOwnTunnelMessage]
     public nonisolated static let tunnelPrepareFailedMessage = String(localized: "VPN 구성을 저장하지 못했습니다. VPN을 다시 켜고 'VPN 구성 추가' 알림이 뜨면 허용을 누르세요.")
     public nonisolated static let vpnNotConnectedMessage = String(localized: "VPN이 연결되지 않았습니다. VPN 상태를 확인한 뒤 다시 시도하세요.")
     public nonisolated static let vpnLoginBeforeRetryMessage = String(localized: "tailnet 로그인이 필요합니다. 로그인한 뒤 다시 시도하세요.")
@@ -1865,6 +1907,11 @@ public final class ClientModel {
     public nonisolated static let sessionFailedMessage = String(localized: "Mac에서 설치를 중단했습니다. Mac에서 빌드를 내렸거나 이 기기의 페어링이 해제되었을 수 있습니다. 빌드 목록을 새로고침하세요.")
     public nonisolated static let installTimeoutMessage = String(localized: "제한 시간 안에 전송이 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요.")
     public nonisolated static let createSessionTimeoutMessage = String(localized: "Mac이 빌드를 확인하는 동안 응답 시간이 지났습니다. 잠시 뒤 다시 설치하세요.")
+
+    /// 앱용 페어링이 이 앱의 터널을 기다릴 때의 안내. 바깥 VPN이 연결돼 있으면 그 이유를 말한다.
+    public nonisolated static func pairingTunnelMessage(for state: TunnelState) -> String {
+        state == .connected ? pairingNeedsOwnTunnelMessage : tunnelMessage(for: state)
+    }
 
     public nonisolated static func tunnelMessage(for state: TunnelState) -> String {
         switch state {
