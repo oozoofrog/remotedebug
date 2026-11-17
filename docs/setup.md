@@ -64,7 +64,7 @@ Xcode 자동 서명은 연결한 iPhone을 개발자 계정에 등록할 수 있
 
 ### 다른 Mac에 나눠 줄 Mac 앱(Developer ID)
 
-`scripts/release-mac.sh`는 Mac 앱을 Developer ID로 서명하고 Apple 공증을 받아 zip으로 묶는다. 받은 사람은 경고 없이 열 수 있다. App Sandbox는 쓰지 않는다(Mac App Store에 올릴 때만 필수다).
+`scripts/release-mac.sh`는 Mac 앱을 Developer ID로 서명하고 Apple 공증을 받아 zip으로 묶는다. 받은 사람은 경고 없이 열 수 있다. App Sandbox는 쓰지 않는다.
 
 - Xcode에 로그인한 계정이 Developer ID 인증서를 만들 수 있어야 한다(계정 소유자). 인증서가 없으면 Xcode가 만든다.
 - `Config/Signing.local.xcconfig`에 `DEVELOPMENT_TEAM`이 있어야 한다.
@@ -182,8 +182,6 @@ remotedebug/scripts/install-phone.sh
 - 빌드 산출물은 `RD_BUILD_ROOT`(기본 `~/RemoteDebugBuild`)의 `phone-install`에 둔다.
 
 확인한 것: 새로 복제한 저장소에서 팀·기기를 인자로 주고 iPhone 14 Pro(iOS 27.2)에 설치. 다른 계정과 처음 등록하는 기기는 확인하지 않음. 이 설치는 이전 버전의 스크립트로 한 것이고, 지금의 스크립트(소스만으로 빌드)로는 실행해 보지 않음.
-
-App Sandbox 안에서 도는 Mac 앱(Mac App Store판)은 `xcodebuild`를 실행하지 못한다. 그 앱의 **iPhone 앱 설치…**는 이 명령을 안내한다. **앱** 화면의 **프로젝트 추가…**로 프로젝트 폴더를 등록하면(등록한 목록은 **가져오기** 메뉴 > **등록한 프로젝트…**) Xcode에서 한 최근 Debug 기기용 빌드를 찾아 게시한다(빌드는 Xcode에서 한다). 빌드를 프로젝트 폴더 안 `Build/Products`에서 먼저 찾고, Xcode의 DerivedData에 두는 프로젝트는 **빌드 폴더 허용…**으로 그 폴더를 한 번 허용해야 찾는다. 폴더 감시는 없다.
 
 ### Mac 앱으로 iPhone 앱 설치
 

@@ -33,33 +33,23 @@ public struct NoFolderBookmarks: FolderBookmarking {
     public func clear() {}
 }
 
-/// 보안 범위 북마크를 `UserDefaults`에 저장한다.
+/// 폴더 북마크를 `UserDefaults`에 저장한다.
 public final class UserDefaultsFolderBookmarks: FolderBookmarking, @unchecked Sendable {
     public static let defaultKey = "RemoteDebug.watchedFolderBookmark"
 
     private let defaults: UserDefaults
     private let key: String
-    private let creationOptions: URL.BookmarkCreationOptions
-    private let resolutionOptions: URL.BookmarkResolutionOptions
 
-    /// 샌드박스 앱은 기본값(읽기 전용 보안 범위: `withSecurityScope` + `securityScopeAllowOnlyReadAccess`)을 쓴다.
-    /// 앱은 고른 폴더를 읽기만 한다(쓰기는 컨테이너 안에서만).
-    public init(
-        defaults: UserDefaults = .standard,
-        key: String = UserDefaultsFolderBookmarks.defaultKey,
-        securityScoped: Bool = true
-    ) {
+    public init(defaults: UserDefaults = .standard, key: String = UserDefaultsFolderBookmarks.defaultKey) {
         self.defaults = defaults
         self.key = key
-        self.creationOptions = securityScoped ? [.withSecurityScope, .securityScopeAllowOnlyReadAccess] : []
-        self.resolutionOptions = securityScoped ? [.withSecurityScope, .withoutUI] : [.withoutUI]
     }
 
     public func save(_ url: URL) throws {
-        // 파일 고르기 창이 준 URL은 접근을 시작해야 북마크를 만들 수 있다(샌드박스).
+        // 파일 고르기 창이 준 URL은 접근을 시작해야 북마크를 만들 수 있다.
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
-        let data = try url.bookmarkData(options: creationOptions, includingResourceValuesForKeys: nil, relativeTo: nil)
+        let data = try url.bookmarkData(options: [], includingResourceValuesForKeys: nil, relativeTo: nil)
         defaults.set(data, forKey: key)
     }
 
@@ -71,7 +61,7 @@ public final class UserDefaultsFolderBookmarks: FolderBookmarking, @unchecked Se
     public func savedFolder() -> SavedFolder {
         guard let data = defaults.data(forKey: key) else { return .none }
         var stale = false
-        guard let url = try? URL(resolvingBookmarkData: data, options: resolutionOptions, relativeTo: nil, bookmarkDataIsStale: &stale) else {
+        guard let url = try? URL(resolvingBookmarkData: data, options: [.withoutUI], relativeTo: nil, bookmarkDataIsStale: &stale) else {
             let path = URL.resourceValues(forKeys: [.pathKey], fromBookmarkData: data)?.path
             return .unresolvable(path: path)
         }
@@ -95,7 +85,7 @@ public final class SecurityScopedAccess: @unchecked Sendable {
         self.active = url.startAccessingSecurityScopedResource()
     }
 
-    /// 접근을 시작했는지(샌드박스 밖이나 이미 권한이 있는 경로면 false일 수 있다).
+    /// 접근을 시작했는지(보안 범위 URL이 아니면 false일 수 있다).
     public var isAccessing: Bool { lock.withLock { active } }
 
     public func stop() {

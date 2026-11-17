@@ -40,7 +40,6 @@ enum AppList {
 struct AppsView: View {
     @Environment(HostModel.self) private var model
     @Environment(ProjectsModel.self) private var projects: ProjectsModel?
-    @Environment(LinkedProjectsModel.self) private var linkedProjects: LinkedProjectsModel?
     @Environment(ImportQueue.self) private var importQueue
     @Environment(\.connectProjects) private var connectProjects
     let showImporter: () -> Void
@@ -51,7 +50,6 @@ struct AppsView: View {
     @State private var projectToRemove: ConnectedProject?
     @State private var buildToInspect: LibraryBuild?
     @State private var showingAgentInstall = false
-    @State private var showingLinkedProjects = false
     @State private var agentNotice: String?
     @State private var expandedApps: Set<String> = []
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -98,13 +96,7 @@ struct AppsView: View {
                 }
                 Menu {
                     Button("빌드 가져오기…", action: showImporter)
-                    // 샌드박스판은 프로젝트를 등록해 최근 빌드를 찾는다. 폴더 감시는 두지 않는다.
-                    if !HostEdition.isSandboxed {
-                        Button("폴더 감시…") { choosingFolder = true }
-                    }
-                    if HostEdition.isSandboxed, linkedProjects != nil {
-                        Button("등록한 프로젝트…") { showingLinkedProjects = true }
-                    }
+                    Button("폴더 감시…") { choosingFolder = true }
                     if projects != nil {
                         Divider()
                         Button("에이전트에 설치…") { showingAgentInstall = true }
@@ -141,7 +133,7 @@ struct AppsView: View {
         .background {
             // fileImporter는 뷰 하나에 하나만 동작한다.
             Color.clear
-                .fileImporter(isPresented: $choosingProject, allowedContentTypes: HostEdition.isSandboxed ? [.folder] : [.folder, .package, .item],
+                .fileImporter(isPresented: $choosingProject, allowedContentTypes: [.folder, .package, .item],
                               allowsMultipleSelection: true) { result in
                     guard case .success(let urls) = result else { return }
                     connectProjects(urls)
@@ -185,19 +177,6 @@ struct AppsView: View {
                 AgentInstallSheet(installer: AgentInstaller(serverPath: Bundle.main.executablePath ?? "", scriptPath: projects.agentScript.path))
             }
         }
-        .sheet(isPresented: $showingLinkedProjects) {
-            if let linkedProjects {
-                NavigationStack {
-                    LinkedProjectsView(projects: linkedProjects)
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button("닫기") { showingLinkedProjects = false }
-                            }
-                        }
-                }
-                .frame(minWidth: 560, minHeight: 420)
-            }
-        }
         .alert("에이전트 안내를 썼습니다", isPresented: Binding(get: { agentNotice != nil }, set: { if !$0 { agentNotice = nil } })) {
             Button("확인") {}
         } message: {
@@ -219,9 +198,7 @@ struct AppsView: View {
         ContentUnavailableView {
             Label("앱 없음", systemImage: "app.dashed")
         } description: {
-            Text(HostEdition.isSandboxed
-                 ? "프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 한 최근 Debug 빌드를 게시합니다."
-                 : "Xcode 프로젝트를 추가하거나 창으로 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다.")
+            Text("Xcode 프로젝트를 추가하거나 창으로 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다.")
         } actions: {
             Button("프로젝트 추가…") { choosingProject = true }
                 .buttonStyle(.borderedProminent)

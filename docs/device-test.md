@@ -168,7 +168,7 @@ U 번호는 `docs/tunnel.md`의 "실기기에서만 확인할 것" 번호와 같
   3. 사용자 승인을 받아 App ID 등록과 권한 추가를 진행한다.
 - 기대 결과: 두 대상 모두 프로필 오류 없이 Network Extensions(Packet Tunnel)가 표시된다.
 - 기록: Signing & Capabilities 스크린샷, 계정 종류(개인·조직, 무료·유료).
-- 실패 시: 권한을 지원하지 않는다는 오류면 그 계정으로는 iPhone 앱을 만들 수 없다. [판정서](appstore-review.md)의 배포 대안을 본다.
+- 실패 시: 권한을 지원하지 않는다는 오류면 그 계정으로는 iPhone 앱을 만들 수 없다.
 
 ## 추가 항목
 

@@ -201,17 +201,12 @@ Sending needs the RemoteDebug VPN on the iPhone. Without it the app keeps the re
 | [docs/protocol-addenda.md](docs/protocol-addenda.md) | Rules that amend `docs/protocol.md`: install page (E), icons (F), logs (G), files (H), update page (I), Tailscale key in the pairing link (J) |
 | [docs/tunnel.md](docs/tunnel.md) | iPhone packet tunnel |
 | [docs/architecture.md](docs/architecture.md) | Structure and initial assumptions. Wrong sentences are listed in "Corrections to the documents" |
-| [docs/appstore-review.md](docs/appstore-review.md) | App Store submission verdict |
 
 When documents disagree, follow this order:
 
 1. `docs/tunnel.md` replaces all of §6 of `docs/protocol.md` and assumption A1 of `docs/architecture.md`.
 2. `docs/protocol-addenda.md` takes precedence over `docs/protocol.md` where the tunnel document is silent.
 3. The rest of `docs/protocol.md` and `docs/architecture.md`, except what "Implementation that differs from the design documents" and "Corrections to the documents" below say.
-
-## App Store verdict
-
-Not submitted. The iPhone app asks iOS to install other apps (guideline 2.5.2); treated as a VPN app it carries the organization-account and disclosure duties of 5.4; and a reviewer cannot see the core feature without a Mac, a tailnet, and development provisioning. Approval is judged very unlikely. Submitting the Mac app alone is not recommended either (4.2.3(i), reviewer access). Recommended distribution is direct install from Xcode or Ad Hoc; TestFlight is not recommended. The verdict is an estimate based on this project's structure, not an Apple decision. Evidence and quotes are in the [verdict](docs/appstore-review.md).
 
 ## Known limitations
 
@@ -249,8 +244,7 @@ The numbers are line numbers in `.agent-loop/remotedebug-bridge/decisions.jsonl`
 | `docs/protocol.md` §5: storing allowed devices | Bound to the control server URL that approved them. Changing servers requires pairing again after confirmation | 34, 43 |
 | `docs/protocol.md:3`: edit this document first when changing rules | Changed rules are in [`docs/protocol-addenda.md`](docs/protocol-addenda.md). When they differ, follow the addenda | 6 |
 | `docs/architecture.md:5`: install only through the node embedded in each app | The embedded path stays; an install web page for iPhones with only the official Tailscale app was added ([`docs/protocol-addenda.md`](docs/protocol-addenda.md) E) at the user's request | 61, 62, 63, 64, 65 |
-| `docs/architecture.md:88`: Xcode and TestFlight internal distribution | Direct Xcode install or Ad Hoc. The [verdict](docs/appstore-review.md) does not recommend TestFlight (guideline 2.2) | 2 |
-| `docs/appstore-review.md`, reading of 2.4.5: Mac app compatible with the sandbox, no launch at login | No App Sandbox; connected projects are built with `xcodebuild`; the app stays in the menu bar and can open at login. Requested by the user; the Mac App Store assessment does not reflect this | No record (user request, 2026-11-11) |
+| `docs/architecture.md:88`: Xcode and TestFlight internal distribution | Direct Xcode install or Ad Hoc | 2 |
 | `docs/architecture.md` assumption A3: Mac app with App Sandbox | The alternative in the same table ("switch to non-sandboxed distribution") was chosen | No record (user request, 2026-11-11) |
 
 Current behavior not in the design documents:
@@ -281,10 +275,10 @@ These sentences differ from the implementation. The documents were not edited; f
 The script prints its usage in Korean:
 
 ```
-사용: scripts/check-docs.sh [--help]   (RD_QUOTES_CACHE_DIR=<폴더>를 주면 Apple 원문 사본으로 인용을 검사한다)
+사용: scripts/check-docs.sh [--help]
 ```
 
-It prints one line per mismatch and exits with code 1 when any of these differ from the repository: paths in code spans and code blocks (except json) under `scripts/`, `docs/`, `Packages/`, `Apps/`, `Config/`, `.agent-loop/`, and root files such as `project.yml`; scripts named in the documents; target, scheme, module, and bundle ID names; U items and the on-device items of `docs/tunnel.md`; D items and the run-order table; relative links and `#` heading anchors; screen text written in bold or double quotes in the install web page procedures (`docs/setup.md` web page section, `docs/device-test.md` D14), compared with the page source `Packages/SwiftailHost/Sources/RDHostLogic/Resources/web` and the Mac app source `Packages/MacHost/Sources`. It also fails when a required document, `scripts/check_quotes.py`, or `scripts/check_protocol_examples.py` is missing. Paths in prose outside code spans are not checked. If Apple's original text cannot be downloaded, the quote check only warns.
+It prints one line per mismatch and exits with code 1 when any of these differ from the repository: paths in code spans and code blocks (except json) under `scripts/`, `docs/`, `Packages/`, `Apps/`, `Config/`, `.agent-loop/`, and root files such as `project.yml`; scripts named in the documents; target, scheme, module, and bundle ID names; U items and the on-device items of `docs/tunnel.md`; D items and the run-order table; relative links and `#` heading anchors; screen text written in bold or double quotes in the install web page procedures (`docs/setup.md` web page section, `docs/device-test.md` D14), compared with the page source `Packages/SwiftailHost/Sources/RDHostLogic/Resources/web` and the Mac app source `Packages/MacHost/Sources`. It also fails when a required document or `scripts/check_protocol_examples.py` is missing. Paths in prose outside code spans are not checked.
 
 ## License
 
