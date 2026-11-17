@@ -37,18 +37,20 @@ public final class SwiftailHostCore: HostCore, Sendable {
         public var pairingDirectory: URL?
         /// QR·링크 페어링 연결을 받는 tailnet 포트. 제안의 링크에 실린다.
         public var pairingPort: UInt16
+        /// 제안 링크의 연결 도메인 주소(Info.plist `RDPairLinkBase`). nil이면 `remotedebug://pair`.
+        public var pairingLinkBase: PairingLinkBase?
 
         public init(directDirectory: URL? = nil, legacyStateDirectory: URL? = nil, pairingDirectory: URL? = nil,
-                    pairingPort: UInt16 = SwiftailHostCore.defaultPairingPort) {
+                    pairingPort: UInt16 = SwiftailHostCore.defaultPairingPort, pairingLinkBase: PairingLinkBase? = nil) {
             (self.directDirectory, self.legacyStateDirectory) = (directDirectory, legacyStateDirectory)
-            (self.pairingDirectory, self.pairingPort) = (pairingDirectory, pairingPort)
+            (self.pairingDirectory, self.pairingPort, self.pairingLinkBase) = (pairingDirectory, pairingPort, pairingLinkBase)
         }
     }
 
     /// QR·링크 페어링의 tailnet 포트. 고정이라 tailnet 정책(ACL)에 적을 수 있다(protocol-addenda B.5).
     public static let defaultPairingPort: UInt16 = 4747
-    /// 제안 링크의 앞부분. iPhone 앱이 이 스킴을 받는다.
-    static let pairingBaseURL = URL(string: "remotedebug://pair")!
+    /// 제안 링크의 기본 앞부분. iPhone 앱이 이 스킴을 받는다.
+    static let pairingBaseURL = URL(string: PairingLinkBase.customScheme)!
     /// QR 페어링 요청이 승인을 기다리는 시간(계약 P5의 120초와 같다).
     static let offerRequestSeconds: TimeInterval = 120
     /// 허용한 뒤 `PairingHost`가 짝으로 저장하기를 기다리는 시간.
@@ -123,10 +125,10 @@ public final class SwiftailHostCore: HostCore, Sendable {
         self.init(layout: layout, factory: .swiftail)
     }
 
-    /// 앱의 저장 위치로.
-    public convenience init(paths: HostPaths) {
+    /// 앱의 저장 위치로. `pairingLinkBase`가 있으면 제안 링크와 QR을 그 https 주소로 낸다.
+    public convenience init(paths: HostPaths, pairingLinkBase: PairingLinkBase? = nil) {
         self.init(layout: Layout(directDirectory: paths.directDir, legacyStateDirectory: paths.legacyStateDir,
-                                 pairingDirectory: paths.pairingDir))
+                                 pairingDirectory: paths.pairingDir, pairingLinkBase: pairingLinkBase))
     }
 
     init(layout: Layout, factory: HostNodeFactory, pollIntervals: (starting: Duration, running: Duration) = (.milliseconds(250), .seconds(2)),
@@ -434,10 +436,17 @@ public final class SwiftailHostCore: HostCore, Sendable {
             throw Self.offerError(error)
         }
         session.log.line("info: 페어링 QR을 엶(\(authKey == nil ? "키 없음" : "키 있음"))")
-        // 인증 키를 실은 제안은 링크로 내보내지 않는다: 사용자 지정 스킴은 다른 앱이 받을 수 있다. QR만 보인다.
-        return PairingInvite(link: authKey == nil ? offer.url(base: Self.pairingBaseURL) : nil,
-                             qrImage: offer.qrCode(base: Self.pairingBaseURL),
+        let (base, shareable) = Self.offerLinkBase(layout.pairingLinkBase, carriesKey: authKey != nil)
+        return PairingInvite(link: shareable ? offer.url(base: base) : nil, qrImage: offer.qrCode(base: base),
                              expiresAt: offer.expires, authKey: keyState, tailnetLockEnabled: snapshot.tailnetLockEnabled)
+    }
+
+    /// 제안 링크·QR의 앞부분과 링크를 내보내도 되는지. 연결 도메인 주소가 있으면 그 https 주소로 내고 링크도 보인다.
+    /// 없으면 `remotedebug://pair`이고, 인증 키를 실은 제안은 링크로 내보내지 않는다: 사용자 지정 스킴은 같은 스킴을 선언한
+    /// 다른 앱이 받을 수 있다. QR만 보인다(iPhone 앱 안 카메라로 읽는다).
+    static func offerLinkBase(_ linkBase: PairingLinkBase?, carriesKey: Bool) -> (base: URL, shareable: Bool) {
+        if let linkBase { return (linkBase.url, true) }
+        return (pairingBaseURL, !carriesKey)
     }
 
     public func closePairingOffer() async {

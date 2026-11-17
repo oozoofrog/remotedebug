@@ -419,9 +419,13 @@ final class FakePairing: PairingService {
     }
 }
 
-/// 시험용 링크 글자.
-func pairingLink(host: String = hostFQDN, secret: String = "s1", key: String? = nil, bad: String? = nil) -> String {
-    var link = "remotedebug://pair#v=1&h=\(host)&s=\(secret)"
+/// 시험용 연결 도메인 주소.
+let exampleLinkBase = PairingLinkBase("https://example.com/remotedebug/pair")!
+
+/// 시험용 링크 글자. `base`를 주면 사용자 지정 스킴 대신 그 주소로 시작한다.
+func pairingLink(host: String = hostFQDN, secret: String = "s1", key: String? = nil, bad: String? = nil,
+                 base: String = "remotedebug://pair") -> String {
+    var link = "\(base)#v=1&h=\(host)&s=\(secret)"
     if let key { link += "&k=\(key)" }
     if let bad { link += "&bad=\(bad)" }
     return link
@@ -444,7 +448,8 @@ struct Harness {
         policy: HostPolicy = .tailnetOnly,
         timing: ClientModel.Timing = .standard,
         push: PushSetup? = nil,
-        deviceName: String = "내 iPhone"
+        deviceName: String = "내 iPhone",
+        linkBase: PairingLinkBase? = nil
     ) {
         self.tunnel = FakeTunnel(tunnel)
         self.store = InMemoryPairedHostStore(host: storedHost)
@@ -459,6 +464,7 @@ struct Harness {
             clock: clock,
             hostPolicy: policy,
             pairingService: pairing,
+            pairingLinkBase: linkBase,
             timing: timing,
             push: push
         )

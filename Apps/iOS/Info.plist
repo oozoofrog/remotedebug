@@ -70,6 +70,8 @@
 	<true/>
 	<key>RDAppGroup</key>
 	<string>group.$(RD_BUNDLE_PREFIX).RemoteDebug</string>
+	<key>RDPairLinkBase</key>
+	<string>$(RD_PAIR_LINK_BASE)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

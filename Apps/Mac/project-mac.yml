@@ -31,6 +31,8 @@ targets:
         # 이 앱을 빌드한 저장소. **iPhone 앱 설치…**가 여기의 RemoteDebug.xcodeproj로 iPhone 앱을 빌드한다.
         # 배포용 빌드(scripts/release-mac.sh)는 RD_SOURCE_ROOT를 비워 이 Mac의 경로를 넣지 않는다.
         RDSourceRoot: $(RD_SOURCE_ROOT)
+        # 앱 페어링 링크의 연결 도메인 주소(Config/Signing.xcconfig). 비어 있으면 링크는 remotedebug://pair다.
+        RDPairLinkBase: $(RD_PAIR_LINK_BASE)
         LSMinimumSystemVersion: "26.0"
         NSUserNotificationAlertStyle: alert
         # 같은 네트워크의 iPhone이 이 Mac을 찾도록 Bonjour로 알린다(docs/protocol-addenda.md O).

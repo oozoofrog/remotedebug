@@ -263,7 +263,7 @@ struct AppPairingPanel: View {
         String(localized: "같으면 이 Mac에서 허용합니다."),
     ]
     static let copyTitle = String(localized: "페어링 링크 복사")
-    /// 키를 실은 QR에는 링크 복사가 없다.
+    /// 키를 실은 QR에는 링크 복사가 없다(연결 도메인 주소로 빌드하지 않았을 때).
     static let cameraOnlyNote = String(localized: "Tailscale 키가 든 QR은 링크로 복사할 수 없습니다. iPhone의 RemoteDebug 앱 안 카메라로 읽으세요.")
     static let lockNote = String(localized: "이 tailnet은 tailnet lock을 씁니다. QR의 키로 처음 들어온 iPhone은 서명 기기에서 서명해야 이 Mac에 닿습니다. 서명한 뒤 새 QR로 다시 페어링하세요.")
 

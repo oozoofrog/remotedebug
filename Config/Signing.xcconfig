@@ -9,4 +9,20 @@ RD_BUNDLE_PREFIX = com.oozoofrog.app
 // 키체인에 둔 값(Tailscale OAuth 클라이언트, 피드백 진단 키)을 다시 설치할 때마다 허용해야 한다.
 // 개발 인증서로 서명하려면 Signing.local.xcconfig에 RD_MAC_SIGN_IDENTITY = Apple Development 를 넣는다.
 RD_MAC_SIGN_IDENTITY = -
+// 앱 페어링 링크를 연결 도메인(universal link) https 주소로 낸다(docs/setup.md의 "페어링 링크를 웹 주소로"). 기본은 꺼짐이고
+// 그러면 링크는 remotedebug://pair다. 켜려면 Signing.local.xcconfig에 호스트를 넣는다(경로는 바꿀 때만):
+//   RD_PAIR_LINK_HOST = example.com
+//   RD_PAIR_LINK_PATH = /remotedebug/pair
+// xcconfig는 //부터 줄 끝을 주석으로 읽으므로 https://는 적지 않는다. 아래에서 https 주소로 합친다.
+RD_PAIR_LINK_HOST =
+RD_PAIR_LINK_PATH = /remotedebug/pair
+// 호스트가 비었으면 OFF, 있으면 ON(이름 조회가 비면 :default가 채운다).
+RD_PAIR_LINK_STATE_ = OFF
+RD_PAIR_LINK_STATE = $(RD_PAIR_LINK_STATE_$(RD_PAIR_LINK_HOST:identifier):default=ON)
+// 두 앱의 Info.plist RDPairLinkBase. 꺼져 있으면 비어 있다.
+RD_PAIR_LINK_BASE_ON = https:/$()/$(RD_PAIR_LINK_HOST)$(RD_PAIR_LINK_PATH)
+RD_PAIR_LINK_BASE = $(RD_PAIR_LINK_BASE_$(RD_PAIR_LINK_STATE))
+// iPhone 앱의 권한 파일. 켜져 있을 때만 연결 도메인 권한(applinks:<호스트>)이 든 파일을 쓴다(빈 applinks:를 넣지 않는다).
+RD_PHONE_ENTITLEMENTS_OFF = Apps/iOS/RemoteDebugPhone.entitlements
+RD_PHONE_ENTITLEMENTS_ON = Apps/iOS/RemoteDebugPhone+Links.entitlements
 #include? "Signing.local.xcconfig"

@@ -207,6 +207,54 @@ private let otherInfo = Examples.info
         #expect(h.model.handle(url: URL(string: "https://example.com")!) == false)
     }
 
+    /// 연결 도메인 주소로 빌드한 앱: 그 https 링크는 사용자 지정 스킴 링크처럼 묻고 시작한다.
+    @Test func httpsLinkOfTheConfiguredBaseAsksFirst() async {
+        let h = Harness(linkBase: exampleLinkBase)
+        let https = pairingLink(base: "https://example.com/remotedebug/pair")
+        #expect(h.model.handle(url: URL(string: https)!))
+        #expect(h.model.pendingConfirmation?.host == hostFQDN)
+        #expect(h.model.pendingConfirmation?.reason == .openedLink)
+        #expect(h.model.lastError == nil)
+        #expect(h.pairing.calls.isEmpty)
+        h.model.dismissPending()
+        // 사용자 지정 스킴 링크도 그대로 받는다.
+        #expect(h.model.handle(url: URL(string: pairingLink())!))
+        #expect(h.model.pendingConfirmation?.reason == .openedLink)
+        h.model.dismissPending()
+        // 앱 안 카메라는 두 꼴을 다 읽는다.
+        #expect(h.model.pair(scanned: https) == nil)
+        await h.model.waitForBackgroundWork()
+        #expect(h.pairing.calls.map(\.host) == [hostFQDN])
+    }
+
+    @Test func httpsLinkOfAnotherAddressShowsTheMismatchGuidance() async {
+        let h = Harness(linkBase: exampleLinkBase)
+        let other = pairingLink(base: "https://other.example.com/remotedebug/pair")
+        #expect(h.model.handle(url: URL(string: other)!))
+        #expect(h.model.lastError == PairingOfferIssue.linkBaseMismatch.userMessage)
+        #expect(h.model.pair(scanned: other) == PairingOfferIssue.linkBaseMismatch.userMessage)
+        #expect(h.model.pair(scanned: pairingLink(base: "http://example.com/remotedebug/pair")) == PairingOfferIssue.notAnOffer.userMessage)
+        h.model.clearError()
+        // 페어링과 상관없는 https 주소는 다루지 않는다.
+        #expect(h.model.handle(url: URL(string: "https://example.com/remotedebug/help")!) == false)
+        #expect(h.model.handle(url: URL(string: "https://example.com/remotedebug/pair")!))
+        #expect(h.model.lastError == PairingOfferIssue.notAnOffer.userMessage)
+        #expect(h.model.pendingConfirmation == nil && h.pairing.calls.isEmpty)
+    }
+
+    /// 주소 없이 빌드한 앱: 지금과 같다. https 제안에는 이 앱에 주소가 없다는 안내를 낸다.
+    @Test func withoutABaseHTTPSOffersAskToBuildWithTheSameAddress() async {
+        let h = Harness()
+        let https = pairingLink(base: "https://example.com/remotedebug/pair")
+        #expect(h.model.handle(url: URL(string: https)!))
+        #expect(h.model.lastError == PairingOfferIssue.linkBaseNotConfigured.userMessage)
+        #expect(h.model.pair(scanned: https) == PairingOfferIssue.linkBaseNotConfigured.userMessage)
+        #expect(h.model.pendingConfirmation == nil && h.pairing.calls.isEmpty)
+        h.model.clearError()
+        #expect(h.model.handle(url: URL(string: "https://example.com/page")!) == false)
+        #expect(h.model.lastError == nil)
+    }
+
     @Test func oldLinkShowsTheUpdateGuidanceInBothPaths() async {
         let h = Harness()
         let old = "remotedebug://pair?host=\(hostFQDN)&code=K7M29QXD"
