@@ -163,7 +163,7 @@ U 번호는 `docs/tunnel.md`의 "실기기에서만 확인할 것" 번호와 같
 
 - 목표: 계정에서 앱을 서명할 수 있는지 본다.
 - 절차:
-  1. `Config/Signing.local.xcconfig`에 팀 ID를 넣고 `xcodegen generate --spec project.yml`을 실행한다.
+  1. `Config/Signing.local.xcconfig`에 팀 ID를 넣는다.
   2. Xcode에서 `RemoteDebugPhone`과 `RemoteDebugTunnel`의 Signing & Capabilities를 연다.
   3. 사용자 승인을 받아 App ID 등록과 권한 추가를 진행한다.
 - 기대 결과: 두 대상 모두 프로필 오류 없이 Network Extensions(Packet Tunnel)가 표시된다.

@@ -99,7 +99,7 @@ import Testing
         #expect(value.isEmpty || PairingLinkBase(value) != nil)
     }
 
-    /// 손으로 고치는 두 권한 파일이 연결 도메인 권한만 다르다(project-ios.yml).
+    /// 손으로 고치는 두 권한 파일이 연결 도메인 권한만 다르다(RemoteDebug.xcodeproj).
     @Test func 연결_도메인_권한_파일은_기본_파일에_applinks만_더한다() throws {
         let folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "iOS")
         func plist(_ name: String) throws -> [String: Any] {

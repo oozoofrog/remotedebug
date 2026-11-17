@@ -2,10 +2,14 @@
 # README.md, README.ko.md와 docs/*.md가 저장소와 맞는지 검사한다. 어긋난 곳마다 '실패:' 한 줄을 출력하고 종료 코드 1로 끝난다.
 #
 # 검사: (a) 문서의 경로가 있는가. 코드 조각과 모든 코드 블록(json 제외, 들여쓴 블록 포함)에서
-#           scripts/ docs/ Packages/ Apps/ Config/ .agent-loop/ 아래 경로, 루트 파일 이름(project.yml 등),
-#           `--spec` 인자, `<이름>.xcodeproj`(project.yml의 name과 비교)를 본다
+#           scripts/ docs/ Packages/ Apps/ Config/ .agent-loop/ RemoteDebug.xcodeproj/ 아래 경로, 루트 파일 이름,
+#           `--spec` 인자, `<이름>.xcodeproj`(프로젝트 파일의 이름과 비교)를 본다
 #       (b) 문서에 적은 스크립트가 실행 가능하고 문법이 맞는가
-#       (c) 대상·스킴·패키지·모듈·번들 ID 이름이 project.yml, project-*.yml, Packages/*/Package.swift에 있는가.
+#       (c) 대상·스킴·패키지·모듈·번들 ID 이름이 프로젝트 파일에 있는가. 이름은 이렇게 읽는다.
+#             프로젝트 이름·대상·패키지 참조·PRODUCT_BUNDLE_IDENTIFIER: RemoteDebug.xcodeproj/project.pbxproj
+#             스킴: RemoteDebug.xcodeproj/xcshareddata/xcschemes/*.xcscheme
+#             번들 ID의 $(RD_BUNDLE_PREFIX): Config/Signing.xcconfig의 값으로 푼다
+#             모듈: Packages/*/Package.swift
 #           번들 ID와 `-scheme` 인자는 긴 코드 조각과 코드 블록 안에서도 찾는다
 #       (d) device-test.md의 U 항목이 tunnel.md의 실기기 항목과 번호·문장까지 같은가(빠진 것, 남는 것, 중복)
 #       (e) README가 docs/의 파일을 모두 링크하는가, 문서의 상대 링크와 `#` 제목 앵커가 살아 있는가
@@ -67,7 +71,10 @@ def read(path):
         return handle.read()
 
 
-REQUIRED = ["README.md", "README.ko.md", "project.yml", "docs/setup.md", "docs/device-test.md", "docs/device-test-results.md",
+PBXPROJ = "RemoteDebug.xcodeproj/project.pbxproj"
+SCHEME_DIR = "RemoteDebug.xcodeproj/xcshareddata/xcschemes"
+SIGNING = "Config/Signing.xcconfig"
+REQUIRED = ["README.md", "README.ko.md", "docs/setup.md", "docs/device-test.md", "docs/device-test-results.md",
             "docs/protocol.md", "docs/protocol-addenda.md", "docs/tunnel.md", "docs/architecture.md"]
 text = {}
 for path in sorted(set(REQUIRED + glob.glob("docs/*.md")), key=lambda p: (p != "README.md", p)):
@@ -79,16 +86,14 @@ for path in sorted(set(REQUIRED + glob.glob("docs/*.md")), key=lambda p: (p != "
         fail(f"{path}: 읽지 못했다: {error.__class__.__name__}")
 if failures:
     finish()
-project_text = text.pop("project.yml")
 
-PREFIXES = ("scripts/", "docs/", "Packages/", "Apps/", "Config/", ".agent-loop/")
+PREFIXES = ("scripts/", "docs/", "Packages/", "Apps/", "Config/", ".agent-loop/", "RemoteDebug.xcodeproj/")
 # 사용자나 스크립트가 만드는 파일이라 없어도 되는 경로.
 GENERATED = {"Config/Signing.local.xcconfig"}
 
 FENCE = re.compile(r"^[ \t]*```([\w+-]*)[^\n]*\n(.*?)^[ \t]*```[ \t]*$", re.M | re.S)
-SHELL_PATH = re.compile(r"(?:^|[\s\"'=(])((?:scripts|docs|Packages|Apps|Config|\.agent-loop)/[\w./*+-]+)", re.M)
+SHELL_PATH = re.compile(r"(?:^|[\s\"'=(])((?:scripts|docs|Packages|Apps|Config|\.agent-loop|RemoteDebug\.xcodeproj)/[\w./*+-]+)", re.M)
 ROOT_FILE = re.compile(r"(?:^|[\s\"'=(])(\.?[\w-]+(?:\.[\w-]+)*\.(?:yml|yaml|xcconfig|xcodeproj))(?=$|[\s\"')])", re.M)
-BUNDLE_ID = re.compile(r"\bcom\.oozoofrog\.app\.[A-Za-z0-9.-]+")
 SCHEME = re.compile(r"-scheme[=\s]+[\"']?([\w-]+)")
 NOT_SCANNED = ("json", "hujson")
 
@@ -116,30 +121,52 @@ def line_of_scheme(body, scheme):
     return body.count("\n", 0, match.start()) + 1 if match else line_of(body, scheme)
 
 
-# 이름 목록: project.yml, project-*.yml, Packages/*/Package.swift.
-specs = {"project.yml": project_text}
-for spec in sorted(glob.glob("Apps/*/project-*.yml") + glob.glob("project-*.yml")):
-    specs[spec] = read(spec)
-project_name = (re.search(r"^name:\s*(\S+)\s*$", project_text, re.M) or [None, ""])[1]
-targets, schemes, packages, bundle_ids = set(), set(), set(), set()
-for spec, body in specs.items():
-    section = None
-    for raw in body.splitlines():
-        top = re.match(r"^([A-Za-z]+):\s*$", raw)
-        if top:
-            section = top.group(1)
-            continue
-        if re.match(r"^\S", raw):
-            section = None
-            continue
-        key = re.match(r"^  ([A-Za-z0-9_-]+):\s*$", raw)
-        if key and section == "targets":
-            targets.add(key.group(1))
-        elif key and section == "schemes":
-            schemes.add(key.group(1))
-        elif key and section == "packages":
-            packages.add(key.group(1))
-    bundle_ids.update(m.rstrip(".") for m in BUNDLE_ID.findall(body))
+# 이름 목록: 프로젝트 파일(pbxproj, 공유 스킴), Config/Signing.xcconfig, Packages/*/Package.swift.
+project_inputs = {}
+for needed in (PBXPROJ, SIGNING):
+    try:
+        project_inputs[needed] = read(needed)
+    except (OSError, UnicodeDecodeError) as error:
+        fail(f"{needed}: 읽지 못했다: {error.__class__.__name__}")
+if failures:
+    finish()
+pbxproj = project_inputs[PBXPROJ]
+signing = project_inputs[SIGNING]
+
+
+def pbx_section(name):
+    found = re.search(r"/\* Begin %s section \*/\n(.*?)/\* End %s section \*/" % (name, name), pbxproj, re.S)
+    if not found:
+        fail(f"{PBXPROJ}: {name} 절을 찾지 못했다")
+    return found.group(1) if found else ""
+
+
+project_name = (re.search(r'PBXProject "([^"]+)"', pbxproj) or [None, ""])[1]
+if not project_name:
+    fail(f'{PBXPROJ}: PBXProject "<이름>"을 찾지 못했다')
+targets = set(re.findall(r"^\t\t\t(?:name|productName) = \"?([\w.-]+)\"?;$", pbx_section("PBXNativeTarget"), re.M))
+schemes = {os.path.basename(path)[: -len(".xcscheme")] for path in glob.glob(SCHEME_DIR + "/*.xcscheme")}
+packages = {os.path.basename(path) for path in re.findall(r"^\t\t\trelativePath = ([^;]+);$", pbx_section("XCLocalSwiftPackageReference"), re.M)}
+packages |= {url.rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+             for url in re.findall(r'^\t\t\trepositoryURL = "([^"]+)";$', pbx_section("XCRemoteSwiftPackageReference"), re.M)}
+if not targets:
+    fail(f"{PBXPROJ}: 대상 이름을 읽지 못했다")
+if not schemes:
+    fail(f"{SCHEME_DIR}: 공유 스킴이 없다")
+if not packages:
+    fail(f"{PBXPROJ}: 패키지 참조를 읽지 못했다")
+prefix_match = re.search(r"^RD_BUNDLE_PREFIX\s*=\s*(\S+)\s*$", signing, re.M)
+if not prefix_match:
+    fail(f"{SIGNING}: RD_BUNDLE_PREFIX를 읽지 못했다")
+bundle_prefix = prefix_match.group(1) if prefix_match else ""
+BUNDLE_ID = re.compile(r"\b" + re.escape(bundle_prefix) + r"\.[A-Za-z0-9.-]+")
+bundle_ids = set()
+for raw in re.findall(r"^\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = ([^;]+);$", pbxproj, re.M):
+    bundle_ids.add(raw.strip().strip('"').replace("$(RD_BUNDLE_PREFIX)", bundle_prefix))
+if not bundle_ids:
+    fail(f"{PBXPROJ}: PRODUCT_BUNDLE_IDENTIFIER를 읽지 못했다")
+if failures:
+    finish()
 modules = set()
 for manifest in glob.glob("Packages/*/Package.swift") + glob.glob("Package.swift"):
     modules.update(re.findall(r'\bname:\s*"([^"]+)"', read(manifest)))
@@ -184,7 +211,7 @@ for path, body in text.items():
             continue  # 위에서 검사했다
         if name.endswith(".xcodeproj"):
             if name[: -len(".xcodeproj")] != project_name:
-                fail(f"{path}:{line_of(body, name)}: project.yml의 name({project_name})과 다른 프로젝트: {name}")
+                fail(f"{path}:{line_of(body, name)}: 프로젝트 파일의 이름({project_name})과 다른 프로젝트: {name}")
         elif any(ch in name for ch in "<>{}$…*"):
             continue
         elif name.rstrip("/") in GENERATED:

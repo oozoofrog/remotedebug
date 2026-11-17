@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 이 저장소의 iPhone 앱(RemoteDebug)을 자기 개발자 계정으로 빌드해 USB나 Wi-Fi로 연결한 iPhone에 설치한다.
-# 필요한 것: Xcode(Apple 계정 로그인, Apple Development 인증서), XcodeGen(`brew install xcodegen`),
+# 필요한 것: Xcode(Apple 계정 로그인, Apple Development 인증서),
 #           개발자 모드를 켠 iPhone. 소스만으로 빌드한다. Swiftail은 Xcode가 처음 빌드할 때 공개 저장소에서 받으므로
 #           인터넷이 필요하다(SWIFTAIL_PATH로 로컬 체크아웃을 가리키는 방법은 README).
 # 사용: scripts/install-phone.sh [--team <팀 ID>] [--device <UDID>] [--prefix <번들 ID 앞부분>]
@@ -21,7 +21,6 @@ done
 fail() { echo "error: $*" >&2; exit 1; }
 
 command -v xcodebuild >/dev/null || fail "Xcode가 없습니다. App Store에서 Xcode를 설치하세요."
-command -v xcodegen >/dev/null || fail "XcodeGen이 없습니다. 'brew install xcodegen'으로 설치하세요."
 
 # 1. 서명 팀. 인자 → Config/Signing.local.xcconfig → 키체인의 Apple Development 인증서.
 LOCAL="$ROOT/Config/Signing.local.xcconfig"
@@ -94,7 +93,6 @@ fi
 # 4. 빌드 → 설치 → 실행.
 OUT="${RD_BUILD_ROOT:-$HOME/RemoteDebugBuild}/phone-install"
 mkdir -p "$OUT"
-(cd "$ROOT" && xcodegen generate --spec project.yml >/dev/null)
 ARGS=(-project "$ROOT/RemoteDebug.xcodeproj" -scheme RemoteDebugPhone -configuration Debug
   -destination "id=$DEVICE" -derivedDataPath "$OUT/DerivedData"
   -allowProvisioningUpdates -allowProvisioningDeviceRegistration

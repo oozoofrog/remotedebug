@@ -49,7 +49,7 @@ A1·A2·A4는 실기기 없이는 확정할 수 없다. 확정 전에는 "동작
 | --- | --- | --- |
 | 호스트 로직과 전송 | `Packages/SwiftailHost/` | `RDHostLogic`(경로·허용 목록·페어링·세션·게시·설치 웹 페이지 파일), `SwiftailHostServer`(HTTP 전송, 같은 네트워크 직접 연결 리스너, 업데이트 페이지 서버), `rd-swiftail-host`(관문·시험 도구) |
 | Mac 호스트 | `Packages/MacHost/` | `MacHostKit`(모델·로직, `HostCore` 프로토콜), `MacHostCore`(`SwiftailHostCore`: Swiftail 노드와 호스트 로직을 `HostCore`로 묶음), `MacHostUI`(화면과 미리보기) |
-| tailnet 노드 | [Swiftail](https://github.com/oozoofrog/Swiftail) | 저장소 밖의 Swift 패키지. 고정한 리비전을 SwiftPM이 받는다. Mac 호스트와 iPhone 터널 확장이 링크한다 |
+| tailnet 노드 | [Swiftail](https://github.com/oozoofrog/Swiftail) | 저장소 밖의 Swift 패키지. 고정한 리비전을 SwiftPM이 받는다. 리비전은 `RemoteDebug.xcodeproj/project.pbxproj`의 패키지 참조와 `Packages/SwiftailHost/Package.swift` 두 곳에 있다. Mac 호스트와 iPhone 터널 확장이 링크한다 |
 | 킷 | `Packages/RemoteDebugKit/` | 공용 모델, 디버그 빌드 검증, IPA·매니페스트 생성, `rdvalidate` CLI |
 | Mac 앱 | `Apps/Mac/` | 호스트 UI와 흐름 |
 | iPhone 앱 | `Apps/iOS/`, `Apps/iOSTunnel/` | 클라이언트 UI, VPN 관리, 터널 확장 |
@@ -106,13 +106,13 @@ Mac 앱, iPhone 앱 두 개(RemoteDebugPhone, RemoteDebugVPN), 위젯·터널 �
 - `String`으로 만들어 나중에 보이는 문구(모델의 오류 문구, enum의 이름·설명, 알림·경고 문구, AppKit·UIKit 제목, 접근성 이름)는 만드는 곳에서 `String(localized: "…")`로 쓴다. `Text(문자열 변수)`는 번역하지 않는다.
 - 보간: `String` 값은 `%@`, `Int`는 `%lld`(자릿수 구분이 붙는다), `Double`은 `%lf`가 된다. 포트·연도·빌드 번호·크기·날짜처럼 모양이 정해진 값은 `String(port)`처럼 먼저 문자열로 만든다. `+`로 이은 조각은 키가 되지 못하므로 문장 하나를 보간으로 쓴다.
 - 번역하지 않는 것: 로그, 진단 파일, 프로토콜·JSON 값, 식별자, 키체인·UserDefaults 키, 오류 코드, 코드가 비교하는 문자열, 미리보기 전용 코드.
-- 표시 이름과 권한 문구(`CFBundleDisplayName`, `NSLocalNetworkUsageDescription`, `NSCameraUsageDescription`), 문서 종류 이름은 대상마다 `Localization/InfoPlist/<대상>/InfoPlist.xcstrings`에 있다. `Apps/*/project-*.yml`의 Info.plist 값을 바꾸면 그 카탈로그의 ko 값도 같이 바꾼다.
+- 표시 이름과 권한 문구(`CFBundleDisplayName`, `NSLocalNetworkUsageDescription`, `NSCameraUsageDescription`), 문서 종류 이름은 대상마다 `Localization/InfoPlist/<대상>/InfoPlist.xcstrings`에 있다. 대상의 `Apps/*/Info.plist` 값을 바꾸면 그 카탈로그의 ko 값도 같이 바꾼다.
 - `swift test`에는 카탈로그가 없어 `String(localized:)`가 한국어 원문을 돌려준다. 시험은 한국어 원문과 비교하고, 스킴 RemoteDebugMac·RemoteDebugPhone의 시험 언어도 ko다.
 
 ### 키 맞추기와 번역 검사
 
 - `scripts/sync-strings.sh`: 세 스킴(RemoteDebugMac, RemoteDebugPhone, RemoteDebugVPN)을 `SWIFT_EMIT_LOC_STRINGS=YES`, 서명 없이 빌드해 컴파일러가 뽑은 키(`.stringsdata`)를 `xcrun xcstringstool sync` 한 번으로 카탈로그에 합친다. 화면 문구를 바꾼 뒤 실행한다. 새 키가 들어오고, 코드에서 사라진 키는 번역이 없으면 지워지며 번역이 있으면 `stale`로 남는다. 번역은 지우지 않는다. 다시 실행해도 결과가 같다.
-- Xcode에서 빌드할 때는 문자열을 뽑지 않는다(`project.yml`의 `SWIFT_EMIT_LOC_STRINGS: NO`). 대상마다 카탈로그를 고치면 다른 플랫폼에서만 쓰는 키가 `stale`이 되기 때문이다. 번역은 Xcode의 카탈로그 편집기에서 넣어도 된다.
+- Xcode에서 빌드할 때는 문자열을 뽑지 않는다(프로젝트 파일의 `SWIFT_EMIT_LOC_STRINGS = NO`). 대상마다 카탈로그를 고치면 다른 플랫폼에서만 쓰는 키가 `stale`이 되기 때문이다. 번역은 Xcode의 카탈로그 편집기에서 넣어도 된다.
 - Debug 빌드가 컴파일하지 않는 분기(`#if targetEnvironment(simulator)`, `#if DEBUG`의 `#else`)의 문구는 `Localization/manual-keys.txt`에 적는다. 스크립트가 `extractionState: manual`로 넣고, sync는 이 키를 건드리지 않는다.
 - `python3 -I scripts/check_strings.py`: 모든 카탈로그와 웹 페이지 번역표에서 en, ja, zh-Hans, zh-Hant 번역이 빠졌거나 형식 지정자(`%@`, `%lld`, 웹은 `{이름}`)가 원문과 다르면 종료 코드 1이다. `shouldTranslate: false`인 키는 검사하지 않는다.
 - `python3 -I scripts/audit_strings.py --stringsdata-root <빌드 폴더> <소스 폴더…>`: 소스의 한국어 리터럴 가운데 키로 뽑히지 않은 것을 보인다. 로그 줄은 빼고 본다.

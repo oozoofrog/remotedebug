@@ -36,8 +36,9 @@ Rules for agents:
 
 ### Working on this repository
 
-- Requirements: Apple silicon Mac, Xcode, XcodeGen. Nothing else needs to be built first. SwiftPM and Xcode fetch [Swiftail](https://github.com/oozoofrog/Swiftail) (BSD-3-Clause) from its public repository at a pinned revision, so the first build needs network access.
-- To build against a local Swiftail checkout: set `SWIFTAIL_PATH=<path to the checkout>` for SwiftPM commands (the folder must be named `Swiftail`), and generate the Xcode project with `xcodegen generate --spec project-localswiftail.yml` instead of `project.yml`; that spec uses the `../Swiftail` folder next to this repository.
+- Requirements: Apple silicon Mac, Xcode. Nothing else needs to be built first. `RemoteDebug.xcodeproj` is in the repository; edit targets and build settings in Xcode. SwiftPM and Xcode fetch [Swiftail](https://github.com/oozoofrog/Swiftail) (BSD-3-Clause) from its public repository at a pinned revision, so the first build needs network access. The revision is set in two places that must change together: the package reference in `RemoteDebug.xcodeproj/project.pbxproj` and `Packages/SwiftailHost/Package.swift`.
+- To build against a local Swiftail checkout: set `SWIFTAIL_PATH=<path to the checkout>` for SwiftPM commands (the folder must be named `Swiftail`). In Xcode, drag the `../Swiftail` folder (next to this repository) into the project navigator; the local copy overrides the remote package of the same name. Do not commit that change.
+- Test-link build (adds test-only tools such as `remotedebug://test?…` links; do not distribute it): put `RD_EXTRA_SWIFT_CONDITIONS = RD_TEST_LINKS` in `Config/Signing.local.xcconfig`. It adds the `RD_TEST_LINKS` compilation condition to `RemoteDebugPhone`, `RemoteDebugTunnel`, and `RemoteDebugVPNTunnel`; with the default empty value the build is unchanged.
 - Tests: `swift test --package-path Packages/PhoneClient`, `swift test --package-path Packages/RemoteDebugKit`, `swift test --package-path Packages/SwiftailHost`, `swift test --package-path Packages/WebPage`, `RD_TEST_TMPDIR=<writable folder> swift test --package-path Packages/MacHost`. More in [setup](docs/setup.md#명령줄-빌드와-시험).
 - `scripts/check-docs.sh` must pass after editing `README.md` or `docs/`.
 - After changing user-visible text, run `scripts/sync-strings.sh` to update the keys of `Localization/Localizable.xcstrings`, then `python3 -I scripts/check_strings.py` to check the translations ([localization](docs/architecture.md#현지화)).
@@ -62,7 +63,6 @@ Rules for agents:
 
 ```sh
 cp Config/Signing.local.xcconfig.example Config/Signing.local.xcconfig   # set DEVELOPMENT_TEAM
-xcodegen generate --spec project.yml
 open RemoteDebug.xcodeproj
 ```
 
@@ -250,12 +250,12 @@ The numbers are line numbers in `.agent-loop/remotedebug-bridge/decisions.jsonl`
 Current behavior not in the design documents:
 
 - The iPhone tunnel sends only the tailnet suffix and reverse zones to `100.100.100.100`; it does not take over the device's DNS (19, 26).
-- The team ID lives in `Config/Signing.local.xcconfig`, which `Config/Signing.xcconfig` includes, so it survives `xcodegen` (38, 39).
+- The team ID lives in `Config/Signing.local.xcconfig`, which `Config/Signing.xcconfig` includes, so the project file never holds it (38, 39).
 - Debug confirmation is bound to a metadata fingerprint of the bundle tree for `.app` (not a content hash) and to SHA-256 for `.ipa`. Bundle ID, version, and build number must also match (40, 43).
 - State folders holding node keys are excluded from backup (31, 34, 35).
 - A storage lock lets only one Mac app run at a time (34, 44).
 - Logic lives in `MacHostKit` and `PhoneClientKit` so it is tested with `swift test` without signing (14, 15).
-- Target settings are in `Apps/Mac/project-mac.yml` and `Apps/iOS/project-ios.yml`, included by the root `project.yml` (25).
+- The Xcode project `RemoteDebug.xcodeproj` is tracked in git; edit targets and build settings in Xcode (25).
 - The Mac app builds only for `ARCHS=arm64` (10).
 - Integration tests of the Mac host are `MacHostE2ETests` in `Packages/MacHost`.
 
@@ -278,7 +278,7 @@ The script prints its usage in Korean:
 사용: scripts/check-docs.sh [--help]
 ```
 
-It prints one line per mismatch and exits with code 1 when any of these differ from the repository: paths in code spans and code blocks (except json) under `scripts/`, `docs/`, `Packages/`, `Apps/`, `Config/`, `.agent-loop/`, and root files such as `project.yml`; scripts named in the documents; target, scheme, module, and bundle ID names; U items and the on-device items of `docs/tunnel.md`; D items and the run-order table; relative links and `#` heading anchors; screen text written in bold or double quotes in the install web page procedures (`docs/setup.md` web page section, `docs/device-test.md` D14), compared with the page source `Packages/SwiftailHost/Sources/RDHostLogic/Resources/web` and the Mac app source `Packages/MacHost/Sources`. It also fails when a required document or `scripts/check_protocol_examples.py` is missing. Paths in prose outside code spans are not checked.
+It prints one line per mismatch and exits with code 1 when any of these differ from the repository: paths in code spans and code blocks (except json) under `scripts/`, `docs/`, `Packages/`, `Apps/`, `Config/`, `.agent-loop/`, and `RemoteDebug.xcodeproj/`; scripts named in the documents; target, scheme, module, and bundle ID names (read from `RemoteDebug.xcodeproj/project.pbxproj`, its shared schemes, `Config/Signing.xcconfig`, and `Packages/*/Package.swift`); U items and the on-device items of `docs/tunnel.md`; D items and the run-order table; relative links and `#` heading anchors; screen text written in bold or double quotes in the install web page procedures (`docs/setup.md` web page section, `docs/device-test.md` D14), compared with the page source `Packages/SwiftailHost/Sources/RDHostLogic/Resources/web` and the Mac app source `Packages/MacHost/Sources`. It also fails when a required document or `scripts/check_protocol_examples.py` is missing. Paths in prose outside code spans are not checked.
 
 ## License
 

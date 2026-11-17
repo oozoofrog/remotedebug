@@ -36,8 +36,9 @@ MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 
 
 ### 이 저장소에서 작업하기
 
-- 요구 사항: Apple silicon Mac, Xcode, XcodeGen. 먼저 빌드할 것은 없다. SwiftPM과 Xcode가 [Swiftail](https://github.com/oozoofrog/Swiftail)(BSD-3-Clause)을 공개 저장소의 고정한 리비전으로 받으므로 처음 빌드할 때는 인터넷이 필요하다.
-- 로컬 Swiftail 체크아웃으로 빌드하려면 SwiftPM 명령에 `SWIFTAIL_PATH=<체크아웃 경로>`를 주고(폴더 이름은 `Swiftail`이어야 한다), Xcode 프로젝트는 `project.yml` 대신 `xcodegen generate --spec project-localswiftail.yml`로 만든다. 이 명세는 이 저장소 옆의 `../Swiftail` 폴더를 쓴다.
+- 요구 사항: Apple silicon Mac, Xcode. 먼저 빌드할 것은 없다. `RemoteDebug.xcodeproj`가 저장소에 있고 대상과 빌드 설정은 Xcode에서 고친다. SwiftPM과 Xcode가 [Swiftail](https://github.com/oozoofrog/Swiftail)(BSD-3-Clause)을 공개 저장소의 고정한 리비전으로 받으므로 처음 빌드할 때는 인터넷이 필요하다. 리비전은 `RemoteDebug.xcodeproj/project.pbxproj`의 패키지 참조와 `Packages/SwiftailHost/Package.swift` 두 곳에 있고 함께 바꾼다.
+- 로컬 Swiftail 체크아웃으로 빌드하려면 SwiftPM 명령에 `SWIFTAIL_PATH=<체크아웃 경로>`를 준다(폴더 이름은 `Swiftail`이어야 한다). Xcode에서는 이 저장소 옆의 `../Swiftail` 폴더를 프로젝트 탐색기에 끌어 놓는다. 같은 이름의 원격 패키지를 로컬 사본이 덮어쓴다. 그 변경은 커밋하지 않는다.
+- 시험 링크 빌드(`remotedebug://test?…` 주소 같은 시험 전용 도구를 넣는다. 배포하지 않는다): `Config/Signing.local.xcconfig`에 `RD_EXTRA_SWIFT_CONDITIONS = RD_TEST_LINKS`를 넣는다. `RemoteDebugPhone`, `RemoteDebugTunnel`, `RemoteDebugVPNTunnel`에 컴파일 조건 `RD_TEST_LINKS`가 더해지고, 기본값(빈 값)에서는 빌드가 달라지지 않는다.
 - 시험: `swift test --package-path Packages/PhoneClient`, `swift test --package-path Packages/RemoteDebugKit`, `swift test --package-path Packages/SwiftailHost`, `swift test --package-path Packages/WebPage`, `RD_TEST_TMPDIR=<쓰기 가능한 폴더> swift test --package-path Packages/MacHost`. 나머지는 [설정 문서](docs/setup.md#명령줄-빌드와-시험)에 있다.
 - `README.md`, `README.ko.md`, `docs/`를 고친 뒤에는 `scripts/check-docs.sh`가 통과해야 한다.
 - 화면 문구를 바꾸면 `scripts/sync-strings.sh`로 `Localization/Localizable.xcstrings`의 키를 맞추고 `python3 -I scripts/check_strings.py`로 번역을 확인한다([현지화](docs/architecture.md#현지화)).
@@ -62,7 +63,6 @@ MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 
 
 ```sh
 cp Config/Signing.local.xcconfig.example Config/Signing.local.xcconfig   # DEVELOPMENT_TEAM을 넣는다
-xcodegen generate --spec project.yml
 open RemoteDebug.xcodeproj
 ```
 
@@ -251,12 +251,12 @@ RemoteDebugFeedback.start(.init(
 설계 문서에 없는 현재 동작:
 
 - iPhone 터널은 tailnet 접미사와 역방향 영역만 `100.100.100.100`으로 보내고 기기 전체 DNS는 가로채지 않는다(19, 26).
-- 팀 ID는 `Config/Signing.local.xcconfig`에 둔다. `Config/Signing.xcconfig`가 읽으므로 `xcodegen`을 다시 돌려도 남는다(38, 39).
+- 팀 ID는 `Config/Signing.local.xcconfig`에 둔다. `Config/Signing.xcconfig`가 읽으므로 프로젝트 파일에는 들어가지 않는다(38, 39).
 - Debug 확인은 `.app`이면 번들 트리의 메타데이터 지문(내용 해시 아님), `.ipa`면 SHA-256에 묶는다. 번들 ID·버전·빌드 번호도 같아야 게시한다(40, 43).
 - 노드 키가 든 상태 폴더는 백업에서 뺀다(31, 34, 35).
 - Mac 앱은 저장 폴더 잠금으로 한 번에 하나만 실행된다(34, 44).
 - 로직은 `MacHostKit`, `PhoneClientKit`에 있어 앱 서명 없이 `swift test`로 시험한다(14, 15).
-- 대상 설정은 `Apps/Mac/project-mac.yml`, `Apps/iOS/project-ios.yml`에 있고 루트 `project.yml`이 두 파일을 포함한다(25).
+- Xcode 프로젝트 `RemoteDebug.xcodeproj`를 git에 올린다. 대상과 빌드 설정은 Xcode에서 고친다(25).
 - Mac 앱은 `ARCHS=arm64`로만 빌드한다(10).
 - Mac 호스트의 통합 시험은 `Packages/MacHost`의 `MacHostE2ETests`다.
 
@@ -277,7 +277,7 @@ RemoteDebugFeedback.start(.init(
 사용: scripts/check-docs.sh [--help]
 ```
 
-다음이 저장소와 다르면 어긋난 곳마다 한 줄을 출력하고 종료 코드 1로 끝난다: 코드 조각과 코드 블록(json 제외)의 경로(`scripts/`, `docs/`, `Packages/`, `Apps/`, `Config/`, `.agent-loop/` 아래와 `project.yml` 같은 루트 파일), 문서에 적은 스크립트, 대상·스킴·모듈·번들 ID 이름, U 항목과 `docs/tunnel.md`의 실기기 항목, D 항목과 실행 순서 표, 상대 링크와 `#` 제목 앵커, 설치 웹 페이지 절차(`docs/setup.md`의 웹 페이지 절, `docs/device-test.md`의 D14)에 굵은 글씨나 큰따옴표로 적은 화면 문구(페이지 소스 `Packages/SwiftailHost/Sources/RDHostLogic/Resources/web`, Mac 앱 소스 `Packages/MacHost/Sources`와 글자 그대로 비교). 필요한 문서나 `scripts/check_protocol_examples.py`가 없어도 실패한다. 코드 조각 밖 본문의 경로는 검사하지 않는다.
+다음이 저장소와 다르면 어긋난 곳마다 한 줄을 출력하고 종료 코드 1로 끝난다: 코드 조각과 코드 블록(json 제외)의 경로(`scripts/`, `docs/`, `Packages/`, `Apps/`, `Config/`, `.agent-loop/`, `RemoteDebug.xcodeproj/` 아래), 문서에 적은 스크립트, 대상·스킴·모듈·번들 ID 이름(`RemoteDebug.xcodeproj/project.pbxproj`와 공유 스킴, `Config/Signing.xcconfig`, `Packages/*/Package.swift`에서 읽는다), U 항목과 `docs/tunnel.md`의 실기기 항목, D 항목과 실행 순서 표, 상대 링크와 `#` 제목 앵커, 설치 웹 페이지 절차(`docs/setup.md`의 웹 페이지 절, `docs/device-test.md`의 D14)에 굵은 글씨나 큰따옴표로 적은 화면 문구(페이지 소스 `Packages/SwiftailHost/Sources/RDHostLogic/Resources/web`, Mac 앱 소스 `Packages/MacHost/Sources`와 글자 그대로 비교). 필요한 문서나 `scripts/check_protocol_examples.py`가 없어도 실패한다. 코드 조각 밖 본문의 경로는 검사하지 않는다.
 
 ## 라이선스
 

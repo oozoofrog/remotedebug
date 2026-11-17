@@ -22,7 +22,7 @@
 #      key that is gone but has a translation, marked "extractionState": "stale". No translation is lost.
 #   5. Fails when a build fails or when an expected module contributed no key.
 #
-# Xcode IDE builds: the project sets SWIFT_EMIT_LOC_STRINGS = NO (project.yml), so building in Xcode
+# Xcode IDE builds: the project sets SWIFT_EMIT_LOC_STRINGS = NO (RemoteDebug.xcodeproj), so building in Xcode
 # does not extract strings and does not rewrite the catalog per target (which would mark the other
 # platform's keys stale). Run this script after changing user-visible text. The catalog may still be
 # edited in Xcode's catalog editor to add translations.
@@ -55,10 +55,8 @@ fi
 mkdir -p "$BUILD"
 
 cd "$ROOT"
-if command -v xcodegen >/dev/null 2>&1; then
-    xcodegen generate --spec project.yml --quiet
-elif [ ! -d "$PROJECT" ]; then
-    echo "sync-strings: RemoteDebug.xcodeproj is missing and xcodegen is not installed" >&2
+if [ ! -d "$PROJECT" ]; then
+    echo "sync-strings: RemoteDebug.xcodeproj is missing" >&2
     exit 1
 fi
 

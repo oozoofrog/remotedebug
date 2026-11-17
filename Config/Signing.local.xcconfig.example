@@ -6,6 +6,8 @@ DEVELOPMENT_TEAM = XXXXXXXXXX
 // RD_BUNDLE_PREFIX = dev.xxxxxxxxxx
 // Mac 앱을 개발 인증서로 서명한다(선택). 넣지 않으면 임시 서명이고, 다시 설치할 때마다 키체인 허용을 묻는다.
 // RD_MAC_SIGN_IDENTITY = Apple Development
+// 시험 링크 빌드(선택, 배포하지 않는다). 시험 전용 도구를 컴파일한다.
+// RD_EXTRA_SWIFT_CONDITIONS = RD_TEST_LINKS
 // 앱 페어링 링크를 연결 도메인(universal link) https 주소로 낸다(선택, docs/setup.md). https://는 빼고 호스트만 적는다.
 // 그 호스트의 /.well-known/apple-app-site-association에 이 팀의 iPhone 앱을 올려야 한다.
 // RD_PAIR_LINK_HOST = example.com

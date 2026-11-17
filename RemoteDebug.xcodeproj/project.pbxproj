@@ -1325,6 +1325,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "$(RD_BUNDLE_PREFIX).RemoteDebugPhone";
 				PRODUCT_NAME = RemoteDebug;
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) $(RD_EXTRA_SWIFT_CONDITIONS)";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -1364,6 +1365,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "$(RD_BUNDLE_PREFIX).RemoteDebugPhone.Tunnel";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) $(RD_EXTRA_SWIFT_CONDITIONS)";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -1385,6 +1387,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "$(RD_BUNDLE_PREFIX).RemoteDebugVPN.Tunnel";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) $(RD_EXTRA_SWIFT_CONDITIONS)";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -1429,6 +1432,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "$(RD_BUNDLE_PREFIX).RemoteDebugPhone";
 				PRODUCT_NAME = RemoteDebug;
 				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) $(RD_EXTRA_SWIFT_CONDITIONS)";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -1468,6 +1472,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "$(RD_BUNDLE_PREFIX).RemoteDebugVPN.Tunnel";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) $(RD_EXTRA_SWIFT_CONDITIONS)";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -1614,6 +1619,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "$(RD_BUNDLE_PREFIX).RemoteDebugPhone.Tunnel";
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) $(RD_EXTRA_SWIFT_CONDITIONS)";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
