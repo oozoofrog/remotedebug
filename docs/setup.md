@@ -223,7 +223,7 @@ tailnet lock이 켜진 tailnet에서는 키로 처음 들어온 iPhone이 서명
 
 ### 페어링 링크를 웹 주소로(연결 도메인)
 
-기본 페어링 링크는 `remotedebug://pair#…`이다. 이 스킴은 같은 스킴을 선언한 다른 앱도 받을 수 있어서, Tailscale 키가 든 제안은 링크 복사 없이 QR만 보인다. 자기 웹 도메인이 있으면 링크를 연결 도메인(universal link) `https://<호스트><경로>#…`로 낼 수 있다. 그 주소는 그 도메인이 허락한 앱만 받으므로 키가 든 제안도 링크로 복사한다. 실기기로는 확인하지 않음.
+기본 페어링 링크는 `remotedebug://pair#…`이다. 이 스킴은 같은 스킴을 선언한 다른 앱도 받을 수 있어서, Tailscale 키가 든 제안은 링크 복사 없이 QR만 보인다. 자기 웹 도메인이 있으면 링크를 연결 도메인(universal link) `https://<호스트><경로>#…`로 낼 수 있다. 그 주소는 그 도메인이 허락한 앱만 받으므로 키가 든 제안도 링크로 복사한다. 실제 iPhone에서 Safari의 링크를 눌러 앱이 열리고 페어링되는 것을 확인했다(2026-11-17).
 
 1. `Config/Signing.local.xcconfig`에 호스트를 넣는다. 경로는 바꿀 때만 넣는다(기본 `/remotedebug/pair`). xcconfig는 `//`부터 줄 끝을 주석으로 읽으므로 `https://`는 적지 않는다. 빌드 설정이 둘을 합쳐 `RD_PAIR_LINK_BASE`(`https://example.com/remotedebug/pair`)를 만들고 Mac 앱과 iPhone 앱의 Info.plist RDPairLinkBase에 넣는다.
 
@@ -238,6 +238,8 @@ tailnet lock이 켜진 tailnet에서는 키로 처음 들어온 iPhone이 서명
    ```sh
    defaults write com.oozoofrog.app.RemoteDebugMac RDPairLinkBase https://example.com/remotedebug/pair
    ```
+
+   적용되지 않으면 `~/Library/Containers/com.oozoofrog.app.RemoteDebugMac`이 있는지 본다. 예전에 샌드박스로 빌드한 앱을 돌린 Mac에서는 `defaults`가 그 폴더 안에 쓴다. 그때는 파일 경로로 넣는다: `defaults write ~/Library/Preferences/com.oozoofrog.app.RemoteDebugMac RDPairLinkBase …`.
 
 3. 그 호스트에 아래 두 파일을 올린다.
 
