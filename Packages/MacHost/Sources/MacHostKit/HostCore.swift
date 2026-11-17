@@ -72,8 +72,15 @@ public protocol HostCore: Sendable {
     /// 같은 네트워크 직접 연결 리스너를 켜거나 끈다(addenda O). 결과는 다음 `status()`의 `direct`에 나온다.
     func setDirect(_ on: Bool) async throws
     func openPairing(ttlSeconds: Int) async throws -> PairingCode
-    /// 승인하면 허용 목록에 들어간 기기, 거절하면 nil.
+    /// 승인하면 허용 목록에 들어간 기기, 거절하면 nil. 코드 페어링과 QR·링크 페어링(`openPairingOffer`)의 요청을 함께 받는다.
     func decidePairing(requestID: String, allow: Bool) async throws -> DeviceEntry?
+    /// QR·링크 페어링 제안을 연다(protocol-addenda B.5). 앞의 제안은 그 자리에서 못 쓴다. OAuth 클라이언트가 있으면 1회용
+    /// Tailscale 키를 만들어 싣고, 만들지 못하면 키 없이 연다(`PairingInvite.authKey`). 제안을 열 수 없으면 던진다.
+    func openPairingOffer(_ request: PairingInviteRequest) async throws -> PairingInvite
+    /// 열린 제안을 닫는다. 이미 승인을 기다리는 요청은 그대로 간다.
+    func closePairingOffer() async
+    /// OAuth 클라이언트의 형식 오류. 관리 API에 보내지 않는다. 맞으면 nil.
+    func checkOAuthClient(_ client: TailscaleAPI.OAuthClient) -> TailscaleAPI.Failure?
     /// `start` 이후의 코어 이벤트. `stop`하면 끝난다.
     func events() -> AsyncStream<CoreEvent>
     /// 제어 서버에 이 노드의 로그아웃을 알린다. `stop()`이 끝난 뒤, 상태 폴더를 지우기 전에 부른다.
@@ -82,6 +89,13 @@ public protocol HostCore: Sendable {
 }
 
 extension HostCore {
+    public func openPairingOffer(_ request: PairingInviteRequest) async throws -> PairingInvite {
+        throw APIErrorBody(code: "not_supported", message: String(localized: "이 코어는 QR 페어링을 지원하지 않습니다."))
+    }
+    public func closePairingOffer() async {}
+    public func checkOAuthClient(_ client: TailscaleAPI.OAuthClient) -> TailscaleAPI.Failure? {
+        TailscaleAPI.isWellFormed(id: client.id, secret: client.secret) ? nil : .badClient
+    }
     public func setAgentBoard(_ board: Data) async throws {}
     public func setDirect(_ on: Bool) async throws {}
     public func logOut(_ config: CoreConfig) async {}

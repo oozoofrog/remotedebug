@@ -36,6 +36,8 @@ let package = Package(
                 .product(name: "SwiftailControl", package: "Swiftail"),
                 .product(name: "SwiftailCertificates", package: "Swiftail"),
                 .product(name: "SwiftailLoopback", package: "Swiftail"),
+                // 페어링 제안·짝 맺기(PairingHost)와 1회용 인증 키 발급. Mac 코어(MacHostCore)가 쓴다.
+                .product(name: "SwiftailPairing", package: "Swiftail"),
             ]
         ),
         .executableTarget(

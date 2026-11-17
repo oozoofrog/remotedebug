@@ -23,7 +23,6 @@ struct HostModelTests {
     }
 
     func makeHarness(_ label: String, clock: @escaping @Sendable () -> Date = { Date() }, port: Int = 443,
-                     api: TailscaleAPI = TailscaleAPI { _ in throw URLError(.notConnectedToInternet) },
                      tokens: any TailscaleClientStoring = MemoryTailscaleClientStore(),
                      prepare: (HostPaths) throws -> Void = { _ in }) throws -> Harness {
         let tmp = try TempDir(label)
@@ -39,7 +38,7 @@ struct HostModelTests {
             core: core, paths: paths, inspector: inspector, packager: packager, bookmarks: bookmarks,
             watcherOptions: .init(useFileEvents: false), id8: "ab12cd34", hostDisplayName: "작업용 Mac", appVersion: "0.1.0",
             port: port, openURL: { url in opened.urls.withLock { $0.append(url) } },
-            tailscaleAPI: api, tailscaleClients: tokens, now: clock
+            tailscaleClients: tokens, now: clock
         )
         return Harness(tmp: tmp, core: core, model: model, paths: paths, opened: opened, bookmarks: bookmarks,
                        inspector: inspector, packager: packager)
@@ -160,93 +159,94 @@ struct HostModelTests {
         #expect(h.model.pairRequestsForAgent.isEmpty)
     }
 
-    /// 가짜 Tailscale API: OAuth 토큰·기기 목록·키 만들기에 답하고 받은 요청을 남긴다.
-    final class FakeTailscale: @unchecked Sendable {
-        let lock = NSLock()
-        var devices = ["rd-mac-ab12cd34.example.ts.net."]
-        var devicesStatus = 200
-        var tokenStatus = 200
-        var keyStatus = 200
-        var requests: [URLRequest] = []
+    @Test func oauthClientIsFormatCheckedAndTheKeyStateFollowsTheAppQR() async throws {
+        let clients = MemoryTailscaleClientStore()
+        let h = try makeHarness("ts-oauth", tokens: clients)
+        await h.model.start()
 
-        func paths() -> [String] { lock.withLock { requests.compactMap { $0.url?.path } } }
+        // 형식이 틀리면 저장하지 않는다(관리 API에는 보내지 않는다).
+        await h.model.saveTailscaleClient(id: "kClient", secret: "not-a-secret", tags: "tag:rd-phone")
+        #expect(!h.model.hasTailscaleClient && h.model.tokenCheck?.ok == false)
+        await h.model.saveTailscaleClient(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: "rd-phone")
+        #expect(!h.model.hasTailscaleClient)
+        await h.model.saveTailscaleClient(id: " kClient ", secret: "tskey-client-kClient-SECRET\n", tags: "tag:rd-phone, tag:dev")
+        #expect(h.model.hasTailscaleClient && h.model.tailscaleTags == ["tag:rd-phone", "tag:dev"])
+        #expect(clients.load() == .init(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: ["tag:rd-phone", "tag:dev"]))
+        #expect(h.model.tokenCheck?.ok == true)
+        #expect(String(describing: try #require(clients.load())).contains("SECRET") == false)
 
-        var api: TailscaleAPI {
-            TailscaleAPI { [self] request in
-                lock.withLock { requests.append(request) }
-                let path = request.url?.path ?? ""
-                func reply(_ status: Int, _ body: String) -> (Data, URLResponse) {
-                    (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!)
-                }
-                if path.hasSuffix("/oauth/token") {
-                    let status = lock.withLock { tokenStatus }
-                    return reply(status, status == 200 ? #"{"access_token":"tskey-api-oauthAccess","token_type":"Bearer","expires_in":3600,"scope":"auth_keys"}"# : "{}")
-                }
-                if path.hasSuffix("/devices") {
-                    let (names, status) = lock.withLock { (devices, devicesStatus) }
-                    return reply(status, #"{"devices":[\#(names.map { #"{"name":"\#($0)"}"# }.joined(separator: ","))]}"#)
-                }
-                let status = lock.withLock { keyStatus }
-                return reply(status, status == 200 ? #"{"id":"k1","key":"tskey-auth-kFake1CNTRL-secret","expires":"2026-11-12T10:15:00Z"}"# : "{}")
-            }
-        }
+        // 앱용 QR: 키가 실리면 키 상태가 따라간다. 설치 페이지 코드는 열지 않는다.
+        await h.model.beginPairing(.app)
+        #expect(h.core.calls.contains(.openOffer(300, true)) && !h.core.calls.contains(.openPairing(300)))
+        #expect(h.model.pairingKeyState == .ready(expires: Date(timeIntervalSince1970: 1_794_478_500)))
+        #expect(h.model.pairingLink?.absoluteString.hasPrefix("remotedebug://pair#v=1&") == true)
+        #expect(h.model.pairingCode == nil)
+        #expect(String(describing: try #require(h.model.openInvite)).contains("s=FAKE") == false)
+
+        // 키를 만들지 못해도 키 없는 QR은 쓴다. 까닭은 설정에도 남는다.
+        h.core.state.withLock { $0.offerKey = .failed(.forbidden) }
+        await h.model.beginAppPairing()
+        #expect(h.model.pairingLink != nil)
+        #expect(h.model.pairingKeyState == .failed(TailscaleAPI.Failure.forbidden.message))
+        #expect(h.model.tokenCheck?.ok == false)
+
+        // QR을 열지 못하면 시트에 까닭이 나오고 링크는 없다.
+        h.core.state.withLock { $0.offerKey = nil }
+        await h.model.beginAppPairing()
+        #expect(h.model.pairingLink == nil && h.model.pairingError?.contains("QR") == true)
+
+        h.model.clearTailscaleClient()
+        #expect(!h.model.hasTailscaleClient && clients.load() == nil && h.model.pairingKeyState == .off)
     }
 
-    @Test func oauthClientSavedOnlyForThisMacsTailnetAndKeyGoesIntoPairingLink() async throws {
-        let fake = FakeTailscale()
-        let clients = MemoryTailscaleClientStore()
-        let h = try makeHarness("ts-oauth", api: fake.api, tokens: clients)
+    @Test func theTwoRoutesCloseEachOtherAndTheAgentOnlyGetsTheInstallPageCode() async throws {
+        let clients = MemoryTailscaleClientStore(.init(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: ["tag:rd-phone"]))
+        let h = try makeHarness("routes", tokens: clients)
         await h.model.start()
         h.core.emit(.state(CoreStatus(backendState: .running, fqdn: "rd-mac-ab12cd34.example.ts.net",
                                       certDomains: ["rd-mac-ab12cd34.example.ts.net"], tlsReady: true, listening: true)))
         #expect(await eventually { h.model.status?.fqdn == "rd-mac-ab12cd34.example.ts.net" })
 
-        // 형식이 틀리면 Tailscale에 묻지 않는다.
-        await h.model.saveTailscaleClient(id: "kClient", secret: "not-a-secret", tags: "tag:rd-phone")
-        await h.model.saveTailscaleClient(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: "rd-phone")
-        #expect(!h.model.hasTailscaleClient && fake.paths().isEmpty)
+        await h.model.beginPairing(.app)
+        #expect(h.model.pairingState.isOfferOpen && h.model.pairingLink != nil)
 
-        // 다른 tailnet의 클라이언트는 저장하지 않는다.
-        fake.lock.withLock { fake.devices = ["someone-else.other.ts.net"] }
-        await h.model.saveTailscaleClient(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: "tag:rd-phone")
-        #expect(!h.model.hasTailscaleClient && clients.load() == nil)
-        #expect(h.model.tokenCheck?.message.contains("rd-mac-ab12cd34.example.ts.net") == true)
-        let tokenBody = String(decoding: try #require(fake.lock.withLock { fake.requests.first?.httpBody }), as: UTF8.self)
-        #expect(tokenBody.contains("grant_type=client_credentials") && tokenBody.contains("client_id=kClient"))
+        // 앱이 없는 iPhone으로 바꾸면 QR을 닫고 코드만 연다.
+        await h.model.beginPairing(.browser)
+        #expect(h.core.calls.last == .openPairing(300) && h.core.calls.contains(.closeOffer))
+        #expect(h.model.pairingCode?.displayCode == "K7M2-9QXD" && h.model.pairingLink == nil)
+        #expect(h.model.installPageLink?.absoluteString == "https://rd-mac-ab12cd34.example.ts.net/#code=K7M29QXD")
 
-        // 기기 읽기 권한이 없으면 확인을 건너뛰고 저장한다.
-        fake.lock.withLock { fake.devicesStatus = 403 }
-        await h.model.saveTailscaleClient(id: " kClient ", secret: "tskey-client-kClient-SECRET\n", tags: "tag:rd-phone, tag:dev")
-        #expect(h.model.hasTailscaleClient && h.model.tailscaleTags == ["tag:rd-phone", "tag:dev"])
-        #expect(clients.load() == .init(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: ["tag:rd-phone", "tag:dev"]))
-        #expect(h.model.tokenCheck?.ok == true && h.model.tokenCheck?.message.contains("확인하지 못했습니다") == true)
+        // 다시 앱으로: 코드는 화면에서 내린다(코어는 제안을 열 때 코드를 닫는다).
+        await h.model.beginPairing(.app)
+        #expect(h.model.pairingCode == nil && h.model.pairingLink != nil)
 
-        await h.model.beginPairing()
-        #expect(h.model.pairingKeyState == .ready(key: "tskey-auth-kFake1CNTRL-secret", expires: Date(timeIntervalSince1970: 1_794_478_500)))
-        #expect(h.model.pairingLink?.absoluteString == "remotedebug://pair?host=rd-mac-ab12cd34.example.ts.net&code=K7M29QXD&key=tskey-auth-kFake1CNTRL-secret")
-        let keyRequest = try #require(fake.lock.withLock { fake.requests.last })
-        #expect(keyRequest.value(forHTTPHeaderField: "Authorization") == "Bearer tskey-api-oauthAccess")
-        let body = try #require(keyRequest.httpBody.flatMap { try JSONSerialization.jsonObject(with: $0) as? [String: Any] })
-        let create = ((body["capabilities"] as? [String: Any])?["devices"] as? [String: Any])?["create"] as? [String: Any]
-        #expect(create?["reusable"] as? Bool == false && create?["preauthorized"] as? Bool == true)
-        #expect(create?["tags"] as? [String] == ["tag:rd-phone", "tag:dev"])
-        #expect(body["expirySeconds"] as? Int == 900)
-        // 저장할 때 받은 토큰을 다시 쓴다(새 토큰을 받지 않는다).
-        #expect(fake.paths().filter { $0.hasSuffix("/oauth/token") }.count == 2)
-
-        // 에이전트 응답에는 키를 넣지 않는다.
+        // 에이전트는 코드만 받는다: 제안의 링크·키를 만들지 않고 돌려주지도 않는다.
+        let offersBefore = h.core.calls.filter { if case .openOffer = $0 { true } else { false } }.count
         guard case .success(let info) = await h.model.openPairingForAgent() else { Issue.record("코드를 열지 못했다"); return }
-        #expect(info.link?.contains("key=") == false)
+        #expect(h.core.calls.filter { if case .openOffer = $0 { true } else { false } }.count == offersBefore)
+        let json = String(decoding: try JSONEncoder().encode(info), as: UTF8.self)
+        #expect(info.code == "K7M2-9QXD" && !json.contains("#v=1") && !json.contains("tskey"))
+    }
 
-        // 키를 만들지 못해도 코드와 키 없는 링크는 쓴다.
-        fake.lock.withLock { fake.keyStatus = 403 }
-        await h.model.beginPairing()
-        #expect(h.model.pairingLink?.absoluteString.contains("key=") == false)
-        #expect(h.model.pairingKeyState == .failed(TailscaleAPI.Failure.forbidden.message))
-        #expect(h.model.tokenCheck?.ok == false)
+    @Test func appQRRequestShowsItsConfirmationCodeOnlyOnScreen() async throws {
+        let h = try makeHarness("offer-request")
+        await h.model.start()
+        await h.model.beginPairing(.app)
+        var request = pairRequest("pr_qr")
+        request.confirmationCode = "042917"
+        receive(h, request)
+        #expect(h.model.pairingState == .requestReceived(requestId: "pr_qr"))
+        #expect(h.model.pairingLink == nil && h.model.pairingInvite == nil)
+        #expect(h.model.pendingPairRequests.first?.confirmationCode == "042917")
 
-        h.model.clearTailscaleClient()
-        #expect(!h.model.hasTailscaleClient && clients.load() == nil && h.model.pairingKeyState == .off)
+        // 에이전트 목록과 사건 JSON에는 확인 숫자가 없다.
+        let agent = String(decoding: try JSONEncoder().encode(h.model.pairRequestsForAgent), as: UTF8.self)
+        let event = String(decoding: try JSONEncoder().encode(request), as: UTF8.self)
+        #expect(!agent.contains("042917") && !event.contains("042917"))
+
+        await h.model.approve("pr_qr")
+        #expect(h.core.calls.contains(.decide("pr_qr", true)))
+        #expect(h.model.devices == [sampleDevice(1)])
     }
 
     @Test func tagParsing() {
@@ -266,11 +266,12 @@ struct HostModelTests {
         h.core.emit(.state(CoreStatus(backendState: .running, fqdn: "rd-mac-ab12cd34.example.ts.net",
                                       certDomains: ["rd-mac-ab12cd34.example.ts.net"], tlsReady: true)))
         #expect(await eventually { h.model.status?.fqdn == "rd-mac-ab12cd34.example.ts.net" })
-        #expect(h.model.pairingLink?.absoluteString == "remotedebug://pair?host=rd-mac-ab12cd34.example.ts.net&code=K7M29QXD")
+        // 설치 페이지 코드에는 앱용 QR이 없다.
+        #expect(h.model.pairingLink == nil)
         h.core.emit(.pairRequest(pairRequest("pr_1")))
         #expect(await eventually { h.model.pendingPairRequests.map(\.requestId) == ["pr_1"] })
         // 코드는 한 번만 쓸 수 있다: 요청이 오면 코드·링크를 내린다.
-        #expect(h.model.pairingLink == nil)
+        #expect(h.model.pairingCode == nil && h.model.installPageLink == nil)
         #expect(h.model.pairingState == .requestReceived(requestId: "pr_1"))
 
         await h.model.approve("pr_1")

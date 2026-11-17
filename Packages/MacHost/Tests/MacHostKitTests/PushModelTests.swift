@@ -35,7 +35,6 @@ struct PushModelTests {
         let core = FakeHostCore()
         let model = HostModel(core: core, paths: paths, inspector: FakeInspector(), packager: FakePackager(), bookmarks: FakeBookmarks(),
                               watcherOptions: .init(useFileEvents: false), id8: "ab12cd34", hostDisplayName: "작업용 Mac", appVersion: "0.1.0",
-                              tailscaleAPI: TailscaleAPI { _ in throw URLError(.notConnectedToInternet) },
                               tailscaleClients: MemoryTailscaleClientStore(), feedbackKeys: MemoryFeedbackKeyStore())
         let defaults = InMemoryDefaults()
         let keys = MemoryAPNsKeyStore()

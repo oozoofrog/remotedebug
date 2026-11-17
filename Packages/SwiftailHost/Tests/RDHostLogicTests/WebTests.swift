@@ -68,10 +68,10 @@ struct WebTests {
     func 경로와머리() async throws {
         let fixture = try HostFixture(paired: false)
         let originalHashes = [
-            "index.html": "2270658592d617dc6a7deeebc46583b8a1a7829630957105ebd40325366f5bea",
+            "index.html": "d4e20274d8b44854382057467bb5a733e4e946daa327688038495984bfbbaaf5",
             "install.css": "3b98a74fffdb3fe728b3bc3e6d1e952b88a1e4007d29b14ec6e24675cb352b42",
             "install.js": "d4a26ba1ed81d308f39b6cf3ac739fcc19a43e447c87113fcbc9acd8aa1f3ee5",
-            "logic.js": "b080f4d9c05d4f8c5b9bb0fb9ba0ff8ab4905643b1b2eb92ed24744bef21ad9a"
+            "logic.js": "025459861e088fef4c948cacc8ce553f02c1c9b0a87b02a7f41e983202c83b00"
         ]
         let source = HostLogic.resourceRoot.appendingPathComponent("web")
         for (path, file, type) in routes {

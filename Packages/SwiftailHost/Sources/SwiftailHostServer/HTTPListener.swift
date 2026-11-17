@@ -197,7 +197,8 @@ public final class HTTPListener: Sendable {
     }
 
     /// Swiftail의 신원 → 로직의 상대. 이름은 예전 Go 코어의 `whois`와 같다: MagicDNS 이름의 첫 레이블, 없으면 표시용 이름.
-    static func peer(_ identity: PeerIdentity) -> HostPeer {
+    /// 페어링(`PairingHost`의 승인 요청)도 같은 규칙으로 허용 목록 항목을 만든다.
+    public static func peer(_ identity: PeerIdentity) -> HostPeer {
         let first = identity.name.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? ""
         return HostPeer(stableID: identity.stableID, nodeName: first.isEmpty ? identity.computedName : first,
                         loginName: identity.loginName)

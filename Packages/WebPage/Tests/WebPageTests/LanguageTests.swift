@@ -208,4 +208,27 @@ import Testing
         #expect(js.eval("labelled.attrs['aria-label']").toString() == (try Self.translation("en", "다시 시도")))
         #expect(js.eval("labelled.attrs['data-x']").toString() == "다시 시도")
     }
+
+    /// 페어링 화면은 앱이 아직 없는 iPhone의 동선이다: 코드를 Mac 앱의 어디에서 얻는지, 설치한 뒤 앱으로 Mac의 QR을
+    /// 읽으라는 다음 행동이 페이지에 있고, 지원하는 언어마다 번역이 있다.
+    @Test func pairingTextGuidesTheBrowserRoute() throws {
+        let page = try String(contentsOf: JSHarness.webDirectory.appending(path: "index.html"), encoding: .utf8)
+        let table = try Self.loadSource().table
+        let keys = [
+            "Mac 앱의 ‘iPhone 페어링…’에서 ‘앱이 아직 없는 iPhone’을 골라 나온 코드를 입력하세요. Mac에서 승인하면 빌드 목록이 열립니다.",
+            "RemoteDebug를 설치한 뒤 앱을 열고, Mac 앱의 ‘iPhone 페어링…’에서 ‘RemoteDebug 앱이 있는 iPhone’을 골라 나온 QR을 앱으로 읽으세요.",
+        ]
+        for key in keys {
+            #expect(page.contains(key), "페이지에 없다: \(key)")
+            for lang in ["en", "ja", "zh-Hans", "zh-Hant"] {
+                #expect((table[lang]?[key] ?? "").isEmpty == false, "\(lang) 번역이 없다: \(key)")
+            }
+        }
+        #expect(!page.contains("Mac 앱의 페어링 화면에 표시된 코드"), "어느 화면인지 밝히지 않던 예전 문구")
+
+        let js = try JSHarness(withPage: true)
+        js.eval("RDLogic.setLanguage('ja')")
+        #expect(js.eval("RDLogic.t(\(String(decoding: try JSONEncoder().encode(keys[1]), as: UTF8.self)))").toString()
+                == table["ja"]?[keys[1]])
+    }
 }

@@ -40,6 +40,15 @@ final class PreviewCore: HostCore {
     func setDevices(_ devices: [DeviceEntry]) async throws {}
     func openPairing(ttlSeconds: Int) async throws -> PairingCode { setup.withLock { $0.pairing } }
 
+    /// 미리보기 QR. 링크는 실제 제안이 아니다(비밀 자리는 고정 글자).
+    func openPairingOffer(_ request: PairingInviteRequest) async throws -> PairingInvite {
+        let link = URL(string: "remotedebug://pair#v=1&h=rd-mac-preview.example.ts.net&p=4747&s=PREVIEWPREVIEWPREVIEWPREVIEWPREVIEWPREVIEW1&e=1794478500")!
+        return PairingInvite(link: link, qrImage: QRCodeView.makeImage(link.absoluteString),
+                             expiresAt: Date().addingTimeInterval(Double(request.lifetimeSeconds) - 28),
+                             authKey: request.oauthClient == nil ? .none : .included(expires: Date().addingTimeInterval(272)),
+                             tailnetLockEnabled: false)
+    }
+
     func decidePairing(requestID: String, allow: Bool) async throws -> DeviceEntry? {
         allow ? DeviceEntry(id: "d_preview2", name: "iPhone", nodeStableId: "nPREVIEW2", nodeName: "rd-phone-preview",
                             loginName: "", pairedAt: Date()) : nil
@@ -201,13 +210,14 @@ public enum PreviewFactory {
         return model
     }
 
-    /// 시나리오의 모델에 페어링 코드를 연다(페어링 시트 미리보기). 공유 중 시나리오는 허용 대기 요청이 먼저 도착한 뒤 연다.
-    public static func makePairingModel(_ scenario: PreviewScenario, root: URL? = nil) async -> HostModel {
+    /// 시나리오의 모델에 그 동선의 페어링을 연다(페어링 시트 미리보기). 공유 중 시나리오는 허용 대기 요청이 먼저 도착한 뒤 연다.
+    public static func makePairingModel(_ scenario: PreviewScenario, route: HostModel.PairingRoute = .browser,
+                                        root: URL? = nil) async -> HostModel {
         let model = await makeModel(scenario, root: root)
         if scenario == .sharing {
             for _ in 0..<300 where model.pendingPairRequests.isEmpty { try? await Task.sleep(for: .milliseconds(10)) }
         }
-        await model.beginPairing()
+        await model.beginPairing(route)
         return model
     }
 
@@ -261,21 +271,23 @@ public struct PreviewHost: View {
 /// 시나리오의 모델로 페어링 시트를 그린다(코드가 열린 상태).
 public struct PairingSheetPreviewHost: View {
     let scenario: PreviewScenario
+    let route: HostModel.PairingRoute?
     @State private var model: HostModel?
 
-    public init(scenario: PreviewScenario) {
+    public init(scenario: PreviewScenario, route: HostModel.PairingRoute? = .browser) {
         self.scenario = scenario
+        self.route = route
     }
 
     public var body: some View {
         if let model {
-            PairingSheet()
+            PairingSheet(route: route)
                 .environment(model)
                 .environment(AuthKeyDraft())
         } else {
             ProgressView()
                 .frame(width: 520, height: 400)
-                .task { model = await PreviewFactory.makePairingModel(scenario) }
+                .task { model = await PreviewFactory.makePairingModel(scenario, route: route ?? .browser) }
         }
     }
 }
@@ -296,8 +308,16 @@ public struct PairingSheetPreviewHost: View {
     PreviewHost(scenario: .sharing, selection: .apps)
 }
 
-#Preview("③ 공유 중: 페어링 코드·Safari 설치 페이지") {
-    PairingSheetPreviewHost(scenario: .sharing)
+#Preview("③ 공유 중: 페어링 동선 고르기") {
+    PairingSheetPreviewHost(scenario: .empty, route: nil)
+}
+
+#Preview("③ 공유 중: 앱이 있는 iPhone(QR)") {
+    PairingSheetPreviewHost(scenario: .sharing, route: .app)
+}
+
+#Preview("③ 공유 중: 앱이 없는 iPhone(설치 페이지·코드)") {
+    PairingSheetPreviewHost(scenario: .sharing, route: .browser)
 }
 
 #Preview("③ 공유 중: 네트워크·설치 페이지 주소") {

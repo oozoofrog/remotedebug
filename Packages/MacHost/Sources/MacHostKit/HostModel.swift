@@ -18,12 +18,22 @@ public final class HostModel {
 
     /// 페어링 시트가 보여 줄 단계.
     public enum PairingState: Sendable, Hashable {
-        /// 열린 코드가 없다(쓰였거나, 만료됐거나, 폐기됐거나, 아직 열지 않았다).
+        /// 열린 코드·QR이 없다(쓰였거나, 만료됐거나, 폐기됐거나, 아직 열지 않았다).
         case idle
-        /// 코드를 보여 주는 중.
+        /// 설치 페이지용 코드를 보여 주는 중(앱이 없는 iPhone).
         case open(PairingCode)
-        /// 코드가 쓰여 요청이 왔다(코드는 한 번만 쓸 수 있어 더 보여 주지 않는다). 승인·거절을 기다린다.
+        /// 앱용 QR을 보여 주는 중(앱이 있는 iPhone). 값은 `pairingInvite`에 있다.
+        case offerOpen(expiresAt: Date)
+        /// 코드나 QR이 쓰여 요청이 왔다(한 번만 쓸 수 있어 더 보여 주지 않는다). 승인·거절을 기다린다.
         case requestReceived(requestId: String)
+    }
+
+    /// 페어링 동선. 사용자가 iPhone의 상황으로 고른다.
+    public enum PairingRoute: String, Sendable, Hashable, CaseIterable {
+        /// RemoteDebug 앱이 있는 iPhone: Mac의 QR을 앱으로 읽고 확인 숫자를 맞춘다.
+        case app
+        /// 앱이 아직 없는 iPhone: Safari로 설치 페이지를 열고 코드를 넣는다.
+        case browser
     }
 
     // MARK: 상태
@@ -54,7 +64,8 @@ public final class HostModel {
         /// Tailscale OAuth 클라이언트가 없다.
         case off
         case creating
-        case ready(key: String, expires: Date?)
+        /// QR에 키가 들어 있다. 키는 이 시각에 끝난다.
+        case ready(expires: Date)
         case failed(String)
     }
 
@@ -65,6 +76,10 @@ public final class HostModel {
     }
 
     public private(set) var pairingKeyState: PairingKeyState = .off
+    /// 앱용 QR(제안). 열려 있을 때만 있다. 링크와 그림은 비밀이다.
+    public private(set) var pairingInvite: PairingInvite?
+    /// QR을 여는 중(키를 만드는 시간 포함).
+    public private(set) var isOpeningInvite = false
     /// 키체인에 Tailscale OAuth 클라이언트가 있다.
     public private(set) var hasTailscaleClient = false
     /// 저장된 클라이언트가 키에 붙이는 태그.
@@ -112,12 +127,9 @@ public final class HostModel {
     @ObservationIgnored private let openURL: @MainActor (URL) -> Void
     @ObservationIgnored private let now: @Sendable () -> Date
     @ObservationIgnored private let deviceStore: JSONFile<StoredDeviceList>
-    @ObservationIgnored private let tailscaleAPI: TailscaleAPI
     @ObservationIgnored private let tailscaleClients: any TailscaleClientStoring
     @ObservationIgnored private let feedbackKeys: any FeedbackKeyStoring
     @ObservationIgnored private let advertiser: (any DirectAdvertising)?
-    /// OAuth 클라이언트로 받은 API 토큰(1시간). 메모리에만 둔다.
-    @ObservationIgnored private var tailscaleAccess: TailscaleAPI.AccessToken?
 
     /// 저장된 빌드 목록을 읽었다. 한 번 읽으면 다시 읽지 않는다(가져오는 중인 작업 폴더를 건드리지 않는다).
     @ObservationIgnored private var libraryLoaded = false
@@ -177,7 +189,6 @@ public final class HostModel {
         port: Int = 443,
         keepPerBundle: Int = 3,
         openURL: @escaping @MainActor (URL) -> Void = { NSWorkspace.shared.open($0) },
-        tailscaleAPI: TailscaleAPI = TailscaleAPI(),
         tailscaleClients: any TailscaleClientStoring = KeychainTailscaleClientStore(),
         feedbackKeys: any FeedbackKeyStoring = KeychainFeedbackKeyStore(),
         advertiser: (any DirectAdvertising)? = nil,
@@ -197,7 +208,6 @@ public final class HostModel {
         self.openURL = openURL
         self.now = now
         self.deviceStore = JSONFile(url: paths.devicesFile)
-        self.tailscaleAPI = tailscaleAPI
         self.tailscaleClients = tailscaleClients
         self.feedbackKeys = feedbackKeys
         self.advertiser = advertiser
@@ -259,11 +269,13 @@ public final class HostModel {
         return code
     }
 
-    /// iPhone에 보여 줄 페어링 링크(QR·복사). 코드가 없거나 만료·사용·폐기됐거나 fqdn을 모르면 nil.
-    public var pairingLink: URL? {
-        guard let code = pairingCode else { return nil }
-        if case .ready(let key, _) = pairingKeyState { return code.link(fqdn: status?.fqdn ?? "", authKey: key) }
-        return code.link(fqdn: status?.fqdn ?? "")
+    /// 앱용 QR의 링크(`remotedebug://pair#v=1&h=…`). 열려 있고 만료되지 않았을 때만. 비밀이다(화면에만 쓴다).
+    public var pairingLink: URL? { openInvite?.link }
+
+    /// 열려 있고 만료되지 않은 앱용 QR.
+    public var openInvite: PairingInvite? {
+        guard case .offerOpen = pairingState, let invite = pairingInvite, invite.expiresAt > now() else { return nil }
+        return invite
     }
 
     /// 설치 웹 페이지 주소(코드 없음). 코어의 `BaseURL`과 같은 규칙: TLS면 `https://<fqdn>/`(포트 443이 아니면 포트를 붙인다),
@@ -527,6 +539,7 @@ public final class HostModel {
         isRunning = false
         setStatus(nil)
         pairingState = .idle
+        pairingInvite = nil
         pairRequests = []
         decidingRequestIDs = []
         pairingError = nil
@@ -698,8 +711,9 @@ public final class HostModel {
             pairRequests.removeAll { $0.requestId == e.requestId }
             rememberName(e.deviceName, for: e.requestId)
             if e.expiresAt > now() { pairRequests.append(e) }
-            // 코드는 한 번만 쓸 수 있다(코어가 이미 지웠다). 더 보여 주지 않고 승인 단계로 넘어간다.
+            // 코드·QR은 한 번만 쓸 수 있다(코어가 이미 닫았다). 더 보여 주지 않고 승인 단계로 넘어간다.
             pairingState = .requestReceived(requestId: e.requestId)
+            pairingInvite = nil
         case .pairDecided(let e):
             let name = requestNames[e.requestId] ?? pairRequests.first { $0.requestId == e.requestId }?.deviceName
             pairRequests.removeAll { $0.requestId == e.requestId }
@@ -771,6 +785,9 @@ public final class HostModel {
         switch pairingState {
         case .open(let code) where code.expiresAt <= t:
             pairingState = .idle
+        case .offerOpen(let expiresAt) where expiresAt <= t:
+            pairingState = .idle
+            pairingInvite = nil
         case .requestReceived(let id) where !pairRequests.contains(where: { $0.requestId == id }) && !decidingRequestIDs.contains(id):
             pairingState = .idle
         default:
@@ -793,57 +810,78 @@ public final class HostModel {
 
     // MARK: 페어링·기기
 
-    /// 페어링 코드를 연다(5분). 이미 열린 코드는 코어가 새 코드로 바꾼다.
+    /// 고른 동선으로 페어링을 연다. 앱이 있는 iPhone은 QR(`beginAppPairing`), 앱이 없는 iPhone은 설치 페이지용 코드
+    /// (`beginPairing`). 하나를 열면 다른 하나는 닫는다: 페어링은 한 번에 하나다.
+    public func beginPairing(_ route: PairingRoute) async {
+        switch route {
+        case .app: await beginAppPairing()
+        case .browser: await beginPairing()
+        }
+    }
+
+    /// 설치 페이지용 코드를 연다(5분, 앱이 아직 없는 iPhone). 이미 열린 코드는 코어가 새 코드로 바꾸고, 열린 QR은 닫는다.
     public func beginPairing() async {
-        guard isRunning else {
-            lastError = String(localized: "공유를 시작해야 페어링할 수 있습니다.")
-            return
-        }
-        if case .unavailable(let reason) = pairingAvailability {
-            lastError = reason
-            return
-        }
-        pairingError = nil
+        guard canOpenPairing() else { return }
+        await closeInviteIfOpen()
         do {
             let code = try await core.openPairing(ttlSeconds: Self.pairingTTLSeconds)
             pairingFailures = 0
             pairingState = .open(code)
-            await createPairingKey(for: code)
         } catch {
             notePairingFailure(String(localized: "페어링 코드를 만들지 못했습니다: \(Self.message(for: error))"))
         }
     }
 
-    /// OAuth 클라이언트가 있으면 이 코드의 QR에 넣을 1회용 Tailscale 키를 만든다. 실패해도 코드는 그대로 쓴다.
-    private func createPairingKey(for code: PairingCode) async {
-        guard let client = tailscaleClients.load() else {
-            pairingKeyState = .off
-            return
-        }
-        pairingKeyState = .creating
+    /// 앱용 QR을 연다(5분, RemoteDebug 앱이 있는 iPhone). OAuth 클라이언트가 있으면 코어가 1회용 Tailscale 키를 만들어
+    /// QR에 싣는다. 키를 만들지 못하면 키 없는 QR을 낸다. 열린 설치 페이지 코드는 닫는다.
+    public func beginAppPairing() async {
+        guard canOpenPairing(), !isOpeningInvite else { return }
+        isOpeningInvite = true
+        defer { isOpeningInvite = false }
+        if case .open = pairingState { pairingState = .idle }
+        pairingInvite = nil
+        let client = tailscaleClients.load()
+        pairingKeyState = client == nil ? .off : .creating
         do {
-            let token = try await tailscaleToken(for: client)
-            let key = try await tailscaleAPI.createAuthKey(token: token, tags: client.tags)
-            guard pairingState == .open(code) else { return }
-            pairingKeyState = .ready(key: key.key, expires: key.expires)
+            let invite = try await core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: Self.pairingTTLSeconds, oauthClient: client))
+            pairingInvite = invite
+            pairingState = .offerOpen(expiresAt: invite.expiresAt)
+            switch invite.authKey {
+            case .none: pairingKeyState = .off
+            case .included(let expires): pairingKeyState = .ready(expires: expires)
+            case .failed(let failure):
+                pairingKeyState = .failed(failure.message)
+                if failure != .network && failure != .cancelled { tokenCheck = TokenCheck(ok: false, message: failure.message) }
+            }
         } catch {
-            tailscaleAccess = nil
-            guard pairingState == .open(code) else { return }
-            pairingKeyState = .failed(error.message)
-            if error != .network { tokenCheck = TokenCheck(ok: false, message: error.message) }
+            pairingKeyState = .off
+            notePairingFailure(String(localized: "페어링 QR을 만들지 못했습니다: \(Self.message(for: error))"))
         }
     }
 
-    /// 아직 쓸 수 있는 API 토큰이 있으면 그것을, 아니면 새로 받는다.
-    private func tailscaleToken(for client: TailscaleAPI.OAuthClient) async throws(TailscaleAPI.Failure) -> String {
-        if let access = tailscaleAccess, access.expires > now() { return access.token }
-        let access = try await tailscaleAPI.accessToken(for: client, now: now())
-        tailscaleAccess = access
-        return access.token
+    /// 공유 중이고 iPhone이 이 Mac에 닿을 수 있을 때만 연다. 아니면 그 이유를 남긴다.
+    private func canOpenPairing() -> Bool {
+        guard isRunning else {
+            lastError = String(localized: "공유를 시작해야 페어링할 수 있습니다.")
+            return false
+        }
+        if case .unavailable(let reason) = pairingAvailability {
+            lastError = reason
+            return false
+        }
+        pairingError = nil
+        return true
     }
 
-    /// OAuth 클라이언트를 확인하고 키체인에 저장한다. 클라이언트에 기기 읽기 권한이 있고 공유 중이면
-    /// 이 Mac이 그 tailnet에 있는지도 본다(다른 tailnet의 키로는 iPhone이 이 Mac에 닿지 못한다).
+    private func closeInviteIfOpen() async {
+        guard pairingInvite != nil || pairingState.isOfferOpen else { return }
+        pairingInvite = nil
+        if pairingState.isOfferOpen { pairingState = .idle }
+        await core.closePairingOffer()
+    }
+
+    /// OAuth 클라이언트의 형식을 확인하고 키체인에 저장한다. 관리 API에는 보내지 않는다: 클라이언트가 실제로 받아들여지는지는
+    /// 다음 QR을 열 때 키를 만들며 안다(실패하면 QR 옆과 이 설정에 그 까닭이 나온다).
     public func saveTailscaleClient(id: String, secret: String, tags tagText: String) async {
         guard let tags = TailscaleAPI.parseTags(tagText) else {
             tokenCheck = TokenCheck(ok: false, message: TailscaleAPI.Failure.badTags.message)
@@ -851,30 +889,9 @@ public final class HostModel {
         }
         let client = TailscaleAPI.OAuthClient(id: id.trimmingCharacters(in: .whitespacesAndNewlines),
                                               secret: secret.trimmingCharacters(in: .whitespacesAndNewlines), tags: tags)
-        isCheckingToken = true
-        defer { isCheckingToken = false }
-        let access: TailscaleAPI.AccessToken
-        do {
-            access = try await tailscaleAPI.accessToken(for: client, now: now())
-        } catch {
-            tokenCheck = TokenCheck(ok: false, message: error.message)
+        if let failure = core.checkOAuthClient(client) {
+            tokenCheck = TokenCheck(ok: false, message: failure.message)
             return
-        }
-        var note = ""
-        if let fqdn = status?.fqdn, !fqdn.isEmpty {
-            let mine = TailscaleAPI.normalized(fqdn)
-            do {
-                let devices = try await tailscaleAPI.devices(token: access.token)
-                guard devices.contains(where: { $0.name == mine }) else {
-                    tokenCheck = TokenCheck(ok: false, message: String(localized: "이 OAuth 클라이언트의 tailnet에 이 Mac(\(mine))이 없습니다. Mac이 로그인한 tailnet에서 만든 클라이언트를 넣으세요. 저장하지 않았습니다."))
-                    return
-                }
-            } catch .forbidden {
-                note = String(localized: " 기기 읽기 권한이 없어 이 Mac이 같은 tailnet인지는 확인하지 못했습니다.")
-            } catch {
-                tokenCheck = TokenCheck(ok: false, message: error.message)
-                return
-            }
         }
         do {
             try tailscaleClients.save(client)
@@ -882,28 +899,26 @@ public final class HostModel {
             tokenCheck = TokenCheck(ok: false, message: String(localized: "OAuth 클라이언트를 키체인에 저장하지 못했습니다: \(Self.message(for: error))"))
             return
         }
-        tailscaleAccess = access
         hasTailscaleClient = true
         tailscaleTags = tags
-        tokenCheck = TokenCheck(ok: true, message: String(localized: "저장했습니다. 이제 페어링 QR에 1회용 Tailscale 키(\(tags.joined(separator: ", ")))가 들어가 iPhone은 로그인 없이 연결됩니다.") + note)
+        tokenCheck = TokenCheck(ok: true, message: String(localized: "저장했습니다. 다음 페어링 QR부터 1회용 Tailscale 키(\(tags.joined(separator: ", ")))가 들어갑니다."))
     }
 
     public func clearTailscaleClient() {
         tailscaleClients.clear()
-        tailscaleAccess = nil
         hasTailscaleClient = false
         tailscaleTags = []
         tokenCheck = nil
         pairingKeyState = .off
     }
 
-    /// 에이전트용: 코드를 열고 iPhone에 넘길 링크를 돌려준다. 허용은 Mac 화면에서 한다.
+    /// 에이전트용: 앱이 아직 없는 iPhone의 설치 페이지에 넣을 코드를 연다. 허용은 Mac 화면에서 한다.
+    /// 앱용 QR(제안의 링크·비밀)·Tailscale 키는 만들지도 돌려주지도 않는다(에이전트 응답은 대화 기록에 남는다).
     public func openPairingForAgent() async -> Result<ProjectsModel.PairingInfo, ProjectsModel.PairingFailure> {
         await beginPairing()
         guard let code = pairingCode else {
             return .failure(.init(pairingError ?? lastError ?? String(localized: "페어링 코드를 만들지 못했습니다.")))
         }
-        // 에이전트 응답은 대화 기록에 남으므로 Tailscale 키는 넣지 않는다.
         return .success(.init(code: code.displayCode, link: code.link(fqdn: status?.fqdn ?? "")?.absoluteString,
                               installPage: installPageLink?.absoluteString, expiresAt: code.expiresAt))
     }
@@ -1486,5 +1501,12 @@ extension HostModel {
         crashLogs.receive(DeviceCrashEvent(deviceId: "", deviceName: String(localized: "메일 첨부"), nodeName: "",
                                            report: CrashReport(kind: .feedback, name: name, bundleId: "", appVersion: "", crashedAt: modified, text: text, image: image)))
         return nil
+    }
+}
+
+extension HostModel.PairingState {
+    var isOfferOpen: Bool {
+        if case .offerOpen = self { return true }
+        return false
     }
 }

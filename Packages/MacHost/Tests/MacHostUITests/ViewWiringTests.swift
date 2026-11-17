@@ -277,7 +277,7 @@ extension ScreenTests {
         model.handle(.state(CoreStatus(backendState: .running, hostname: "h", fqdn: "h.example.ts.net",
                                        certDomains: ["h.example.ts.net"], tlsReady: true, listening: true)))
         core.failPairing.withLock { $0 = true }
-        let window = host(PairingSheet().environment(model).environment(AuthKeyDraft()))
+        let window = host(PairingSheet(route: .browser).environment(model).environment(AuthKeyDraft()))
         defer { window.close() }
         let view = try root(window)
         let shown = try await until { AXTree.texts(in: view).contains { $0.contains("페어링 코드를 만들지 못했습니다") } }

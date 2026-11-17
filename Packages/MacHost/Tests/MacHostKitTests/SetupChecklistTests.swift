@@ -20,9 +20,9 @@ import Testing
         let needPhone = SetupChecklist.make(guidance: ready, fqdn: "rd-mac-1.t.ts.net", devices: 0, builds: 2)
         #expect(needPhone.items.map(\.state) == [.done, .done, .current, .done])
         #expect(needPhone.doneCount == 3)
-        // iPhone 연결은 설치 → VPN·로그인 → 페어링 허용의 하위 단계로 나뉜다.
+        // iPhone 연결은 설치 → VPN·로그인 → QR 페어링 허용(→ 케이블 없을 때의 설치 페이지 동선)의 하위 단계로 나뉜다.
         let actions = needPhone.current.map { item in item.substeps.map { $0.action } } ?? []
-        #expect(actions == [.installPhoneApp, nil, .pair])
+        #expect(actions == [.installPhoneApp, nil, .pair, nil])
         let others = needPhone.items.filter { $0.step != .iphone }
         #expect(others.allSatisfy { $0.substeps.isEmpty })
 

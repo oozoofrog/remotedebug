@@ -84,7 +84,7 @@ public struct AgentMCPServer: Sendable {
 
     static var tools: [[String: Any]] { [
         tool("remotedebug_status", "RemoteDebug Mac 앱의 상태: 공유 중인지, iPhone용 설치 페이지 주소, 연결한 프로젝트 목록.", path: false, scheme: false),
-        tool("remotedebug_pairing_code", "iPhone 페어링 코드를 새로 연다(5분). iPhone RemoteDebug 앱을 바로 여는 remotedebug:// 링크와 Safari용 설치 페이지 링크를 돌려준다. iPhone이 요청하면 허용은 Mac 화면에서 사용자가 누른다.", path: false, scheme: false),
+        tool("remotedebug_pairing_code", "RemoteDebug 앱이 아직 없는 iPhone용: Safari 설치 페이지에 넣을 8자 페어링 코드를 새로 연다(5분). 코드가 든 설치 페이지 링크(installPage)를 돌려준다. 사용자는 iPhone의 Tailscale 앱을 Mac과 같은 tailnet에 연결하고 그 링크를 Safari로 연 뒤, 페이지에서 RemoteDebug 앱을 설치한다. 앱이 이미 있는 iPhone은 이 코드를 쓰지 않는다: 사용자에게 Mac 앱의 'iPhone 페어링…'에서 'RemoteDebug 앱이 있는 iPhone'을 골라 QR로 페어링해 달라고 한다(그 QR은 에이전트에 주지 않는다). 허용은 Mac 화면에서 사용자가 누른다.", path: false, scheme: false),
         tool("remotedebug_pair_requests", "Mac의 허용을 기다리는 iPhone 페어링 요청 목록(요청 id, iPhone이 보낸 이름, tailnet 노드 이름, 로그인, 만료 시각). 요청은 2분 뒤 만료된다.", path: false, scheme: false),
         [
             "name": "remotedebug_pair_decide",
@@ -382,7 +382,7 @@ extension AgentScript {
 
         - `remotedebug_build`: `project_path`(프로젝트 폴더의 절대 경로), `scheme`(선택)
         - `remotedebug_schemes`: `project_path`
-        - `remotedebug_pairing_code`: iPhone 페어링 코드와 링크.
+        - `remotedebug_pairing_code`: RemoteDebug 앱이 아직 없는 iPhone용 설치 페이지 코드와 그 페이지 링크. 앱이 있는 iPhone은 사용자에게 Mac 앱의 'iPhone 페어링…' > 'RemoteDebug 앱이 있는 iPhone'의 QR로 페어링해 달라고 한다.
         - `remotedebug_pair_requests`, `remotedebug_pair_decide`: 허용을 기다리는 요청을 보고 거부할 수 있다. 허용은 할 수 없다: 사용자에게 RemoteDebug Mac 앱 화면에서 허용해 달라고 한다.
         - `remotedebug_device_logs`: iPhone 앱이 보낸 진단 로그. iPhone에서 설치·업데이트·연결이 안 될 때 먼저 본다.
         - `remotedebug_crash_logs`: iPhone이 보낸 크래시 기록과 사람이 앱에서 쓴 피드백(목록의 종류가 `피드백`). `id` 없이 부르면 목록, `id`를 주면 원문. 설치한 앱이 iPhone에서 죽는다고 하면 먼저 본다. 기록이 없으면 사용자에게 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 그 앱의 기록을 열고 공유 버튼으로 RemoteDebug에 넘겨 달라고 한다. RemoteDebug iPhone 앱 자신의 크래시는 앱을 다시 열면 자동으로 들어온다. 앱에 피드백 보내기 기능을 붙여 달라는 요청에는 저장소(https://github.com/oozoofrog/remotedebug)의 Swift 패키지 `RemoteDebugFeedback`(iOS 17 이상)을 앱 대상에 추가하고, 앱 시작 때 `RemoteDebugFeedback.start(.init(macHost:email:publicKeyBase64:))`, 피드백을 띄울 화면에 `.remoteDebugFeedback(isPresented:)`를 넣는다. Mac 주소와 공개키가 든 코드는 Mac 앱 앱 화면에서 그 앱 줄의 더 보기 메뉴 > "크래시·피드백 보내기 추가"에 있고, 받을 메일 주소는 사용자에게 묻는다. 패키지는 글, 화면 사진, 최근 로그를 Mac으로 바로 보내고, 닿지 않으면 메일로 보낸다. 메일에 붙어 온 `.afdiag` 파일은 Mac 앱의 크래시·피드백 화면에서 연다. 원문 파일은 `~/Library/Application Support/RemoteDebug/CrashLogs`에 있다.

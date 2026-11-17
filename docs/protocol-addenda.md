@@ -35,6 +35,8 @@
 
 목록에서 빠진 노드의 열린 세션은 `failed`가 된다(C.3).
 
+앱 QR 페어링(B.5)의 짝 목록은 허용 목록의 부분집합으로 맞춘다. `setDevices`마다 허용 목록에 없는 짝을 짝 목록에서 지운다(허용한 뒤 저장을 기다리는 짝은 둔다). 기기를 지우면 이렇게 짝 목록에서도 빠지고, 공유가 꺼졌을 때 지운 기기는 다음 시작의 첫 `setDevices`에서 빠진다. 허용 목록에만 있는 기기(설치 페이지 코드로 페어링한 기기, 앱 QR 동선 전에 페어링한 기기)는 그대로 쓴다. 다시 페어링하지 않아도 된다.
+
 ### A.5 상태(`CoreStatus`)
 
 `backendState`는 언제나 `Stopped`, `Starting`, `NeedsLogin`, `NeedsMachineAuth`, `Running`, `Error` 중 하나다.
@@ -114,6 +116,34 @@
 - 매니페스트 받기 횟수(5번)를 쓰지 않는다.
 - 세션 상태를 바꾸지 않고, IPA 만료 연장(600초)을 시작하지 않고, `session` 이벤트를 보내지 않는다.
 - `app.ipa`의 `HEAD`는 `Content-Length`와 `Accept-Ranges`를 준다.
+
+### B.5 앱 QR 페어링 (§2)
+
+RemoteDebug 앱이 있는 iPhone의 동선이다. 짝 맺기는 Swiftail `SwiftailPairing`(그 저장소의 페어링 계약 문서 `SwiftailPairing.md`)이 하고, 호스트는 그 결과를 허용 목록으로 옮긴다. REST 경로는 없다.
+
+- 페어링 포트: 호스트 노드가 tailnet TCP **4747**에서 짝 맺기 연결을 받는다(`PairingHost`, 노드가 돌 때만). 고정이라 tailnet 정책(ACL)에 적을 수 있다. iPhone 노드에서 호스트의 443과 4747로 가는 연결이 허용되어야 한다.
+- 제안: 호스트 화면이 "RemoteDebug 앱이 있는 iPhone"을 고르면 제안 하나를 연다(수명 300초, 한 번만 쓰임, 새로 열면 앞의 것은 못 씀). 링크는 `remotedebug://pair#v=1&h=<fqdn>&p=4747&s=<비밀 43자>&e=<만료 유닉스 초>[&k=<1회용 Tailscale 키>]`이고 화면은 이것을 QR(Swiftail `qrCode(base:)`)과 **페어링 링크 복사**로 보인다. 값은 모두 조각(`#` 뒤)에 있다. 링크·QR은 비밀이라 로그, 에이전트 응답, 활동 기록에 넣지 않는다.
+- 승인 요청: iPhone이 제안의 비밀을 증명하면 호스트는 `pair-request`(§10)를 낸다. `requestId`는 `pr_`로 시작하고, `deviceName`은 iPhone이 밝힌 이름(1~64바이트), `nodeName`·`loginName`은 연결의 노드 신원, 대기 시간은 120초다. Swift 값에만 `confirmationCode`(확인 숫자 6자리)가 있다. 승인 화면은 동선("RemoteDebug 앱의 QR로 요청")과 확인 숫자를 보이고, iPhone 화면의 숫자와 같을 때만 허용하라고 한다. 같은 OAuth 클라이언트의 키로 들어온 노드들은 로그인 이름이 같으므로 확인 숫자로 가린다.
+- 허용: `decidePairing(requestID:allow: true)`가 짝 맺기에 허용을 알리고, `PairingHost`가 그 노드를 짝 목록(`<저장 루트>/pairing/paired-peers.json`)에 저장하기를 5초까지 기다린다. 저장되면 설치 페이지 코드의 허용과 같은 결과를 낸다: 허용 목록 항목(`StableID` 기준, 같은 노드면 기기 id를 이어 씀), `device-added`, `pair-decided`(`approved`). 저장되지 않으면(iPhone이 끊음, 승인 순간 그 주소의 노드 신원이 바뀜, 저장 실패) 허용 목록에 넣지 않고 `pair-decided`(`expired`)와 `pair_incomplete` 오류를 낸다. iPhone은 거절로 끝난다.
+- 거절·끊김: 거절하면 `pair-decided`(`denied`). iPhone이 끊거나 120초가 지나면 그 요청은 곧 거절로 돌아가고 `pair-decided`(`expired`)다. 같은 요청에 다시 답하면 `bad_request`.
+- 공유를 멈추면 페어링 포트를 닫고 기다리던 요청은 `expired`로 끝낸다.
+- 짝이 된 앱은 허용 목록 인증으로 `GET /v1/info`를 불러 호스트 정보를 얻는다. 모양은 §4.2와 같다:
+
+```json
+{
+  "hostId": "h_4be0c7a1",
+  "hostName": "작업용 Mac",
+  "fqdn": "rd-mac-ab12cd34.example-tailnet.ts.net",
+  "protocol": 1,
+  "appVersion": "0.1.0",
+  "buildCount": 1,
+  "updatePage": "https://…/"
+}
+```
+
+  `updatePage`는 I.2대로 열렸을 때만 있다. `hostId`·`hostName`·`fqdn`은 §4.3 `approved` 응답의 `host`와 같은 값이다.
+- tailnet lock: lock이 켜진 tailnet에서 링크의 키로 처음 들어온 iPhone 노드는 서명 기기에서 서명될 때까지 호스트의 netmap에 없어 짝 맺기가 끝나지 않는다. 키를 실은 QR이면 화면에 "서명한 뒤 새 QR로 다시 페어링하세요"를 보인다. 서명된 뒤에는 이미 tailnet에 든 노드라 새 QR의 키를 쓰지 않는다.
+- 로그(`core.log`)에는 요약만 남긴다(QR을 엶과 키의 유무, 요청을 받음, 허용·거절·답 없이 끝남, 실패 종류). 비밀·키·확인 숫자·이름·주소는 남기지 않는다.
 
 ## C. 설치 세션 (§4.4)
 
@@ -388,16 +418,15 @@ Mac 앱이 `UpdatePageServing`(구현 `SwiftailUpdatePage`)으로 `UpdatePageSer
 - iPhone 앱: RemoteDebug 앱에는 자기 업데이트 화면이 없다. 자기 빌드는 업데이트 앱이 설치한다(M.4). 업데이트 페이지는 업데이트 앱 없이 설치할 때 Safari에서 직접 연다. 앱은 `updatePage` 값을 페어링 정보에 저장만 한다.
 - 에이전트 `status` 응답에 `updatePage`가 있다.
 
-## J. 페어링 링크의 1회용 Tailscale 키
+## J. 앱 QR의 1회용 Tailscale 키
 
-페어링 링크(§2)에 선택 쿼리 `key`를 더한다: `remotedebug://pair?host=<fqdn>&code=<코드>&key=<tskey-auth-…>`.
+앱 QR(B.5)의 링크에 선택 값 `k=<tskey-auth-…>`를 싣는다. iPhone은 tailnet에 아직 없으면 이 키로 로그인 없이 들어온 뒤 짝을 맺는다. 설치 페이지 코드 동선에는 키가 없다.
 
-- Mac 앱은 사용자가 넣은 Tailscale OAuth 클라이언트(클라이언트 ID, 비밀값 `tskey-client-…`, 태그; 키체인 보관)로 `POST https://api.tailscale.com/api/v2/oauth/token`(`grant_type=client_credentials`, `client_id`, `client_secret`)에서 1시간짜리 API 토큰을 받아 메모리에 둔다. 페어링 코드를 열 때마다 그 토큰으로 `POST …/tailnet/-/keys`를 부른다. 본문은 `{"capabilities":{"devices":{"create":{"reusable":false,"ephemeral":false,"preauthorized":true,"tags":[<태그>]}}},"expirySeconds":900,"description":"RemoteDebug iPhone pairing"}`이고 응답의 `key`를 링크에 넣는다. OAuth 클라이언트로 만드는 키에는 태그가 꼭 있어야 하므로 기본값은 `tag:rd-phone`이다.
-- 클라이언트에 필요한 권한은 `auth_keys`(쓰기)와 그 태그다. 기기 읽기 권한이 있으면 저장할 때 `GET …/tailnet/-/devices`로 이 Mac의 MagicDNS 이름이 그 tailnet에 있는지 확인하고, 없으면 저장하지 않는다(다른 tailnet의 키로는 iPhone이 Mac에 닿지 못한다). 권한이 없으면(403) 확인을 건너뛴다.
-- iPhone 노드는 그 태그를 단 노드가 된다. 정책 파일이 그 태그에서 이 Mac의 443 포트로 가는 연결을 허용해야 한다.
-- 키를 만들지 못하면 `key` 없이 지금처럼 쓴다. 에이전트 명령(`rd pair`, `remotedebug_pairing_code`) 응답에는 키를 넣지 않는다(대화 기록에 남기 때문).
-- iPhone 앱은 `key`가 `tskey-auth-`로 시작하고 영문·숫자·하이픈 200자 이하일 때만 받는다. 아니면 `invalidAuthKey`. `key`가 둘 이상이면 페어링 링크가 아니다. VPN이 연결돼 있지 않으면 그 키로 VPN을 켜고(키는 저장하지 않음) 페어링은 연결된 뒤 이어 간다. 이미 연결돼 있으면 키를 쓰지 않는다.
-- 요청 본문 형식과 응답 필드는 실제 Tailscale API로 확인하지 않았다. 공식 문서에서 확인한 것은 엔드포인트, OAuth 토큰 엔드포인트와 응답의 `access_token`·`expires_in`, `auth_keys` 범위, OAuth로 만든 키에 태그가 필요하다는 점, Bearer 인증, `-` tailnet 이름이다.
+- 사용자가 설정 창 **고급**에 넣은 Tailscale OAuth 클라이언트(클라이언트 ID, 비밀값 `tskey-client-…`, 태그. 키체인 보관)로 Swiftail `AuthKeyIssuer`가 앱 QR을 열 때마다 키를 만든다: 토큰 요청(`POST https://api.tailscale.com/api/v2/oauth/token`, Basic 인증을 먼저 쓰고 실패하면 본문에 자격을 실어 한 번 더), 그다음 `POST …/tailnet/-/keys`. 본문은 `{"capabilities":{"devices":{"create":{"reusable":false,"ephemeral":false,"preauthorized":true,"tags":[<태그>]}}},"expirySeconds":300}`이고 수명은 제안과 같다. 토큰은 호출마다 새로 받고 쥐지 않는다. 만든 키는 지우지 않고 수명이 지나 스스로 끝난다.
+- 저장할 때는 형식만 본다(ID·비밀값은 `A-Za-z0-9-_.~` 1~512바이트, 비밀값은 `tskey-client-`로 시작, 태그는 `tag:` + 영문으로 시작하는 영문 소문자·숫자·하이픈). 관리 API에는 보내지 않으므로, 클라이언트가 실제로 받아들여지는지는 다음 앱 QR을 열 때 안다. 기기 목록 API로 이 Mac이 같은 tailnet인지 보던 확인은 없앴다.
+- 클라이언트에 필요한 권한은 `auth_keys`(쓰기)와 그 태그다. iPhone 노드는 그 태그를 단 노드가 되므로, 정책 파일이 그 태그에서 이 Mac의 443과 4747로 가는 연결을 허용해야 한다.
+- 키를 만들지 못하면 키 없는 QR을 열고, 화면과 설정에 까닭을 보인다(`clientRejected`·`unauthorized`: 클라이언트가 지워졌거나 비밀값이 틀림, `forbidden`: 권한·태그 없음, `http(상태)`, `network` 등). 발급된 키를 링크에 실을 수 없으면(감싼 키 등) 키 없이 연다.
+- 키는 저장하지 않고, 로그·오류·에이전트 응답에 넣지 않는다. tailnet lock의 감싼 키는 만들지도 싣지도 않는다.
 
 ## K. 에이전트 요청
 
