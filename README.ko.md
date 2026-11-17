@@ -17,7 +17,7 @@ Mac 앱의 **에이전트에 설치…**는 Claude Code와 Codex에 MCP 서버 `
 | `remotedebug_status` | 공유 중인지, 설치 페이지 주소, 연결한 프로젝트 |
 | `remotedebug_schemes` | Xcode 프로젝트(`project_path`)를 연결하고 스킴 목록을 돌려준다 |
 | `remotedebug_build` | `project_path`(선택 `scheme`)를 Debug 기기용으로 빌드해 게시한다. 빌드가 끝날 때까지 기다린다 |
-| `remotedebug_pairing_code` | 5분짜리 페어링 코드를 연다. 코드와 `remotedebug://pair?…` 링크(Tailscale 키 없음)를 돌려준다 |
+| `remotedebug_pairing_code` | 앱이 아직 없는 iPhone용 5분짜리 페어링 코드를 연다. 코드와 설치 페이지 링크(`installPage`)를 돌려준다 |
 | `remotedebug_pair_requests` | 허용을 기다리는 페어링 요청(기기 이름, tailnet 노드 이름, 로그인, 만료 시각) |
 | `remotedebug_pair_decide` | 요청을 거부한다(`request_id`). 허용은 할 수 없다: 허용은 Mac 앱 화면에서만 한다 |
 | `remotedebug_device_logs` | iPhone 앱이 보낸 진단 로그(앱 시작, VPN, 페어링, 빌드 목록, 설치, 업데이트) |

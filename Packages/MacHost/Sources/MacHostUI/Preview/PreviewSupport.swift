@@ -43,7 +43,8 @@ final class PreviewCore: HostCore {
     /// 미리보기 QR. 링크는 실제 제안이 아니다(비밀 자리는 고정 글자).
     func openPairingOffer(_ request: PairingInviteRequest) async throws -> PairingInvite {
         let link = URL(string: "remotedebug://pair#v=1&h=rd-mac-preview.example.ts.net&p=4747&s=PREVIEWPREVIEWPREVIEWPREVIEWPREVIEWPREVIEW1&e=1794478500")!
-        return PairingInvite(link: link, qrImage: QRCodeView.makeImage(link.absoluteString),
+        // 실제 코어처럼 키를 실은 제안에는 링크가 없다(QR만).
+        return PairingInvite(link: request.oauthClient == nil ? link : nil, qrImage: QRCodeView.makeImage(link.absoluteString),
                              expiresAt: Date().addingTimeInterval(Double(request.lifetimeSeconds) - 28),
                              authKey: request.oauthClient == nil ? .none : .included(expires: Date().addingTimeInterval(272)),
                              tailnetLockEnabled: false)

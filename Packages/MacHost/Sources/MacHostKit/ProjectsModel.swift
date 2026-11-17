@@ -58,17 +58,14 @@ public final class ProjectsModel {
         public static let usage = "RemoteDebug 앱이 아직 없는 iPhone의 Safari 설치 페이지에 넣는 코드입니다. iPhone의 Tailscale 앱을 Mac과 같은 tailnet에 연결하고 installPage를 Safari로 연 뒤, 페이지에서 RemoteDebug 앱을 설치하세요. 앱이 있는 iPhone은 Mac 앱의 'iPhone 페어링…'에서 'RemoteDebug 앱이 있는 iPhone'을 골라 QR로 페어링합니다."
         /// 화면 표시용 `K7M2-9QXD`.
         public var code: String
-        /// iPhone RemoteDebug 앱을 여는 `remotedebug://pair?host=…&code=…`.
-        public var link: String?
         /// 앱 없이 Safari로 페어링하는 설치 페이지(`https://<fqdn>/#code=…`).
         public var installPage: String?
         public var expiresAt: Date
         /// 이 코드의 쓰임(`usage`). 응답 JSON의 `usage`.
         public var usage: String? = PairingInfo.usage
 
-        public init(code: String, link: String?, installPage: String?, expiresAt: Date) {
+        public init(code: String, installPage: String?, expiresAt: Date) {
             self.code = code
-            self.link = link
             self.installPage = installPage
             self.expiresAt = expiresAt
         }

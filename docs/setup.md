@@ -157,7 +157,7 @@ xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugPhone -destination 
 4. **앱** 화면 도구 막대의 **가져오기** 메뉴에서 **빌드 가져오기…**(⌘O)를 누르거나 `.app`, `.ipa`를 창에 끌어 놓는다. 같은 메뉴의 **폴더 감시…**로 폴더를 고르면 새 빌드를 자동으로 가져온다. Xcode에서 Debug 구성으로 기기용으로 빌드한 것만 받는다.
 5. 빌드 폴더 이름(`Debug-iphoneos`)과 앱 안의 `*.debug.dylib` 어느 쪽으로도 Debug임을 확인할 수 없으면 "Debug 구성으로 빌드한 앱인가요?" 대화상자가 번들 ID, 버전, 빌드 번호, 경로를 보여 준다. Debug 빌드가 맞을 때만 **Debug 빌드로 가져오기**를 누르고, 아니면 **가져오지 않기**를 누른다.
 6. **기기** 화면에서 **iPhone 페어링…**을 누른다. 시트가 "이 iPhone에 RemoteDebug 앱이 있나요?"와 두 동선을 보여 준다. iPhone의 상황으로 고른다. 고르기 전에는 QR도 코드도 열지 않는다. 시트 위의 두 칸으로 동선을 바꿀 수 있다.
-   - **RemoteDebug 앱이 있는 iPhone**: QR, 할 일 세 줄, 남은 시간, **페어링 링크 복사**가 나온다. iPhone의 RemoteDebug 앱으로 QR을 읽는다([iPhone 절](#첫-실행-iphone)). QR은 5분 뒤 만료되고 한 번만 쓸 수 있다. **새 QR 만들기**로 다시 연다.
+   - **RemoteDebug 앱이 있는 iPhone**: QR, 할 일 세 줄, 남은 시간, **페어링 링크 복사**가 나온다. QR에 Tailscale 키가 들어 있으면(아래 [QR 한 번으로 연결](#qr-한-번으로-연결tailscale-oauth-클라이언트)) 링크 복사 대신 "Tailscale 키가 든 QR은 링크로 복사할 수 없습니다. iPhone의 RemoteDebug 앱 안 카메라로 읽으세요."가 나온다. iPhone의 RemoteDebug 앱으로 QR을 읽는다([iPhone 절](#첫-실행-iphone)). QR은 5분 뒤 만료되고 한 번만 쓸 수 있다. **새 QR 만들기**로 다시 연다.
    - **앱이 아직 없는 iPhone**: 할 일 네 줄, 설치 페이지 QR, 코드 없는 설치 페이지 주소, **링크 복사**, 8자 코드, 남은 시간이 나온다. 이 Mac에 RemoteDebug 앱 빌드가 게시되어 있지 않으면 그 안내도 나온다([웹 페이지 절](#iphone에서-앱-없이-설치웹-페이지)). 코드는 5분 뒤 만료되고 한 번만 쓸 수 있다. **새 코드 만들기**로 다시 연다.
 7. iPhone이 요청하면 시트에 "요청한 iPhone이 맞는지 확인하고 응답하세요."와 요청 줄이 나온다. 같은 줄이 **기기** 화면의 "허용 대기"에도 나온다. 줄에는 '‘<기기 이름>’(<노드 이름>)이 페어링을 요청했습니다', 요청이 온 동선("RemoteDebug 앱의 QR로 요청" 또는 "Safari 설치 페이지의 코드로 요청"), tailnet 로그인 이름이 있다. 기기 이름은 iPhone이 보낸 값이고, 노드 이름과 로그인 이름은 tailnet이 알려 준 값이다.
    - 앱 QR 요청: 확인 숫자 6자리와 "iPhone에 나온 숫자와 같을 때만 허용하세요."가 함께 나온다. iPhone 앱 화면의 숫자와 같을 때만 **허용**을 누른다. 같은 OAuth 클라이언트의 키로 들어온 iPhone들은 로그인 이름이 같으므로 숫자로 가린다. 노드 이름은 `rd-phone-<8자>`다.
@@ -208,7 +208,7 @@ Mac 앱 설정 창(⌘,) **고급** 탭의 "iPhone 자동 연결"에 Tailscale O
 
 1. Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만든다([만드는 법](https://tailscale.com/kb/1215/oauth-clients)). 권한은 Auth Keys 쓰기(`auth_keys`)를 고르고 태그는 `tag:rd-phone`을 고른다. 태그가 목록에 없으면 정책 파일의 `tagOwners`에 `"tag:rd-phone": ["autogroup:admin"]`을 먼저 더한다.
 2. 클라이언트 ID와 비밀값(`tskey-client-…`, 만들 때 한 번만 보여 준다)을 Mac 앱 설정 창(⌘,) **고급** > "iPhone 자동 연결"에 넣고 **저장**을 누른다. 저장할 때는 형식만 본다. 클라이언트가 실제로 받아들여지는지는 다음 QR을 열 때 알 수 있고, 키를 만들지 못하면 QR 아래와 이 설정에 그 까닭이 나온다.
-3. **기기** > **iPhone 페어링…** > **RemoteDebug 앱이 있는 iPhone**을 열면 QR 아래에 "이 QR에는 한 번만 쓸 수 있는 Tailscale 키가 들어 있어, iPhone은 로그인 없이 연결됩니다."가 나온다. RemoteDebug 앱으로 QR을 읽으면 앱이 그 키로 tailnet에 들어온 뒤 페어링을 요청한다. 확인 숫자가 같으면 Mac에서 **허용**을 누른다.
+3. **기기** > **iPhone 페어링…** > **RemoteDebug 앱이 있는 iPhone**을 열면 QR 아래에 "이 QR에는 한 번만 쓸 수 있는 Tailscale 키가 들어 있어, iPhone은 로그인 없이 연결됩니다."가 나온다. 이 QR에는 **페어링 링크 복사**가 없다. RemoteDebug 앱 안 카메라로 QR을 읽으면 앱이 그 키로 tailnet에 들어온 뒤 페어링을 요청한다. 확인 숫자가 같으면 Mac에서 **허용**을 누른다.
 
 키는 QR과 같은 5분 동안 한 번만 쓸 수 있고 미리 승인된, `tag:rd-phone`이 붙은 키다. QR을 찍은 기기는 이 tailnet에 들어오므로 QR을 다른 사람에게 보여 주지 않는다. 그 iPhone 노드는 태그가 붙은 노드라서, 정책 파일이 `tag:rd-phone`에서 이 Mac의 443과 4747 포트로 가는 연결을 허용해야 한다([tailnet 정책(ACL)](#tailnet-정책acl)).
 
@@ -219,7 +219,7 @@ tailnet lock이 켜진 tailnet에서는 키로 처음 들어온 iPhone이 서명
 
 1. 앱의 VPN 카드에서 **VPN 켜기**를 누르고, iOS의 'VPN 구성 추가' 알림에서 허용을 누른다.
 2. 상태가 "로그인 필요"가 되면 **로그인 페이지 열기**로 로그인하거나 **인증 키로 켜기**에 키를 넣는다. 상태가 "연결됨"이 될 때까지 기다린다.
-3. Mac에서 **iPhone 페어링…** > **RemoteDebug 앱이 있는 iPhone**을 열고, iPhone의 RemoteDebug 앱으로 그 QR을 읽는다. Mac에서 복사한 `remotedebug://pair#…` 링크를 iPhone에서 눌러 열어도 된다. 링크와 QR에는 비밀이 들어 있으므로 다른 사람에게 보내지 않는다.
+3. Mac에서 **iPhone 페어링…** > **RemoteDebug 앱이 있는 iPhone**을 열고, iPhone의 RemoteDebug 앱으로 그 QR을 읽는다. Tailscale 키가 없는 QR이면 Mac에서 복사한 `remotedebug://pair#…` 링크를 iPhone에서 눌러 열어도 된다. 링크와 QR에는 비밀이 들어 있으므로 다른 사람에게 보내지 않는다.
 4. iPhone과 Mac에 확인 숫자 6자리가 나온다. 같으면 Mac에서 허용한다. 짝이 되면 앱은 `GET /v1/info`로 Mac의 이름과 주소를 받는다.
 5. "빌드" 목록에서 **설치**를 누른다. "iOS 설치 창에서 ‘설치’를 누르세요"가 나오면 iOS 설치 창에서 **설치**를 누른다. 창을 닫았으면 **다시 열기**를 누른다.
 6. "전송 완료"가 나오면 홈 화면에서 앱을 연다. 개발자를 신뢰하라는 알림이 나오면 설정 > 일반 > VPN 및 기기 관리에서 신뢰한 뒤 다시 연다. 앱이 실행되지 않으면 설정 > 개인정보 보호 및 보안 > 개발자 모드를 확인한다.

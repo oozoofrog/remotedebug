@@ -303,9 +303,9 @@ struct ProjectsModelTests {
 
         let expires = Date(timeIntervalSince1970: 1_800_000_000)
         let pairing = ProjectsModel(root: w.tmp.path("state-pair"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived),
-                                    openPairing: { .success(.init(code: "K7M2-9QXD", link: "remotedebug://pair?host=h&code=K7M29QXD", installPage: nil, expiresAt: expires)) }) { _ in nil }
+                                    openPairing: { .success(.init(code: "K7M2-9QXD", installPage: "https://h/#code=K7M29QXD", expiresAt: expires)) }) { _ in nil }
         let paired = await pairing.handleAgentRequest("pair\n\n\n")
-        #expect(paired.ok && paired.pairing?.link == "remotedebug://pair?host=h&code=K7M29QXD" && paired.pairing?.code == "K7M2-9QXD")
+        #expect(paired.ok && paired.pairing?.installPage == "https://h/#code=K7M29QXD" && paired.pairing?.code == "K7M2-9QXD")
 
         let decided = Names()
         let waiting = ProjectsModel.PairRequestInfo(requestId: "pr_1", deviceName: "iPhone", nodeName: "rd-phone-1", loginName: "me@", expiresAt: expires)

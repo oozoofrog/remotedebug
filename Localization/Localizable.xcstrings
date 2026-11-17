@@ -8405,6 +8405,34 @@
         }
       }
     },
+    "Tailscale 키가 든 QR은 링크로 복사할 수 없습니다. iPhone의 RemoteDebug 앱 안 카메라로 읽으세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A QR code with a Tailscale key can't be copied as a link. Scan it with the camera inside the RemoteDebug app on the iPhone."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscaleキーを含むQRコードはリンクとしてコピーできません。iPhoneのRemoteDebugアプリ内のカメラで読み取ってください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "含有 Tailscale 密钥的二维码无法拷贝为链接。请用 iPhone 上 RemoteDebug App 内的相机扫描。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "含有 Tailscale 金鑰的 QR 碼無法拷貝為連結。請用 iPhone 上 RemoteDebug App 內的相機掃描。"
+          }
+        }
+      }
+    },
     "Tailscale 키를 만드는 중…" : {
       "localizations" : {
         "en" : {

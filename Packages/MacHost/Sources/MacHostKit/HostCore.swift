@@ -38,18 +38,6 @@ public struct PairingCode: Codable, Sendable, Hashable {
         guard code.count == 8 else { return code }
         return code.prefix(4) + "-" + code.suffix(4)
     }
-
-    /// `remotedebug://pair?host=<fqdn>&code=<code>`. fqdn이 비면 nil.
-    /// `authKey`가 있으면 `&key=<1회용 Tailscale 키>`를 붙인다. iPhone은 그 키로 로그인 없이 VPN을 켠다.
-    public func link(fqdn: String, authKey: String? = nil) -> URL? {
-        guard !fqdn.isEmpty else { return nil }
-        var c = URLComponents()
-        c.scheme = "remotedebug"
-        c.host = "pair"
-        c.queryItems = [URLQueryItem(name: "host", value: fqdn), URLQueryItem(name: "code", value: code)]
-        if let authKey { c.queryItems?.append(URLQueryItem(name: "key", value: authKey)) }
-        return c.url
-    }
 }
 
 /// 호스트 모드 코어(RDNode)의 추상화. 실제 어댑터는 C API를 이 프로토콜로 감싼다.

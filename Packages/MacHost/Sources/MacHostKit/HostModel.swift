@@ -80,6 +80,9 @@ public final class HostModel {
     public private(set) var pairingInvite: PairingInvite?
     /// QR을 여는 중(키를 만드는 시간 포함).
     public private(set) var isOpeningInvite = false
+    /// 코드·QR 열기의 세대. 새로 열 때마다 올린다. 앞 세대의 열기가 늦게 끝나면 결과를 버린다.
+    @ObservationIgnored private var pairingGeneration = 0
+    @ObservationIgnored private var pairingTask: Task<Void, Never>?
     /// 키체인에 Tailscale OAuth 클라이언트가 있다.
     public private(set) var hasTailscaleClient = false
     /// 저장된 클라이언트가 키에 붙이는 태그.
@@ -269,7 +272,7 @@ public final class HostModel {
         return code
     }
 
-    /// 앱용 QR의 링크(`remotedebug://pair#v=1&h=…`). 열려 있고 만료되지 않았을 때만. 비밀이다(화면에만 쓴다).
+    /// 앱용 QR의 링크(`remotedebug://pair#v=1&h=…`). 열려 있고 만료되지 않았고 키를 싣지 않았을 때만. 비밀이다(화면에만 쓴다).
     public var pairingLink: URL? { openInvite?.link }
 
     /// 열려 있고 만료되지 않은 앱용 QR.
@@ -418,6 +421,9 @@ public final class HostModel {
     /// 공유를 멈춘다. 시작하는 중이면 시작을 멈춘다. 폴더 감시는 계속한다.
     public func stop() async {
         runGeneration += 1
+        pairingGeneration += 1
+        pairingTask?.cancel()
+        isOpeningInvite = false
         startTask?.cancel()
         startTask = nil
         startingGeneration = nil
@@ -810,32 +816,57 @@ public final class HostModel {
 
     // MARK: 페어링·기기
 
-    /// 고른 동선으로 페어링을 연다. 앱이 있는 iPhone은 QR(`beginAppPairing`), 앱이 없는 iPhone은 설치 페이지용 코드
-    /// (`beginPairing`). 하나를 열면 다른 하나는 닫는다: 페어링은 한 번에 하나다.
+    /// 고른 동선으로 페어링을 연다. 앱이 있는 iPhone은 QR, 앱이 없는 iPhone은 설치 페이지용 코드. 하나를 열면 다른 하나는
+    /// 닫는다: 페어링은 한 번에 하나다. 열기는 한 번에 하나씩 한다: 새로 열면 진행 중인 열기를 취소하고, 그것이 끝난 뒤에 연다.
+    /// 늦게 끝난 앞의 열기는 화면 상태를 바꾸지 않는다(연 QR은 닫는다).
     public func beginPairing(_ route: PairingRoute) async {
-        switch route {
-        case .app: await beginAppPairing()
-        case .browser: await beginPairing()
+        pairingGeneration += 1
+        let generation = pairingGeneration
+        let previous = pairingTask
+        previous?.cancel()
+        let task = Task { @MainActor [weak self] in
+            await previous?.value
+            guard let self, self.isCurrentPairing(generation) else { return }
+            switch route {
+            case .app: await self.openAppPairing(generation)
+            case .browser: await self.openBrowserPairing(generation)
+            }
         }
+        pairingTask = task
+        await task.value
     }
 
     /// 설치 페이지용 코드를 연다(5분, 앱이 아직 없는 iPhone). 이미 열린 코드는 코어가 새 코드로 바꾸고, 열린 QR은 닫는다.
     public func beginPairing() async {
-        guard canOpenPairing() else { return }
-        await closeInviteIfOpen()
-        do {
-            let code = try await core.openPairing(ttlSeconds: Self.pairingTTLSeconds)
-            pairingFailures = 0
-            pairingState = .open(code)
-        } catch {
-            notePairingFailure(String(localized: "페어링 코드를 만들지 못했습니다: \(Self.message(for: error))"))
-        }
+        await beginPairing(.browser)
     }
 
     /// 앱용 QR을 연다(5분, RemoteDebug 앱이 있는 iPhone). OAuth 클라이언트가 있으면 코어가 1회용 Tailscale 키를 만들어
     /// QR에 싣는다. 키를 만들지 못하면 키 없는 QR을 낸다. 열린 설치 페이지 코드는 닫는다.
     public func beginAppPairing() async {
-        guard canOpenPairing(), !isOpeningInvite else { return }
+        await beginPairing(.app)
+    }
+
+    private func isCurrentPairing(_ generation: Int) -> Bool {
+        generation == pairingGeneration && !Task.isCancelled
+    }
+
+    private func openBrowserPairing(_ generation: Int) async {
+        guard canOpenPairing() else { return }
+        await closeInviteIfOpen()
+        do {
+            let code = try await core.openPairing(ttlSeconds: Self.pairingTTLSeconds)
+            guard isCurrentPairing(generation), isRunning else { return }
+            pairingFailures = 0
+            pairingState = .open(code)
+        } catch {
+            guard isCurrentPairing(generation) else { return }
+            notePairingFailure(String(localized: "페어링 코드를 만들지 못했습니다: \(Self.message(for: error))"))
+        }
+    }
+
+    private func openAppPairing(_ generation: Int) async {
+        guard canOpenPairing() else { return }
         isOpeningInvite = true
         defer { isOpeningInvite = false }
         if case .open = pairingState { pairingState = .idle }
@@ -844,6 +875,11 @@ public final class HostModel {
         pairingKeyState = client == nil ? .off : .creating
         do {
             let invite = try await core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: Self.pairingTTLSeconds, oauthClient: client))
+            guard isCurrentPairing(generation), isRunning else {
+                // 그사이 다른 동선을 골랐거나 공유를 멈췄다: 이 QR은 쓰지 않는다.
+                await core.closePairingOffer()
+                return
+            }
             pairingInvite = invite
             pairingState = .offerOpen(expiresAt: invite.expiresAt)
             switch invite.authKey {
@@ -854,6 +890,7 @@ public final class HostModel {
                 if failure != .network && failure != .cancelled { tokenCheck = TokenCheck(ok: false, message: failure.message) }
             }
         } catch {
+            guard isCurrentPairing(generation) else { return }
             pairingKeyState = .off
             notePairingFailure(String(localized: "페어링 QR을 만들지 못했습니다: \(Self.message(for: error))"))
         }
@@ -919,8 +956,7 @@ public final class HostModel {
         guard let code = pairingCode else {
             return .failure(.init(pairingError ?? lastError ?? String(localized: "페어링 코드를 만들지 못했습니다.")))
         }
-        return .success(.init(code: code.displayCode, link: code.link(fqdn: status?.fqdn ?? "")?.absoluteString,
-                              installPage: installPageLink?.absoluteString, expiresAt: code.expiresAt))
+        return .success(.init(code: code.displayCode, installPage: installPageLink?.absoluteString, expiresAt: code.expiresAt))
     }
 
     /// 에이전트용: 허용을 기다리는 요청.

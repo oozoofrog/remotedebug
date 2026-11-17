@@ -122,11 +122,12 @@
 RemoteDebug 앱이 있는 iPhone의 동선이다. 짝 맺기는 Swiftail `SwiftailPairing`(그 저장소의 페어링 계약 문서 `SwiftailPairing.md`)이 하고, 호스트는 그 결과를 허용 목록으로 옮긴다. REST 경로는 없다.
 
 - 페어링 포트: 호스트 노드가 tailnet TCP **4747**에서 짝 맺기 연결을 받는다(`PairingHost`, 노드가 돌 때만). 고정이라 tailnet 정책(ACL)에 적을 수 있다. iPhone 노드에서 호스트의 443과 4747로 가는 연결이 허용되어야 한다.
-- 제안: 호스트 화면이 "RemoteDebug 앱이 있는 iPhone"을 고르면 제안 하나를 연다(수명 300초, 한 번만 쓰임, 새로 열면 앞의 것은 못 씀). 링크는 `remotedebug://pair#v=1&h=<fqdn>&p=4747&s=<비밀 43자>&e=<만료 유닉스 초>[&k=<1회용 Tailscale 키>]`이고 화면은 이것을 QR(Swiftail `qrCode(base:)`)과 **페어링 링크 복사**로 보인다. 값은 모두 조각(`#` 뒤)에 있다. 링크·QR은 비밀이라 로그, 에이전트 응답, 활동 기록에 넣지 않는다.
+- 제안: 호스트 화면이 "RemoteDebug 앱이 있는 iPhone"을 고르면 제안 하나를 연다(수명 300초, 한 번만 쓰임, 새로 열면 앞의 것은 못 씀). 링크는 `remotedebug://pair#v=1&h=<fqdn>&p=4747&s=<비밀 43자>&e=<만료 유닉스 초>[&k=<1회용 Tailscale 키>]`이고 화면은 이것을 QR(Swiftail `qrCode(base:)`)과 **페어링 링크 복사**로 보인다. 값은 모두 조각(`#` 뒤)에 있다. 1회용 Tailscale 키를 실은 제안은 QR만 보이고 링크 복사가 없다(iPhone 앱 안 카메라로 읽는다). 코어는 그 제안의 링크를 화면에 넘기지 않는다. 링크·QR은 비밀이라 로그, 에이전트 응답, 활동 기록에 넣지 않는다.
 - 승인 요청: iPhone이 제안의 비밀을 증명하면 호스트는 `pair-request`(§10)를 낸다. `requestId`는 `pr_`로 시작하고, `deviceName`은 iPhone이 밝힌 이름(1~64바이트), `nodeName`·`loginName`은 연결의 노드 신원, 대기 시간은 120초다. Swift 값에만 `confirmationCode`(확인 숫자 6자리)가 있다. 승인 화면은 동선("RemoteDebug 앱의 QR로 요청")과 확인 숫자를 보이고, iPhone 화면의 숫자와 같을 때만 허용하라고 한다. 같은 OAuth 클라이언트의 키로 들어온 노드들은 로그인 이름이 같으므로 확인 숫자로 가린다.
-- 허용: `decidePairing(requestID:allow: true)`가 짝 맺기에 허용을 알리고, `PairingHost`가 그 노드를 짝 목록(`<저장 루트>/pairing/paired-peers.json`)에 저장하기를 5초까지 기다린다. 저장되면 설치 페이지 코드의 허용과 같은 결과를 낸다: 허용 목록 항목(`StableID` 기준, 같은 노드면 기기 id를 이어 씀), `device-added`, `pair-decided`(`approved`). 저장되지 않으면(iPhone이 끊음, 승인 순간 그 주소의 노드 신원이 바뀜, 저장 실패) 허용 목록에 넣지 않고 `pair-decided`(`expired`)와 `pair_incomplete` 오류를 낸다. iPhone은 거절로 끝난다.
+- 허용: `decidePairing(requestID:allow: true)`가 짝 맺기에 허용을 알리고, `PairingHost`가 그 노드를 짝 목록(`<저장 루트>/pairing/paired-peers.json`)에 저장하기를 5초까지 기다린다. 저장은 그 노드의 짝 기록(`pairedAt`)이 허용하기 전과 달라진 것으로 판단한다(같은 노드의 예전 짝 기록은 이번 저장이 아니다). 저장되면 설치 페이지 코드의 허용과 같은 결과를 낸다: 허용 목록 항목(`StableID` 기준, 같은 노드면 기기 id를 이어 씀), `device-added`, `pair-decided`(`approved`). 저장되지 않으면(iPhone이 끊음, 승인 순간 그 주소의 노드 신원이 바뀜, 저장 실패) 허용 목록에 넣지 않고 `pair-decided`(`expired`)와 `pair_incomplete` 오류를 낸다. iPhone은 거절로 끝난다. 5초 뒤에 늦게 저장된 짝은 허용 목록에 없으므로 짝 목록 맞추기가 지운다.
 - 거절·끊김: 거절하면 `pair-decided`(`denied`). iPhone이 끊거나 120초가 지나면 그 요청은 곧 거절로 돌아가고 `pair-decided`(`expired`)다. 같은 요청에 다시 답하면 `bad_request`.
-- 공유를 멈추면 페어링 포트를 닫고 기다리던 요청은 `expired`로 끝낸다.
+- 공유를 멈추면 페어링 포트를 닫고 기다리던 요청은 `expired`로 끝낸다. 허용한 뒤 저장을 기다리던 요청도 `expired`로 끝내고(`not_running` 오류) 허용 목록에 넣지 않는다. 멈춤은 이 마무리가 끝난 뒤에 끝나고, 멈춘 실행의 사건은 다음 실행의 구독자에게 가지 않는다.
+- 짝 목록 맞추기: 짝 목록은 허용 목록의 부분집합으로 둔다. 화면이 허용 목록을 넣을 때와 상태를 읽을 때(2초)마다 허용 목록에 없고 허용 중도 아닌 짝을 지운다. 화면이 허용 목록을 한 번도 넣지 않았으면 지우지 않는다.
 - 짝이 된 앱은 허용 목록 인증으로 `GET /v1/info`를 불러 호스트 정보를 얻는다. 모양은 §4.2와 같다:
 
 ```json
