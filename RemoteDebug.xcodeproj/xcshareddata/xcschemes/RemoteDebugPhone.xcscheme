@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
    LastUpgradeVersion = "1430"
-   version = "1.7">
+   version = "1.3">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES"
-      runPostActionsOnFailure = "NO">
+      buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -16,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4C6DA476238F00B9AF094FF3"
-               BuildableName = "RemoteDebugPhone.app"
+               BuildableName = "RemoteDebug.app"
                BlueprintName = "RemoteDebugPhone"
                ReferencedContainer = "container:RemoteDebug.xcodeproj">
             </BuildableReference>
@@ -27,14 +26,13 @@
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      language = "ko"
       shouldUseLaunchSchemeArgsEnv = "YES"
-      onlyGenerateCoverageForSpecifiedTargets = "NO">
+      language = "ko">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4C6DA476238F00B9AF094FF3"
-            BuildableName = "RemoteDebugPhone.app"
+            BuildableName = "RemoteDebug.app"
             BlueprintName = "RemoteDebugPhone"
             ReferencedContainer = "container:RemoteDebug.xcodeproj">
          </BuildableReference>
@@ -52,8 +50,6 @@
             </BuildableReference>
          </TestableReference>
       </Testables>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -70,13 +66,11 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4C6DA476238F00B9AF094FF3"
-            BuildableName = "RemoteDebugPhone.app"
+            BuildableName = "RemoteDebug.app"
             BlueprintName = "RemoteDebugPhone"
             ReferencedContainer = "container:RemoteDebug.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <CommandLineArguments>
-      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -89,7 +83,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4C6DA476238F00B9AF094FF3"
-            BuildableName = "RemoteDebugPhone.app"
+            BuildableName = "RemoteDebug.app"
             BlueprintName = "RemoteDebugPhone"
             ReferencedContainer = "container:RemoteDebug.xcodeproj">
          </BuildableReference>
