@@ -174,8 +174,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 paths = appPaths
                 lock = try StateDirLock.acquire(root: appPaths.root)
                 let bookmarks = UserDefaultsFolderBookmarks(defaults: defaults, key: options.folderBookmarkKey)
-                // 빌드 설정 RD_PAIR_LINK_HOST로 넣은 연결 도메인 주소. 없으면 페어링 링크는 remotedebug://pair다.
-                let linkBase = PairingLinkBase.fromInfo(Bundle.main.infoDictionary)
+                // 연결 도메인 주소. 사용자 기본값 RDPairLinkBase가 먼저고(내려받은 앱은 빌드 값이 비어 있다),
+                // 없으면 빌드 설정 RD_PAIR_LINK_HOST로 넣은 값을 쓴다. 둘 다 없으면 페어링 링크는 remotedebug://pair다.
+                let linkBase = PairingLinkBase(defaults.string(forKey: PairingLinkBase.infoKey))
+                    ?? PairingLinkBase.fromInfo(Bundle.main.infoDictionary)
                 let model = HostModel(core: SwiftailHostCore(paths: appPaths, pairingLinkBase: linkBase), paths: appPaths, bookmarks: bookmarks, id8: options.nodeID8,
                                       advertiser: BonjourAdvertiser())
                 model.controlURL = options.controlURL

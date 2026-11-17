@@ -233,6 +233,12 @@ tailnet lock이 켜진 tailnet에서는 키로 처음 들어온 iPhone이 서명
    ```
 
 2. Mac 앱과 iPhone 앱을 **같은 값으로** 빌드한다(`Config/Signing.local.xcconfig`를 고친 뒤 빌드). 호스트가 있으면 iPhone 앱(`RemoteDebugPhone`)은 `Apps/iOS/RemoteDebugPhone+Links.entitlements`로 서명되어 연결 도메인 권한 `applinks:<호스트>`가 들어간다. 자동 서명이 App ID에 Associated Domains를 켠다(계정 소유자의 승인이 필요할 수 있다). 터널 확장과 RD 업데이트 앱에는 넣지 않는다. 호스트가 비어 있으면 권한도 없고 링크는 `remotedebug://pair#…` 그대로다.
+   내려받은 Mac 앱(공증된 배포본)은 이 값 없이 빌드돼 있다. 그 앱에는 사용자 기본값으로 넣고 앱을 다시 연다. 값을 지우면 `remotedebug://pair#…`로 돌아간다.
+
+   ```sh
+   defaults write com.oozoofrog.app.RemoteDebugMac RDPairLinkBase https://example.com/remotedebug/pair
+   ```
+
 3. 그 호스트에 아래 두 파일을 올린다.
 
 **`/.well-known/apple-app-site-association`**: `https://<호스트>/.well-known/apple-app-site-association`에서 리디렉션 없이 `Content-Type: application/json`으로 낸다. `appIDs`는 `<팀 ID>.<iPhone 앱 번들 ID>`다. 번들 ID는 `$(RD_BUNDLE_PREFIX).RemoteDebugPhone`이다(Mac 앱의 **iPhone 앱 설치…**나 `scripts/install-phone.sh`가 앞부분을 `dev.<팀 ID 소문자>`로 바꿨으면 그 값). 여러 팀·앞부분으로 설치하면 그 수만큼 `appIDs`에 넣는다. `components`는 페어링 경로 하나만 연다. 아래 팀 ID `ABCDE12345`는 예시다.

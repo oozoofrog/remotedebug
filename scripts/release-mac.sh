@@ -22,10 +22,12 @@ EXPORT="$OUT/export"
 rm -rf "$ARCHIVE" "$EXPORT" "$OUT"/*.plist
 
 # RD_SOURCE_ROOT를 비워 Info.plist에 이 Mac의 저장소 경로를 넣지 않는다.
+# RD_PAIR_LINK_HOST도 비운다: 연결 도메인은 iPhone 앱을 서명한 팀에 묶이므로 나눠 주는 앱에 넣지 않는다.
+# 받은 쪽은 `defaults write com.oozoofrog.app.RemoteDebugMac RDPairLinkBase https://<호스트>/remotedebug/pair`로 넣는다.
 # 팀은 명령줄로도 준다: Swift 패키지의 리소스 번들 대상은 Config/Signing.xcconfig를 읽지 않는다.
 eyebuild -p remotedebug xcodebuild mac-devid -- -project "$ROOT/RemoteDebug.xcodeproj" -scheme RemoteDebugMac \
   -configuration Release -archivePath "$ARCHIVE" -allowProvisioningUpdates \
-  CODE_SIGN_IDENTITY="Apple Development" DEVELOPMENT_TEAM="$TEAM" RD_SOURCE_ROOT= archive
+  CODE_SIGN_IDENTITY="Apple Development" DEVELOPMENT_TEAM="$TEAM" RD_SOURCE_ROOT= RD_PAIR_LINK_HOST= archive
 
 options() { # <destination>
   cat > "$OUT/export-$1.plist" <<PLIST
