@@ -6,6 +6,8 @@ RemoteDebug sends Debug (development-signed) builds from your Mac to your iPhone
 
 The detailed documents under `docs/` are written in Korean.
 
+RemoteDebug is free. To support its development, you can sponsor it on [GitHub Sponsors](https://github.com/sponsors/oozoofrog).
+
 ## For AI agents
 
 ### Using RemoteDebug from an agent

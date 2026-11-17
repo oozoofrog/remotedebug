@@ -6,6 +6,8 @@ RemoteDebug는 Mac의 Debug(개발 서명) 빌드를 Tailscale을 거쳐 iPhone�
 
 `docs/`의 자세한 문서는 한국어로 쓰여 있다.
 
+RemoteDebug는 무료다. 개발을 이어 가는 데 보탬을 주려면 [GitHub Sponsors](https://github.com/sponsors/oozoofrog)로 후원할 수 있다.
+
 ## 에이전트를 위한 안내
 
 ### 에이전트에서 RemoteDebug 쓰기
