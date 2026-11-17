@@ -276,6 +276,8 @@ struct RootView: View {
                     return
                 }
                 #endif
+                // 페어링 확인과 진행 상태는 빌드 탭에 있다.
+                tab = .builds
                 model.handle(url: url)
             }
         }

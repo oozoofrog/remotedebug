@@ -48,11 +48,10 @@ struct PairingProgressSection: View {
                 } icon: {
                     Image(systemName: "clock")
                 }
-                if state.vpnPair.owner == .other {
-                    // 다른 VPN(공식 Tailscale 앱 등)이 켜져 있다. 페어링은 이 앱의 터널로만 맺는다.
-                    Button("이 앱으로 VPN 가져오기") { Task { await takeOverVPN() } }
-                        .bold()
-                }
+                // 페어링은 이 앱의 터널로만 맺는다. 다른 VPN(공식 Tailscale 앱 등)이 켜져 있거나,
+                // 다른 VPN 구성이 선택돼 있어 저절로 켜지지 않을 때 사용자가 켠다.
+                Button(state.vpnPair.owner == .other ? "이 앱으로 VPN 가져오기" : "VPN 켜기") { Task { await takeOverVPN() } }
+                    .bold()
                 Button("페어링 취소", role: .destructive, action: cancel)
             }
         } else {
