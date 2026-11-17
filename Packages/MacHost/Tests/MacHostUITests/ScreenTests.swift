@@ -120,11 +120,14 @@ struct ScreenTests {
             let model = await model(scenario, tmp)
             for item in SidebarItem.allCases { render(model, item) }
             await model.shutdown()
-            let pairing = await PreviewFactory.makePairingModel(scenario, root: tmp.url.appendingPathComponent("pairing", isDirectory: true))
-            let sheet = NSHostingView(rootView: PairingSheet().environment(pairing).environment(AuthKeyDraft()))
-            sheet.frame = NSRect(x: 0, y: 0, width: 520, height: 720)
-            sheet.layoutSubtreeIfNeeded()
-            await pairing.shutdown()
+            for route in [HostModel.PairingRoute?.none, .app, .browser] {
+                let pairing = await PreviewFactory.makePairingModel(scenario, route: route ?? .browser,
+                                                                    root: tmp.url.appendingPathComponent("pairing", isDirectory: true))
+                let sheet = NSHostingView(rootView: PairingSheet(route: route).environment(pairing).environment(AuthKeyDraft()))
+                sheet.frame = NSRect(x: 0, y: 0, width: 560, height: 760)
+                sheet.layoutSubtreeIfNeeded()
+                await pairing.shutdown()
+            }
         }
         let failure = NSHostingView(rootView: LaunchFailureView(failure: .alreadyRunning, switchToRunningApp: {}, quit: {}))
         failure.frame = NSRect(x: 0, y: 0, width: 760, height: 520)

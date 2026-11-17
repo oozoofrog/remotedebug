@@ -17,15 +17,20 @@ JSON 키는 camelCase, 시각은 UTC ISO-8601(`Z`), 문자열은 UTF-8이다.
 노드 이름은 `rd-mac-<id8>`, `rd-phone-<id8>`이다. `<id8>`은 앱이 처음 실행할 때 만들어 저장하는 무작위 4바이트의 16진수다.
 호스트는 tailnet TCP 443에서 TLS(MagicDNS 인증서)로 응답한다. 호스트 주소는 `https://<fqdn>`이다.
 
-## 2. 페어링 링크
+## 2. 페어링 동선
 
-호스트가 페어링을 열면 코드 하나를 만든다(8자, Crockford base32, 표시는 `K7M2-9QXD`). 화면에는 다음 링크를 QR과 복사 텍스트로 보여 준다.
+페어링은 두 동선이 있고 사용자가 iPhone의 상황으로 고른다. 어느 쪽이든 승인은 호스트 화면에서만 하고, 승인되면 그 노드가 허용 목록(§5)에 들어간다. 권한 판정은 허용 목록 하나로 한다.
 
-```
-remotedebug://pair?host=<fqdn>&code=<code>
-```
+| 동선 | iPhone | 절차 | 상세 |
+| --- | --- | --- | --- |
+| 앱 QR | RemoteDebug 앱이 있다 | 호스트가 QR·링크(제안)를 연다 → 앱이 읽고 페어링 포트로 짝 맺기 → 양쪽 화면의 확인 숫자 6자리 비교 → 호스트에서 승인 | addenda B.5 |
+| 설치 페이지 코드 | 앱이 아직 없다 | tailnet에 든 iPhone의 Safari로 설치 페이지(addenda E)를 연다 → 호스트가 연 8자 코드 입력 → 호스트에서 승인 → 페이지에서 RemoteDebug 앱 설치 → 앱은 앱 QR 동선으로 따로 페어링 | 아래, §4.3 |
 
-코드는 5분 뒤 만료되고 한 번만 쓸 수 있다. 잘못된 코드는 같은 코드에 5번까지만 시도할 수 있고 5번째 실패에 코드를 폐기한다.
+설치 페이지 코드: 호스트가 코드 하나를 만든다(8자, Crockford base32, 표시는 `K7M2-9QXD`). 화면은 코드를 넣은 설치 페이지 링크 `https://<fqdn>/#code=<code>`를 QR과 복사 텍스트로, 코드 없는 주소와 코드를 글자로 보여 준다. 코드는 5분 뒤 만료되고 한 번만 쓸 수 있다. 잘못된 코드는 같은 코드에 5번까지만 시도할 수 있고 5번째 실패에 코드를 폐기한다. 에이전트 명령(`rd pair`, `remotedebug_pairing_code`)은 이 동선의 코드만 연다. 그 응답에는 코드, 설치 페이지 링크, 쓰임 안내(`usage`), 그리고 앱용 코드 링크 `remotedebug://pair?host=<fqdn>&code=<code>`가 있다. 호스트 화면은 이 코드 링크를 보이지 않는다.
+
+한 번에 한 동선만 열린다: 앱 QR을 열면 열린 코드를 닫고, 코드를 열면 열린 QR을 닫는다. 한쪽으로 요청이 오면 다른 쪽도 닫는다.
+
+설치 페이지로 승인되는 것은 공식 Tailscale 앱의 노드다. RemoteDebug 앱은 자기 터널 확장의 Swiftail 노드(`rd-phone-<id8>`, 다른 `StableID`)로 호스트에 닿으므로, 앱을 설치한 뒤 앱 QR 동선으로 따로 페어링한다. iOS는 VPN 하나만 켜 두므로 앱의 VPN을 켜면 공식 앱의 VPN은 꺼진다.
 
 ## 3. 인증 규칙
 
@@ -107,7 +112,9 @@ remotedebug://pair?host=<fqdn>&code=<code>
 }
 ```
 
-### 4.3 페어링
+### 4.3 페어링(설치 페이지 코드)
+
+앱 QR 동선은 REST를 쓰지 않는다(addenda B.5). 그 동선으로 짝이 된 앱은 허용 목록 인증으로 `GET /v1/info`(§4.2)를 불러 아래 `host`와 같은 값(`hostId`, `hostName`, `fqdn`)을 얻는다.
 
 ```json
 {
@@ -294,8 +301,11 @@ Mac 앱의 모델(`HostModel`, `MacHostKit`)은 호스트 노드를 `HostCore` �
 | `setAgentBoard(_:)` | `GET /v1/agent`가 낼 JSON(addenda K) | |
 | `setDevices(_:)` | `[DeviceEntry]`(허용 목록 전체) | 모델은 이 호출을 한 번에 하나씩 순서대로 보낸다 |
 | `setDirect(_:)` | 켜기·끄기 | 같은 네트워크 직접 연결 리스너(addenda O). 결과는 다음 `status()`의 `direct` |
-| `openPairing(ttlSeconds:)` | | `PairingCode`: `{"code":"K7M29QXD","expiresAt":"…"}` |
-| `decidePairing(requestID:allow:)` | | 승인하면 허용 목록에 들어간 `DeviceEntry`, 거절하면 `nil` |
+| `openPairing(ttlSeconds:)` | | `PairingCode`: `{"code":"K7M29QXD","expiresAt":"…"}`. 열린 앱 QR은 닫는다 |
+| `openPairingOffer(_:)` | `PairingInviteRequest`(수명 초, OAuth 클라이언트) | `PairingInvite`(링크, QR 그림, 만료, 키 결과, tailnet lock 여부). 열린 코드는 닫는다(addenda B.5) |
+| `closePairingOffer()` | | 열린 앱 QR을 닫는다 |
+| `checkOAuthClient(_:)` | OAuth 클라이언트 | 형식이 틀렸으면 그 까닭. 관리 API에 보내지 않는다 |
+| `decidePairing(requestID:allow:)` | | 두 동선의 요청을 함께 받는다. 승인하면 허용 목록에 들어간 `DeviceEntry`, 거절하면 `nil` |
 | `events()` | | `start` 이후의 `CoreEvent` 스트림. `stop`하면 끝난다 |
 | `logOut(_:)` | `CoreConfig` | 제어 서버에 이 노드의 로그아웃을 알린다. `stop()`이 끝난 뒤 상태 폴더를 지우기 전에 부르고, 실패해도 돌아온다 |
 
@@ -366,7 +376,7 @@ Mac 앱의 모델(`HostModel`, `MacHostKit`)은 호스트 노드를 `HostCore` �
 | type | 추가 필드 |
 | --- | --- |
 | `state` | `status`(§9 상태) |
-| `pair-request` | 위 예시 |
+| `pair-request` | 위 예시. 앱 QR 요청은 Swift 값에 `confirmationCode`(확인 숫자 6자리)가 더 있다. 승인 화면에만 쓰고 JSON에는 싣지 않는다 |
 | `pair-decided` | `requestId`, `state`(`approved`/`denied`/`expired`) |
 | `device-added` | `device`(`DeviceEntry`) |
 | `denied` | `path`, `reason`(오류 코드), `nodeName`(알 수 있을 때) |

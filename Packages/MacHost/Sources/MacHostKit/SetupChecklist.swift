@@ -89,7 +89,8 @@ public struct SetupChecklist: Sendable, Hashable {
         return [
             Substep(id: 1, text: install, action: .installPhoneApp),
             Substep(id: 2, text: String(localized: "iPhone 앱에서 VPN을 켜고 이 Mac과 같은 Tailscale 계정으로 로그인합니다.")),
-            Substep(id: 3, text: String(localized: "페어링 QR을 iPhone 앱으로 찍은 뒤, 이 Mac에 온 요청을 허용합니다."), action: .pair),
+            Substep(id: 3, text: String(localized: "‘iPhone 페어링…’에서 ‘RemoteDebug 앱이 있는 iPhone’을 고르고, 앱으로 QR을 읽은 뒤 확인 숫자가 같으면 허용합니다."), action: .pair),
+            Substep(id: 4, text: String(localized: "케이블 없이 설치하려면 ‘iPhone 페어링…’에서 ‘앱이 아직 없는 iPhone’을 고릅니다.")),
         ]
     }
 

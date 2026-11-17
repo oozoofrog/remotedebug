@@ -33,7 +33,7 @@ struct TailscaleTokenSection: View {
                     Link("OAuth 클라이언트 만드는 법", destination: Self.guide)
                     Spacer()
                     if model.isCheckingToken { ProgressView().controlSize(.small) }
-                    Button("확인하고 저장") {
+                    Button("저장") {
                         let (id, value, tagText) = (clientID, secret, tags)
                         Task {
                             await model.saveTailscaleClient(id: id, secret: value, tags: tagText)
@@ -58,8 +58,9 @@ struct TailscaleTokenSection: View {
         } footer: {
             // 긴 설명이 한 줄로 잘리지 않게 줄을 바꿔 다 보인다.
             VStack(alignment: .leading, spacing: 6) {
-                Text("이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 됩니다. 태그는 위와 같은 태그를 고르고, 목록에 없으면 정책 파일의 tagOwners에 먼저 추가하세요. 기기 읽기 권한을 함께 주면 이 Mac이 같은 tailnet인지 확인합니다.")
-                Text("페어링 QR을 열 때마다 15분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣습니다. QR을 다른 사람에게 보여 주지 마세요.")
+                Text("이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 됩니다. 태그는 위와 같은 태그를 고르고, 목록에 없으면 정책 파일의 tagOwners에 먼저 추가하세요.")
+                Text("정책 파일은 그 태그에서 이 Mac의 443·4747 포트로 가는 연결을 허용해야 합니다.")
+                Text("앱용 페어링 QR을 열 때마다 QR과 같은 5분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣습니다. QR을 다른 사람에게 보여 주지 마세요.")
             }
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -67,7 +68,7 @@ struct TailscaleTokenSection: View {
             Button("클라이언트 지우기", role: .destructive) { model.clearTailscaleClient() }
             Button("취소", role: .cancel) {}
         } message: {
-            Text("이후 페어링 QR에는 Tailscale 키가 들어가지 않아 iPhone에서 Tailscale 로그인이 필요합니다. 관리 콘솔의 클라이언트는 그대로 남습니다.")
+            Text("이후 앱용 페어링 QR에는 Tailscale 키가 들어가지 않아 iPhone에서 Tailscale 로그인이 필요합니다. 관리 콘솔의 클라이언트는 그대로 남습니다.")
         }
     }
 }
@@ -81,7 +82,7 @@ struct PairingKeyNote: View {
     var body: some View {
         switch model.pairingKeyState {
         case .ready:
-            Label("이 QR에는 15분 동안 한 번만 쓸 수 있는 Tailscale 키가 들어 있어, iPhone은 로그인 없이 연결됩니다. 다른 사람에게 보여 주지 마세요.", systemImage: "key.fill")
+            Label("이 QR에는 한 번만 쓸 수 있는 Tailscale 키가 들어 있어, iPhone은 로그인 없이 연결됩니다. 다른 사람에게 보여 주지 마세요.", systemImage: "key.fill")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

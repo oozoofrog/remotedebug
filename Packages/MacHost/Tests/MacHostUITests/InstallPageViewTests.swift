@@ -25,7 +25,7 @@ extension ScreenTests {
         await PreviewFactory.makePairingModel(scenario, root: tmp.url.appendingPathComponent("host", isDirectory: true))
     }
 
-    /// 시트의 설치 페이지 부분과 네트워크 화면의 줄은 페어링할 수 있을 때만 있다.
+    /// 시트의 설치 페이지 부분과 네트워크 화면의 줄은 페어링할 수 있을 때만 있다(앱이 없는 iPhone 동선).
     @Test func installPageShowsOnlyWhenPairingIsAvailable() async throws {
         let tmp = try UITempDir("installdecide")
         let sharing = await pairingModel(.sharing, tmp)
@@ -45,65 +45,106 @@ extension ScreenTests {
         }
     }
 
-    /// 시트는 앱 QR만 펼쳐 보이고, Safari 설치는 "앱이 없을 때"로 접어 둔다.
+    /// 시트는 iPhone의 상황을 먼저 고르게 하고, 고르기 전에는 코드도 QR도 열지 않는다.
     @Test(.timeLimit(.minutes(1)))
-    func pairingSheetFoldsTheSafariInstall() async throws {
-        let tmp = try UITempDir("installfold")
+    func pairingSheetStartsWithTheRouteChoice() async throws {
+        let tmp = try UITempDir("routechoice")
+        let model = await PreviewFactory.makeModel(.sharing, root: tmp.url.appendingPathComponent("host", isDirectory: true))
+        // 미리보기의 허용 대기 요청이 먼저 오면 시트는 그 요청을 보인다. 그 요청을 끝내 둔다.
+        try #require(try await until { !model.pendingPairRequests.isEmpty })
+        for request in model.pendingPairRequests {
+            model.handle(.pairDecided(PairDecidedEvent(requestId: request.requestId, state: .denied)))
+        }
+        let window = host(PairingSheet().environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, CopyLog().copier))
+        defer { window.close() }
+        let view = try root(window)
+        try #require(try await until { !AXTree.buttons(PairingSheet.routeTitle(.browser), in: view).isEmpty })
+        #expect(!AXTree.buttons(PairingSheet.routeTitle(.app), in: view).isEmpty)
+        #expect(model.pairingCode == nil && model.openInvite == nil)
+
+        // 앱이 없는 iPhone을 고르면 그때 코드를 연다.
+        AXTree.press(try #require(AXTree.buttons(PairingSheet.routeTitle(.browser), in: view).first))
+        #expect(try await until { model.pairingCode != nil })
+        #expect(model.openInvite == nil)
+        await model.shutdown()
+    }
+
+    /// 이미 열린 코드(에이전트가 연 것 등)가 있으면 시트는 고르기 화면 대신 그 동선으로 열린다.
+    @Test(.timeLimit(.minutes(1)))
+    func pairingSheetOpensOnTheRouteThatIsAlreadyOpen() async throws {
+        let tmp = try UITempDir("routeopen")
         let model = await pairingModel(.sharing, tmp)
         let window = host(PairingSheet().environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, CopyLog().copier))
         defer { window.close() }
         let view = try root(window)
-        try #require(try await until { !AXTree.buttons("페어링 링크 복사", in: view).isEmpty })
-        let texts = AXTree.texts(in: view)
-        #expect(texts.contains(BrowserInstallPanel.heading), "\(texts)")
-        #expect(AXTree.buttons(BrowserInstallPanel.copyTitle, in: view).isEmpty, "Safari 설치는 접혀 있다")
-        #expect(!texts.contains(Self.pageLink))
+        #expect(try await until { !AXTree.buttons(BrowserPairingPanel.copyTitle, in: view).isEmpty })
         await model.shutdown()
     }
 
-    /// 시트를 펼치면 두 번째 QR·링크 글자·사실 문장이 보이고, "링크 복사"는 링크만 클립보드에 넣고 알린다.
+    /// 앱이 없는 iPhone: 할 일 순서, 주소(코드 없음), 코드, "링크 복사"는 코드를 넣은 링크만 클립보드에 넣고 알린다.
     @Test(.timeLimit(.minutes(1)))
-    func pairingSheetCopiesTheInstallPageLink() async throws {
+    func browserRouteShowsTheStepsAndCopiesTheInstallPageLink() async throws {
         let tmp = try UITempDir("installsheet")
         let model = await pairingModel(.sharing, tmp)
         let log = CopyLog()
-        let window = host(PairingSheet(showsBrowserInstall: true).environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, log.copier))
+        let window = host(PairingSheet(route: .browser).environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, log.copier))
         defer { window.close() }
         let view = try root(window)
-        try #require(try await until { !AXTree.buttons(BrowserInstallPanel.copyTitle, in: view).isEmpty })
+        try #require(try await until { !AXTree.buttons(BrowserPairingPanel.copyTitle, in: view).isEmpty })
         let texts = AXTree.texts(in: view)
-        #expect(texts.contains(Self.pageLink))
-        #expect(texts.contains(BrowserInstallPanel.facts))
-        #expect(texts.contains(BrowserInstallPanel.heading))
-        #expect(texts.contains { $0.contains("RemoteDebug에서 QR을 찍거나") }, "앱 페어링 안내는 그대로")
+        #expect(BrowserPairingPanel.steps.allSatisfy(texts.contains), "\(texts)")
+        #expect(texts.contains(Self.pageAddress) && texts.contains("K7M2-9QXD"))
+        #expect(!texts.contains { $0.contains("remotedebug://") }, "앱용 링크는 없다")
 
-        AXTree.press(try #require(AXTree.buttons(BrowserInstallPanel.copyTitle, in: view).first))
+        AXTree.press(try #require(AXTree.buttons(BrowserPairingPanel.copyTitle, in: view).first))
         try #require(try await until { !log.writes.isEmpty })
         #expect(log.writes == [Self.pageLink])
-        #expect(log.announcements == [BrowserInstallPanel.copyAnnouncement])
+        #expect(log.announcements == [BrowserPairingPanel.copyAnnouncement])
         #expect(try await until { !AXTree.buttons(CopyLinkButton.copiedTitle, in: view).isEmpty }, "복사됨 표시")
-
-        // 앱 페어링 링크 복사는 예전처럼 앱 링크만 넣는다.
-        AXTree.press(try #require(AXTree.buttons("페어링 링크 복사", in: view).first))
-        try #require(try await until { log.writes.count == 2 })
-        #expect(log.writes.last == "remotedebug://pair?host=\(PreviewFactory.fqdn)&code=K7M29QXD")
-        #expect(log.announcements.count == 1)
         await model.shutdown()
     }
 
-    /// 코드가 쓰이면 시트에서 설치 페이지 부분이 사라진다.
+    /// 앱이 있는 iPhone: QR과 할 일 순서. 링크 복사는 제안의 링크를 넣는다. 설치 페이지 코드는 보이지 않는다.
     @Test(.timeLimit(.minutes(1)))
-    func pairingSheetDropsTheInstallPageWhenTheCodeIsUsed() async throws {
-        let tmp = try UITempDir("installused")
-        let model = await pairingModel(.sharing, tmp)
-        let window = host(PairingSheet(showsBrowserInstall: true).environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, CopyLog().copier))
+    func appRouteShowsTheQRSteps() async throws {
+        let tmp = try UITempDir("appsheet")
+        let model = await PreviewFactory.makePairingModel(.sharing, route: .app, root: tmp.url.appendingPathComponent("host", isDirectory: true))
+        let log = CopyLog()
+        let window = host(PairingSheet(route: .app).environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, log.copier))
         defer { window.close() }
         let view = try root(window)
-        try #require(try await until { !AXTree.buttons(BrowserInstallPanel.copyTitle, in: view).isEmpty })
-        model.handle(.pairRequest(PairRequestEvent(requestId: "pr_used", deviceName: "Safari iPhone", nodeName: "rd-phone-web", loginName: "",
-                                                   expiresAt: Date().addingTimeInterval(120))))
-        #expect(try await until { AXTree.buttons(BrowserInstallPanel.copyTitle, in: view).isEmpty })
-        #expect(!AXTree.texts(in: view).contains(Self.pageLink))
+        try #require(try await until { !AXTree.buttons(AppPairingPanel.copyTitle, in: view).isEmpty })
+        let texts = AXTree.texts(in: view)
+        #expect(AppPairingPanel.steps.allSatisfy(texts.contains), "\(texts)")
+        #expect(!texts.contains("K7M2-9QXD") && model.pairingCode == nil)
+        AXTree.press(try #require(AXTree.buttons(AppPairingPanel.copyTitle, in: view).first))
+        try #require(try await until { !log.writes.isEmpty })
+        #expect(log.writes.first?.hasPrefix("remotedebug://pair#v=1&") == true)
+        await model.shutdown()
+    }
+
+    /// 코드가 쓰이면 시트에서 설치 페이지 부분이 사라지고 요청 줄이 나온다. 요청 줄은 어느 동선으로 왔는지 보이고,
+    /// 확인 숫자는 앱 QR 요청에만 있다.
+    @Test(.timeLimit(.minutes(1)))
+    func pairingSheetShowsTheRequestRouteWhenTheCodeIsUsed() async throws {
+        let tmp = try UITempDir("installused")
+        let model = await pairingModel(.sharing, tmp)
+        let window = host(PairingSheet(route: .browser).environment(model).environment(AuthKeyDraft()).environment(\.linkCopier, CopyLog().copier))
+        defer { window.close() }
+        let view = try root(window)
+        try #require(try await until { !AXTree.buttons(BrowserPairingPanel.copyTitle, in: view).isEmpty })
+        let web = PairRequestEvent(requestId: "pr_used", deviceName: "Safari iPhone", nodeName: "rd-phone-web", loginName: "",
+                                   expiresAt: Date().addingTimeInterval(120))
+        model.handle(.pairRequest(web))
+        #expect(try await until { AXTree.buttons(BrowserPairingPanel.copyTitle, in: view).isEmpty })
+        #expect(!AXTree.texts(in: view).contains(Self.pageAddress))
+        #expect(try await until { AXTree.texts(in: view).contains(PairRequestRow.routeText(web)) })
+        #expect(PairRequestRow.confirmationDigits(web) == nil)
+
+        var qr = web
+        qr.confirmationCode = "042917"
+        #expect(PairRequestRow.routeText(qr) != PairRequestRow.routeText(web))
+        #expect(PairRequestRow.confirmationDigits(qr) == "042 917")
         await model.shutdown()
     }
 

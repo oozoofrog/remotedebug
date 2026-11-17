@@ -30,7 +30,7 @@
 
   <section id="view-pair" aria-labelledby="pair-title" hidden>
     <h2 id="pair-title" tabindex="-1">Mac 페어링</h2>
-    <p>Mac 앱의 페어링 화면에 표시된 코드를 입력하세요. Mac에서 승인하면 빌드 목록이 열립니다.</p>
+    <p>Mac 앱의 ‘iPhone 페어링…’에서 ‘앱이 아직 없는 iPhone’을 골라 나온 코드를 입력하세요. Mac에서 승인하면 빌드 목록이 열립니다.</p>
     <form id="pair-form" novalidate>
       <label for="code">페어링 코드</label>
       <input id="code" name="code" class="code" type="text" inputmode="text" autocomplete="one-time-code"
@@ -63,6 +63,7 @@
       <p>Mac 앱에서 빌드를 공유한 뒤 새로고침하세요.</p>
     </div>
     <ul id="build-list" class="builds"></ul>
+    <p id="next-step" class="hint">RemoteDebug를 설치한 뒤 앱을 열고, Mac 앱의 ‘iPhone 페어링…’에서 ‘RemoteDebug 앱이 있는 iPhone’을 골라 나온 QR을 앱으로 읽으세요.</p>
     <p id="loaded-at" class="hint"></p>
   </section>
 </main>

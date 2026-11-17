@@ -6,13 +6,18 @@ public struct PairRequestEvent: Codable, Sendable, Hashable {
     public var nodeName: String
     public var loginName: String
     public var expiresAt: Date
+    /// QR·링크 페어링(addenda B.5)의 확인 숫자 6자리. 승인 화면에만 보인다. 코드 페어링이면 nil.
+    /// 비밀에 가까운 값이라 JSON에 싣지 않는다(인코딩·디코딩 모두 건너뛴다). 에이전트 응답과 로그에도 넣지 않는다.
+    public var confirmationCode: String?
 
-    public init(requestId: String, deviceName: String, nodeName: String, loginName: String, expiresAt: Date) {
+    public init(requestId: String, deviceName: String, nodeName: String, loginName: String, expiresAt: Date,
+                confirmationCode: String? = nil) {
         self.requestId = requestId
         self.deviceName = deviceName
         self.nodeName = nodeName
         self.loginName = loginName
         self.expiresAt = expiresAt
+        self.confirmationCode = confirmationCode
     }
 
     enum CodingKeys: String, CodingKey { case requestId, deviceName, nodeName, loginName, expiresAt }

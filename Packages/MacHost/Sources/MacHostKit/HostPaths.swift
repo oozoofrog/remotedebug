@@ -27,6 +27,9 @@ public struct HostPaths: Sendable, Hashable {
     /// IPA 풀기·묶기용 작업 폴더(게시 폴더와 같은 볼륨이라 이름 바꾸기로 원자적 교체가 된다).
     public var workDir: URL { root.appendingPathComponent("Work", isDirectory: true) }
     public var devicesFile: URL { root.appendingPathComponent("devices.json") }
+    /// QR·링크 페어링의 짝 목록(Swiftail `PairingHost`의 `paired-peers.json`). 권한 판정은 `devicesFile`(허용 목록)이 한다.
+    /// 노드 상태(`stateDir`)와 따로 둔다: 로그아웃이 노드 상태를 지워도 짝 목록은 허용 목록과 함께 남는다.
+    public var pairingDir: URL { root.appendingPathComponent("pairing", isDirectory: true) }
     public var buildsFile: URL { root.appendingPathComponent("builds.json") }
     /// 감시 폴더에서 이미 처리한 빌드의 지문(경로 → 지문). 다시 시작해도 같은 빌드를 또 가져오지 않는다.
     public var watchStateFile: URL { root.appendingPathComponent("watched.json") }

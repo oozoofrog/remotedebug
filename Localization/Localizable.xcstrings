@@ -6433,6 +6433,174 @@
         }
       }
     },
+    "QR 페어링 포트를 열지 못했습니다. 공유를 다시 시작하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't open the QR pairing port. Restart sharing."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QRペアリング用のポートを開けませんでした。共有をやり直してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法打开二维码配对端口。请重新开始共享。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法開啟 QR 碼配對連接埠。請重新開始分享。"
+          }
+        }
+      }
+    },
+    "QR 페어링을 준비하지 못했습니다. 공유를 다시 시작하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't prepare QR pairing. Restart sharing."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QRペアリングを準備できませんでした。共有をやり直してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法准备二维码配对。请重新开始共享。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法準備 QR 碼配對。請重新開始分享。"
+          }
+        }
+      }
+    },
+    "QR 페어링을 준비하지 못했습니다. 설치 페이지 코드로는 페어링할 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't prepare QR pairing. You can still pair with an install page code."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QRペアリングを準備できませんでした。インストールページのコードではペアリングできます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法准备二维码配对。仍可使用安装页面代码配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法準備 QR 碼配對。仍可使用安裝頁面代碼配對。"
+          }
+        }
+      }
+    },
+    "QR을 만드는 중…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Creating QR code…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QRコードを作成中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在生成二维码…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在產生 QR 碼…"
+          }
+        }
+      }
+    },
+    "QR을 만들지 못했습니다. 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't create the QR code. Try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QRコードを作成できませんでした。もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法生成二维码。请重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法產生 QR 碼。請再試一次。"
+          }
+        }
+      }
+    },
+    "QR이 만료됐습니다. 새 QR을 만드세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The QR code expired. Create a new one."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QRコードの期限が切れました。新しいQRコードを作成してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "二维码已过期。请生成新的二维码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QR 碼已過期。請產生新的 QR 碼。"
+          }
+        }
+      }
+    },
     "RD 업데이트" : {
       "localizations" : {
         "en" : {
@@ -6971,6 +7139,34 @@
         }
       }
     },
+    "RemoteDebug 앱의 QR로 요청" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requested with the QR code in the RemoteDebug app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteDebugアプリのQRコードでリクエスト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过 RemoteDebug App 的二维码请求"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "透過 RemoteDebug App 的 QR 碼請求"
+          }
+        }
+      }
+    },
     "RemoteDebug 앱이 VPN을 켜 두었습니다" : {
       "localizations" : {
         "en" : {
@@ -6995,6 +7191,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "RemoteDebug App 已開啟 VPN"
+          }
+        }
+      }
+    },
+    "RemoteDebug 앱이 있는 iPhone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone with RemoteDebug"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "RemoteDebugアプリがあるiPhone"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安装 RemoteDebug 的 iPhone"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已安裝 RemoteDebug 的 iPhone"
           }
         }
       }
@@ -7475,6 +7699,62 @@
         }
       }
     },
+    "Safari 설치 페이지의 코드로 요청" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requested with a code on the Safari install page"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safariのインストールページのコードでリクエスト"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过 Safari 安装页面的代码请求"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "透過 Safari 安裝頁面的代碼請求"
+          }
+        }
+      }
+    },
+    "Safari로 설치 페이지를 열어 코드로 페어링하고 앱을 설치합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the install page in Safari, pair with a code, and install the app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safariでインストールページを開き、コードでペアリングしてアプリをインストールします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Safari 中打开安装页面，用代码配对并安装 App。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Safari 中開啟安裝頁面，用代碼配對並安裝 App。"
+          }
+        }
+      }
+    },
     "Safari에서 열기" : {
       "localizations" : {
         "en" : {
@@ -7891,6 +8171,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tailscale 連線完成後，會開啟 HTTPS 安裝網址。"
+          }
+        }
+      }
+    },
+    "Tailscale 키 만들기를 멈췄습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopped creating the Tailscale key."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tailscaleキーの作成を中止しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已停止创建 Tailscale 密钥。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已停止建立 Tailscale 金鑰。"
           }
         }
       }
@@ -10079,6 +10387,34 @@
         }
       }
     },
+    "iPhone 카메라로 이 QR을 찍거나, Safari에서 아래 주소를 엽니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scan this QR code with the iPhone camera, or open the address below in Safari."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneのカメラでこのQRコードを読み取るか、Safariで下のアドレスを開きます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 iPhone 相机扫描此二维码，或在 Safari 中打开下面的地址。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 iPhone 相機掃描此 QR 碼，或在 Safari 中開啟下方的位址。"
+          }
+        }
+      }
+    },
     "iPhone 페어링" : {
       "localizations" : {
         "en" : {
@@ -10135,6 +10471,62 @@
         }
       }
     },
+    "iPhone과 이 Mac에 나온 확인 숫자가 같은지 봅니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check that the confirmation numbers on the iPhone and this Mac match."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneとこのMacに表示された確認番号が同じか確かめます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认 iPhone 和这台 Mac 上显示的确认数字相同。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認 iPhone 和這台 Mac 上顯示的確認數字相同。"
+          }
+        }
+      }
+    },
+    "iPhone과 페어링을 끝내지 못했습니다. iPhone이 연결을 끊었을 수 있습니다. 새 QR로 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't finish pairing with the iPhone. The iPhone may have disconnected. Try again with a new QR code."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneとのペアリングを完了できませんでした。iPhoneが接続を切った可能性があります。新しいQRコードでもう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法完成与 iPhone 的配对。iPhone 可能已断开连接。请用新的二维码重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法完成與 iPhone 的配對。iPhone 可能已中斷連線。請用新的 QR 碼再試一次。"
+          }
+        }
+      }
+    },
     "iPhone에 RemoteDebug 앱을 설치하고 이 Mac과 페어링합니다." : {
       "localizations" : {
         "en" : {
@@ -10159,6 +10551,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在 iPhone 上安裝 RemoteDebug App，並與這台 Mac 配對。"
+          }
+        }
+      }
+    },
+    "iPhone에 나온 숫자와 같을 때만 허용하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Allow only if it matches the number on the iPhone."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneに表示された番号と同じときだけ許可してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仅当与 iPhone 上显示的数字相同时才允许。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "僅在與 iPhone 上顯示的數字相同時才允許。"
           }
         }
       }
@@ -10271,6 +10691,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法儲存到 iPhone。請檢查儲存空間。"
+          }
+        }
+      }
+    },
+    "iPhone에서 RemoteDebug 앱을 열고 이 QR을 읽습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the RemoteDebug app on the iPhone and scan this QR code."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneでRemoteDebugアプリを開き、このQRコードを読み取ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 上打开 RemoteDebug App 并扫描此二维码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 iPhone 上打開 RemoteDebug App 並掃描此 QR 碼。"
           }
         }
       }
@@ -10411,6 +10859,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選擇要傳送到 iPhone 的檔案"
+          }
+        }
+      }
+    },
+    "iPhone을 이 Mac과 페어링합니다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pair an iPhone with this Mac"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneをこのMacとペアリングします"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将 iPhone 与这台 Mac 配对"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將 iPhone 與這台 Mac 配對"
           }
         }
       }
@@ -10579,6 +11055,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "請在 iPhone 的 RemoteDebug 中掃描 QR 或輸入代碼。"
+          }
+        }
+      }
+    },
+    "iPhone의 Tailscale 앱을 이 Mac과 같은 tailnet에 연결합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect the Tailscale app on the iPhone to the same tailnet as this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhoneのTailscaleアプリをこのMacと同じtailnetに接続します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将 iPhone 上的 Tailscale App 连接到与这台 Mac 相同的 tailnet。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將 iPhone 上的 Tailscale App 連線到與這台 Mac 相同的 tailnet。"
           }
         }
       }
@@ -11833,6 +12337,34 @@
         }
       }
     },
+    "‘iPhone 페어링…’에서 ‘RemoteDebug 앱이 있는 iPhone’을 고르고, 앱으로 QR을 읽은 뒤 확인 숫자가 같으면 허용합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In ‘iPhone Pairing…’, choose ‘iPhone with RemoteDebug’, scan the QR code with the app, and allow it if the confirmation numbers match."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「iPhoneをペアリング…」で「RemoteDebugアプリがあるiPhone」を選び、アプリでQRコードを読み取って、確認番号が同じなら許可します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在“iPhone 配对…”中选择“已安装 RemoteDebug 的 iPhone”，用 App 扫描二维码，确认数字相同后允许。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在「iPhone 配對…」中選擇「已安裝 RemoteDebug 的 iPhone」，用 App 掃描 QR 碼，確認數字相同後允許。"
+          }
+        }
+      }
+    },
     "가져오기" : {
       "localizations" : {
         "en" : {
@@ -12053,6 +12585,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "請先選擇要監視的檔案夾。"
+          }
+        }
+      }
+    },
+    "같으면 이 Mac에서 허용합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "If they match, allow it on this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "同じなら、このMacで許可します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果相同，请在这台 Mac 上允许。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果相同，請在這台 Mac 上允許。"
           }
         }
       }
@@ -19687,6 +20247,34 @@
         }
       }
     },
+    "새 QR 만들기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create New QR Code"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいQRコードを作成"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "生成新二维码"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "產生新 QR 碼"
+          }
+        }
+      }
+    },
     "새 RemoteDebug 빌드가 있습니다. RD 업데이트에서 설치하세요." : {
       "localizations" : {
         "en" : {
@@ -23027,6 +23615,62 @@
         }
       }
     },
+    "앱용 페어링 QR을 열 때마다 QR과 같은 5분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣습니다. QR을 다른 사람에게 보여 주지 마세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each time you open a pairing QR code for the app, a single-use key valid for the same 5 minutes as the QR code is created and included in it. Don't show the QR code to anyone else."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリ用のペアリングQRコードを開くたびに、QRコードと同じ5分間だけ1回使えるキーを作成してQRコードに含めます。QRコードを他人に見せないでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次打开 App 用的配对二维码时，都会创建一个与二维码同样有效 5 分钟、只能使用一次的密钥并放入二维码。请勿向他人展示二维码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "每次開啟 App 用的配對 QR 碼時，都會建立一組與 QR 碼同樣有效 5 分鐘、只能使用一次的金鑰並放入 QR 碼。請勿向他人展示 QR 碼。"
+          }
+        }
+      }
+    },
+    "앱으로 QR을 읽어 페어링합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pair by scanning a QR code with the app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリでQRコードを読み取ってペアリングします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 App 扫描二维码进行配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 App 掃描 QR 碼進行配對。"
+          }
+        }
+      }
+    },
     "앱은 %@가 됩니다. 이 팀에서 이미 쓰는 값이 아니면 그대로 두세요." : {
       "localizations" : {
         "en" : {
@@ -23135,6 +23779,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "若 App 無法執行，請確認「設定」>「隱私權與安全性」>「開發者模式」是否已開啟。"
+          }
+        }
+      }
+    },
+    "앱이 아직 없는 iPhone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "iPhone without the app yet"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリがまだないiPhone"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未安装 App 的 iPhone"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "尚未安裝 App 的 iPhone"
           }
         }
       }
@@ -24399,6 +25071,34 @@
         }
       }
     },
+    "요청이 끝났지만 기기가 추가되지 않았습니다. 새 QR이나 코드로 다시 페어링하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The request ended, but the device wasn't added. Pair again with a new QR code or code."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リクエストは終了しましたが、デバイスは追加されませんでした。新しいQRコードまたはコードでもう一度ペアリングしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求已结束，但未添加设备。请用新的二维码或代码重新配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請求已結束，但未新增裝置。請用新的 QR 碼或代碼重新配對。"
+          }
+        }
+      }
+    },
     "요청이 끝났지만 기기가 추가되지 않았습니다. 새 코드로 다시 시도하세요." : {
       "localizations" : {
         "en" : {
@@ -24455,6 +25155,34 @@
         }
       }
     },
+    "요청이 만료됐습니다. 새 QR이나 코드로 다시 페어링하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The request expired. Pair again with a new QR code or code."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リクエストの期限が切れました。新しいQRコードまたはコードでもう一度ペアリングしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求已过期。请用新的二维码或代码重新配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請求已過期。請用新的 QR 碼或代碼重新配對。"
+          }
+        }
+      }
+    },
     "요청이 만료됐습니다. 새 코드를 만들어 iPhone에서 다시 요청하세요." : {
       "localizations" : {
         "en" : {
@@ -24479,6 +25207,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "請求已過期。請產生新代碼，再從 iPhone 重新請求。"
+          }
+        }
+      }
+    },
+    "요청한 iPhone이 맞는지 확인하고 응답하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check that this is the iPhone that made the request, then respond."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リクエストしたiPhoneで間違いないか確かめてから応答してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请确认这是发出请求的 iPhone，然后作出回应。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請確認這是發出請求的 iPhone，然後再回應。"
           }
         }
       }
@@ -24675,6 +25431,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移除此 Mac"
+          }
+        }
+      }
+    },
+    "이 Mac에 게시된 RemoteDebug 앱 빌드가 없어 4단계를 할 수 없습니다. 먼저 RemoteDebugPhone 스킴을 빌드해 게시하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Step 4 isn't possible because no RemoteDebug app build is published on this Mac. Build and publish the RemoteDebugPhone scheme first."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このMacにRemoteDebugアプリのビルドが公開されていないため、手順4を行えません。先にRemoteDebugPhoneスキームをビルドして公開してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台 Mac 上没有已发布的 RemoteDebug App 构建，无法进行第 4 步。请先构建并发布 RemoteDebugPhone 方案。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這台 Mac 上沒有已發布的 RemoteDebug App 建置，無法進行第 4 步。請先建置並發布 RemoteDebugPhone 配置。"
           }
         }
       }
@@ -25099,6 +25883,34 @@
         }
       }
     },
+    "이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 됩니다. 태그는 위와 같은 태그를 고르고, 목록에 없으면 정책 파일의 tagOwners에 먼저 추가하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create an OAuth client in the admin console of the tailnet this Mac is signed in to. It needs only the Auth Keys write scope (auth_keys). Choose the same tag as above; if it isn't listed, add it to tagOwners in the policy file first."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このMacがサインインしているtailnetの管理コンソールでOAuthクライアントを作成してください。権限はAuth Keysの書き込み(auth_keys)だけで足ります。タグは上と同じものを選び、一覧になければ先にポリシーファイルのtagOwnersに追加してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请在这台 Mac 登录的 tailnet 的管理控制台中创建 OAuth 客户端。只需要 Auth Keys 写入权限（auth_keys）。标签选择与上面相同的标签；如果列表中没有，请先将其添加到策略文件的 tagOwners 中。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請在這台 Mac 登入的 tailnet 的管理主控台中建立 OAuth 用戶端。只需要 Auth Keys 寫入權限（auth_keys）。標籤選擇與上方相同的標籤；如果清單中沒有，請先將其加入策略檔的 tagOwners。"
+          }
+        }
+      }
+    },
     "이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 됩니다. 태그는 위와 같은 태그를 고르고, 목록에 없으면 정책 파일의 tagOwners에 먼저 추가하세요. 기기 읽기 권한을 함께 주면 이 Mac이 같은 tailnet인지 확인합니다." : {
       "localizations" : {
         "en" : {
@@ -25123,6 +25935,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "請在這台 Mac 登入的 tailnet 管理主控台中建立 OAuth 用戶端。只需要 Auth Keys 寫入（auth_keys）權限。標籤請選擇與上方相同的標籤；若列表中沒有，請先在原則檔案的 tagOwners 中加入。若同時授予裝置讀取權限，這台 Mac 會確認是否為同一個 tailnet。"
+          }
+        }
+      }
+    },
+    "이 Mac이 아직 tailnet에 연결되지 않았습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Mac isn't connected to the tailnet yet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このMacはまだtailnetに接続されていません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台 Mac 尚未连接到 tailnet。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這台 Mac 尚未連線到 tailnet。"
           }
         }
       }
@@ -25207,6 +26047,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此 QR 包含一把 15 分鐘內只能使用一次的 Tailscale 金鑰，iPhone 不必登入即可連線。請勿給他人看。"
+          }
+        }
+      }
+    },
+    "이 QR에는 한 번만 쓸 수 있는 Tailscale 키가 들어 있어, iPhone은 로그인 없이 연결됩니다. 다른 사람에게 보여 주지 마세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This QR code contains a single-use Tailscale key, so the iPhone connects without signing in. Don't show it to anyone else."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このQRコードには1回だけ使えるTailscaleキーが含まれているため、iPhoneはサインインせずに接続します。他人に見せないでください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此二维码包含只能使用一次的 Tailscale 密钥，因此 iPhone 无需登录即可连接。请勿向他人展示。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 QR 碼包含只能使用一次的 Tailscale 金鑰，因此 iPhone 無需登入即可連線。請勿向他人展示。"
+          }
+        }
+      }
+    },
+    "이 iPhone에 RemoteDebug 앱이 있나요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Does this iPhone have the RemoteDebug app?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このiPhoneにRemoteDebugアプリはありますか?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这台 iPhone 上有 RemoteDebug App 吗？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這台 iPhone 上有 RemoteDebug App 嗎？"
           }
         }
       }
@@ -25409,6 +26305,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此 iPhone 尚未獲得 Mac 核准。請重新配對。"
+          }
+        }
+      }
+    },
+    "이 tailnet은 tailnet lock을 씁니다. QR의 키로 처음 들어온 iPhone은 서명 기기에서 서명해야 이 Mac에 닿습니다. 서명한 뒤 새 QR로 다시 페어링하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This tailnet uses Tailnet Lock. An iPhone that joins with the key in the QR code can reach this Mac only after a signing device signs it. After signing, pair again with a new QR code."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このtailnetはTailnet Lockを使っています。QRコードのキーで初めて参加したiPhoneは、署名デバイスで署名されるまでこのMacに届きません。署名したら、新しいQRコードでもう一度ペアリングしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 tailnet 使用 Tailnet Lock。用二维码中的密钥首次加入的 iPhone 需由签名设备签名后才能访问这台 Mac。签名后，请用新的二维码重新配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 tailnet 使用 Tailnet Lock。用 QR 碼中的金鑰首次加入的 iPhone 需由簽署裝置簽署後才能連到這台 Mac。簽署後，請用新的 QR 碼重新配對。"
           }
         }
       }
@@ -26001,6 +26925,34 @@
         }
       }
     },
+    "이 코어는 QR 페어링을 지원하지 않습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This core doesn't support QR pairing."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このコアはQRペアリングに対応していません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此核心不支持二维码配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此核心不支援 QR 碼配對。"
+          }
+        }
+      }
+    },
     "이 팀으로는 VPN(Network Extension) 권한을 쓸 수 없습니다. 개인(무료) 팀은 지원하지 않으니 유료 Apple Developer Program 팀을 고르세요." : {
       "localizations" : {
         "en" : {
@@ -26337,6 +27289,34 @@
         }
       }
     },
+    "이미 처리되었거나 만료된 페어링 요청입니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This pairing request was already handled or has expired."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このペアリングリクエストはすでに処理済みか、期限が切れています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此配对请求已处理或已过期。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此配對請求已處理或已過期。"
+          }
+        }
+      }
+    },
     "이어 갈 대화를 찾지 못했습니다. 새 요청으로 보내세요." : {
       "localizations" : {
         "en" : {
@@ -26479,6 +27459,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "隱藏先前的建置"
+          }
+        }
+      }
+    },
+    "이후 앱용 페어링 QR에는 Tailscale 키가 들어가지 않아 iPhone에서 Tailscale 로그인이 필요합니다. 관리 콘솔의 클라이언트는 그대로 남습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "From now on, pairing QR codes for the app won't include a Tailscale key, so the iPhone needs to sign in to Tailscale. The client stays in the admin console."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以後、アプリ用のペアリングQRコードにはTailscaleキーが含まれないため、iPhoneでTailscaleへのサインインが必要になります。管理コンソールのクライアントはそのまま残ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此后 App 用的配对二维码将不包含 Tailscale 密钥，iPhone 需要登录 Tailscale。管理控制台中的客户端会保留。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此後 App 用的配對 QR 碼將不包含 Tailscale 金鑰，iPhone 需要登入 Tailscale。管理主控台中的用戶端會保留。"
           }
         }
       }
@@ -27257,6 +28265,34 @@
         }
       }
     },
+    "저장했습니다. 다음 페어링 QR부터 1회용 Tailscale 키(%@)가 들어갑니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved. From the next pairing QR code on, it includes a single-use Tailscale key (%@)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存しました。次のペアリングQRコードから1回限りのTailscaleキー(%@)が含まれます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已保存。从下一个配对二维码开始，将包含一次性 Tailscale 密钥（%@）。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已儲存。從下一個配對 QR 碼開始，將包含一次性 Tailscale 金鑰（%@）。"
+          }
+        }
+      }
+    },
     "저장했습니다. 다음에 VPN을 켤 때 적용됩니다." : {
       "localizations" : {
         "en" : {
@@ -27543,6 +28579,34 @@
         }
       }
     },
+    "정책 파일은 그 태그에서 이 Mac의 443·4747 포트로 가는 연결을 허용해야 합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The policy file must allow connections from that tag to ports 443 and 4747 on this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ポリシーファイルで、そのタグからこのMacのポート443と4747への接続を許可する必要があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "策略文件必须允许从该标签到这台 Mac 的 443 和 4747 端口的连接。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "策略檔必須允許從該標籤到這台 Mac 的 443 和 4747 連接埠的連線。"
+          }
+        }
+      }
+    },
     "제거" : {
       "localizations" : {
         "en" : {
@@ -27627,6 +28691,34 @@
         }
       }
     },
+    "제어 서버가 바뀌어 %@를 추가하지 않았습니다. 지금 서버에서 다시 페어링하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The control server changed, so %@ wasn't added. Pair again on the current server."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コントロールサーバが変更されたため、%@ を追加しませんでした。現在のサーバでもう一度ペアリングしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由于控制服务器已更改，未添加 %@。请在当前服务器上重新配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "控制伺服器已變更，因此未新增 %@。請在目前的伺服器上重新配對。"
+          }
+        }
+      }
+    },
     "제어 서버가 바뀌어 %@를 추가하지 않았습니다. 지금 서버에서 새 코드로 다시 페어링하세요." : {
       "localizations" : {
         "en" : {
@@ -27651,6 +28743,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "控制伺服器已變更，因此未新增 %@。請在目前的伺服器上使用新代碼重新配對。"
+          }
+        }
+      }
+    },
+    "제어 서버가 바뀌어 %@을 추가하지 않았습니다. 지금 서버에서 다시 페어링하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The control server changed, so %@ wasn't added. Pair again on the current server."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コントロールサーバが変更されたため、%@ を追加しませんでした。現在のサーバでもう一度ペアリングしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由于控制服务器已更改，未添加 %@。请在当前服务器上重新配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "控制伺服器已變更，因此未新增 %@。請在目前的伺服器上重新配對。"
           }
         }
       }
@@ -28995,6 +30115,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法使用相機"
+          }
+        }
+      }
+    },
+    "케이블 없이 설치하려면 ‘iPhone 페어링…’에서 ‘앱이 아직 없는 iPhone’을 고릅니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To install without a cable, choose ‘iPhone without the app yet’ in ‘iPhone Pairing…’."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ケーブルなしでインストールするには、「iPhoneをペアリング…」で「アプリがまだないiPhone」を選びます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如需不用数据线安装，请在“iPhone 配对…”中选择“尚未安装 App 的 iPhone”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如需不用傳輸線安裝，請在「iPhone 配對…」中選擇「尚未安裝 App 的 iPhone」。"
           }
         }
       }
@@ -31111,6 +32259,62 @@
         }
       }
     },
+    "페어링 QR을 만들지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't create the pairing QR code."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングQRコードを作成できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法生成配对二维码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法產生配對 QR 碼。"
+          }
+        }
+      }
+    },
+    "페어링 QR을 만들지 못했습니다: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't create the pairing QR code: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングQRコードを作成できませんでした: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法生成配对二维码：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法產生配對 QR 碼：%@"
+          }
+        }
+      }
+    },
     "페어링 QR을 열 때마다 15분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣습니다. QR을 다른 사람에게 보여 주지 마세요." : {
       "localizations" : {
         "en" : {
@@ -31247,6 +32451,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "複製配對連結"
+          }
+        }
+      }
+    },
+    "페어링 링크를 복사했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied the pairing link."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングリンクをコピーしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷贝配对链接。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拷貝配對連結。"
           }
         }
       }
@@ -32171,6 +33403,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "配對日期"
+          }
+        }
+      }
+    },
+    "페이지에 아래 코드를 넣고 페어링을 요청한 뒤, 이 Mac에서 허용합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the code below on the page and request pairing, then allow it on this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ページに下のコードを入力してペアリングをリクエストし、このMacで許可します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在页面中输入下面的代码并请求配对，然后在这台 Mac 上允许。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在頁面中輸入下方的代碼並請求配對，然後在這台 Mac 上允許。"
+          }
+        }
+      }
+    },
+    "페이지의 빌드 목록에서 RemoteDebug를 설치하고, 앱을 열어 ‘RemoteDebug 앱이 있는 iPhone’의 QR을 읽습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Install RemoteDebug from the build list on the page, then open the app and scan the QR code for ‘iPhone with RemoteDebug’."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ページのビルド一覧からRemoteDebugをインストールし、アプリを開いて「RemoteDebugアプリがあるiPhone」のQRコードを読み取ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从页面的构建列表中安装 RemoteDebug，然后打开 App 扫描“已安装 RemoteDebug 的 iPhone”的二维码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從頁面的建置列表中安裝 RemoteDebug，然後打開 App 掃描「已安裝 RemoteDebug 的 iPhone」的 QR 碼。"
           }
         }
       }
@@ -33717,6 +35005,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "好"
+          }
+        }
+      }
+    },
+    "확인 숫자 %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmation number %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認番号 %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认数字 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認數字 %@"
           }
         }
       }

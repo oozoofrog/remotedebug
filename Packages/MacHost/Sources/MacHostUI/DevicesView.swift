@@ -100,7 +100,7 @@ struct DevicesView: View {
                 Label("iPhone 페어링…", systemImage: "qrcode")
             }
             .disabled(!Self.pairingEntryEnabled(model))
-            .help(pairingReason ?? String(localized: "페어링 코드를 만듭니다"))
+            .help(pairingReason ?? String(localized: "iPhone을 이 Mac과 페어링합니다"))
         }
         .confirmationDialog(
             "기기를 제거할까요?",
@@ -202,8 +202,20 @@ struct PairRequestRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(Self.sentence(request))
                     .font(.headline)
+                Text(Self.routeText(request)).font(.callout).foregroundStyle(.secondary)
                 if !request.loginName.isEmpty {
                     Text(request.loginName).font(.callout).foregroundStyle(.secondary)
+                }
+                if let digits = Self.confirmationDigits(request) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(digits)
+                            .font(.title2.monospaced().weight(.semibold))
+                            .accessibilityLabel("확인 숫자 \(request.confirmationCode?.map(String.init).joined(separator: " ") ?? "")")
+                        Text("iPhone에 나온 숫자와 같을 때만 허용하세요.")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
                 Text("\(request.expiresAt.formatted(date: .omitted, time: .shortened))까지 응답하지 않으면 만료됩니다.")
                     .font(.callout)
@@ -223,6 +235,17 @@ struct PairRequestRow: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .contain)
+    }
+
+    /// 요청이 온 동선.
+    nonisolated static func routeText(_ r: PairRequestEvent) -> String {
+        r.confirmationCode == nil ? String(localized: "Safari 설치 페이지의 코드로 요청") : String(localized: "RemoteDebug 앱의 QR로 요청")
+    }
+
+    /// 확인 숫자(앱 QR 요청만). 읽기 쉽게 세 자리씩 띄운다.
+    nonisolated static func confirmationDigits(_ r: PairRequestEvent) -> String? {
+        guard let code = r.confirmationCode, code.count == 6 else { return nil }
+        return code.prefix(3) + " " + code.suffix(3)
     }
 
     /// 요청한 기기 이름. 비어 있으면 `이름 없는 기기`.

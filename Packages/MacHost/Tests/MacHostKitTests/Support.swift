@@ -136,6 +136,9 @@ final class FakeHostCore: HostCore {
         case setDevices([DeviceEntry])
         case setDirect(Bool)
         case openPairing(Int)
+        /// 제안의 수명, OAuth 클라이언트를 넘겼는지.
+        case openOffer(Int, Bool)
+        case closeOffer
         case decide(String, Bool)
         case logOut
     }
@@ -168,6 +171,9 @@ final class FakeHostCore: HostCore {
         var stopEvents: [CoreEvent] = []
         var pairing = PairingCode(code: "K7M29QXD", expiresAt: Date().addingTimeInterval(300))
         var approvedDevice: DeviceEntry? = sampleDevice(1)
+        /// `openPairingOffer`가 낼 키 결과(클라이언트를 받았을 때). nil이면 제안을 열지 못해 던진다.
+        var offerKey: PairingInvite.AuthKey? = .included(expires: Date(timeIntervalSince1970: 1_794_478_500))
+        var offerLockEnabled = false
         var continuation: AsyncStream<CoreEvent>.Continuation?
         var stateDirAtLogOut: Bool?
     }
@@ -280,6 +286,19 @@ final class FakeHostCore: HostCore {
         guard known else { throw APIErrorBody(code: "bad_request", message: "알 수 없는 페어링 요청입니다.") }
         return allow ? state.withLock { $0.approvedDevice } : nil
     }
+
+    /// 실제 코어처럼: 클라이언트가 있으면 키 결과(`offerKey`)를, 없으면 키 없는 제안을 낸다. 링크는 시험용 고정값이다.
+    func openPairingOffer(_ request: PairingInviteRequest) async throws -> PairingInvite {
+        record(.openOffer(request.lifetimeSeconds, request.oauthClient != nil))
+        guard let key = state.withLock({ $0.offerKey }) else {
+            throw APIErrorBody(code: "pairing_unavailable", message: "QR 페어링을 준비하지 못했습니다.")
+        }
+        return PairingInvite(link: URL(string: "remotedebug://pair#v=1&h=rd-mac-test.example.ts.net&p=4747&s=FAKE&e=1")!,
+                             qrImage: nil, expiresAt: Date().addingTimeInterval(Double(request.lifetimeSeconds)),
+                             authKey: request.oauthClient == nil ? .none : key, tailnetLockEnabled: state.withLock { $0.offerLockEnabled })
+    }
+
+    func closePairingOffer() async { record(.closeOffer) }
 
     func events() -> AsyncStream<CoreEvent> {
         let (stream, continuation) = AsyncStream.makeStream(of: CoreEvent.self)
