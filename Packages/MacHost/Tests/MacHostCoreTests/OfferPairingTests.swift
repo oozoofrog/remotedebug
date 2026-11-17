@@ -19,6 +19,10 @@ final class FakePairingHost: PairingHosting, Sendable {
         var closed = 0
         var removed: [String] = []
         var savesOnApprove = true
+        /// 참이면 허용된 뒤 거짓이 될 때까지 짝 저장을 미룬다(저장이 늦는 경우).
+        var holdsSave = false
+        /// 허용을 받은 `join` 수(저장 전).
+        var approvals = 0
         var rejectsAuthKey = false
         var listening = false
         /// 승인을 기다리는 `decide` Task. 실제 `PairingHost`처럼 듣기가 끝나면 취소한다.
@@ -70,7 +74,10 @@ final class FakePairingHost: PairingHosting, Sendable {
         state.withLock { $0.deciding.append(task) }
         // iPhone이 끊는 것(이 Task의 취소)도 `decide`를 취소한다.
         let allowed = await withTaskCancellationHandler { await task.value } onCancel: { task.cancel() }
-        if allowed, state.withLock({ $0.savesOnApprove }) { state.withLock { $0.peers[request.peer.stableID] = Date() } }
+        guard allowed else { return false }
+        state.withLock { $0.approvals += 1 }
+        while state.withLock({ $0.holdsSave }) { try? await Task.sleep(for: .milliseconds(10)) }
+        if state.withLock({ $0.savesOnApprove }) { state.withLock { $0.peers[request.peer.stableID] = Date() } }
         return allowed
     }
 }
@@ -80,6 +87,8 @@ final class OfferStubs: Sendable {
     let host = Mutex<FakePairingHost?>(nil)
     let issued = Mutex<[Int]>([])
     let keyFailure = Mutex<TailscaleAPI.Failure?>(nil)
+    /// 참이면 키 발급이 취소될 때까지 끝나지 않는다(관리 API가 느린 경우).
+    let keyHangs = Mutex(false)
 }
 
 /// 가짜 노드 + 가짜 여는 쪽 + 가짜 키 발급으로 코어를 띄운다.
@@ -94,7 +103,7 @@ final class OfferHarness: Sendable {
     static let key = "tskey-auth-kTEST1CNTRL-abcdef"
     static let client = TailscaleAPI.OAuthClient(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: ["tag:rd-phone"])
 
-    init(_ label: String, lockEnabled: Bool = false) throws {
+    init(_ label: String, lockEnabled: Bool = false, saveTimeout: Duration = .seconds(1)) throws {
         tmp = try CoreTempDir(label)
         var factory = fake.factory
         factory.makePairing = { [stubs] _, _, _, decide in
@@ -104,11 +113,13 @@ final class OfferHarness: Sendable {
         }
         factory.issueKey = { [stubs] _, seconds throws(TailscaleAPI.Failure) in
             stubs.issued.withLock { $0.append(seconds) }
+            while stubs.keyHangs.withLock({ $0 }), !Task.isCancelled { try? await Task.sleep(for: .milliseconds(10)) }
+            if Task.isCancelled { throw .cancelled }
             if let failure = stubs.keyFailure.withLock({ $0 }) { throw failure }
             return IssuedPairingKey(key: Self.key, expires: Date(timeIntervalSince1970: 1_794_478_800))
         }
         core = SwiftailHostCore(layout: .init(pairingDirectory: tmp.url.appending(path: "pairing")), factory: factory,
-                                pollIntervals: (.milliseconds(20), .milliseconds(20)))
+                                pollIntervals: (.milliseconds(20), .milliseconds(20)), offerSaveTimeout: saveTimeout)
         config = try tmp.config()
         fake.node.update {
             $0.snapshot = NodeSnapshot(state: .running, fqdn: Self.fqdn, stableID: "nMAC", certDomains: [Self.fqdn],
@@ -148,10 +159,11 @@ struct OfferPairingTests {
         let invite = try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 300, oauthClient: OfferHarness.client))
         #expect(h.stubs.issued.withLock { $0 } == [300])
         #expect(invite.authKey == .included(expires: Date(timeIntervalSince1970: 1_794_478_800)))
-        #expect(invite.link.absoluteString.hasPrefix("remotedebug://pair#v=1&h=rd-mac-0000test.example.ts.net&p=4747&"))
-        #expect(invite.link.absoluteString.contains("&k=\(OfferHarness.key)"))
+        // 키는 제안(QR)에만 실린다. 키가 든 링크는 내보내지 않는다.
+        #expect(invite.link == nil)
         #expect(invite.qrImage != nil && invite.tailnetLockEnabled)
         #expect(pairing.state.withLock { $0.opened.map(\.lifetime) } == [300])
+        #expect(pairing.state.withLock { $0.opened.map(\.authKey) } == [OfferHarness.key])
         // 설명과 로그에 비밀이 없다.
         #expect(!String(describing: invite).contains(FakePairingHost.secret) && !String(describing: invite).contains("tskey"))
         #expect(!h.log.contains(OfferHarness.key) && !h.log.contains(FakePairingHost.secret) && h.log.contains("페어링 QR을 엶(키 있음)"))
@@ -174,18 +186,21 @@ struct OfferPairingTests {
         let pairing = try h.pairing
 
         let plain = try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 300, oauthClient: nil))
-        #expect(plain.authKey == .none && !plain.link.absoluteString.contains("&k=") && h.stubs.issued.withLock { $0 }.isEmpty)
+        let plainLink = try #require(plain.link)
+        #expect(plain.authKey == .none && plainLink.absoluteString.hasPrefix("remotedebug://pair#v=1&h=rd-mac-0000test.example.ts.net&p=4747&"))
+        #expect(!plainLink.absoluteString.contains("&k=") && h.stubs.issued.withLock { $0 }.isEmpty)
 
         h.stubs.keyFailure.withLock { $0 = .forbidden }
         let failed = try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 300, oauthClient: OfferHarness.client))
-        #expect(failed.authKey == .failed(.forbidden) && !failed.link.absoluteString.contains("&k="))
+        #expect(failed.authKey == .failed(.forbidden) && failed.link?.absoluteString.contains("&k=") == false)
         #expect(h.log.contains("페어링 키를 만들지 못함(forbidden)"))
 
         // 발급된 키를 링크에 실을 수 없으면 키 없이 다시 연다.
         h.stubs.keyFailure.withLock { $0 = nil }
         pairing.state.withLock { $0.rejectsAuthKey = true }
         let unusable = try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 300, oauthClient: OfferHarness.client))
-        #expect(unusable.authKey == .failed(.invalidResponse) && !unusable.link.absoluteString.contains("&k="))
+        #expect(unusable.authKey == .failed(.invalidResponse) && unusable.link?.absoluteString.contains("&k=") == false)
+        #expect(h.log.contains("키 없이 엶") && !h.log.contains("페어링 QR을 엶(키 있음)"))
 
         await #expect(throws: APIErrorBody.self) {
             try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 0, oauthClient: nil))
@@ -267,6 +282,112 @@ struct OfferPairingTests {
         _ = await joined.value
         #expect(pairDecisions(sink).contains(PairDecidedEvent(requestId: request.requestId, state: .expired)))
         #expect(try await h.core.status().pairedDevices == 0)
+    }
+
+    /// 같은 노드의 예전 짝 기록은 이번 허용이 저장됐다는 증거가 아니다: 이번에 기록이 바뀌어야 허용 목록에 넣는다.
+    @Test func anEarlierPairingOfTheSameNodeIsNotTakenAsThisApproval() async throws {
+        let h = try OfferHarness("offer-earlier", saveTimeout: .milliseconds(400))
+        try await h.core.start(h.config)
+        defer { Task { await h.core.stop() } }
+        let sink = EventSink(h.core.events())
+        let pairing = try h.pairing
+        // 방금(1초 안에) 짝이 된 같은 노드가 다시 페어링한다. 이번 요청은 저장되지 않는다(끊김·저장 실패).
+        pairing.state.withLock {
+            $0.peers["nPHONE1"] = Date()
+            $0.savesOnApprove = false
+        }
+        try await h.core.setDevices([DeviceEntry(id: "d_1", name: "예전 이름", nodeStableId: "nPHONE1", nodeName: "rd-phone-1a2b3c4d",
+                                                 loginName: "tagged-devices", pairedAt: Date())])
+        let joined = Task { await pairing.join(OfferHarness.request()) }
+        #expect(await eventually { pairRequests(sink).count == 1 })
+        let request = try #require(pairRequests(sink).first)
+        await #expect(throws: APIErrorBody.self) { try await h.core.decidePairing(requestID: request.requestId, allow: true) }
+        _ = await joined.value
+        #expect(pairDecisions(sink).map(\.state) == [.expired])
+        #expect(!sink.all.contains { if case .deviceAdded = $0 { true } else { false } })
+    }
+
+    /// 기한이 지나 실패로 끝낸 뒤에 늦게 저장된 짝은 허용 목록에 없으므로 짝 목록에서 지운다.
+    @Test func aSaveThatArrivesAfterTheTimeoutIsRemovedFromThePairedList() async throws {
+        let h = try OfferHarness("offer-late", saveTimeout: .milliseconds(300))
+        try await h.core.start(h.config)
+        defer { Task { await h.core.stop() } }
+        let sink = EventSink(h.core.events())
+        let pairing = try h.pairing
+        try await h.core.setDevices([])
+        pairing.state.withLock { $0.holdsSave = true }
+
+        let joined = Task { await pairing.join(OfferHarness.request()) }
+        #expect(await eventually { pairRequests(sink).count == 1 })
+        let request = try #require(pairRequests(sink).first)
+        await #expect(throws: APIErrorBody.self) { try await h.core.decidePairing(requestID: request.requestId, allow: true) }
+        #expect(pairing.state.withLock { $0.peers.isEmpty })
+
+        pairing.state.withLock { $0.holdsSave = false }
+        #expect(await joined.value)
+        #expect(await eventually { pairing.state.withLock { $0.removed } == ["nPHONE1"] && pairing.state.withLock { $0.peers.isEmpty } })
+        #expect(try await h.core.status().pairedDevices == 0)
+    }
+
+    /// 허용한 뒤 저장을 기다리는 사이 공유를 멈추고 다시 시작해도, 앞 실행의 허용은 새 실행의 허용 목록·사건에 들어가지 않는다.
+    @Test func stoppingWhileAnApprovalIsBeingSavedDoesNotLeakIntoTheNextRun() async throws {
+        let h = try OfferHarness("offer-restart", saveTimeout: .seconds(5))
+        try await h.core.start(h.config)
+        let sink = EventSink(h.core.events())
+        let first = try h.pairing
+        try await h.core.setDevices([])
+        first.state.withLock { $0.holdsSave = true }
+
+        let joined = Task { await first.join(OfferHarness.request()) }
+        #expect(await eventually { pairRequests(sink).count == 1 })
+        let request = try #require(pairRequests(sink).first)
+        let decided = Task { try await h.core.decidePairing(requestID: request.requestId, allow: true) }
+        #expect(await eventually { first.state.withLock { $0.approvals } == 1 })
+
+        // 멈춤은 허용의 마무리를 기다린다(기한 5초보다 훨씬 빨리 끝난다). 그 요청은 만료로 끝난다.
+        let clock = ContinuousClock()
+        let stopTime = await clock.measure { await h.core.stop() }
+        #expect(stopTime < .seconds(3))
+        #expect(pairDecisions(sink).map(\.state) == [.expired])
+
+        try await h.core.start(h.config)
+        let next = EventSink(h.core.events())
+        try await h.core.setDevices([])
+        // 앞 실행의 PairingHost가 이제야 저장한다.
+        first.state.withLock { $0.holdsSave = false }
+        _ = await joined.value
+        await #expect(throws: APIErrorBody.self) { try await decided.value }
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(!sink.all.contains { if case .deviceAdded = $0 { true } else { false } })
+        #expect(!next.all.contains { if case .deviceAdded = $0 { true } else { false } })
+        #expect(!next.all.contains { if case .pairDecided = $0 { true } else { false } })
+        #expect(try await h.core.status().pairedDevices == 0)
+        await h.core.stop()
+    }
+
+    /// 키를 만드는 사이 화면이 열기를 취소하면 설치 페이지 코드를 닫지 않고 제안도 열지 않는다.
+    @Test func aCancelledOfferLeavesTheInstallPageCodeOpen() async throws {
+        let h = try OfferHarness("offer-cancel")
+        try await h.core.start(h.config)
+        defer { Task { await h.core.stop() } }
+        let pairing = try h.pairing
+        h.stubs.keyHangs.withLock { $0 = true }
+        let opening = Task { try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 300, oauthClient: OfferHarness.client)) }
+        #expect(await eventually { h.stubs.issued.withLock { $0 } == [300] })
+        let code = try await h.core.openPairing(ttlSeconds: 300)
+        opening.cancel()
+        await #expect(throws: (any Error).self) { try await opening.value }
+        #expect(pairing.state.withLock { $0.opened }.isEmpty)
+
+        // 그 코드는 아직 쓸 수 있다.
+        let handler = try #require(h.fake.handler.withLock { $0 })
+        let body = Array(#"{"code":"\#(code.code)","deviceName":"x","platform":"ios","clientVersion":"1"}"#.utf8)
+        let response = await handler.handle(HostRequest(
+            method: "POST", target: "/v1/pair/request",
+            headers: [(name: "host", value: OfferHarness.fqdn), (name: "content-type", value: "application/json")],
+            body: BytesBody(body), contentLength: UInt64(body.count),
+            origin: .tailnet(HostPeer(stableID: "nPHONE9", nodeName: "p", loginName: ""))))
+        #expect((200..<300).contains(response.status))
     }
 
     /// 두 목록이 어긋났을 때: 허용 목록이 기준이다. 허용 목록에만 있는 기기(코드 페어링, 옮기기 전의 짝)는 그대로 쓰고,

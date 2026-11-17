@@ -138,6 +138,8 @@ final class FakeHostCore: HostCore {
         case openPairing(Int)
         /// 제안의 수명, OAuth 클라이언트를 넘겼는지.
         case openOffer(Int, Bool)
+        /// 제안을 열었다(설치 페이지 코드는 닫혔다).
+        case offerOpened
         case closeOffer
         case decide(String, Bool)
         case logOut
@@ -174,6 +176,8 @@ final class FakeHostCore: HostCore {
         /// `openPairingOffer`가 낼 키 결과(클라이언트를 받았을 때). nil이면 제안을 열지 못해 던진다.
         var offerKey: PairingInvite.AuthKey? = .included(expires: Date(timeIntervalSince1970: 1_794_478_500))
         var offerLockEnabled = false
+        /// `openPairingOffer` 호출마다 하나씩 꺼내 그 문이 열릴 때까지 멈춘다(키를 만드는 시간).
+        var offerGates: [Gate] = []
         var continuation: AsyncStream<CoreEvent>.Continuation?
         var stateDirAtLogOut: Bool?
     }
@@ -287,15 +291,21 @@ final class FakeHostCore: HostCore {
         return allow ? state.withLock { $0.approvedDevice } : nil
     }
 
-    /// 실제 코어처럼: 클라이언트가 있으면 키 결과(`offerKey`)를, 없으면 키 없는 제안을 낸다. 링크는 시험용 고정값이다.
+    /// 실제 코어처럼: 클라이언트가 있으면 키 결과(`offerKey`)를, 없으면 키 없는 제안을 낸다. 키를 실으면 링크는 없다.
+    /// 링크는 시험용 고정값이다. 문을 지나면 설치 페이지 코드를 닫고 제안을 연다(`.offerOpened`).
     func openPairingOffer(_ request: PairingInviteRequest) async throws -> PairingInvite {
         record(.openOffer(request.lifetimeSeconds, request.oauthClient != nil))
+        let gate = state.withLock { $0.offerGates.isEmpty ? nil : $0.offerGates.removeFirst() }
+        if let gate { await gate.wait() }
         guard let key = state.withLock({ $0.offerKey }) else {
             throw APIErrorBody(code: "pairing_unavailable", message: "QR 페어링을 준비하지 못했습니다.")
         }
-        return PairingInvite(link: URL(string: "remotedebug://pair#v=1&h=rd-mac-test.example.ts.net&p=4747&s=FAKE&e=1")!,
+        record(.offerOpened)
+        let authKey: PairingInvite.AuthKey = request.oauthClient == nil ? .none : key
+        let carriesKey = if case .included = authKey { true } else { false }
+        return PairingInvite(link: carriesKey ? nil : URL(string: "remotedebug://pair#v=1&h=rd-mac-test.example.ts.net&p=4747&s=FAKE&e=1")!,
                              qrImage: nil, expiresAt: Date().addingTimeInterval(Double(request.lifetimeSeconds)),
-                             authKey: request.oauthClient == nil ? .none : key, tailnetLockEnabled: state.withLock { $0.offerLockEnabled })
+                             authKey: authKey, tailnetLockEnabled: state.withLock { $0.offerLockEnabled })
     }
 
     func closePairingOffer() async { record(.closeOffer) }

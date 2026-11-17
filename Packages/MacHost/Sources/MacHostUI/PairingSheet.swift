@@ -15,6 +15,8 @@ struct PairingSheet: View {
 
     @State private var route: HostModel.PairingRoute?
     @State private var opening = false
+    /// 마지막으로 시작한 열기. 앞의 열기가 늦게 끝나도 진행 표시를 내리지 않는다.
+    @State private var openingID = 0
     /// 이 동선에서 코드·QR을 한 번이라도 보였다(만료 안내에 쓴다).
     @State private var hadOpen = false
     @State private var lastRequest: PairRequestEvent?
@@ -178,10 +180,12 @@ struct PairingSheet: View {
     }
 
     private func open(_ route: HostModel.PairingRoute) async {
+        openingID += 1
+        let id = openingID
         opening = true
         lastRequest = nil
         await model.beginPairing(route)
-        opening = false
+        if id == openingID { opening = false }
     }
 }
 
@@ -259,6 +263,8 @@ struct AppPairingPanel: View {
         String(localized: "같으면 이 Mac에서 허용합니다."),
     ]
     static let copyTitle = String(localized: "페어링 링크 복사")
+    /// 키를 실은 QR에는 링크 복사가 없다.
+    static let cameraOnlyNote = String(localized: "Tailscale 키가 든 QR은 링크로 복사할 수 없습니다. iPhone의 RemoteDebug 앱 안 카메라로 읽으세요.")
     static let lockNote = String(localized: "이 tailnet은 tailnet lock을 씁니다. QR의 키로 처음 들어온 iPhone은 서명 기기에서 서명해야 이 Mac에 닿습니다. 서명한 뒤 새 QR로 다시 페어링하세요.")
 
     var body: some View {
@@ -270,7 +276,14 @@ struct AppPairingPanel: View {
                 VStack(alignment: .leading, spacing: 10) {
                     PairingSteps(steps: Self.steps)
                     Countdown(expiresAt: invite.expiresAt)
-                    CopyLinkButton(url: invite.link, title: Self.copyTitle, announcement: String(localized: "페어링 링크를 복사했습니다."))
+                    if let link = invite.link {
+                        CopyLinkButton(url: link, title: Self.copyTitle, announcement: String(localized: "페어링 링크를 복사했습니다."))
+                    } else {
+                        Text(Self.cameraOnlyNote)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
             PairingKeyNote(dismiss: dismiss)

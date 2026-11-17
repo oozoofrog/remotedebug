@@ -123,6 +123,33 @@ extension ScreenTests {
         await model.shutdown()
     }
 
+    /// 1회용 Tailscale 키를 실은 QR은 링크 복사 없이 QR만 보이고, 앱 안 카메라로 읽으라고 한다. 키가 없으면 링크 복사가 있다.
+    @Test(.timeLimit(.minutes(1)))
+    func appQRWithATailscaleKeyHasNoCopyButton() async throws {
+        let tmp = try UITempDir("appsheetkey")
+        let model = await pairingModel(.sharing, tmp)
+        let link = URL(string: "remotedebug://pair#v=1&h=rd-mac-test.example.ts.net&p=4747&s=FAKE&e=1")!
+        func invite(_ authKey: PairingInvite.AuthKey, link: URL?) -> PairingInvite {
+            PairingInvite(link: link, qrImage: QRCodeView.makeImage(link?.absoluteString ?? "qr"), expiresAt: Date().addingTimeInterval(300),
+                          authKey: authKey, tailnetLockEnabled: false)
+        }
+
+        let keyed = host(AppPairingPanel(invite: invite(.included(expires: Date().addingTimeInterval(300)), link: nil), dismiss: {})
+            .environment(model).environment(\.linkCopier, CopyLog().copier))
+        defer { keyed.close() }
+        let keyedView = try root(keyed)
+        try #require(try await until { AXTree.texts(in: keyedView).contains(AppPairingPanel.cameraOnlyNote) })
+        #expect(AXTree.buttons(AppPairingPanel.copyTitle, in: keyedView).isEmpty)
+
+        let plain = host(AppPairingPanel(invite: invite(.none, link: link), dismiss: {})
+            .environment(model).environment(\.linkCopier, CopyLog().copier))
+        defer { plain.close() }
+        let plainView = try root(plain)
+        #expect(try await until { !AXTree.buttons(AppPairingPanel.copyTitle, in: plainView).isEmpty })
+        #expect(!AXTree.texts(in: plainView).contains(AppPairingPanel.cameraOnlyNote))
+        await model.shutdown()
+    }
+
     /// 코드가 쓰이면 시트에서 설치 페이지 부분이 사라지고 요청 줄이 나온다. 요청 줄은 어느 동선으로 왔는지 보이고,
     /// 확인 숫자는 앱 QR 요청에만 있다.
     @Test(.timeLimit(.minutes(1)))

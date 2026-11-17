@@ -13,6 +13,8 @@
 //   `decidePairing`으로 하고, 허용하면 로직의 허용 목록에 코드 페어링과 같은 항목을 넣는다.
 // - `stop()`: 노드를 멈추고, 직접 연결 리스너를 닫고, 로직을 닫아(열린 세션의 `failed`, addenda C.3) 그 이벤트까지 넘긴 뒤
 //   스트림을 끝낸다(`HostCore` 계약). 로직의 이벤트는 동기로 스트림 버퍼에 들어가므로 끝내기 전에 모두 들어 있다.
+// - 실행 구분: `start`마다 실행 번호를 매긴다. 로직·노드·페어링이 내는 이벤트는 그 실행이 아직 지금 실행일 때만 구독자에게 간다.
+//   `stop()`은 허용한 QR 페어링의 마무리(짝 저장 확인과 허용 목록 넣기)를 취소하고 끝나기를 기다린 뒤 로직을 닫는다.
 import Darwin
 import Foundation
 import MacHostKit
@@ -49,9 +51,13 @@ public final class SwiftailHostCore: HostCore, Sendable {
     static let pairingBaseURL = URL(string: "remotedebug://pair")!
     /// QR 페어링 요청이 승인을 기다리는 시간(계약 P5의 120초와 같다).
     static let offerRequestSeconds: TimeInterval = 120
+    /// 허용한 뒤 `PairingHost`가 짝으로 저장하기를 기다리는 시간.
+    static let defaultOfferSaveTimeout: Duration = .seconds(5)
 
     /// 실행 하나의 것.
     private final class Session: Sendable {
+        /// 실행 번호. 이 실행의 이벤트는 이 번호가 지금 실행일 때만 구독자에게 간다.
+        let run: Int
         let config: CoreConfig
         let logic: HostLogic
         let node: any HostNodeLayer
@@ -64,9 +70,12 @@ public final class SwiftailHostCore: HostCore, Sendable {
         /// QR·링크 페어링의 여는 쪽과 그것을 돌리는 Task. 붙이지 못했으면 nil.
         let pairing = Mutex<(host: (any PairingHosting)?, task: Task<Void, Never>?)>((nil, nil))
         let offers = PendingOffers()
+        /// 짝 목록 맞추기를 한 번에 하나씩.
+        let reconciling = SerialLock()
 
-        init(config: CoreConfig, logic: HostLogic, node: any HostNodeLayer, log: CoreLogFile, stateDirectory: URL, directDirectory: URL) {
-            (self.config, self.logic, self.node, self.log) = (config, logic, node, log)
+        init(run: Int, config: CoreConfig, logic: HostLogic, node: any HostNodeLayer, log: CoreLogFile, stateDirectory: URL,
+             directDirectory: URL) {
+            (self.run, self.config, self.logic, self.node, self.log) = (run, config, logic, node, log)
             (self.stateDirectory, self.directDirectory) = (stateDirectory, directDirectory)
         }
     }
@@ -84,6 +93,10 @@ public final class SwiftailHostCore: HostCore, Sendable {
         var loggedState: String?
         var reachedRunning = false
         var stopped = false
+        /// 화면이 허용 목록을 한 번이라도 넣었다. 그 전에는 짝 목록을 맞추지 않는다(빈 목록으로 짝을 지우지 않게).
+        var devicesApplied = false
+        /// 허용한 QR 페어링의 마무리(요청 id → 작업). `stop()`이 취소하고 기다린다.
+        var admissions: [String: Task<DeviceEntry?, any Error>] = [:]
     }
 
     private struct Shared {
@@ -91,6 +104,8 @@ public final class SwiftailHostCore: HostCore, Sendable {
         var subscribers: [UUID: AsyncStream<CoreEvent>.Continuation] = [:]
         /// 이번 앱 실행에서 직접 연결을 한 번이라도 켰다(상태의 `direct`).
         var directEverOn = false
+        /// 마지막으로 매긴 실행 번호.
+        var lastRun = 0
     }
 
     private let layout: Layout
@@ -101,6 +116,8 @@ public final class SwiftailHostCore: HostCore, Sendable {
     let pollIntervals: (starting: Duration, running: Duration)
     /// 직접 연결 리스너를 루프백에만 묶는다(시험).
     let directLoopbackOnly: Bool
+    /// 허용한 뒤 짝 저장을 기다리는 시간.
+    let offerSaveTimeout: Duration
 
     public convenience init(layout: Layout = Layout()) {
         self.init(layout: layout, factory: .swiftail)
@@ -113,11 +130,12 @@ public final class SwiftailHostCore: HostCore, Sendable {
     }
 
     init(layout: Layout, factory: HostNodeFactory, pollIntervals: (starting: Duration, running: Duration) = (.milliseconds(250), .seconds(2)),
-         directLoopbackOnly: Bool = false) {
+         directLoopbackOnly: Bool = false, offerSaveTimeout: Duration = SwiftailHostCore.defaultOfferSaveTimeout) {
         self.layout = layout
         self.factory = factory
         self.pollIntervals = pollIntervals
         self.directLoopbackOnly = directLoopbackOnly
+        self.offerSaveTimeout = offerSaveTimeout
     }
 
     // MARK: HostCore — 수명
@@ -154,6 +172,10 @@ public final class SwiftailHostCore: HostCore, Sendable {
         }
         let log = CoreLogFile(path: config.logPath)
 
+        let run = shared.withLock { value -> Int in
+            value.lastRun += 1
+            return value.lastRun
+        }
         // 로직은 노드보다 먼저 선다(직접 연결은 tailnet과 무관하게 답한다).
         let infoBox = InfoBox()
         let logic: HostLogic
@@ -166,9 +188,9 @@ public final class SwiftailHostCore: HostCore, Sendable {
                 events: { _ in },
                 updatePageURL: { UpdatePageServer.shared.publicURL },
                 eventDetails: { [weak self] detail in
-                    self?.broadcast(Self.coreEvent(detail))
+                    self?.broadcast(run: run, Self.coreEvent(detail))
                     // 설치 페이지 코드로 요청이 오면 앱용 QR은 닫는다: 페어링은 한 번에 하나다.
-                    if case .pairRequest(let event) = detail.event, event.confirmationCode == nil { self?.closeOfferInBackground() }
+                    if case .pairRequest(let event) = detail.event, event.confirmationCode == nil { self?.closeOfferInBackground(run: run) }
                 }
             ))
         } catch let error as APIErrorBody {
@@ -184,12 +206,12 @@ public final class SwiftailHostCore: HostCore, Sendable {
         )
         let layer: any HostNodeLayer
         do {
-            layer = try factory.make(configuration, logic, { [weak self] event in self?.nodeEvent(event) })
+            layer = try factory.make(configuration, logic, { [weak self] event in self?.nodeEvent(event, run: run) })
         } catch {
             logic.close()
             throw Self.invalid(String(localized: "노드 설정이 올바르지 않습니다."))
         }
-        let session = Session(config: config, logic: logic, node: layer, log: log, stateDirectory: stateDirectory,
+        let session = Session(run: run, config: config, logic: logic, node: layer, log: log, stateDirectory: stateDirectory,
                               directDirectory: directDirectory)
         sessionInfo.withLock { $0 = infoBox }
         shared.withLock { $0.session = session }
@@ -214,7 +236,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
                 try await setDirect(true)
             } catch {
                 log.line("warn: 직접 연결 리스너를 열지 못했습니다")
-                broadcast(.log(LogEvent(level: "warn", message: String(localized: "직접 연결 리스너를 열지 못했습니다."))))
+                broadcast(run: run, .log(LogEvent(level: "warn", message: String(localized: "직접 연결 리스너를 열지 못했습니다."))))
             }
         }
     }
@@ -223,7 +245,14 @@ public final class SwiftailHostCore: HostCore, Sendable {
         await lifecycle.lock()
         defer { lifecycle.unlock() }
         guard let session = shared.withLock({ $0.session }) else { return }
-        session.lock.withLock { $0.stopped = true }
+        let admissions = session.lock.withLock { value -> [Task<DeviceEntry?, any Error>] in
+            value.stopped = true
+            defer { value.admissions = [:] }
+            return Array(value.admissions.values)
+        }
+        // 허용한 QR 페어링의 마무리: 취소하고 끝나기를 기다린다(이 실행의 로직이 열려 있을 때 끝나게).
+        for task in admissions { task.cancel() }
+        for task in admissions { _ = await task.result }
         // 페어링: 듣기를 멈춘다. 승인을 기다리던 요청은 취소되어 거절로 돌아간다(그 사건까지 넘긴 뒤 로직을 닫는다).
         let pairing = session.pairing.withLock { value in
             defer { value = (nil, nil) }
@@ -345,7 +374,8 @@ public final class SwiftailHostCore: HostCore, Sendable {
     public func setDevices(_ devices: [DeviceEntry]) async throws {
         let session = try current()
         try session.logic.setDevices(devices)
-        await reconcilePairing(session, allowed: Set(devices.map(\.nodeStableId)))
+        session.lock.withLock { $0.devicesApplied = true }
+        await reconcilePairing(session)
     }
 
     public func openPairing(ttlSeconds: Int) async throws -> PairingCode {
@@ -383,6 +413,8 @@ public final class SwiftailHostCore: HostCore, Sendable {
                 session.log.line("warn: 페어링 키를 만들지 못함(\(Self.logName(error)))")
             }
         }
+        // 키를 만드는 동안 화면이 다른 동선으로 바꿨으면 아무것도 닫거나 열지 않는다.
+        try Task.checkCancellation()
         // 설치 페이지 코드는 닫는다: 페어링은 한 번에 하나다.
         session.logic.closePairingCode()
         let offer: PairingOffer
@@ -392,6 +424,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
             // 발급된 키를 링크에 실을 수 없다(감싼 키 등). 키 없이 연다.
             session.log.line("warn: 페어링 키를 링크에 실을 수 없어 키 없이 엶")
             keyState = .failed(.invalidResponse)
+            authKey = nil
             do {
                 offer = try await host.open(lifetimeSeconds: request.lifetimeSeconds, authKey: nil)
             } catch {
@@ -401,7 +434,9 @@ public final class SwiftailHostCore: HostCore, Sendable {
             throw Self.offerError(error)
         }
         session.log.line("info: 페어링 QR을 엶(\(authKey == nil ? "키 없음" : "키 있음"))")
-        return PairingInvite(link: offer.url(base: Self.pairingBaseURL), qrImage: offer.qrCode(base: Self.pairingBaseURL),
+        // 인증 키를 실은 제안은 링크로 내보내지 않는다: 사용자 지정 스킴은 다른 앱이 받을 수 있다. QR만 보인다.
+        return PairingInvite(link: authKey == nil ? offer.url(base: Self.pairingBaseURL) : nil,
+                             qrImage: offer.qrCode(base: Self.pairingBaseURL),
                              expiresAt: offer.expires, authKey: keyState, tailnetLockEnabled: snapshot.tailnetLockEnabled)
     }
 
@@ -472,7 +507,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
             }
         } catch {
             session.log.line("warn: QR 페어링을 준비하지 못함(\(Self.pairingLogName(error)))")
-            broadcast(.log(LogEvent(level: "warn", message: String(localized: "QR 페어링을 준비하지 못했습니다. 설치 페이지 코드로는 페어링할 수 있습니다."))))
+            broadcast(run: session.run, .log(LogEvent(level: "warn", message: String(localized: "QR 페어링을 준비하지 못했습니다. 설치 페이지 코드로는 페어링할 수 있습니다."))))
             return
         }
         guard let host else { return }
@@ -482,7 +517,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
             } catch {
                 guard !Task.isCancelled else { return }
                 session.log.line("warn: 페어링 포트를 듣지 못함(\(Self.pairingLogName(error)))")
-                self?.broadcast(.log(LogEvent(level: "warn", message: String(localized: "QR 페어링 포트를 열지 못했습니다. 공유를 다시 시작하세요."))))
+                self?.broadcast(run: session.run, .log(LogEvent(level: "warn", message: String(localized: "QR 페어링 포트를 열지 못했습니다. 공유를 다시 시작하세요."))))
             }
         }
         session.pairing.withLock { $0 = (host, task) }
@@ -506,29 +541,56 @@ public final class SwiftailHostCore: HostCore, Sendable {
         return allowed
     }
 
-    /// 화면의 허용·거부. 허용하면 `PairingHost`가 짝으로 저장하기를 기다려 허용 목록에 넣는다. 저장되지 않았으면
-    /// (iPhone이 그사이 끊음, 노드 신원이 바뀜, 저장 실패) 넣지 않고 던진다.
+    /// 화면의 허용·거부. 허용하면 `PairingHost`가 이번 요청으로 짝을 저장하기를 기다려 허용 목록에 넣는다. 저장되지 않았거나
+    /// (iPhone이 그사이 끊음, 노드 신원이 바뀜, 저장 실패) 그사이 공유가 멈췄으면 넣지 않고 던진다.
     private func decideOffer(_ session: Session, requestID: String, allow: Bool) async throws -> DeviceEntry? {
-        let decidedAt = Date()
-        guard let request = session.offers.answer(id: requestID, allow: allow) else {
-            throw APIErrorBody(code: "bad_request", message: String(localized: "이미 처리되었거나 만료된 페어링 요청입니다."))
-        }
         guard allow else {
+            guard session.offers.answer(id: requestID, allow: false) != nil else { throw Self.unknownRequest }
             session.offers.finish(requestID)
             session.logic.finishOfferPairingRequest(requestID: requestID, state: .denied)
             session.log.line("info: QR 페어링 요청을 거절함")
             return nil
         }
-        defer { session.offers.finish(requestID) }
+        guard let pending = session.offers.waitingRequest(id: requestID) else { throw Self.unknownRequest }
         let host = session.pairing.withLock { $0.host }
-        let deadline = ContinuousClock.now + .seconds(5)
+        // 허용하기 전의 그 노드 기록. 허용한 뒤 이 기록이 바뀌어야 이번 요청이 저장된 것이다(같은 노드의 예전 짝과 가린다).
+        let before = await host?.pairedAt(stableID: pending.peer.stableID)
+        guard let request = session.offers.answer(id: requestID, allow: true) else { throw Self.unknownRequest }
+        let task = session.lock.withLock { value -> Task<DeviceEntry?, any Error>? in
+            guard !value.stopped else { return nil }
+            let task = Task { [self] in
+                try await self.admitOffer(session, requestID: requestID, request: request, host: host, before: before)
+            }
+            value.admissions[requestID] = task
+            return task
+        }
+        guard let task else {
+            session.offers.finish(requestID)
+            session.logic.finishOfferPairingRequest(requestID: requestID, state: .expired)
+            throw Self.stoppedError
+        }
+        defer { session.lock.withLock { _ = $0.admissions.removeValue(forKey: requestID) } }
+        return try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
+    }
+
+    /// 허용한 요청의 마무리: 짝 목록의 그 노드 기록이 `before`에서 바뀌기를 기다려 허용 목록에 넣는다.
+    /// 취소되거나(공유를 멈춤) 기한이 지나면 넣지 않는다. 늦게 저장된 짝은 짝 목록 맞추기가 지운다.
+    private func admitOffer(_ session: Session, requestID: String, request: PendingOffers.Request, host: (any PairingHosting)?,
+                            before: Date?) async throws -> DeviceEntry? {
+        defer { session.offers.finish(requestID) }
+        let deadline = ContinuousClock.now + offerSaveTimeout
         var saved = false
-        while let host, ContinuousClock.now < deadline {
-            if let pairedAt = await host.pairedAt(stableID: request.peer.stableID), pairedAt >= decidedAt.addingTimeInterval(-1) {
+        while let host, !Task.isCancelled, ContinuousClock.now < deadline {
+            if let pairedAt = await host.pairedAt(stableID: request.peer.stableID), pairedAt != before {
                 saved = true
                 break
             }
             try? await Task.sleep(for: .milliseconds(20))
+        }
+        if Task.isCancelled || session.lock.withLock({ $0.stopped }) {
+            session.log.line("info: QR 페어링을 끝내기 전에 공유가 멈춤")
+            session.logic.finishOfferPairingRequest(requestID: requestID, state: .expired)
+            throw Self.stoppedError
         }
         guard saved else {
             session.log.line("warn: QR 페어링을 허용했지만 짝이 저장되지 않음")
@@ -540,10 +602,15 @@ public final class SwiftailHostCore: HostCore, Sendable {
         return session.logic.admitOfferPairedDevice(requestID: requestID, peer: request.peer, name: request.name)
     }
 
-    /// 짝 목록을 허용 목록의 부분집합으로 맞춘다. 허용 목록에 없는 짝은 지운다(허용한 뒤 저장을 기다리는 짝은 둔다).
-    private func reconcilePairing(_ session: Session, allowed: Set<String>) async {
+    /// 짝 목록을 허용 목록(로직의 기기)의 부분집합으로 맞춘다. 허용 목록에 없는 짝은 지운다(허용한 뒤 저장을 기다리는 짝은 둔다).
+    /// 허용 목록을 받은 뒤 그 목록이 바뀔 때와 상태를 읽을 때마다 부른다(기한이 지난 뒤 늦게 저장된 짝도 지운다).
+    private func reconcilePairing(_ session: Session) async {
         guard let host = session.pairing.withLock({ $0.host }) else { return }
+        await session.reconciling.lock()
+        defer { session.reconciling.unlock() }
+        // 허용 중인 노드를 허용 목록보다 먼저 읽는다. 허용 목록에 넣은 뒤에야 허용 중에서 빠지므로, 둘 중 어디에도 없는 짝만 지운다.
         let admitting = session.offers.admittingStableIDs
+        let allowed = Set(session.logic.deviceStableIDs())
         for id in await host.pairedStableIDs() where !allowed.contains(id) && !admitting.contains(id) {
             do {
                 try await host.removePeer(stableID: id)
@@ -553,9 +620,18 @@ public final class SwiftailHostCore: HostCore, Sendable {
         }
     }
 
-    private func closeOfferInBackground() {
-        guard let host = shared.withLock({ $0.session })?.pairing.withLock({ $0.host }) else { return }
+    private func closeOfferInBackground(run: Int) {
+        guard let session = shared.withLock({ $0.session }), session.run == run,
+              let host = session.pairing.withLock({ $0.host }) else { return }
         Task { await host.closeCurrentOffer() }
+    }
+
+    private static var unknownRequest: APIErrorBody {
+        APIErrorBody(code: "bad_request", message: String(localized: "이미 처리되었거나 만료된 페어링 요청입니다."))
+    }
+
+    private static var stoppedError: APIErrorBody {
+        APIErrorBody(code: "not_running", message: String(localized: "공유가 꺼져 있습니다."))
     }
 
     private static func offerError(_ error: PairingError) -> APIErrorBody {
@@ -668,21 +744,22 @@ public final class SwiftailHostCore: HostCore, Sendable {
         }
     }
 
-    private func broadcast(_ event: CoreEvent) {
-        let subscribers = shared.withLock { Array($0.subscribers.values) }
+    /// `run` 실행의 이벤트를 구독자에게 보낸다. 그 실행이 이미 끝났으면(멈춤, 다시 시작) 버린다.
+    private func broadcast(run: Int, _ event: CoreEvent) {
+        let subscribers = shared.withLock { $0.session?.run == run ? Array($0.subscribers.values) : [] }
         for continuation in subscribers { continuation.yield(event) }
     }
 
     /// 노드 층의 사건. URL·이름·키는 로그로 보내지 않는다(상태로만 간다).
-    private func nodeEvent(_ event: HostEvent) {
-        guard let session = shared.withLock({ $0.session }) else { return }
+    private func nodeEvent(_ event: HostEvent, run: Int) {
+        guard let session = shared.withLock({ $0.session }), session.run == run else { return }
         switch event {
         case .certificate(_, _, let notAfter, _):
             session.log.line("info: 인증서: \(RDTimestamp.string(notAfter))까지")
-            broadcast(.log(LogEvent(level: "info", message: String(localized: "HTTPS 인증서를 받았습니다."))))
+            broadcast(run: run, .log(LogEvent(level: "info", message: String(localized: "HTTPS 인증서를 받았습니다."))))
         case .serverFailed(let kind):
             session.log.line("warn: 루프백 리스너를 띄우지 못함(\(kind))")
-            broadcast(.log(LogEvent(level: "warn", message: CoreStatusMapping.listenerPrefix + String(localized: "루프백 리스너를 띄우지 못했습니다."))))
+            broadcast(run: run, .log(LogEvent(level: "warn", message: CoreStatusMapping.listenerPrefix + String(localized: "루프백 리스너를 띄우지 못했습니다."))))
         case .defaultInterface(let name):
             session.log.line("info: 기본 인터페이스: \(name)")
         case .listening(let port):
@@ -702,7 +779,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
         guard !wasStopped else { return }
         session.log.line("error: 노드가 끝남(\(end.logName))")
         let message = end == .nodeKeyExpired ? String(localized: "tailnet 로그인이 만료됐습니다. 공유를 다시 시작해 로그인하세요.") : (end.message ?? "")
-        broadcast(.log(LogEvent(level: end == .nodeKeyExpired ? "warn" : "error", message: message)))
+        broadcast(run: session.run, .log(LogEvent(level: end == .nodeKeyExpired ? "warn" : "error", message: message)))
     }
 
     private func refresh(_ session: Session) async {
@@ -735,6 +812,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
         while !Task.isCancelled {
             await refresh(session)
             session.logic.sweep()
+            if session.lock.withLock({ $0.devicesApplied && !$0.stopped }) { await reconcilePairing(session) }
             let status = makeStatus(session)
             let (snapshot, certificate) = session.lock.withLock { ($0.snapshot, $0.certificate) }
 
@@ -761,7 +839,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
                 defer { value.lastEmitted = comparable }
                 return value.lastEmitted != comparable
             }
-            if changed { broadcast(.state(status)) }
+            if changed { broadcast(run: session.run, .state(status)) }
             let running = status.backendState == .running
             try? await Task.sleep(for: running ? pollIntervals.running : pollIntervals.starting)
         }
@@ -785,7 +863,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
         guard changed, let failure, failure != .nodeNotRunning else { return }
         let name = CoreStatusMapping.logName(failure)
         session.log.line("warn: 인증서를 받지 못함(\(name))")
-        broadcast(.log(LogEvent(level: "warn", message: String(localized: "TLS 인증서를 받지 못했습니다(\(name))."))))
+        broadcast(run: session.run, .log(LogEvent(level: "warn", message: String(localized: "TLS 인증서를 받지 못했습니다(\(name))."))))
     }
 
     private func noteLock(_ session: Session, waiting: Bool) {
@@ -796,7 +874,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
         if was == waiting { return }
         let text = waiting ? "tailnet lock: waiting for a signature" : "tailnet lock: this node is signed"
         session.log.line("info: \(text)")
-        broadcast(.log(LogEvent(level: "info", message: text)))
+        broadcast(run: session.run, .log(LogEvent(level: "info", message: text)))
     }
 
     static func stateName(_ state: NodeState) -> String {

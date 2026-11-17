@@ -4,8 +4,8 @@ import RDModels
 
 /// QR·링크 페어링 제안 하나를 화면에 보이기 위한 값(protocol-addenda B.5). 코어가 Swiftail `PairingOffer`로 만든다.
 ///
-/// `link`와 `qrImage`는 제안의 비밀(과 1회용 Tailscale 키)을 담는다. 화면에만 보이고 로그·에이전트 응답·활동 기록에 넣지
-/// 않는다. 그래서 `description`과 `dump`는 비밀을 가린다.
+/// `link`와 `qrImage`는 제안의 비밀을 담는다. 1회용 Tailscale 키는 `qrImage`에만 실린다(키를 실으면 `link`는 없다).
+/// 화면에만 보이고 로그·에이전트 응답·활동 기록에 넣지 않는다. 그래서 `description`과 `dump`는 비밀을 가린다.
 public struct PairingInvite: @unchecked Sendable, CustomStringConvertible, CustomReflectable {
     /// 1회용 Tailscale 키를 QR에 실었는지.
     public enum AuthKey: Sendable, Hashable {
@@ -17,8 +17,9 @@ public struct PairingInvite: @unchecked Sendable, CustomStringConvertible, Custo
         case failed(TailscaleAPI.Failure)
     }
 
-    /// `remotedebug://pair#v=1&h=…`. 비밀이다.
-    public var link: URL
+    /// `remotedebug://pair#v=1&h=…`. 비밀이다. 1회용 Tailscale 키를 실은 제안이면 nil이다: 키가 든 링크는 내보내지 않고
+    /// QR만 보인다(iPhone 앱 안 카메라로 읽는다).
+    public var link: URL?
     /// 링크를 적은 QR. 모듈 하나가 한 화소이고 둘레에 여백이 있다. 보간 없이 키워 그린다. 만들지 못했으면 nil.
     public var qrImage: CGImage?
     public var expiresAt: Date
@@ -26,7 +27,7 @@ public struct PairingInvite: @unchecked Sendable, CustomStringConvertible, Custo
     /// 이 Mac의 tailnet에 tailnet lock이 켜져 있다. 키로 새로 들어온 iPhone은 서명될 때까지 이 Mac에 닿지 못한다.
     public var tailnetLockEnabled: Bool
 
-    public init(link: URL, qrImage: CGImage?, expiresAt: Date, authKey: AuthKey, tailnetLockEnabled: Bool) {
+    public init(link: URL?, qrImage: CGImage?, expiresAt: Date, authKey: AuthKey, tailnetLockEnabled: Bool) {
         (self.link, self.qrImage, self.expiresAt, self.authKey, self.tailnetLockEnabled) = (link, qrImage, expiresAt, authKey, tailnetLockEnabled)
     }
 

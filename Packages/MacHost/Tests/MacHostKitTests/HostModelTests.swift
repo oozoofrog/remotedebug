@@ -147,7 +147,10 @@ struct HostModelTests {
             return
         }
         #expect(info.code == "K7M2-9QXD")
-        #expect(info.link == "remotedebug://pair?host=rd-mac-ab12cd34.example.ts.net&code=K7M29QXD")
+        #expect(info.installPage == "https://rd-mac-ab12cd34.example.ts.net/#code=K7M29QXD")
+        // 응답에는 iPhone 앱용 링크가 없다(설치 페이지 주소와 코드만).
+        let json = String(decoding: try JSONEncoder().encode(info), as: UTF8.self)
+        #expect(!json.contains("remotedebug://") && !json.contains("\"link\""))
         #expect(h.core.calls.contains(.openPairing(300)))
 
         h.core.emit(.pairRequest(pairRequest("pr_agent")))
@@ -175,18 +178,18 @@ struct HostModelTests {
         #expect(h.model.tokenCheck?.ok == true)
         #expect(String(describing: try #require(clients.load())).contains("SECRET") == false)
 
-        // 앱용 QR: 키가 실리면 키 상태가 따라간다. 설치 페이지 코드는 열지 않는다.
+        // 앱용 QR: 키가 실리면 키 상태가 따라간다. 키를 실은 QR에는 링크가 없다. 설치 페이지 코드는 열지 않는다.
         await h.model.beginPairing(.app)
         #expect(h.core.calls.contains(.openOffer(300, true)) && !h.core.calls.contains(.openPairing(300)))
         #expect(h.model.pairingKeyState == .ready(expires: Date(timeIntervalSince1970: 1_794_478_500)))
-        #expect(h.model.pairingLink?.absoluteString.hasPrefix("remotedebug://pair#v=1&") == true)
+        #expect(h.model.openInvite != nil && h.model.pairingLink == nil)
         #expect(h.model.pairingCode == nil)
         #expect(String(describing: try #require(h.model.openInvite)).contains("s=FAKE") == false)
 
-        // 키를 만들지 못해도 키 없는 QR은 쓴다. 까닭은 설정에도 남는다.
+        // 키를 만들지 못해도 키 없는 QR은 쓴다(링크 복사도 된다). 까닭은 설정에도 남는다.
         h.core.state.withLock { $0.offerKey = .failed(.forbidden) }
         await h.model.beginAppPairing()
-        #expect(h.model.pairingLink != nil)
+        #expect(h.model.pairingLink?.absoluteString.hasPrefix("remotedebug://pair#v=1&") == true)
         #expect(h.model.pairingKeyState == .failed(TailscaleAPI.Failure.forbidden.message))
         #expect(h.model.tokenCheck?.ok == false)
 
@@ -208,7 +211,8 @@ struct HostModelTests {
         #expect(await eventually { h.model.status?.fqdn == "rd-mac-ab12cd34.example.ts.net" })
 
         await h.model.beginPairing(.app)
-        #expect(h.model.pairingState.isOfferOpen && h.model.pairingLink != nil)
+        // 키를 실은 QR이라 링크는 없다(QR만).
+        #expect(h.model.pairingState.isOfferOpen && h.model.openInvite != nil && h.model.pairingLink == nil)
 
         // 앱이 없는 iPhone으로 바꾸면 QR을 닫고 코드만 연다.
         await h.model.beginPairing(.browser)
@@ -218,7 +222,7 @@ struct HostModelTests {
 
         // 다시 앱으로: 코드는 화면에서 내린다(코어는 제안을 열 때 코드를 닫는다).
         await h.model.beginPairing(.app)
-        #expect(h.model.pairingCode == nil && h.model.pairingLink != nil)
+        #expect(h.model.pairingCode == nil && h.model.openInvite != nil)
 
         // 에이전트는 코드만 받는다: 제안의 링크·키를 만들지 않고 돌려주지도 않는다.
         let offersBefore = h.core.calls.filter { if case .openOffer = $0 { true } else { false } }.count
@@ -226,6 +230,35 @@ struct HostModelTests {
         #expect(h.core.calls.filter { if case .openOffer = $0 { true } else { false } }.count == offersBefore)
         let json = String(decoding: try JSONEncoder().encode(info), as: UTF8.self)
         #expect(info.code == "K7M2-9QXD" && !json.contains("#v=1") && !json.contains("tskey"))
+    }
+
+    /// 앱용 QR을 만드는(키를 만드는) 사이 앱이 없는 iPhone으로 바꾸면: 앞의 열기를 취소하고 그것이 끝난 뒤 코드를 연다.
+    /// 늦게 끝난 QR 열기는 코드를 덮어쓰지 않고, 연 QR은 닫는다.
+    @Test func switchingRouteWhileTheQRIsBeingMadeKeepsTheInstallPageCode() async throws {
+        let clients = MemoryTailscaleClientStore(.init(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: ["tag:rd-phone"]))
+        let h = try makeHarness("route-race", tokens: clients)
+        await h.model.start()
+        let gate = Gate()
+        h.core.state.withLock { $0.offerGates = [gate] }
+
+        let app = Task { await h.model.beginPairing(.app) }
+        #expect(await eventually { h.model.isOpeningInvite && h.core.calls.contains(.openOffer(300, true)) })
+        let browser = Task { await h.model.beginPairing(.browser) }
+        // 코드는 앞의 열기가 끝나기 전에는 열지 않는다.
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(!h.core.calls.contains(.openPairing(300)))
+
+        await gate.open()
+        await app.value
+        await browser.value
+        #expect(h.model.pairingCode?.displayCode == "K7M2-9QXD")
+        #expect(h.model.openInvite == nil && h.model.pairingInvite == nil && !h.model.isOpeningInvite)
+        let calls = h.core.calls
+        let opened = try #require(calls.firstIndex(of: .offerOpened))
+        let closed = try #require(calls.lastIndex(of: .closeOffer))
+        let code = try #require(calls.lastIndex(of: .openPairing(300)))
+        #expect(opened < closed && closed < code, "\(calls)")
+        #expect(h.model.pairingError == nil)
     }
 
     @Test func appQRRequestShowsItsConfirmationCodeOnlyOnScreen() async throws {

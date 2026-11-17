@@ -166,6 +166,14 @@ final class PendingOffers: Sendable {
         return request
     }
 
+    /// 답을 기다리는 요청. 답하지 않는다.
+    func waitingRequest(id: String) -> Request? {
+        state.withLock { value in
+            guard case .waiting = value.slots[id] else { return nil }
+            return value.requests[id]
+        }
+    }
+
     /// 이 코어가 아는 요청인지(기다리는 중이거나, 허용한 뒤 저장을 기다리는 중).
     func knows(_ id: String) -> Bool { state.withLock { $0.requests[id] != nil } }
 
