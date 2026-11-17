@@ -59,7 +59,7 @@ struct QRScannerSheet: View {
             ContentUnavailableView {
                 Label("카메라 접근이 꺼져 있습니다", systemImage: "camera.fill")
             } description: {
-                Text("설정에서 RemoteDebug의 카메라 접근을 허용하거나, 이전 화면에서 주소와 코드를 직접 입력하세요.")
+                Text("설정에서 RemoteDebug의 카메라 접근을 허용하거나, Mac이 보낸 페어링 링크를 이 iPhone에서 여세요.")
             } actions: {
                 Button("설정 열기") {
                     if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
@@ -69,7 +69,7 @@ struct QRScannerSheet: View {
             ContentUnavailableView {
                 Label("카메라를 쓸 수 없습니다", systemImage: "camera.fill")
             } description: {
-                Text("이 기기에서는 카메라를 쓸 수 없습니다. 이전 화면에서 주소와 코드를 직접 입력하세요.")
+                Text("이 기기에서는 카메라를 쓸 수 없습니다. Mac이 보낸 페어링 링크를 이 iPhone에서 여세요.")
             }
         }
     }

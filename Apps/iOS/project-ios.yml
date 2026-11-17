@@ -102,6 +102,9 @@ targets:
         product: RDModels
       - package: PhoneClient
         product: PhoneClientKit
+      # 페어링(QR·링크)은 앱이 OS 소켓으로 들어온다. 터널 확장은 이 제품을 링크하지 않는다.
+      - package: Swiftail
+        product: SwiftailPairing
   RemoteDebugTunnel:
     type: app-extension
     platform: iOS

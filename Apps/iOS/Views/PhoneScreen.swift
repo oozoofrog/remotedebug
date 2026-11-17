@@ -31,11 +31,11 @@ struct PhoneScreen: View {
 
                 if state.host == nil, !state.isPairingInFlight, state.queuedPairingHost == nil {
                     Section {
-                        PairingForm(pair: actions.pair, handleScanned: actions.handleScanned, onSubmit: {}, collapsesManualEntry: true)
+                        PairingForm(handleScanned: actions.handleScanned, onSubmit: {}, isPrimary: true)
                     } header: {
                         Text("Mac 페어링")
                     } footer: {
-                        Text("Mac 앱의 페어링 화면에 있는 QR 코드를 스캔하거나 주소와 코드를 입력하세요.")
+                        Text("Mac 앱의 페어링 화면에 있는 QR 코드를 스캔하세요. Mac이 보낸 링크를 이 iPhone에서 열어도 됩니다.")
                     }
                 }
 
@@ -73,7 +73,7 @@ struct PhoneScreen: View {
                 NavigationStack {
                     Form {
                         Section {
-                            PairingForm(pair: actions.pair, handleScanned: actions.handleScanned) {
+                            PairingForm(handleScanned: actions.handleScanned) {
                                 showsPairingSheet = false
                             }
                         } footer: {
@@ -90,26 +90,32 @@ struct PhoneScreen: View {
                 }
             }
             .alert(
-                "다른 Mac과 페어링할까요?",
+                state.pendingPairing?.fromLink == true ? String(localized: "링크로 페어링할까요?") : String(localized: "다른 Mac과 페어링할까요?"),
                 isPresented: Binding(
-                    get: { state.pendingReplacementHost != nil },
-                    set: { presented in if !presented { actions.dismissReplacement() } }
+                    get: { state.pendingPairing != nil },
+                    set: { presented in if !presented { actions.dismissPending() } }
                 ),
-                presenting: state.pendingReplacementHost
+                presenting: state.pendingPairing
             ) { _ in
-                Button("페어링 요청") { actions.confirmReplacement() }
-                Button("취소", role: .cancel) { actions.dismissReplacement() }
-            } message: { newHost in
-                Text(replacementMessage(newHost: newHost))
+                Button("페어링 요청") { actions.confirmPending() }
+                Button("취소", role: .cancel) { actions.dismissPending() }
+            } message: { pending in
+                Text(pendingMessage(pending))
             }
         }
     }
 
-    private func replacementMessage(newHost: String) -> String {
-        if let current = state.host {
-            return String(localized: "\(newHost)에 페어링을 요청합니다. 새 Mac이 승인하기 전까지는 지금 Mac(\(current.hostName))을 계속 사용합니다.")
+    private func pendingMessage(_ pending: PendingPairingPrompt) -> String {
+        if pending.fromLink {
+            if let current = state.host {
+                return String(localized: "\(pending.host)에 페어링을 요청합니다. 이 링크는 다른 앱이나 웹 페이지에서 열렸을 수 있으니, 직접 연 Mac 앱의 링크일 때만 진행하세요. 새 Mac이 승인하기 전까지는 지금 Mac(\(current.hostName))을 계속 사용합니다.")
+            }
+            return String(localized: "\(pending.host)에 페어링을 요청합니다. 이 링크는 다른 앱이나 웹 페이지에서 열렸을 수 있으니, 직접 연 Mac 앱의 링크일 때만 진행하세요.")
         }
-        return String(localized: "진행 중인 페어링을 멈추고 \(newHost)에 페어링을 요청합니다.")
+        if let current = state.host {
+            return String(localized: "\(pending.host)에 페어링을 요청합니다. 새 Mac이 승인하기 전까지는 지금 Mac(\(current.hostName))을 계속 사용합니다.")
+        }
+        return String(localized: "진행 중인 페어링을 멈추고 \(pending.host)에 페어링을 요청합니다.")
     }
 }
 

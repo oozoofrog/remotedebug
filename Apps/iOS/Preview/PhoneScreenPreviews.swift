@@ -35,11 +35,10 @@ enum PreviewFixtures {
     static let buildB = build("b_bbbb0002", name: "미리보기 앱 B", version: "0.9.1", number: "7", size: 12_800_000)
 
     static let actions = PhoneActions(
-        pair: { _, _ in },
         handleScanned: { _ in nil },
         cancelPairing: {},
-        confirmReplacement: {},
-        dismissReplacement: {},
+        confirmPending: {},
+        dismissPending: {},
         refresh: {},
         install: { _ in },
         clearInstall: { _ in },
@@ -110,14 +109,16 @@ private func screen(_ state: PhoneViewState) -> some View {
 }
 
 #Preview("② 승인 대기") {
-    screen(PhoneViewState(
+    var state = PhoneViewState(
         phase: .waitingApproval(deviceName: "iPhone"),
-        pairingExpiresAt: .now.addingTimeInterval(272),
+        pairingExpiresAt: .now.addingTimeInterval(112),
         tunnel: .connected
-    ))
+    )
+    state.confirmationCode = "482915"
+    return screen(state)
 }
 
-#Preview("②-1 페어링 요청 중") {
+#Preview("②-1 Mac에 연결하는 중") {
     screen(PhoneViewState(phase: .requestingPairing, tunnel: .connected))
 }
 
@@ -210,7 +211,13 @@ private func screen(_ state: PhoneViewState) -> some View {
 
 #Preview("⑪ 다른 Mac 교체 확인") {
     var state = PreviewFixtures.paired(builds: [PreviewFixtures.buildA])
-    state.pendingReplacementHost = "other-mac.example.ts.net"
+    state.pendingPairing = PendingPairingPrompt(host: "other-mac.example.ts.net", fromLink: false)
+    return screen(state)
+}
+
+#Preview("⑪-2 링크로 연 페어링 확인") {
+    var state = PhoneViewState(tunnel: .off)
+    state.pendingPairing = PendingPairingPrompt(host: "preview-mac.example.ts.net", fromLink: true)
     return screen(state)
 }
 

@@ -4,12 +4,7 @@ import Testing
 
 @testable import PhoneClientKit
 
-private let pairURL = URL(string: "remotedebug://pair?host=\(hostFQDN)&code=k7m2-9qxd")!
 private let otherFQDN = "other-mac.example-tailnet.ts.net"
-private let otherPairURL = URL(string: "remotedebug://pair?host=\(otherFQDN)&code=ABCD2345")!
-private let otherApproved = Examples.pairApproved
-    .replacingOccurrences(of: "h_4be0c7a1", with: "h_other000")
-    .replacingOccurrences(of: "rd-mac-ab12cd34", with: "other-mac")
 private let token = "Zm9vYmFyYmF6cXV4Zm9vYmFyYmF6cXV4Zm9vYmFyYmE"
 private let manifest = "https://\(hostFQDN)/i/\(token)/manifest.plist"
 private func enc(_ s: String) -> String {
@@ -17,199 +12,236 @@ private func enc(_ s: String) -> String {
 }
 private let otherInfo = Examples.info
     .replacingOccurrences(of: "h_4be0c7a1", with: "h_other000")
-    .replacingOccurrences(of: "rd-mac-ab12cd34", with: "other-mac")
+    .replacingOccurrences(of: "rd-mac-ab12cd34.example-tailnet.ts.net", with: otherFQDN)
 
 @MainActor
 @Suite struct ClientModelPairingTests {
-    @Test func approvedPairingSavesHostAndLoadsBuilds() async throws {
-        let h = Harness()
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pair("pending")), .json(Examples.pairApproved))
-        h.serveHostInfoAndBuilds()
+    private let secret = "tskey-auth-kTest1CNTRL-abc"
 
-        #expect(h.model.handle(url: pairURL))
+    /// 링크로 연 페어링: 묻고 → 확인하면 짝을 맺고 Mac 정보를 받아 저장한다.
+    @Test func openedLinkAsksFirstThenPairsAndLoadsBuilds() async throws {
+        let h = Harness()
+        h.serveHostInfoAndBuilds()
+        let link = pairingLink()
+
+        #expect(h.model.handle(url: URL(string: link)!))
+        // 묻기 전에는 아무것도 하지 않는다.
+        #expect(h.model.pendingConfirmation?.host == hostFQDN)
+        #expect(h.model.pendingConfirmation?.reason == .openedLink)
+        #expect(h.pairing.calls.isEmpty)
+        #expect(h.transport.requests.isEmpty)
+        #expect(h.model.phase == .unpaired)
+
+        h.model.confirmPending()
         await h.model.waitForBackgroundWork()
 
+        #expect(h.model.pendingConfirmation == nil)
         #expect(h.model.phase == .paired)
-        #expect(h.model.host == PairedHost(hostId: "h_4be0c7a1", hostName: "작업용 Mac", fqdn: hostFQDN, pairedAt: t0.addingTimeInterval(2)))
+        #expect(h.model.host == PairedHost(hostId: "h_4be0c7a1", hostName: "작업용 Mac", fqdn: hostFQDN, pairedAt: t0))
         #expect(h.store.load() == h.model.host)
         #expect(h.model.builds.map(\.id) == ["b_9f3a1c2e"])
-        #expect(h.model.buildsLoadedAt == t0.addingTimeInterval(2))
+        #expect(h.model.buildsLoadedAt == t0)
         #expect(h.model.lastError == nil)
         #expect(h.model.pairingExpiresAt == nil)
-        // 페어링은 VPN 구성을 건드리지 않는다.
+        #expect(h.model.confirmationCode == nil)
+        #expect(h.pairing.calls == [.init(host: hostFQDN, deviceName: "내 iPhone")])
+        // 페어링은 VPN 구성을 건드리지 않는다. 앱의 모든 요청은 제안의 호스트로만 갔다.
         #expect(h.tunnel.prepareCount == 0)
-        #expect(h.transport.count("GET", "/v1/pair/request/pr_7c1e55d0") == 2)
-        // 모든 요청은 링크의 호스트로만 갔다.
+        #expect(h.transport.count("GET", "/v1/info") >= 1)
         #expect(h.transport.requests.allSatisfy { $0.url?.host == hostFQDN && $0.url?.scheme == "https" })
-        #expect(h.transport.requests.first?.jsonBody?["code"] as? String == "K7M29QXD")
+        // 예전 코드 페어링 경로는 더 부르지 않는다.
+        #expect(h.transport.requests.allSatisfy { !($0.url?.path.hasPrefix("/v1/pair") ?? false) })
     }
 
-    @Test func waitingApprovalPhaseWhilePolling() async throws {
-        let h = Harness(clock: TestClock(mode: .blocking))
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.model.pair(code: "K7M2-9QXD", host: hostFQDN)
-        await h.waitUntilSleeping()
+    @Test func dismissingTheQuestionStartsNothing() async {
+        let h = Harness()
+        h.model.handle(url: URL(string: pairingLink())!)
+        h.model.dismissPending()
+        await h.model.waitForBackgroundWork()
+        #expect(h.model.pendingConfirmation == nil)
+        #expect(h.pairing.calls.isEmpty)
+        #expect(h.model.phase == .unpaired)
+    }
+
+    /// 앱 안 카메라로 읽은 QR은 묻지 않고 시작한다.
+    @Test func scannedQRStartsWithoutAsking() async {
+        let h = Harness()
+        h.serveHostInfoAndBuilds()
+        #expect(h.model.pair(scanned: pairingLink()) == nil)
+        #expect(h.model.pendingConfirmation == nil)
+        await h.model.waitForBackgroundWork()
+        #expect(h.model.phase == .paired)
+        #expect(h.pairing.calls.count == 1)
+    }
+
+    @Test func infoFieldsAreStored() async throws {
+        let h = Harness()
+        let info = Examples.info.replacingOccurrences(of: "\"appVersion\"", with: "\"updatePage\": \"https://login.example.com/update\", \"appVersion\"")
+        h.transport.on("GET", "/v1/info", .json(info))
+        h.transport.on("GET", "/v1/builds", .json(Examples.emptyBuilds))
+        _ = h.model.pair(scanned: pairingLink())
+        await h.model.waitForBackgroundWork()
+        #expect(h.model.host?.updatePage == URL(string: "https://login.example.com/update"))
+        #expect(h.model.host?.hostId == "h_4be0c7a1")
+        #expect(h.model.host?.hostName == "작업용 Mac")
+    }
+
+    // MARK: 승인 대기와 확인 숫자
+
+    @Test func confirmationCodeAndCountdownWhileWaitingAndCancel() async {
+        let h = Harness()
+        h.pairing.setHolds(true)
+        _ = h.model.pair(scanned: pairingLink())
+        await h.waitUntil { h.model.phase == .waitingApproval(deviceName: "내 iPhone") }
         #expect(h.model.phase == .waitingApproval(deviceName: "내 iPhone"))
-        // 호스트 expiresAt(t0+420)보다 로컬 제한(120초)이 이르다.
+        #expect(h.model.confirmationCode == "482915")
         #expect(h.model.pairingExpiresAt == t0.addingTimeInterval(120))
+        #expect(h.model.pairingHost == hostFQDN)
+
         h.model.cancelPairing()
         #expect(h.model.phase == .unpaired)
+        #expect(h.model.confirmationCode == nil)
         #expect(h.model.pairingExpiresAt == nil)
-    }
-
-    @Test(arguments: [
-        ("denied", ClientModel.pairingDeniedMessage),
-        ("expired", ClientModel.pairingExpiredMessage),
-    ])
-    func deniedOrExpired(_ state: String, _ message: String) async {
-        let h = Harness()
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pair(state)))
-        h.model.handle(url: pairURL)
         await h.model.waitForBackgroundWork()
-        #expect(h.model.phase == .unpaired)
-        #expect(h.model.lastError == message)
+        // 작업 취소가 짝 맺기까지 닿았고, 안내 문구는 없다.
+        await h.waitUntil { h.pairing.cancelledJoins == 1 }
+        #expect(h.pairing.cancelledJoins == 1)
+        #expect(h.model.lastError == nil)
         #expect(h.store.load() == nil)
     }
 
-    @Test func pendingUntilDeadlineExpires() async {
+    @Test func connectingPhaseBeforeTheCodeArrives() async {
         let h = Harness()
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pair("pending")))
-        h.model.handle(url: pairURL)
+        h.pairing.setCode(nil)
+        h.pairing.setHolds(true)
+        _ = h.model.pair(scanned: pairingLink())
+        await h.waitUntil { !h.pairing.calls.isEmpty }
+        for _ in 0..<20 { await Task.yield() }
+        #expect(h.model.phase == .requestingPairing)
+        #expect(h.model.confirmationCode == nil)
+        h.model.cancelPairing()
         await h.model.waitForBackgroundWork()
-        #expect(h.model.phase == .unpaired)
-        #expect(h.model.lastError == ClientModel.pairingExpiredMessage)
-        // 1초마다 120번 + 마감 뒤 마지막 확인 1번.
-        #expect(h.transport.count("GET", "/v1/pair/request/pr_7c1e55d0") == 121)
-        #expect(h.clock.now == t0.addingTimeInterval(120))
     }
 
-    @Test func deadlineIsClampedToEarlierHostExpiry() async {
-        let h = Harness()
-        let soon = Examples.pairPending.replacingOccurrences(of: "09:07:00Z", with: "09:00:30Z")
-        h.transport.on("POST", "/v1/pair/request", .json(soon, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pair("pending")))
-        h.model.handle(url: pairURL)
-        await h.model.waitForBackgroundWork()
-        #expect(h.model.lastError == ClientModel.pairingExpiredMessage)
-        #expect(h.transport.count("GET", "/v1/pair/request/pr_7c1e55d0") == 31)
-        #expect(h.clock.now == t0.addingTimeInterval(30))
-    }
-
-    @Test func transientPollFailureIsRetried() async {
-        let h = Harness()
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .fail(.networkConnectionLost), .fail(.timedOut), .json(Examples.pairApproved))
+    @Test func deviceNameIsSanitizedForThePairing() async {
+        let h = Harness(deviceName: "홍길동의 iPhone\u{200B}\u{202E}")
         h.serveHostInfoAndBuilds()
-        h.model.handle(url: pairURL)
+        _ = h.model.pair(scanned: pairingLink())
         await h.model.waitForBackgroundWork()
-        #expect(h.model.phase == .paired)
-        #expect(h.transport.count("GET", "/v1/pair/request/pr_7c1e55d0") == 3)
+        #expect(h.pairing.calls.first?.deviceName == "홍길동의 iPhone")
     }
 
-    @Test func approvalAfterLocalDeadlineIsTrusted() async {
-        let clock = TestClock(mode: .blocking)
-        let h = Harness(clock: clock)
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pairApproved))
-        h.serveHostInfoAndBuilds(Examples.emptyBuilds)
-        h.model.handle(url: pairURL)
-        await h.waitUntilSleeping()
-        h.model.stopPolling()
-        await h.model.waitForBackgroundWork()
+    // MARK: 오류별 문구
 
-        clock.advance(by: 300)  // 잠긴 동안 Mac에서 승인했다
-        clock.setMode(.instant)
-        h.model.resumePolling()
-        await h.model.waitForBackgroundWork()
-        #expect(h.model.phase == .paired)
-        #expect(h.model.host?.hostId == "h_4be0c7a1")
-        #expect(h.model.lastError == nil)
-        #expect(h.transport.count("GET", "/v1/pair/request/pr_7c1e55d0") == 1)
-    }
-
-    @Test func unreachableFinalCheckReportsExpiry() async {
-        let clock = TestClock(mode: .blocking)
-        let h = Harness(clock: clock)
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .fail(.cannotConnectToHost))
-        h.model.handle(url: pairURL)
-        await h.waitUntilSleeping()
-        h.model.stopPolling()
-        await h.model.waitForBackgroundWork()
-        clock.advance(by: 300)
-        clock.setMode(.instant)
-        h.model.resumePolling()
-        await h.model.waitForBackgroundWork()
-        #expect(h.model.phase == .unpaired)
-        #expect(h.model.lastError == ClientModel.pairingExpiredMessage)
-        #expect(h.transport.count("GET", "/v1/pair/request/pr_7c1e55d0") == 1)
-    }
-
-    @Test func approvedWithoutHostFails() async {
+    @Test(arguments: [
+        PairingFailure.unreachable, .notOnTailnet, .rejected, .denied, .timedOut, .hostNotVerified, .protocolViolation, .unexpected,
+    ])
+    func failureShowsItsMessageAndPairsNothing(_ failure: PairingFailure) async {
         let h = Harness()
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pair("approved")))
-        h.model.handle(url: pairURL)
+        h.pairing.setOutcome(.failed(failure))
+        _ = h.model.pair(scanned: pairingLink())
         await h.model.waitForBackgroundWork()
         #expect(h.model.phase == .unpaired)
+        #expect(h.model.lastError == failure.userMessage)
+        #expect(h.model.lastError?.isEmpty == false)
         #expect(h.model.host == nil)
         #expect(h.store.load() == nil)
-        #expect(h.model.lastError == "Mac에서 알 수 없는 응답을 받았습니다. 잠시 뒤 다시 시도하세요.")
+        #expect(h.model.confirmationCode == nil)
+        // 짝을 맺지 못했으면 Mac에 정보도 묻지 않는다.
+        #expect(h.transport.requests.isEmpty)
     }
 
-    @Test(arguments: [
-        ("pair_code_invalid", 403, "페어링 코드가 맞지 않거나 만료되었습니다. Mac에 표시된 코드를 확인하고 다시 입력하세요."),
-        ("too_many_attempts", 429, "코드를 너무 많이 틀렸습니다. Mac에서 새 페어링 코드를 연 뒤 다시 시도하세요."),
-    ])
-    func rejectedCode(_ code: String, _ status: Int, _ message: String) async {
+    @Test func aCancelledResultShowsNoMessage() async {
         let h = Harness()
-        h.transport.on("POST", "/v1/pair/request", .error(code, status: status))
-        h.model.handle(url: pairURL)
+        h.pairing.setOutcome(.failed(.cancelled))
+        _ = h.model.pair(scanned: pairingLink())
         await h.model.waitForBackgroundWork()
         #expect(h.model.phase == .unpaired)
-        #expect(h.model.lastError == message)
-        #expect(h.transport.count("GET", "/v1/pair/request/pr_7c1e55d0") == 0)
+        #expect(h.model.lastError == nil)
     }
 
-    @Test func approvedHostWithDifferentAddressIsRejected() async {
+    @Test func infoIsRetriedAndThenReportedWithoutSavingAPartialPairing() async {
         let h = Harness()
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pairApproved.replacingOccurrences(of: "rd-mac-ab12cd34", with: "other-mac")))
-        h.model.handle(url: pairURL)
+        h.transport.on("GET", "/v1/info", .fail(.timedOut), .json(Examples.info))
+        h.transport.on("GET", "/v1/builds", .json(Examples.emptyBuilds))
+        _ = h.model.pair(scanned: pairingLink())
+        await h.model.waitForBackgroundWork()
+        #expect(h.model.phase == .paired)
+        #expect(h.model.lastError == nil)
+
+        let failing = Harness()
+        failing.transport.on("GET", "/v1/info", .fail(.cannotConnectToHost))
+        _ = failing.model.pair(scanned: pairingLink())
+        await failing.model.waitForBackgroundWork()
+        #expect(failing.transport.count("GET", "/v1/info") == 3)
+        #expect(failing.model.phase == .unpaired)
+        #expect(failing.model.lastError == ClientModel.pairingInfoFailedMessage)
+        #expect(failing.store.load() == nil)
+        #expect(failing.model.host == nil)
+    }
+
+    @Test func infoFromAnotherAddressIsRejected() async {
+        let h = Harness()
+        h.transport.on("GET", "/v1/info", .json(Examples.info.replacingOccurrences(of: "rd-mac-ab12cd34", with: "other-mac")))
+        _ = h.model.pair(scanned: pairingLink())
         await h.model.waitForBackgroundWork()
         #expect(h.model.phase == .unpaired)
         #expect(h.model.lastError == ClientModel.pairedAddressMismatchMessage)
         #expect(h.store.load() == nil)
     }
 
+    // MARK: 링크 읽기
+
     @Test func linkOutsidePolicySendsNothing() async {
         let h = Harness()
-        #expect(h.model.handle(url: URL(string: "remotedebug://pair?host=evil.example.com&code=K7M29QXD")!))
-        #expect(h.model.lastError == PairingLinkError.hostNotAllowed.userMessage)
-        h.model.pair(code: "K7M29QXD", host: "127.0.0.1")
-        h.model.pair(code: "K7M29QXD", host: "100.64.0.10")
-        // 다른 정책으로 만든 링크도 모델의 정책으로 다시 거른다.
-        h.model.pair(link: try! PairingLink(host: "localhost", code: "K7M29QXD", policy: .allowingLoopbackForTesting))
+        #expect(h.model.handle(url: URL(string: pairingLink(host: "evil.example.com"))!))
+        #expect(h.model.lastError == PairingOfferIssue.hostNotAllowed.userMessage)
+        #expect(h.model.pair(scanned: pairingLink(host: "100.64.0.10")) == PairingOfferIssue.hostNotAllowed.userMessage)
+        #expect(h.model.pair(scanned: pairingLink(host: "127.0.0.1")) == PairingOfferIssue.hostNotAllowed.userMessage)
         await h.model.waitForBackgroundWork()
+        #expect(h.pairing.calls.isEmpty)
         #expect(h.transport.requests.isEmpty)
         #expect(h.tunnel.prepareCount == 0)
+        #expect(h.model.pendingConfirmation == nil)
         #expect(h.model.phase == .unpaired)
         #expect(h.model.handle(url: URL(string: "https://example.com")!) == false)
     }
 
+    @Test func oldLinkShowsTheUpdateGuidanceInBothPaths() async {
+        let h = Harness()
+        let old = "remotedebug://pair?host=\(hostFQDN)&code=K7M29QXD"
+        #expect(h.model.handle(url: URL(string: old)!))
+        #expect(h.model.lastError == PairingOfferIssue.legacyLink.userMessage)
+        h.model.clearError()
+        #expect(h.model.pair(scanned: old) == PairingOfferIssue.legacyLink.userMessage)
+        #expect(h.model.lastError == nil)
+        #expect(h.model.pendingConfirmation == nil)
+        #expect(h.pairing.calls.isEmpty)
+    }
+
+    @Test func badLinksShowTheirOwnMessage() async {
+        let h = Harness()
+        #expect(h.model.pair(scanned: "https://example.com/not-a-link") == PairingOfferIssue.notAnOffer.userMessage)
+        #expect(h.model.pair(scanned: "remotedebug://pair") == PairingOfferIssue.notAnOffer.userMessage)
+        #expect(h.model.pair(scanned: pairingLink(bad: "secret")) == PairingOfferIssue.invalidSecret.userMessage)
+        #expect(h.model.pair(scanned: pairingLink(bad: "wrapped")) == PairingOfferIssue.wrappedAuthKey.userMessage)
+        #expect(h.model.pair(scanned: pairingLink(bad: "authkey")) == PairingOfferIssue.invalidAuthKey.userMessage)
+        h.model.handle(url: URL(string: pairingLink(bad: "wrapped"))!)
+        #expect(h.model.lastError == PairingOfferIssue.wrappedAuthKey.userMessage)
+        #expect(h.pairing.calls.isEmpty)
+        #expect(h.model.phase == .unpaired)
+    }
+
+    // MARK: VPN과 인증 키
+
     @Test func tunnelOffBlocksPairingUntilConnected() async throws {
         let h = Harness(tunnel: .off)
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pairApproved))
         h.serveHostInfoAndBuilds()
 
-        h.model.handle(url: pairURL)
+        _ = h.model.pair(scanned: pairingLink())
         await h.model.waitForBackgroundWork()
-        #expect(h.transport.requests.isEmpty)
-        #expect(h.model.queuedPairing == PairingLink(url: pairURL))
+        #expect(h.pairing.calls.isEmpty)
+        #expect(h.model.queuedPairing?.host == hostFQDN)
         #expect(h.model.needsTunnel)
         #expect(h.model.lastError == ClientModel.tunnelOffMessage)
         #expect(h.model.phase == .unpaired)
@@ -223,25 +255,23 @@ private let otherInfo = Examples.info
         #expect(h.model.queuedPairing == nil)
         #expect(h.model.phase == .paired)
         #expect(h.model.lastError == nil)
-        #expect(h.transport.count("POST", "/v1/pair/request") == 1)
+        #expect(h.pairing.calls.count == 1)
     }
 
     @Test func cancelDropsQueuedPairing() async {
         let h = Harness(tunnel: .off)
-        h.model.handle(url: pairURL)
+        _ = h.model.pair(scanned: pairingLink())
         #expect(h.model.queuedPairing != nil)
         h.model.cancelPairing()
         #expect(h.model.queuedPairing == nil)
         h.tunnel.set(.connected)
         for _ in 0..<50 { await Task.yield() }
         await h.model.waitForBackgroundWork()
-        #expect(h.transport.requests.isEmpty)
+        #expect(h.pairing.calls.isEmpty)
     }
 
-    @Test func linkWithAuthKeyTurnsOnVPNThenPairs() async throws {
+    @Test func authKeyTurnsOnVPNOnceThenPairsAndLeavesNoTrace() async throws {
         let h = Harness(tunnel: .off)
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pairApproved))
         h.serveHostInfoAndBuilds()
         var usedKeys: [String] = []
         let tunnel = h.tunnel
@@ -249,45 +279,72 @@ private let otherInfo = Examples.info
             usedKeys.append(key)
             tunnel.set(.connected)
         }
-        let url = URL(string: pairURL.absoluteString + "&key=tskey-auth-kTest1CNTRL-abc")!
-        #expect(h.model.handle(url: url))
+        let link = pairingLink(key: secret)
+        #expect(h.model.handle(url: URL(string: link)!))
+        h.model.confirmPending()
         await h.waitUntil { !usedKeys.isEmpty }
-        #expect(usedKeys == ["tskey-auth-kTest1CNTRL-abc"])
+        #expect(usedKeys == [secret])
         await h.waitUntil { h.model.phase == .paired }
         await h.model.waitForBackgroundWork()
         #expect(h.model.phase == .paired)
-        #expect(h.transport.count("POST", "/v1/pair/request") == 1)
+        #expect(usedKeys == [secret])  // 한 번만 쓴다
+        #expect(h.pairing.calls.count == 1)
         #expect(h.model.lastError == nil)
-        // 키는 로그에 남지 않는다.
-        #expect(!h.model.logBook.recent.contains { $0.message.contains("tskey") })
+        // 키·링크·확인 숫자는 로그와 안내 문구에 남지 않는다.
+        for entry in h.model.logBook.recent {
+            #expect(!entry.message.contains("tskey"))
+            #expect(!entry.message.contains(link))
+            #expect(!entry.message.contains("s1"))
+            #expect(!entry.message.contains("482915"))
+        }
+        #expect(h.model.lastError?.contains("tskey") != true)
+        #expect(String(describing: h.model.queuedPairing).contains("tskey") == false)
     }
 
-    @Test func linkWithAuthKeyDoesNotReconnectWhenVPNIsUp() async throws {
+    @Test func authKeyIsNotUsedWhenAlreadyOnTheTailnet() async throws {
         let h = Harness(tunnel: .connected)
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
+        h.serveHostInfoAndBuilds()
         var used = 0
         h.model.connectWithAuthKey = { _ in used += 1 }
-        h.model.handle(url: URL(string: pairURL.absoluteString + "&key=tskey-auth-kTest1CNTRL-abc")!)
-        await h.waitUntil { h.transport.count("POST", "/v1/pair/request") == 1 }
+        _ = h.model.pair(scanned: pairingLink(key: secret))
+        await h.model.waitForBackgroundWork()
         #expect(used == 0)
-        h.model.cancelPairing()
+        #expect(h.pairing.calls.count == 1)
+        #expect(h.model.phase == .paired)
+    }
+
+    @Test func authKeyAlsoStartsTheVPNWhenLoginIsNeeded() async throws {
+        let h = Harness(tunnel: .needsLogin(authURL: URL(string: "https://login.tailscale.com/a/x")))
+        h.serveHostInfoAndBuilds()
+        var usedKeys: [String] = []
+        let tunnel = h.tunnel
+        h.model.connectWithAuthKey = { key in
+            usedKeys.append(key)
+            tunnel.set(.connected)
+        }
+        _ = h.model.pair(scanned: pairingLink(key: secret))
+        await h.waitUntil { h.model.phase == .paired }
+        await h.model.waitForBackgroundWork()
+        #expect(usedKeys == [secret])
+        #expect(h.model.phase == .paired)
+        #expect(h.model.lastError == nil)
     }
 
     @Test func refreshDoesNotReplaceQueuedPairing() async throws {
         let h = Harness(tunnel: .off, storedHost: Harness.pairedHost)
         h.serveHostInfoAndBuilds()
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pairApproved))
         await h.model.restore()
-        // 같은 Mac의 새 코드라 확인 없이 VPN을 기다린다.
-        h.model.handle(url: pairURL)
-        #expect(h.model.queuedPairing == PairingLink(url: pairURL))
+        // 같은 Mac의 새 QR이라 확인 없이 VPN을 기다린다.
+        let link = pairingLink()
+        _ = h.model.pair(scanned: link)
+        let queued = h.model.queuedPairing
+        #expect(queued?.host == hostFQDN)
         await h.model.refresh()  // 당겨서 새로고침
-        #expect(h.model.queuedPairing == PairingLink(url: pairURL))
+        #expect(h.model.queuedPairing == queued)
 
         await h.model.connectTunnel()
         await h.model.waitForBackgroundWork()
-        #expect(h.transport.count("POST", "/v1/pair/request") == 1)
+        #expect(h.pairing.calls.count == 1)
         #expect(h.transport.count("GET", "/v1/info") >= 1)
         #expect(h.model.phase == .paired)
         #expect(h.model.builds.count == 1)
@@ -295,10 +352,10 @@ private let otherInfo = Examples.info
 
     @Test func tunnelNeedsLoginMessage() async {
         let h = Harness(tunnel: .needsLogin(authURL: URL(string: "https://login.tailscale.com/a/x")))
-        h.model.handle(url: pairURL)
+        _ = h.model.pair(scanned: pairingLink())
         await h.model.waitForBackgroundWork()
         #expect(h.model.lastError == ClientModel.tunnelNeedsLoginMessage)
-        #expect(h.transport.requests.isEmpty)
+        #expect(h.pairing.calls.isEmpty)
     }
 
     @Test func tunnelConnectFailure() async {
@@ -318,95 +375,85 @@ private let otherInfo = Examples.info
         #expect(h.model.tunnel == .off)
     }
 
-    @Test func stopBeforePairingResponseReturnsToUnpaired() async {
+    // MARK: 백그라운드
+
+    @Test func goingToTheBackgroundEndsTheJoinAndSaysSo() async {
         let h = Harness()
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.hold("POST", "/v1/pair/request")
-        h.model.handle(url: pairURL)
-        await h.waitUntil { h.transport.waiting("POST", "/v1/pair/request") == 1 }
-        #expect(h.model.phase == .requestingPairing)
+        h.pairing.setHolds(true)
+        _ = h.model.pair(scanned: pairingLink())
+        await h.waitUntil { h.model.confirmationCode != nil }
         h.model.stopPolling()
-        h.transport.release("POST", "/v1/pair/request")
         await h.model.waitForBackgroundWork()
-        for _ in 0..<20 { await Task.yield() }
         #expect(h.model.phase == .unpaired)
-        #expect(h.model.lastError == nil)
-        #expect(h.transport.count("GET", "/v1/pair/request/pr_7c1e55d0") == 0)
-    }
-
-    @Test func pairingPollCanBeStoppedAndResumed() async {
-        let clock = TestClock(mode: .blocking)
-        let h = Harness(clock: clock)
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pairApproved))
-        h.serveHostInfoAndBuilds(Examples.emptyBuilds)
-        h.model.handle(url: pairURL)
-        await h.waitUntilSleeping()
-
-        h.model.stopPolling()
-        await h.model.waitForBackgroundWork()
-        #expect(h.model.phase == .waitingApproval(deviceName: "내 iPhone"))
-        #expect(h.transport.count("GET", "/v1/pair/request/pr_7c1e55d0") == 0)
-
-        clock.setMode(.instant)
+        #expect(h.model.confirmationCode == nil)
+        #expect(h.model.lastError == ClientModel.pairingInterruptedMessage)
+        await h.waitUntil { h.pairing.cancelledJoins == 1 }
+        #expect(h.pairing.cancelledJoins == 1)
         h.model.resumePolling()
         await h.model.waitForBackgroundWork()
-        #expect(h.model.phase == .paired)
-        #expect(h.transport.count("POST", "/v1/pair/request") == 1)
-        #expect(h.model.builds.isEmpty)
-        #expect(h.model.buildsLoadedAt != nil)
+        // 1회용 제안이라 돌아와도 다시 보내지 않는다.
+        #expect(h.pairing.calls.count == 1)
+        #expect(h.model.phase == .unpaired)
+        #expect(h.store.load() == nil)
     }
 
-    // MARK: 같은 링크·다른 링크
+    @Test func goingToTheBackgroundWithoutPairingSaysNothing() async {
+        let h = Harness()
+        h.model.stopPolling()
+        h.model.resumePolling()
+        #expect(h.model.lastError == nil)
+    }
+
+    // MARK: 같은 QR·다른 QR
 
     @Test func sameLinkWhileWaitingIsIgnored() async {
-        let h = Harness(clock: TestClock(mode: .blocking))
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.model.handle(url: pairURL)
-        await h.waitUntilSleeping()
-        h.model.handle(url: pairURL)
-        h.model.handle(url: URL(string: "remotedebug://pair?host=\(hostFQDN.uppercased())&code=K7M29QXD")!)
-        await h.waitUntilSleeping(atLeast: 1)
-        #expect(h.transport.count("POST", "/v1/pair/request") == 1)
+        let h = Harness()
+        h.pairing.setHolds(true)
+        let link = pairingLink()
+        _ = h.model.pair(scanned: link)
+        await h.waitUntil { h.model.confirmationCode != nil }
+        _ = h.model.pair(scanned: link)
+        h.model.handle(url: URL(string: link)!)
+        #expect(h.pairing.calls.count == 1)
         #expect(h.model.phase == .waitingApproval(deviceName: "내 iPhone"))
-        #expect(h.model.pendingReplacement == nil)
+        #expect(h.model.pendingConfirmation == nil)
         #expect(h.model.lastError == nil)
         h.model.cancelPairing()
+        await h.model.waitForBackgroundWork()
     }
 
     @Test func sameLinkAfterApprovalIsIgnored() async {
         let h = Harness()
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pairApproved))
         h.serveHostInfoAndBuilds()
-        h.model.handle(url: pairURL)
+        let link = pairingLink()
+        _ = h.model.pair(scanned: link)
         await h.model.waitForBackgroundWork()
-        h.model.handle(url: pairURL)
+        _ = h.model.pair(scanned: link)
+        h.model.handle(url: URL(string: link)!)
         await h.model.waitForBackgroundWork()
-        #expect(h.transport.count("POST", "/v1/pair/request") == 1)
+        #expect(h.pairing.calls.count == 1)
+        #expect(h.model.pendingConfirmation == nil)
         #expect(h.model.lastError == nil)
     }
 
     @Test func differentLinkWhileWaitingAsksFirst() async throws {
-        let clock = TestClock(mode: .blocking)
-        let h = Harness(clock: clock)
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.model.handle(url: pairURL)
-        await h.waitUntilSleeping()
+        let h = Harness()
+        h.pairing.setHolds(true)
+        _ = h.model.pair(scanned: pairingLink())
+        await h.waitUntil { h.model.confirmationCode != nil }
 
-        let second = URL(string: "remotedebug://pair?host=\(hostFQDN)&code=ABCD2345")!
-        h.model.handle(url: second)
-        #expect(h.model.pendingReplacement == PairingLink(url: second))
-        #expect(h.transport.count("POST", "/v1/pair/request") == 1)
+        _ = h.model.pair(scanned: pairingLink(secret: "s2"))
+        #expect(h.model.pendingConfirmation?.reason == .replacement)
+        #expect(h.pairing.calls.count == 1)
         #expect(h.model.phase == .waitingApproval(deviceName: "내 iPhone"))
 
-        h.model.confirmReplacement()
-        #expect(h.model.pendingReplacement == nil)
-        await h.waitUntilSleeping(atLeast: 2)
-        #expect(h.transport.count("POST", "/v1/pair/request") == 2)
-        #expect(h.transport.requests.last?.jsonBody?["code"] as? String == "ABCD2345")
-        #expect(h.model.phase == .waitingApproval(deviceName: "내 iPhone"))
+        h.model.confirmPending()
+        #expect(h.model.pendingConfirmation == nil)
+        await h.waitUntil { h.pairing.calls.count == 2 }
+        #expect(h.pairing.calls.count == 2)
         h.model.cancelPairing()
+        await h.waitUntil { h.pairing.cancelledJoins == 2 }
+        #expect(h.pairing.cancelledJoins == 2)
     }
 
     @Test func linkForOtherMacAsksBeforeReplacing() async throws {
@@ -414,14 +461,15 @@ private let otherInfo = Examples.info
         h.serveHostInfoAndBuilds()
         await h.model.restore()
 
-        #expect(h.model.handle(url: otherPairURL))
-        #expect(h.model.pendingReplacement == PairingLink(url: otherPairURL))
+        _ = h.model.pair(scanned: pairingLink(host: otherFQDN))
+        #expect(h.model.pendingConfirmation?.host == otherFQDN)
+        #expect(h.model.pendingConfirmation?.reason == .replacement)
         #expect(h.model.phase == .paired)
-        h.model.dismissReplacement()
+        h.model.dismissPending()
         await h.model.waitForBackgroundWork()
-        #expect(h.model.pendingReplacement == nil)
+        #expect(h.model.pendingConfirmation == nil)
         #expect(h.model.host == Harness.pairedHost)
-        #expect(h.transport.count("POST", "/v1/pair/request") == 0)
+        #expect(h.pairing.calls.isEmpty)
     }
 
     @Test func failedPairingWithOtherMacKeepsCurrentMac() async throws {
@@ -429,15 +477,16 @@ private let otherInfo = Examples.info
         h.serveHostInfoAndBuilds()
         await h.model.restore()
         let prepares = h.tunnel.prepareCount
-        h.transport.on("POST", "/v1/pair/request", .error("pair_code_invalid", status: 403))
+        h.pairing.setOutcome(.failed(.rejected))
 
-        h.model.handle(url: otherPairURL)
-        h.model.confirmReplacement()
+        _ = h.model.pair(scanned: pairingLink(host: otherFQDN))
+        h.model.confirmPending()
         await h.model.waitForBackgroundWork()
         #expect(h.model.phase == .paired)
         #expect(h.model.host == Harness.pairedHost)
         #expect(h.store.load() == Harness.pairedHost)
         #expect(h.model.builds.count == 1)
+        #expect(h.model.lastError == PairingFailure.rejected.userMessage)
         #expect(h.tunnel.prepareCount == prepares)
         #expect(h.tunnel.connectCount == 0 && h.tunnel.disconnectCount == 0)
         #expect(h.model.tunnel == .connected)
@@ -449,14 +498,13 @@ private let otherInfo = Examples.info
     }
 
     @Test func cancelledPairingWithOtherMacKeepsCurrentMac() async throws {
-        let clock = TestClock(mode: .blocking)
-        let h = Harness(storedHost: Harness.pairedHost, clock: clock)
+        let h = Harness(storedHost: Harness.pairedHost)
         h.serveHostInfoAndBuilds()
         await h.model.restore()
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.model.handle(url: otherPairURL)
-        h.model.confirmReplacement()
-        await h.waitUntilSleeping()
+        h.pairing.setHolds(true)
+        _ = h.model.pair(scanned: pairingLink(host: otherFQDN))
+        h.model.confirmPending()
+        await h.waitUntil { h.model.confirmationCode != nil }
         h.model.cancelPairing()
         await h.model.waitForBackgroundWork()
         #expect(h.model.phase == .paired)
@@ -482,10 +530,8 @@ private let otherInfo = Examples.info
         #expect(h.model.installs["b_9f3a1c2e"] == .waitingForInstaller)
 
         clock.setMode(.instant)
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(otherApproved))
-        h.model.handle(url: otherPairURL)
-        h.model.confirmReplacement()
+        _ = h.model.pair(scanned: pairingLink(host: otherFQDN))
+        h.model.confirmPending()
         await h.model.waitForBackgroundWork()
 
         #expect(h.model.host?.fqdn == otherFQDN)
@@ -498,6 +544,41 @@ private let otherInfo = Examples.info
         h.model.resumePolling()
         await h.model.waitForBackgroundWork()
         #expect(h.transport.count("GET", "/v1/sessions/s_52d9a07e") == 0)
+    }
+
+    // MARK: 저장 값 호환
+
+    /// 공용 설정 `RemoteDebug.pairedHost`는 예전 값과 같은 모양이다. 이미 페어링한 사용자는 다시 페어링하지 않는다.
+    @Test func savedValueKeepsTheOldShapeAndOldValuesStillLoad() async throws {
+        let legacy = """
+        {"hostId":"h_4be0c7a1","hostName":"작업용 Mac","fqdn":"\(hostFQDN)","pairedAt":"2026-11-11T09:00:00Z"}
+        """
+        let suite = "rd-test-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(Data(legacy.utf8), forKey: UserDefaultsPairedHostStore.defaultKey)
+        let loaded = try #require(UserDefaultsPairedHostStore(defaults: defaults).load())
+        #expect(loaded == Harness.pairedHost)
+
+        // 예전 값으로 시작한 앱은 다시 페어링하지 않고 Mac에 바로 닿는다.
+        let h = Harness(storedHost: loaded)
+        h.serveHostInfoAndBuilds()
+        await h.model.restore()
+        #expect(h.model.phase == .paired)
+        #expect(h.pairing.calls.isEmpty)
+
+        // 새로 짝을 맺고 저장한 값도 같은 키만 쓴다.
+        let fresh = Harness()
+        fresh.serveHostInfoAndBuilds()
+        _ = fresh.model.pair(scanned: pairingLink())
+        await fresh.model.waitForBackgroundWork()
+        let saved = try #require(fresh.store.load())
+        let store = UserDefaultsPairedHostStore(defaults: defaults, key: "RemoteDebug.test.saved")
+        try store.save(saved)
+        let data = try #require(defaults.data(forKey: "RemoteDebug.test.saved"))
+        let object = try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        #expect(Set(object.keys) == ["hostId", "hostName", "fqdn", "pairedAt"])
+        #expect(try UserDefaultsPairedHostStore(defaults: defaults, key: "RemoteDebug.test.saved").load() == saved)
     }
 }
 
@@ -1390,9 +1471,7 @@ private final class Recorder {
         #expect(store.enabled)
 
         h.tunnel.set(.connected)
-        h.transport.on("POST", "/v1/pair/request", .json(Examples.pairPending, status: 202))
-        h.transport.on("GET", "/v1/pair/request/pr_7c1e55d0", .json(Examples.pairApproved))
-        h.model.pair(code: "K7M2-9QXD", host: hostFQDN)
+        _ = h.model.pair(scanned: pairingLink())
         await h.model.waitForBackgroundWork()
         #expect(h.model.phase == .paired)
         #expect(h.transport.count("PUT", pushPath) == 2)

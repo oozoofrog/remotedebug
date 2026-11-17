@@ -51,6 +51,7 @@ final class AppServices {
             store: UserDefaultsPairedHostStore(defaults: SharedContainer.defaults, legacy: .standard),
             opener: opener,
             tunnel: tunnel,
+            pairingService: SwiftailPairingService(),
             logBook: DeviceLogBook(fileURL: DeviceLogBook.defaultFileURL()),
             crashBook: CrashBook(directory: CrashBook.defaultDirectory()),
             direct: directConnection.route,
@@ -116,6 +117,14 @@ struct RootView: View {
 
     private var model: ClientModel { services.model }
     private var tunnel: TunnelController { services.tunnel }
+
+    /// Mac과 짝을 맺는 중(연결·승인 대기)인가.
+    private var pairingActive: Bool {
+        switch model.phase {
+        case .requestingPairing, .waitingApproval: true
+        case .unpaired, .paired: false
+        }
+    }
 
     private var state: PhoneViewState {
         var state = PhoneViewState(model: model, tunnelAvailable: tunnel.isAvailable, tunnelActive: tunnel.isTunnelActive,
@@ -214,6 +223,10 @@ struct RootView: View {
                 case .none: break
                 }
             }
+        }
+        .onChange(of: pairingActive, initial: true) { _, active in
+            // 확인 숫자를 Mac 화면과 견주는 동안 화면이 꺼지면 앱이 백그라운드로 가 페어링이 끊긴다.
+            UIApplication.shared.isIdleTimerDisabled = active
         }
         .onChange(of: model.host?.fqdn, initial: true) { _, fqdn in
             // 터널이 이 Mac까지의 경로(직접·중계)를 알아보게 한다.
@@ -444,18 +457,10 @@ struct RootView: View {
 
     private var actions: PhoneActions {
         PhoneActions(
-            pair: { host, code in model.pair(code: code, host: host) },
-            handleScanned: { text in
-                do throws(PairingLinkError) {
-                    model.pair(link: try PairingLink.parse(text: text))
-                    return nil
-                } catch {
-                    return error.userMessage
-                }
-            },
+            handleScanned: { text in model.pair(scanned: text) },
             cancelPairing: { model.cancelPairing() },
-            confirmReplacement: { model.confirmReplacement() },
-            dismissReplacement: { model.dismissReplacement() },
+            confirmPending: { model.confirmPending() },
+            dismissPending: { model.dismissPending() },
             refresh: { await model.refresh() },
             install: { services.installer.install($0, with: model) },
             clearInstall: {
