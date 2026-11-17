@@ -1,8 +1,7 @@
 # macOS
 .DS_Store
 
-# Xcode. RemoteDebug.xcodeproj는 xcodegen으로 만든다.
-*.xcodeproj
+# Xcode. RemoteDebug.xcodeproj는 git에 올린다. 사용자별 상태만 뺀다.
 xcuserdata/
 DerivedData/
 *.xcresult
