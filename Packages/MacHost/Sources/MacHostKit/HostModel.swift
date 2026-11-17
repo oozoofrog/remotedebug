@@ -1079,6 +1079,24 @@ public final class HostModel {
         devices[i].directTokenHash = device.directTokenHash
         devices[i].push = device.push
         saveDevices()
+        removeSuperseded(by: devices[i])
+    }
+
+    /// 방금 알림을 등록한 기기와 같은 전화기의 예전 항목을 허용 목록에서 뺀다(코어에도 적용한다).
+    private func removeSuperseded(by device: DeviceEntry) {
+        for old in Self.supersededDevices(by: device, in: devices) {
+            appendActivity(.deviceReplaced(old), String(localized: "\(old.name)(\(old.nodeName)) 기기를 허용 목록에서 뺐습니다. 같은 iPhone을 다시 페어링했습니다."))
+            Task { await removeDevice(old.id) }
+        }
+    }
+
+    /// `device`가 대신하게 된 예전 항목: 같은 알림 등록(토큰·앱·환경)과 같은 로그인 계정을 가졌고 더 먼저 페어링한 것.
+    /// APNs 토큰은 한 전화기의 한 앱에 하나이므로, 같은 토큰을 든 더 오래된 항목은 다시 페어링하기 전의 같은 전화기다.
+    nonisolated static func supersededDevices(by device: DeviceEntry, in devices: [DeviceEntry]) -> [DeviceEntry] {
+        guard let push = device.push, device.isPushRegistered else { return [] }
+        return devices.filter {
+            $0.id != device.id && $0.push == push && $0.loginName == device.loginName && $0.pairedAt < device.pairedAt
+        }
     }
 
     /// 기기의 알림 등록을 지운다(APNs가 토큰을 더는 받지 않을 때). 그사이 기기가 다른 토큰으로 다시 등록했으면

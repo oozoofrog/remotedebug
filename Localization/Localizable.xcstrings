@@ -1683,6 +1683,34 @@
         }
       }
     },
+    "%@(%@) 기기를 허용 목록에서 뺐습니다. 같은 iPhone을 다시 페어링했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Removed the %1$@ (%2$@) device from the allowed list. The same iPhone was paired again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デバイス%1$@(%2$@)を許可リストから外しました。同じiPhoneを再度ペアリングしました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将 %1$@(%2$@)设备从允许列表中移除。同一部 iPhone 已重新配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已將 %1$@(%2$@)裝置從允許列表中移除。同一部 iPhone 已重新配對。"
+          }
+        }
+      }
+    },
     "%@(%@): 이 Mac의 빌드 목록과 설치에 접근할 수 없게 되고, 진행 중인 설치는 끊깁니다. 다시 쓰려면 새로 페어링해야 합니다." : {
       "localizations" : {
         "en" : {
@@ -14221,6 +14249,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "裝置名稱 %@。以與 RemoteDebug App 相同的 tailnet 節點連線。"
+          }
+        }
+      }
+    },
+    "기기 정리" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Device replaced"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デバイス整理"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已整理设备"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已整理裝置"
           }
         }
       }

@@ -194,6 +194,41 @@ struct DirectTests {
         #expect(try savedDevices(h.paths).first?.directTokenHash == registered.directTokenHash)
     }
 
+    @Test func repairedPhoneReplacesItsOlderEntry() async throws {
+        let push = PushRegistration(token: String(repeating: "0123abcd", count: 8), bundleId: "com.example.app", environment: "development")
+        var old = sampleDevice(1)
+        old.push = push
+        var other = sampleDevice(2)
+        other.push = PushRegistration(token: String(repeating: "ffff0000", count: 8), bundleId: "com.example.app", environment: "development")
+        var fresh = sampleDevice(3)
+        fresh.pairedAt = old.pairedAt.addingTimeInterval(3600)
+        let h = try makeHarness("push-replace", devices: [old, other, fresh])
+        await h.model.start()
+
+        fresh.push = push
+        h.model.handle(.deviceUpdated(fresh))
+        #expect(await eventually { h.model.devices.map(\.id) == ["d_2", "d_3"] })
+        #expect(h.core.setDevicesCalls.last?.map(\.id) == ["d_2", "d_3"], "예전 항목은 코어의 허용 목록에서도 빠진다")
+        #expect(try savedDevices(h.paths).map(\.id) == ["d_2", "d_3"])
+        #expect(h.model.activity.first?.text.contains("다시 페어링") == true)
+    }
+
+    @Test func olderEntryIsKeptWhenTheNewerOneAlreadyHoldsTheToken() {
+        let push = PushRegistration(token: "aa", bundleId: "com.example.app", environment: "development")
+        var newer = sampleDevice(1)
+        newer.push = push
+        newer.pairedAt = newer.pairedAt.addingTimeInterval(3600)
+        var older = sampleDevice(2)
+        older.push = push
+        var stranger = sampleDevice(3)
+        stranger.push = push
+        stranger.loginName = "someone@example.com"
+        stranger.pairedAt = older.pairedAt.addingTimeInterval(-3600)
+        // 더 오래된 항목이 같은 토큰을 등록해도 최근 항목을 빼지 않는다. 다른 계정의 항목도 빼지 않는다.
+        #expect(HostModel.supersededDevices(by: older, in: [newer, older, stranger]).isEmpty)
+        #expect(HostModel.supersededDevices(by: newer, in: [newer, older, stranger]).map(\.id) == ["d_2"])
+    }
+
     @Test func pushUpdateForARemovedDeviceIsIgnored() async throws {
         let h = try makeHarness("push-removed", devices: [sampleDevice(1)])
         await h.model.start()

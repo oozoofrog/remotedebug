@@ -128,6 +128,8 @@ public struct ActivityItem: Sendable, Hashable, Identifiable {
         case session(SessionEvent)
         case pairDecided(PairDecidedEvent)
         case deviceAdded(DeviceEntry)
+        /// 같은 iPhone을 다시 페어링해서 예전 항목을 뺐다.
+        case deviceReplaced(DeviceEntry)
     }
 
     public var id: UUID
