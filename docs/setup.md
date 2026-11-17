@@ -208,7 +208,7 @@ Mac 앱 설정 창(⌘,) **고급** 탭의 "iPhone 자동 연결"에 Tailscale O
 
 1. Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만든다([만드는 법](https://tailscale.com/kb/1215/oauth-clients)). 권한은 Auth Keys 쓰기(`auth_keys`)를 고르고 태그는 `tag:rd-phone`을 고른다. 태그가 목록에 없으면 정책 파일의 `tagOwners`에 `"tag:rd-phone": ["autogroup:admin"]`을 먼저 더한다.
 2. 클라이언트 ID와 비밀값(`tskey-client-…`, 만들 때 한 번만 보여 준다)을 Mac 앱 설정 창(⌘,) **고급** > "iPhone 자동 연결"에 넣고 **저장**을 누른다. 저장할 때는 형식만 본다. 클라이언트가 실제로 받아들여지는지는 다음 QR을 열 때 알 수 있고, 키를 만들지 못하면 QR 아래와 이 설정에 그 까닭이 나온다.
-3. **기기** > **iPhone 페어링…** > **RemoteDebug 앱이 있는 iPhone**을 열면 QR 아래에 "이 QR에는 한 번만 쓸 수 있는 Tailscale 키가 들어 있어, iPhone은 로그인 없이 연결됩니다."가 나온다. 이 QR에는 **페어링 링크 복사**가 없다. RemoteDebug 앱 안 카메라로 QR을 읽으면 앱이 그 키로 tailnet에 들어온 뒤 페어링을 요청한다. 확인 숫자가 같으면 Mac에서 **허용**을 누른다.
+3. **기기** > **iPhone 페어링…** > **RemoteDebug 앱이 있는 iPhone**을 열면 QR 아래에 "이 QR에는 한 번만 쓸 수 있는 Tailscale 키가 들어 있어, iPhone은 로그인 없이 연결됩니다."가 나온다. 이 QR에는 **페어링 링크 복사**가 없다(링크를 웹 주소로 내도록 빌드했으면 있다. [페어링 링크를 웹 주소로](#페어링-링크를-웹-주소로연결-도메인)). RemoteDebug 앱 안 카메라로 QR을 읽으면 앱이 그 키로 tailnet에 들어온 뒤 페어링을 요청한다. 확인 숫자가 같으면 Mac에서 **허용**을 누른다.
 
 키는 QR과 같은 5분 동안 한 번만 쓸 수 있고 미리 승인된, `tag:rd-phone`이 붙은 키다. QR을 찍은 기기는 이 tailnet에 들어오므로 QR을 다른 사람에게 보여 주지 않는다. 그 iPhone 노드는 태그가 붙은 노드라서, 정책 파일이 `tag:rd-phone`에서 이 Mac의 443과 4747 포트로 가는 연결을 허용해야 한다([tailnet 정책(ACL)](#tailnet-정책acl)).
 
@@ -219,10 +219,74 @@ tailnet lock이 켜진 tailnet에서는 키로 처음 들어온 iPhone이 서명
 
 1. 앱의 VPN 카드에서 **VPN 켜기**를 누르고, iOS의 'VPN 구성 추가' 알림에서 허용을 누른다.
 2. 상태가 "로그인 필요"가 되면 **로그인 페이지 열기**로 로그인하거나 **인증 키로 켜기**에 키를 넣는다. 상태가 "연결됨"이 될 때까지 기다린다.
-3. Mac에서 **iPhone 페어링…** > **RemoteDebug 앱이 있는 iPhone**을 열고, iPhone의 RemoteDebug 앱으로 그 QR을 읽는다. Tailscale 키가 없는 QR이면 Mac에서 복사한 `remotedebug://pair#…` 링크를 iPhone에서 눌러 열어도 된다. 링크와 QR에는 비밀이 들어 있으므로 다른 사람에게 보내지 않는다.
+3. Mac에서 **iPhone 페어링…** > **RemoteDebug 앱이 있는 iPhone**을 열고, iPhone의 RemoteDebug 앱으로 그 QR을 읽는다. Tailscale 키가 없는 QR이면 Mac에서 복사한 `remotedebug://pair#…` 링크를 iPhone에서 눌러 열어도 된다(웹 주소로 빌드했으면 `https://…` 링크이고 키가 있어도 복사할 수 있다). 링크와 QR에는 비밀이 들어 있으므로 다른 사람에게 보내지 않는다.
 4. iPhone과 Mac에 확인 숫자 6자리가 나온다. 같으면 Mac에서 허용한다. 짝이 되면 앱은 `GET /v1/info`로 Mac의 이름과 주소를 받는다.
 5. "빌드" 목록에서 **설치**를 누른다. "iOS 설치 창에서 ‘설치’를 누르세요"가 나오면 iOS 설치 창에서 **설치**를 누른다. 창을 닫았으면 **다시 열기**를 누른다.
 6. "전송 완료"가 나오면 홈 화면에서 앱을 연다. 개발자를 신뢰하라는 알림이 나오면 설정 > 일반 > VPN 및 기기 관리에서 신뢰한 뒤 다시 연다. 앱이 실행되지 않으면 설정 > 개인정보 보호 및 보안 > 개발자 모드를 확인한다.
+
+### 페어링 링크를 웹 주소로(연결 도메인)
+
+기본 페어링 링크는 `remotedebug://pair#…`이다. 이 스킴은 같은 스킴을 선언한 다른 앱도 받을 수 있어서, Tailscale 키가 든 제안은 링크 복사 없이 QR만 보인다. 자기 웹 도메인이 있으면 링크를 연결 도메인(universal link) `https://<호스트><경로>#…`로 낼 수 있다. 그 주소는 그 도메인이 허락한 앱만 받으므로 키가 든 제안도 링크로 복사한다. 실기기로는 확인하지 않음.
+
+1. `Config/Signing.local.xcconfig`에 호스트를 넣는다. 경로는 바꿀 때만 넣는다(기본 `/remotedebug/pair`). xcconfig는 `//`부터 줄 끝을 주석으로 읽으므로 `https://`는 적지 않는다. 빌드 설정이 둘을 합쳐 `RD_PAIR_LINK_BASE`(`https://example.com/remotedebug/pair`)를 만들고 Mac 앱과 iPhone 앱의 Info.plist RDPairLinkBase에 넣는다.
+
+   ```
+   RD_PAIR_LINK_HOST = example.com
+   RD_PAIR_LINK_PATH = /remotedebug/pair
+   ```
+
+2. Mac 앱과 iPhone 앱을 **같은 값으로** 빌드한다(`xcodegen generate --spec project.yml` 뒤에 빌드). 호스트가 있으면 iPhone 앱(`RemoteDebugPhone`)은 `Apps/iOS/RemoteDebugPhone+Links.entitlements`로 서명되어 연결 도메인 권한 `applinks:<호스트>`가 들어간다. 자동 서명이 App ID에 Associated Domains를 켠다(계정 소유자의 승인이 필요할 수 있다). 터널 확장과 RD 업데이트 앱에는 넣지 않는다. 호스트가 비어 있으면 권한도 없고 링크는 `remotedebug://pair#…` 그대로다.
+3. 그 호스트에 아래 두 파일을 올린다.
+
+**`/.well-known/apple-app-site-association`**: `https://<호스트>/.well-known/apple-app-site-association`에서 리디렉션 없이 `Content-Type: application/json`으로 낸다. `appIDs`는 `<팀 ID>.<iPhone 앱 번들 ID>`다. 번들 ID는 `$(RD_BUNDLE_PREFIX).RemoteDebugPhone`이다(Mac 앱의 **iPhone 앱 설치…**나 `scripts/install-phone.sh`가 앞부분을 `dev.<팀 ID 소문자>`로 바꿨으면 그 값). 여러 팀·앞부분으로 설치하면 그 수만큼 `appIDs`에 넣는다. `components`는 페어링 경로 하나만 연다. 아래 팀 ID `ABCDE12345`는 예시다.
+
+```json
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["ABCDE12345.com.oozoofrog.app.RemoteDebugPhone"],
+        "components": [
+          { "/": "/remotedebug/pair", "comment": "RemoteDebug 앱 페어링 링크. 값은 # 뒤에 있다" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**대체 페이지**(`https://<호스트><경로>`): 앱이 없거나 앱이 이 주소로 빌드되지 않았을 때, 또는 Safari 주소 막대에 링크를 붙여 넣었을 때 열린다. 주소의 조각(`#` 뒤)에 페어링 비밀과 Tailscale 키가 있으므로 다음을 지킨다.
+
+- 제3자 스크립트·글꼴·분석·광고·iframe을 싣지 않는다. 같은 출처의 정적 HTML 한 장이면 된다.
+- 열리자마자, 다른 무엇보다 먼저 주소에서 조각을 지운다(`history.replaceState`). 브라우저 기록에는 조각까지 남을 수 있다.
+- 조각을 어디에도 보내지 않는다: 요청, 로그, 분석, 저장소(`localStorage` 등)에 넣지 않는다. 조각은 서버 요청과 Referer에 실리지 않지만, 페이지의 스크립트는 읽을 수 있다.
+- `Referrer-Policy: no-referrer`, `Cache-Control: no-store`를 보낸다.
+- 할 일을 적는다: RemoteDebug 앱 안 카메라로 Mac의 QR을 읽는다. 링크를 메시지·메모에서 길게 눌러 RemoteDebug로 열 수도 있다. 이 페이지가 계속 열리면 iPhone 앱이 이 주소로 빌드되었는지 확인한다.
+
+```html
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<script>
+  // 페어링 비밀과 키가 든 조각을 주소와 현재 기록 항목에서 지운다. 읽거나 보내지 않는다.
+  if (location.hash) history.replaceState(null, "", location.pathname);
+</script>
+<title>RemoteDebug 페어링</title>
+<p>이 링크는 RemoteDebug iPhone 앱에서 열립니다. RemoteDebug 앱 안 카메라로 Mac의 QR 코드를 읽으세요.</p>
+<p>이 페이지가 계속 보이면 iPhone 앱이 이 주소로 빌드되었는지 확인하세요.</p>
+```
+
+iPhone 앱은 호스트와 경로가 설정과 같은 https 링크만 페어링 링크로 읽고(대소문자를 가리지 않는 호스트, 끝의 `/` 하나는 받음), 다른 호스트·경로·포트·쿼리와 `http`는 받지 않는다. `remotedebug://pair#…`도 계속 읽으므로 호스트 없이 빌드한 Mac과도 페어링한다. OS가 배달한 링크는 지금처럼 Mac 주소를 보이고 묻는다. 두 앱의 설정이 어긋나면 iPhone 앱이 안내한다.
+
+| Mac | iPhone | 결과 |
+| --- | --- | --- |
+| 없음 | 없음 또는 있음 | `remotedebug://pair#…`. 지금과 같다 |
+| 있음 | 같은 값 | `https://…#…`. 링크와 QR 모두 열린다 |
+| 있음 | 없음 | 앱 안 카메라로 읽으면 "이 iPhone 앱은 그 주소 없이 빌드되었습니다"가 든 안내. 링크를 누르면 대체 페이지가 열린다 |
+| 있음 | 다른 호스트나 경로 | 앱 안 카메라로 읽으면 "다른 웹 주소로 빌드한 Mac 앱"이 든 안내 |
+
+실기기에서만 확인되는 것: Apple의 연결 도메인 파일 수집(설치 뒤 시간이 걸릴 수 있다), 링크를 눌렀을 때 앱이 열리는지, 앱이 이 링크를 `onOpenURL`과 `NSUserActivityTypeBrowsingWeb` 중 어느 쪽으로 받는지(둘 다 받는다), 대체 페이지가 조각을 지우는지.
 
 ### iPhone 앱 업데이트
 

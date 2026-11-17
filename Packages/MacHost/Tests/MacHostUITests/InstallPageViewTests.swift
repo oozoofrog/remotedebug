@@ -150,6 +150,26 @@ extension ScreenTests {
         await model.shutdown()
     }
 
+    /// 연결 도메인 주소로 빌드한 Mac은 키를 실은 제안도 https 링크로 내므로 링크 복사가 있다. 복사한 글자는 그 링크다.
+    @Test(.timeLimit(.minutes(1)))
+    func appQRWithATailscaleKeyAndAnHTTPSLinkHasACopyButton() async throws {
+        let tmp = try UITempDir("appsheethttps")
+        let model = await pairingModel(.sharing, tmp)
+        let link = URL(string: "https://example.com/remotedebug/pair#v=1&h=rd-mac-test.example.ts.net&p=4747&s=FAKE&e=1&k=tskey-auth-kFAKE")!
+        let invite = PairingInvite(link: link, qrImage: QRCodeView.makeImage(link.absoluteString), expiresAt: Date().addingTimeInterval(300),
+                                   authKey: .included(expires: Date().addingTimeInterval(300)), tailnetLockEnabled: false)
+        let log = CopyLog()
+        let window = host(AppPairingPanel(invite: invite, dismiss: {}).environment(model).environment(\.linkCopier, log.copier))
+        defer { window.close() }
+        let view = try root(window)
+        try #require(try await until { !AXTree.buttons(AppPairingPanel.copyTitle, in: view).isEmpty })
+        #expect(!AXTree.texts(in: view).contains(AppPairingPanel.cameraOnlyNote))
+        AXTree.press(try #require(AXTree.buttons(AppPairingPanel.copyTitle, in: view).first))
+        try #require(try await until { !log.writes.isEmpty })
+        #expect(log.writes.first == link.absoluteString)
+        await model.shutdown()
+    }
+
     /// 코드가 쓰이면 시트에서 설치 페이지 부분이 사라지고 요청 줄이 나온다. 요청 줄은 어느 동선으로 왔는지 보이고,
     /// 확인 숫자는 앱 QR 요청에만 있다.
     @Test(.timeLimit(.minutes(1)))

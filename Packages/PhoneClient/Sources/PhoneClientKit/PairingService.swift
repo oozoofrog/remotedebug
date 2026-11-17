@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import RDModels
 
 /// 페어링 링크·QR에서 읽은 제안(Swiftail 페어링의 `PairingOffer`를 앱 쪽 값으로 옮긴 것).
 ///
@@ -91,6 +92,10 @@ public enum PairingOfferIssue: Error, Equatable, Sendable {
     case wrappedAuthKey
     /// 주소가 정책(`.ts.net` 이름)을 통과하지 못했다.
     case hostNotAllowed
+    /// 연결 도메인(https) 링크인데 이 앱은 그 주소 없이 빌드되었다(Mac만 `RD_PAIR_LINK_HOST`를 넣어 빌드함).
+    case linkBaseNotConfigured
+    /// 연결 도메인(https) 링크인데 이 앱에 넣은 주소와 호스트나 경로가 다르다.
+    case linkBaseMismatch
 
     public var userMessage: String {
         switch self {
@@ -106,6 +111,10 @@ public enum PairingOfferIssue: Error, Equatable, Sendable {
             String(localized: "링크의 Tailscale 키가 Tailnet Lock으로 서명된 형식이라 쓸 수 없습니다. 이 iPhone에서 먼저 Tailscale에 로그인한 뒤 Mac에서 QR 코드를 새로 여세요.")
         case .hostNotAllowed:
             String(localized: "Mac 주소는 .ts.net으로 끝나는 이름이어야 합니다. Mac에 표시된 QR 코드나 링크를 사용하세요.")
+        case .linkBaseNotConfigured:
+            String(localized: "이 링크는 웹 주소로 링크를 내도록 빌드한 Mac 앱이 만든 것이고, 이 iPhone 앱은 그 주소 없이 빌드되었습니다. 두 앱을 같은 RD_PAIR_LINK_HOST·RD_PAIR_LINK_PATH 값으로 빌드하거나, Mac 앱을 그 값 없이 다시 빌드하세요.")
+        case .linkBaseMismatch:
+            String(localized: "이 링크는 이 iPhone 앱과 다른 웹 주소로 빌드한 Mac 앱이 만든 것입니다. 두 앱을 같은 RD_PAIR_LINK_HOST·RD_PAIR_LINK_PATH 값으로 빌드하세요.")
         }
     }
 }
@@ -180,12 +189,20 @@ public struct UnavailablePairingService: PairingService {
 }
 
 /// 앱이 받은 글자가 RemoteDebug 페어링 링크인지 가리고 제안으로 읽는다.
+///
+/// 페어링 링크는 사용자 지정 스킴(`remotedebug://pair#…`)과, 앱을 연결 도메인 주소(`PairingLinkBase`)로 빌드했으면 그 https 주소
+/// (`https://<호스트><경로>#…`) 두 꼴이다. 사용자 지정 스킴은 주소 없이 빌드한 Mac과 맞추려고 언제나 읽는다.
 public enum PairingInput {
-    /// Mac이 내는 링크의 `base`.
-    public static let base = "remotedebug://pair"
+    /// 사용자 지정 스킴 링크의 `base`.
+    public static let base = PairingLinkBase.customScheme
 
-    /// 글자가 페어링 링크 자리(`remotedebug://pair` 뒤에 끝, `#`, `?`와 그 앞의 `/` 하나)인가. 읽을 수 있는지는 보지 않는다.
-    public static func isPairingAddress(_ text: String) -> Bool {
+    /// 글자가 페어링 링크 자리인가. 읽을 수 있는지는 보지 않는다.
+    /// 사용자 지정 스킴은 `remotedebug://pair` 뒤에 끝, `#`, `?`와 그 앞의 `/` 하나이고, https 링크는 `linkBase`와 호스트·경로가 같아야 한다.
+    public static func isPairingAddress(_ text: String, linkBase: PairingLinkBase? = nil) -> Bool {
+        isCustomSchemeAddress(text) || linkBase?.matches(text) == true
+    }
+
+    static func isCustomSchemeAddress(_ text: String) -> Bool {
         let lower = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard lower.hasPrefix(base) else { return false }
         var rest = lower.dropFirst(base.count)
@@ -195,10 +212,21 @@ public enum PairingInput {
         return next == "#" || next == "?"
     }
 
-    /// 링크·QR 글자를 읽는다. 주소가 `remotedebug://pair`가 아니면 `.notAnOffer`, 예전 꼴이면 `.legacyLink`.
-    public static func read(_ text: String, with service: any PairingService, policy: HostPolicy) throws(PairingOfferIssue) -> PairingProposal {
+    /// 링크·QR 글자를 읽는다. 페어링 링크 자리가 아니면 `.notAnOffer`, 예전 꼴이면 `.legacyLink`.
+    /// 다른 https 주소에 실린 제안이면 설정이 어긋난 것이다: 이 앱에 주소가 없으면 `.linkBaseNotConfigured`, 있으면 `.linkBaseMismatch`.
+    public static func read(
+        _ text: String, with service: any PairingService, policy: HostPolicy, linkBase: PairingLinkBase? = nil
+    ) throws(PairingOfferIssue) -> PairingProposal {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard isPairingAddress(trimmed) else { throw .notAnOffer }
+        if let linkBase, linkBase.matches(trimmed) {
+            return try readOffer(trimmed, with: service, policy: policy)
+        }
+        guard isCustomSchemeAddress(trimmed) else {
+            if isHTTPSAddress(trimmed), (try? service.read(link: trimmed)) != nil {
+                throw linkBase == nil ? .linkBaseNotConfigured : .linkBaseMismatch
+            }
+            throw .notAnOffer
+        }
         let head = trimmed.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? trimmed
         let hasFragment = trimmed.contains("#")
         if head.contains("?") {
@@ -206,7 +234,18 @@ public enum PairingInput {
             let legacy = query.split(separator: "&").contains { $0.hasPrefix("host=") || $0.hasPrefix("code=") }
             throw !hasFragment && legacy ? .legacyLink : .notAnOffer
         }
-        let proposal = try service.read(link: trimmed)
+        return try readOffer(trimmed, with: service, policy: policy)
+    }
+
+    /// 글자가 https 주소인가(대소문자 무시).
+    static func isHTTPSAddress(_ text: String) -> Bool {
+        text.lowercased().hasPrefix("https://")
+    }
+
+    private static func readOffer(_ text: String, with service: any PairingService, policy: HostPolicy) throws(PairingOfferIssue) -> PairingProposal {
+        // 조각이 없으면 제안이 아니다(https 링크의 대체 페이지 주소 등).
+        guard text.contains("#") else { throw .notAnOffer }
+        let proposal = try service.read(link: text)
         guard let valid = policy.validatedHost(proposal.host), valid == proposal.host else { throw .hostNotAllowed }
         return proposal
     }

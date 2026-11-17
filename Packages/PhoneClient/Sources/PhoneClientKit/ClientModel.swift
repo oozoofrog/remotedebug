@@ -282,6 +282,8 @@ public final class ClientModel {
     private let tunnelController: any TunnelControlling
     private let clock: any PollingClock
     private let policy: HostPolicy
+    /// 페어링 링크의 연결 도메인 주소(Info.plist `RDPairLinkBase`). nil이면 사용자 지정 스킴 링크만 받는다.
+    private let pairingLinkBase: PairingLinkBase?
     private let pairingService: any PairingService
     private let timing: Timing
     private let receivedStore: ReceivedFileStore
@@ -340,6 +342,7 @@ public final class ClientModel {
         clock: any PollingClock = SystemPollingClock(),
         hostPolicy: HostPolicy = .tailnetOnly,
         pairingService: any PairingService = UnavailablePairingService(),
+        pairingLinkBase: PairingLinkBase? = nil,
         timing: Timing = .standard,
         logBook: DeviceLogBook? = nil,
         crashBook: CrashBook? = nil,
@@ -359,6 +362,7 @@ public final class ClientModel {
         self.clock = clock
         self.policy = hostPolicy
         self.pairingService = pairingService
+        self.pairingLinkBase = pairingLinkBase
         self.timing = timing
         self.direct = direct
         self.logBook = logBook ?? DeviceLogBook()
@@ -418,16 +422,19 @@ public final class ClientModel {
 
     // MARK: 페어링
 
-    /// 앱이 받은 URL을 처리한다. `remotedebug://pair` 링크가 아니면 `false`.
+    /// 앱이 받은 URL을 처리한다. 페어링 링크(`remotedebug://pair#…`, 연결 도메인 주소가 있으면 그 https 링크)가 아니면 `false`.
     /// 링크는 어디서든 올 수 있으므로 시작하기 전에 Mac 주소를 보이고 사용자에게 묻는다(`pendingConfirmation`).
-    /// 읽지 못한 링크는 `lastError`에 안내를 남긴다.
+    /// 읽지 못한 링크와 다른 https 주소에 실린 제안은 `lastError`에 안내를 남긴다.
     @discardableResult
     public func handle(url: URL) -> Bool {
         let text = url.absoluteString
-        guard PairingInput.isPairingAddress(text) else { return false }
+        let isPairingAddress = PairingInput.isPairingAddress(text, linkBase: pairingLinkBase)
+        guard isPairingAddress || PairingInput.isHTTPSAddress(text) else { return false }
         do throws(PairingOfferIssue) {
-            request(try PairingInput.read(text, with: pairingService, policy: policy), source: .openedLink)
+            request(try PairingInput.read(text, with: pairingService, policy: policy, linkBase: pairingLinkBase), source: .openedLink)
         } catch {
+            // 페어링과 상관없는 https 주소는 이 앱이 다루지 않는다.
+            if !isPairingAddress, error == .notAnOffer { return false }
             lastError = error.userMessage
         }
         return true
@@ -438,7 +445,7 @@ public final class ClientModel {
     /// 페어링 QR이 아니면 안내 문구를 돌려주고 아무것도 시작하지 않는다.
     public func pair(scanned text: String) -> String? {
         do throws(PairingOfferIssue) {
-            request(try PairingInput.read(text, with: pairingService, policy: policy), source: .scanned)
+            request(try PairingInput.read(text, with: pairingService, policy: policy, linkBase: pairingLinkBase), source: .scanned)
             return nil
         } catch {
             return error.userMessage

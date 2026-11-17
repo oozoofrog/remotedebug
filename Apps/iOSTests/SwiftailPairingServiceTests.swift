@@ -1,5 +1,6 @@
 import Foundation
 import PhoneClientKit
+import RDModels
 import SwiftailPairing
 import Testing
 @testable import RemoteDebug
@@ -68,6 +69,48 @@ import Testing
         #expect(throws: PairingOfferIssue.hostNotAllowed) {
             try PairingInput.read(link().replacingOccurrences(of: host, with: "mac.example.com"), with: service, policy: .tailnetOnly)
         }
+    }
+
+    @Test func 연결_도메인_링크를_실제_라이브러리로_읽는다() throws {
+        let base = try #require(PairingLinkBase("https://example.com/remotedebug/pair"))
+        let service = SwiftailPairingService()
+        let https = link(key: authKey).replacingOccurrences(of: "remotedebug://pair", with: "https://example.com/remotedebug/pair")
+        let proposal = try PairingInput.read(https, with: service, policy: .tailnetOnly, linkBase: base)
+        #expect(proposal.host == host && proposal.authKey == authKey)
+        // 사용자 지정 스킴도 계속 읽는다.
+        #expect(try PairingInput.read(link(), with: service, policy: .tailnetOnly, linkBase: base).host == host)
+        // 다른 주소의 제안은 설정이 어긋났다고 알린다.
+        #expect(throws: PairingOfferIssue.linkBaseMismatch) {
+            try PairingInput.read(https.replacingOccurrences(of: "example.com", with: "other.example.com"), with: service,
+                                  policy: .tailnetOnly, linkBase: base)
+        }
+        #expect(throws: PairingOfferIssue.linkBaseNotConfigured) {
+            try PairingInput.read(https, with: service, policy: .tailnetOnly)
+        }
+        #expect(throws: PairingOfferIssue.notAnOffer) {
+            try PairingInput.read(https.replacingOccurrences(of: "https://", with: "http://"), with: service,
+                                  policy: .tailnetOnly, linkBase: base)
+        }
+    }
+
+    /// 이 빌드의 Info.plist `RDPairLinkBase`는 비어 있거나(RD_PAIR_LINK_HOST 없음) 올바른 https 주소다.
+    @Test func 앱의_링크_주소_설정은_비었거나_올바르다() throws {
+        let value = try #require(Bundle.main.object(forInfoDictionaryKey: PairingLinkBase.infoKey) as? String)
+        #expect(value.isEmpty || PairingLinkBase(value) != nil)
+    }
+
+    /// 손으로 고치는 두 권한 파일이 연결 도메인 권한만 다르다(project-ios.yml).
+    @Test func 연결_도메인_권한_파일은_기본_파일에_applinks만_더한다() throws {
+        let folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "iOS")
+        func plist(_ name: String) throws -> [String: Any] {
+            let data = try Data(contentsOf: folder.appending(path: name))
+            return try #require(try PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any])
+        }
+        var links = try plist("RemoteDebugPhone+Links.entitlements")
+        let plain = try plist("RemoteDebugPhone.entitlements")
+        #expect(links.removeValue(forKey: "com.apple.developer.associated-domains") as? [String] == ["applinks:$(RD_PAIR_LINK_HOST)"])
+        #expect(plain["com.apple.developer.associated-domains"] == nil)
+        #expect(NSDictionary(dictionary: links).isEqual(to: plain))
     }
 
     @Test func 제안은_비밀과_인증_키를_드러내지_않는다() throws {

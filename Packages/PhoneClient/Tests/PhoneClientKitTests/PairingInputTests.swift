@@ -1,4 +1,5 @@
 import Foundation
+import RDModels
 import Testing
 
 @testable import PhoneClientKit
@@ -50,7 +51,7 @@ import Testing
     }
 
     @Test(arguments: [
-        "https://pair#h=a.b.ts.net",
+        "https://pair#v=1",
         "remotedebug://unpair#h=a.b.ts.net",
         "remotedebug://pair/extra#h=a.b.ts.net",
         "remotedebug://pairing#h=a.b.ts.net",
@@ -80,6 +81,72 @@ import Testing
         #expect(!PairingInput.isPairingAddress("remotedebug://test?probe=on"))
         #expect(!PairingInput.isPairingAddress("remotedebug-vpn://open"))
         #expect(!PairingInput.isPairingAddress("https://example.com"))
+    }
+
+    // MARK: 연결 도메인(https) 링크
+
+    @Test func readsTheHTTPSLinkOfTheConfiguredBase() throws {
+        let base = exampleLinkBase
+        let https = pairingLink(key: "tskey-auth-kTest1CNTRL-abc", base: "https://example.com/remotedebug/pair")
+        let proposal = try PairingInput.read(https, with: service, policy: .tailnetOnly, linkBase: base)
+        #expect(proposal.host == hostFQDN && proposal.authKey == "tskey-auth-kTest1CNTRL-abc")
+        for variant in ["HTTPS://Example.COM/remotedebug/pair", "https://example.com/remotedebug/pair/"] {
+            #expect(try PairingInput.read(pairingLink(base: variant), with: service, policy: .tailnetOnly, linkBase: base).host == hostFQDN)
+        }
+        // 사용자 지정 스킴도 계속 읽는다(주소 없이 빌드한 Mac).
+        #expect(try PairingInput.read(pairingLink(), with: service, policy: .tailnetOnly, linkBase: base).host == hostFQDN)
+        // 주소가 맞아도 정책 밖의 Mac은 받지 않는다.
+        #expect(throws: PairingOfferIssue.hostNotAllowed) {
+            try PairingInput.read(pairingLink(host: "mac.example.com", base: base.url.absoluteString), with: service,
+                                  policy: .tailnetOnly, linkBase: base)
+        }
+        // 조각이 없는 주소(대체 페이지 그 자체)는 제안이 아니다.
+        #expect(throws: PairingOfferIssue.notAnOffer) {
+            try PairingInput.read("https://example.com/remotedebug/pair", with: service, policy: .tailnetOnly, linkBase: base)
+        }
+    }
+
+    @Test(arguments: [
+        "https://other.example.com/remotedebug/pair",
+        "https://example.com/remotedebug/other",
+        "https://example.com/remotedebug/pair/extra",
+        "https://example.com/remotedebug",
+        "https://example.com.evil.test/remotedebug/pair",
+        "https://example.com:8443/remotedebug/pair",
+    ])
+    func otherHTTPSAddressesAreAMismatch(_ address: String) {
+        #expect(throws: PairingOfferIssue.linkBaseMismatch) {
+            try PairingInput.read(pairingLink(base: address), with: service, policy: .tailnetOnly, linkBase: exampleLinkBase)
+        }
+        #expect(!PairingInput.isPairingAddress(pairingLink(base: address), linkBase: exampleLinkBase))
+    }
+
+    @Test func httpsLinkWithoutAConfiguredBaseSaysSo() {
+        let https = pairingLink(base: "https://example.com/remotedebug/pair")
+        #expect(throws: PairingOfferIssue.linkBaseNotConfigured) { try read(https) }
+        #expect(!PairingInput.isPairingAddress(https))
+        // 두 안내는 서로 다르고, 예전 Mac 앱 안내와도 다르다.
+        let messages = [PairingOfferIssue.linkBaseNotConfigured, .linkBaseMismatch, .legacyLink].map(\.userMessage)
+        #expect(Set(messages).count == 3)
+    }
+
+    @Test(arguments: [
+        "http://example.com/remotedebug/pair",
+        "HTTP://example.com/remotedebug/pair",
+        "ftp://example.com/remotedebug/pair",
+    ])
+    func plainHTTPIsNotAnOffer(_ address: String) {
+        #expect(throws: PairingOfferIssue.notAnOffer) {
+            try PairingInput.read(pairingLink(base: address), with: service, policy: .tailnetOnly, linkBase: exampleLinkBase)
+        }
+        #expect(throws: PairingOfferIssue.notAnOffer) { try read(pairingLink(base: address)) }
+    }
+
+    @Test func addressCheckWithABase() {
+        #expect(PairingInput.isPairingAddress("https://example.com/remotedebug/pair#x", linkBase: exampleLinkBase))
+        #expect(PairingInput.isPairingAddress("remotedebug://pair#x", linkBase: exampleLinkBase))
+        #expect(!PairingInput.isPairingAddress("https://example.com/remotedebug/pair#x"))
+        #expect(!PairingInput.isPairingAddress("http://example.com/remotedebug/pair#x", linkBase: exampleLinkBase))
     }
 
     @Test(arguments: ["example.com", "100.64.0.10", "127.0.0.1", "example.ts.net", "evil.ts.net.attacker.com"])

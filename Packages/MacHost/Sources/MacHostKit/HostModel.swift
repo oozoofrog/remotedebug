@@ -272,7 +272,8 @@ public final class HostModel {
         return code
     }
 
-    /// 앱용 QR의 링크(`remotedebug://pair#v=1&h=…`). 열려 있고 만료되지 않았고 키를 싣지 않았을 때만. 비밀이다(화면에만 쓴다).
+    /// 앱용 QR의 링크(`remotedebug://pair#v=1&h=…` 또는 연결 도메인의 https 링크). 열려 있고 만료되지 않았을 때만.
+    /// 사용자 지정 스킴이면 키를 싣지 않았을 때만 있다. 비밀이다(화면에만 쓴다).
     public var pairingLink: URL? { openInvite?.link }
 
     /// 열려 있고 만료되지 않은 앱용 QR.

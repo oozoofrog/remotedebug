@@ -52,6 +52,8 @@ final class AppServices {
             opener: opener,
             tunnel: tunnel,
             pairingService: SwiftailPairingService(),
+            // 빌드 설정 RD_PAIR_LINK_HOST로 넣은 연결 도메인 주소. 없으면 remotedebug://pair 링크만 받는다.
+            pairingLinkBase: PairingLinkBase.fromInfo(Bundle.main.infoDictionary),
             logBook: DeviceLogBook(fileURL: DeviceLogBook.defaultFileURL()),
             crashBook: CrashBook(directory: CrashBook.defaultDirectory()),
             direct: directConnection.route,
@@ -280,6 +282,11 @@ struct RootView: View {
                 tab = .builds
                 model.handle(url: url)
             }
+        }
+        .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+            // 연결 도메인(universal link)으로 온 페어링 링크. 보통은 onOpenURL로 오지만 이 경로로 올 때도 받는다.
+            guard let url = activity.webpageURL else { return }
+            if model.handle(url: url) { tab = .builds }
         }
         .alert("크래시 기록", isPresented: Binding(get: { crashNotice != nil }, set: { if !$0 { crashNotice = nil } })) {
             Button("확인") { crashNotice = nil }

@@ -30,15 +30,11 @@ targets:
         buildPhase: resources
       - path: Localization/InfoPlist/RemoteDebugPhone/InfoPlist.xcstrings
         buildPhase: resources
-    entitlements:
-      path: Apps/iOS/RemoteDebugPhone.entitlements
-      properties:
-        # 새 빌드·파일 알림(docs/protocol-addenda.md P). 디버그 빌드만 쓰므로 APNs 개발 환경이다.
-        aps-environment: development
-        com.apple.developer.networking.networkextension:
-          - packet-tunnel-provider
-        com.apple.security.application-groups:
-          - group.$(RD_BUNDLE_PREFIX).RemoteDebug
+    # 권한 파일은 둘이고 손으로 고친다(XcodeGen의 entitlements는 CODE_SIGN_ENTITLEMENTS를 한 파일로 고정하므로 쓰지 않는다).
+    # - Apps/iOS/RemoteDebugPhone.entitlements: 새 빌드·파일 알림(aps-environment: development, docs/protocol-addenda.md P),
+    #   packet-tunnel-provider, App Group(group.$(RD_BUNDLE_PREFIX).RemoteDebug).
+    # - Apps/iOS/RemoteDebugPhone+Links.entitlements: 같은 내용에 연결 도메인 권한(applinks:$(RD_PAIR_LINK_HOST))을 더한 것.
+    # RD_PAIR_LINK_HOST가 있을 때만 뒤의 것을 쓴다(아래 CODE_SIGN_ENTITLEMENTS). 두 파일이 어긋나면 RemoteDebugPhoneTests가 실패한다.
     info:
       path: Apps/iOS/Info.plist
       properties:
@@ -47,6 +43,8 @@ targets:
         CFBundleDevelopmentRegion: en
         # 두 앱과 두 터널 확장이 함께 쓰는 저장소(SharedContainer).
         RDAppGroup: group.$(RD_BUNDLE_PREFIX).RemoteDebug
+        # 페어링 링크의 연결 도메인 주소(Config/Signing.xcconfig). 비어 있으면 remotedebug://pair 링크만 받는다.
+        RDPairLinkBase: $(RD_PAIR_LINK_BASE)
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
@@ -87,6 +85,8 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         PRODUCT_BUNDLE_IDENTIFIER: $(RD_BUNDLE_PREFIX).RemoteDebugPhone
         PRODUCT_NAME: RemoteDebug
+        # RD_PAIR_LINK_HOST가 있으면 연결 도메인 권한이 든 파일(Config/Signing.xcconfig).
+        CODE_SIGN_ENTITLEMENTS: $(RD_PHONE_ENTITLEMENTS_$(RD_PAIR_LINK_STATE))
         TARGETED_DEVICE_FAMILY: "1"
         CODE_SIGN_STYLE: Automatic
         # 시뮬레이터만 로컬 서명. 기기 빌드는 Xcode 기본 신원(Apple Development)과 DEVELOPMENT_TEAM으로 서명한다.

@@ -26959,6 +26959,62 @@
         }
       }
     },
+    "이 링크는 웹 주소로 링크를 내도록 빌드한 Mac 앱이 만든 것이고, 이 iPhone 앱은 그 주소 없이 빌드되었습니다. 두 앱을 같은 RD_PAIR_LINK_HOST·RD_PAIR_LINK_PATH 값으로 빌드하거나, Mac 앱을 그 값 없이 다시 빌드하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This link was made by a Mac app built to issue web links, but this iPhone app was built without that address. Build both apps with the same RD_PAIR_LINK_HOST and RD_PAIR_LINK_PATH values, or rebuild the Mac app without them."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリンクはWebアドレスでリンクを出すようにビルドしたMacアプリで作成されたものですが、このiPhoneアプリはそのアドレスなしでビルドされています。両方のアプリを同じRD_PAIR_LINK_HOST・RD_PAIR_LINK_PATHの値でビルドするか、Macアプリをその値なしでビルドし直してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此链接由构建为使用网页地址的 Mac App 生成，但此 iPhone App 构建时没有该地址。请用相同的 RD_PAIR_LINK_HOST 和 RD_PAIR_LINK_PATH 值构建两个 App，或不带这些值重新构建 Mac App。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此連結由建置為使用網頁位址的 Mac App 產生，但此 iPhone App 建置時沒有該位址。請用相同的 RD_PAIR_LINK_HOST 和 RD_PAIR_LINK_PATH 值建置兩個 App，或不帶這些值重新建置 Mac App。"
+          }
+        }
+      }
+    },
+    "이 링크는 이 iPhone 앱과 다른 웹 주소로 빌드한 Mac 앱이 만든 것입니다. 두 앱을 같은 RD_PAIR_LINK_HOST·RD_PAIR_LINK_PATH 값으로 빌드하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This link was made by a Mac app built with a different web address than this iPhone app. Build both apps with the same RD_PAIR_LINK_HOST and RD_PAIR_LINK_PATH values."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリンクは、このiPhoneアプリとは異なるWebアドレスでビルドしたMacアプリで作成されたものです。両方のアプリを同じRD_PAIR_LINK_HOST・RD_PAIR_LINK_PATHの値でビルドしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此链接由使用与此 iPhone App 不同网页地址构建的 Mac App 生成。请用相同的 RD_PAIR_LINK_HOST 和 RD_PAIR_LINK_PATH 值构建两个 App。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此連結由使用與此 iPhone App 不同網頁位址建置的 Mac App 產生。請用相同的 RD_PAIR_LINK_HOST 和 RD_PAIR_LINK_PATH 值建置兩個 App。"
+          }
+        }
+      }
+    },
     "이 링크는 이전 버전 Mac 앱이 만든 것입니다. Mac 앱을 최신 버전으로 올린 뒤 QR 코드를 새로 여세요." : {
       "localizations" : {
         "en" : {

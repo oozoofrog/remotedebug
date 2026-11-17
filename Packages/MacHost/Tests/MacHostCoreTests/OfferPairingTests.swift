@@ -1,3 +1,4 @@
+import CoreImage
 import Foundation
 import MacHostKit
 import RDHostLogic
@@ -103,7 +104,7 @@ final class OfferHarness: Sendable {
     static let key = "tskey-auth-kTEST1CNTRL-abcdef"
     static let client = TailscaleAPI.OAuthClient(id: "kClient", secret: "tskey-client-kClient-SECRET", tags: ["tag:rd-phone"])
 
-    init(_ label: String, lockEnabled: Bool = false, saveTimeout: Duration = .seconds(1)) throws {
+    init(_ label: String, lockEnabled: Bool = false, saveTimeout: Duration = .seconds(1), linkBase: PairingLinkBase? = nil) throws {
         tmp = try CoreTempDir(label)
         var factory = fake.factory
         factory.makePairing = { [stubs] _, _, _, decide in
@@ -118,8 +119,8 @@ final class OfferHarness: Sendable {
             if let failure = stubs.keyFailure.withLock({ $0 }) { throw failure }
             return IssuedPairingKey(key: Self.key, expires: Date(timeIntervalSince1970: 1_794_478_800))
         }
-        core = SwiftailHostCore(layout: .init(pairingDirectory: tmp.url.appending(path: "pairing")), factory: factory,
-                                pollIntervals: (.milliseconds(20), .milliseconds(20)), offerSaveTimeout: saveTimeout)
+        core = SwiftailHostCore(layout: .init(pairingDirectory: tmp.url.appending(path: "pairing"), pairingLinkBase: linkBase),
+                                factory: factory, pollIntervals: (.milliseconds(20), .milliseconds(20)), offerSaveTimeout: saveTimeout)
         config = try tmp.config()
         fake.node.update {
             $0.snapshot = NodeSnapshot(state: .running, fqdn: Self.fqdn, stableID: "nMAC", certDomains: [Self.fqdn],
@@ -210,6 +211,50 @@ struct OfferPairingTests {
         await #expect(throws: APIErrorBody.self) {
             try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 300, oauthClient: nil))
         }
+    }
+
+    @Test func withoutLinkBaseOffersUseTheCustomSchemeAndKeyedOffersAreQROnly() async throws {
+        let h = try OfferHarness("offer-scheme")
+        try await h.core.start(h.config)
+        defer { Task { await h.core.stop() } }
+
+        let plain = try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 300, oauthClient: nil))
+        #expect(plain.link?.absoluteString.hasPrefix("remotedebug://pair#v=1&") == true)
+        #expect(QRText.read(plain.qrImage)?.hasPrefix("remotedebug://pair#v=1&") == true)
+
+        let keyed = try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 300, oauthClient: OfferHarness.client))
+        #expect(keyed.link == nil)
+        let qr = try #require(QRText.read(keyed.qrImage))
+        #expect(qr.hasPrefix("remotedebug://pair#v=1&") && qr.contains("&k=\(OfferHarness.key)"))
+    }
+
+    @Test func withLinkBaseOffersUseTheHTTPSLinkEvenWithAKey() async throws {
+        let base = try #require(PairingLinkBase("https://example.com/remotedebug/pair"))
+        let h = try OfferHarness("offer-https", linkBase: base)
+        try await h.core.start(h.config)
+        defer { Task { await h.core.stop() } }
+
+        let plain = try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 300, oauthClient: nil))
+        let plainLink = try #require(plain.link).absoluteString
+        #expect(plainLink.hasPrefix("https://example.com/remotedebug/pair#v=1&h=rd-mac-0000test.example.ts.net&p=4747&"))
+        #expect(QRText.read(plain.qrImage) == plainLink)
+
+        // 키를 실은 제안도 연결 도메인 링크로 낸다(복사 단추가 보인다).
+        let keyed = try await h.core.openPairingOffer(PairingInviteRequest(lifetimeSeconds: 300, oauthClient: OfferHarness.client))
+        let keyedLink = try #require(keyed.link).absoluteString
+        #expect(keyed.authKey == .included(expires: Date(timeIntervalSince1970: 1_794_478_800)))
+        #expect(keyedLink.hasPrefix("https://example.com/remotedebug/pair#v=1&") && keyedLink.contains("&k=\(OfferHarness.key)"))
+        #expect(QRText.read(keyed.qrImage) == keyedLink)
+        // 로그와 설명에는 링크가 없다.
+        #expect(!h.log.contains("example.com") && !h.log.contains("tskey") && !String(describing: keyed).contains("example.com"))
+    }
+
+    @Test func offerLinkBaseRules() throws {
+        let base = try #require(PairingLinkBase("https://example.com/remotedebug/pair"))
+        #expect(SwiftailHostCore.offerLinkBase(nil, carriesKey: false) == (URL(string: "remotedebug://pair")!, true))
+        #expect(SwiftailHostCore.offerLinkBase(nil, carriesKey: true) == (URL(string: "remotedebug://pair")!, false))
+        #expect(SwiftailHostCore.offerLinkBase(base, carriesKey: false) == (base.url, true))
+        #expect(SwiftailHostCore.offerLinkBase(base, carriesKey: true) == (base.url, true))
     }
 
     @Test func approvalAddsTheDeviceToTheAllowListWithTheSameEventsAsCodePairing() async throws {
@@ -483,5 +528,15 @@ struct RealPairingHostTests {
         #expect(stubs.issued.withLock { $0 } == [4747, 4747])
         let log = (try? String(contentsOf: tmp.paths.coreLogFile, encoding: .utf8)) ?? ""
         #expect(!log.contains("QR 페어링을 준비하지 못함"))
+    }
+}
+
+/// 코어가 만든 QR 그림(모듈 하나가 한 화소)을 키워서 글자를 읽는다.
+enum QRText {
+    static func read(_ image: CGImage?) -> String? {
+        guard let image else { return nil }
+        let scaled = CIImage(cgImage: image).samplingNearest().transformed(by: CGAffineTransform(scaleX: 8, y: 8))
+        let detector = CIDetector(ofType: CIDetectorTypeQRCode, context: CIContext(), options: [CIDetectorAccuracy: CIDetectorAccuracyHigh])
+        return (detector?.features(in: scaled).first as? CIQRCodeFeature)?.messageString
     }
 }
