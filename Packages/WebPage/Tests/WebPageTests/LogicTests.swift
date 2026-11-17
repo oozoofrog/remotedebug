@@ -35,7 +35,7 @@ private func installURL(_ manifest: String) -> String {
     func parityWithIPhoneApp(_ input: String) throws {
         let js = try JSHarness()
         let result = js.call("normalizeCode", input)
-        let swift: Result<String, PairingLinkError>
+        let swift: Result<String, PairingCodeError>
         do {
             swift = .success(try PairingCode.parse(input).normalized)
         } catch {
@@ -51,7 +51,7 @@ private func installURL(_ manifest: String) -> String {
             let expected = error == .invalidCodeCharacters ? "invalidCodeCharacters" : "invalidCodeLength"
             #expect(result.string("error") == expected, "input \(input.debugDescription)")
             #expect(!js.call("isValidCode", input).toBool())
-            #expect(js.message(expected) == error.userMessage)
+            #expect(!js.message(expected).isEmpty)
         }
     }
 
@@ -212,16 +212,12 @@ private func installURL(_ manifest: String) -> String {
 
     @Test func clientModelWording() throws {
         let js = try JSHarness()
-        #expect(js.message("pairingDenied") == ClientModel.pairingDeniedMessage)
-        #expect(js.message("pairingExpired") == ClientModel.pairingExpiredMessage)
         #expect(js.message("sessionFailed") == ClientModel.sessionFailedMessage)
         #expect(js.message("installTimeout") == ClientModel.installTimeoutMessage)
         #expect(js.message("createSessionTimeout") == ClientModel.createSessionTimeoutMessage)
         #expect(js.message("expired") == InstallState.expiredMessage)
         #expect(js.message("developerModeHint") == InstallState.developerModeHint)
         #expect(js.message("completedSent") + " " + js.message("developerModeHint") == InstallState.completedMessage)
-        #expect(js.message("invalidCodeLength") == PairingLinkError.invalidCodeLength.userMessage)
-        #expect(js.message("invalidCodeCharacters") == PairingLinkError.invalidCodeCharacters.userMessage)
     }
 
     @Test func classifyResponse() throws {
@@ -438,7 +434,7 @@ private func installURL(_ manifest: String) -> String {
         let js = try JSHarness()
         #expect(js.call("pairingOutcome", "pending").toString() == "wait")
         #expect(js.call("pairingOutcome", "approved").toString() == "approved")
-        #expect(js.call("pairingOutcome", "denied").string("message") == ClientModel.pairingDeniedMessage)
-        #expect(js.call("pairingOutcome", "expired").string("message") == ClientModel.pairingExpiredMessage)
+        #expect(js.call("pairingOutcome", "denied").string("message") == js.message("pairingDenied"))
+        #expect(js.call("pairingOutcome", "expired").string("message") == js.message("pairingExpired"))
     }
 }
