@@ -202,17 +202,12 @@ RemoteDebugFeedback.start(.init(
 | [docs/protocol-addenda.md](docs/protocol-addenda.md) | `docs/protocol.md`를 고치고 더하는 규칙: 설치 웹 페이지(E), 아이콘(F), 로그(G), 파일(H), 업데이트 페이지(I), 페어링 링크의 Tailscale 키(J) |
 | [docs/tunnel.md](docs/tunnel.md) | iPhone 패킷 터널 |
 | [docs/architecture.md](docs/architecture.md) | 구조와 초기 가정. 틀린 문장은 아래 "문서 정정" |
-| [docs/appstore-review.md](docs/appstore-review.md) | App Store 제출 판정 |
 
 문서가 서로 다르면 이 순서로 따른다.
 
 1. `docs/tunnel.md`: `docs/protocol.md`의 §6 전체와 `docs/architecture.md`의 가정 A1을 대체한다.
 2. `docs/protocol-addenda.md`: 터널이 다루지 않는 부분에서 `docs/protocol.md`보다 앞선다.
 3. `docs/protocol.md`, `docs/architecture.md`의 나머지 부분. 단, 아래 "설계 문서와 달라진 구현"과 "문서 정정"에 적은 내용은 그 표를 따른다.
-
-## App Store 판정
-
-제출하지 않는다. iPhone 앱은 다른 앱의 설치를 요청하는 기능 때문에 지침 2.5.2에 걸리고, VPN 앱으로 보면 5.4의 조직 계정·고지 의무가 따르며, 심사자가 Mac·tailnet·개발 프로비저닝 없이는 핵심 기능을 볼 수 없어 승인 가능성이 매우 낮다고 판단했다. Mac 앱 단독 제출도 4.2.3(i)와 심사자 접근 때문에 권하지 않는다. 권장 배포는 Xcode 직접 설치나 Ad Hoc이고, TestFlight는 권하지 않는다. 판정은 이 프로젝트 구조를 바탕으로 한 추정이며 Apple의 실제 심사 결과가 아니다. 근거와 인용은 [판정서](docs/appstore-review.md)에 있다.
 
 ## 알려진 한계와 문제
 
@@ -250,8 +245,7 @@ RemoteDebugFeedback.start(.init(
 | `docs/protocol.md` §5: 허용 기기 저장 | 승인한 제어 서버 URL에 묶는다. 서버를 바꾸면 확인 후 다시 페어링한다 | 34, 43 |
 | `docs/protocol.md:3`: 바꿀 때 이 문서를 먼저 고친다 | 바뀐 규칙은 [`docs/protocol-addenda.md`](docs/protocol-addenda.md)에 있다. 둘이 다르면 addenda를 따른다 | 6 |
 | `docs/architecture.md:5`: 각 앱에 내장한 노드만으로 설치 | 내장 경로는 그대로 두고, 공식 Tailscale 앱만 있는 iPhone이 Safari로 여는 설치 웹 페이지를 사용자 요청으로 더했다([`docs/protocol-addenda.md`](docs/protocol-addenda.md) E) | 61, 62, 63, 64, 65 |
-| `docs/architecture.md:88`: Xcode·TestFlight 내부 배포 | Xcode 직접 설치나 Ad Hoc. [판정서](docs/appstore-review.md)가 TestFlight를 권하지 않는다(지침 2.2) | 2 |
-| `docs/appstore-review.md`의 2.4.5 해석: 샌드박스 호환, 로그인 시 자동 실행 없음 | App Sandbox를 쓰지 않고 연결한 프로젝트를 `xcodebuild`로 빌드한다. 메뉴 막대에 상주하고 로그인할 때 열 수 있다. 사용자 요청이며 Mac App Store 판단은 이 변경을 반영하지 않았다 | 기록 없음(2026-11-11 사용자 요청) |
+| `docs/architecture.md:88`: Xcode·TestFlight 내부 배포 | Xcode 직접 설치나 Ad Hoc | 2 |
 | `docs/architecture.md` 가정 A3: App Sandbox를 켠 Mac 앱 | 같은 표의 대안("비샌드박스 배포로 전환")을 택했다 | 기록 없음(2026-11-11 사용자 요청) |
 
 설계 문서에 없는 현재 동작:
@@ -280,10 +274,10 @@ RemoteDebugFeedback.start(.init(
 ## 문서 검사
 
 ```
-사용: scripts/check-docs.sh [--help]   (RD_QUOTES_CACHE_DIR=<폴더>를 주면 Apple 원문 사본으로 인용을 검사한다)
+사용: scripts/check-docs.sh [--help]
 ```
 
-다음이 저장소와 다르면 어긋난 곳마다 한 줄을 출력하고 종료 코드 1로 끝난다: 코드 조각과 코드 블록(json 제외)의 경로(`scripts/`, `docs/`, `Packages/`, `Apps/`, `Config/`, `.agent-loop/` 아래와 `project.yml` 같은 루트 파일), 문서에 적은 스크립트, 대상·스킴·모듈·번들 ID 이름, U 항목과 `docs/tunnel.md`의 실기기 항목, D 항목과 실행 순서 표, 상대 링크와 `#` 제목 앵커, 설치 웹 페이지 절차(`docs/setup.md`의 웹 페이지 절, `docs/device-test.md`의 D14)에 굵은 글씨나 큰따옴표로 적은 화면 문구(페이지 소스 `Packages/SwiftailHost/Sources/RDHostLogic/Resources/web`, Mac 앱 소스 `Packages/MacHost/Sources`와 글자 그대로 비교). 필요한 문서나 `scripts/check_quotes.py`, `scripts/check_protocol_examples.py`가 없어도 실패한다. 코드 조각 밖 본문의 경로는 검사하지 않는다. Apple 원문을 받지 못하면 인용 검사는 경고만 남긴다.
+다음이 저장소와 다르면 어긋난 곳마다 한 줄을 출력하고 종료 코드 1로 끝난다: 코드 조각과 코드 블록(json 제외)의 경로(`scripts/`, `docs/`, `Packages/`, `Apps/`, `Config/`, `.agent-loop/` 아래와 `project.yml` 같은 루트 파일), 문서에 적은 스크립트, 대상·스킴·모듈·번들 ID 이름, U 항목과 `docs/tunnel.md`의 실기기 항목, D 항목과 실행 순서 표, 상대 링크와 `#` 제목 앵커, 설치 웹 페이지 절차(`docs/setup.md`의 웹 페이지 절, `docs/device-test.md`의 D14)에 굵은 글씨나 큰따옴표로 적은 화면 문구(페이지 소스 `Packages/SwiftailHost/Sources/RDHostLogic/Resources/web`, Mac 앱 소스 `Packages/MacHost/Sources`와 글자 그대로 비교). 필요한 문서나 `scripts/check_protocol_examples.py`가 없어도 실패한다. 코드 조각 밖 본문의 경로는 검사하지 않는다.
 
 ## 라이선스
 

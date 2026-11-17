@@ -86,7 +86,7 @@ struct HostStorageTests {
         #expect(real.folderBookmarkKey == UserDefaultsFolderBookmarks.defaultKey)
         #expect(real.savedControlURLKey == LaunchOptions.controlURLKey)
         #expect(real.controlURL == "https://developer.example.com")
-        let realStore = UserDefaultsFolderBookmarks(defaults: defaults, key: real.folderBookmarkKey, securityScoped: false)
+        let realStore = UserDefaultsFolderBookmarks(defaults: defaults, key: real.folderBookmarkKey)
         try realStore.save(folder)
 
         defaults.set("RemoteDebug-smoke-2", forKey: LaunchOptions.stateRootNameKey)
@@ -94,7 +94,7 @@ struct HostStorageTests {
         #expect(smoke.controlURL.isEmpty, "다른 저장 폴더가 기본 폴더의 제어 서버를 읽었다")
         #expect(smoke.savedControlURLKey != LaunchOptions.controlURLKey)
         #expect(smoke.folderBookmarkKey != real.folderBookmarkKey)
-        let smokeStore = UserDefaultsFolderBookmarks(defaults: defaults, key: smoke.folderBookmarkKey, securityScoped: false)
+        let smokeStore = UserDefaultsFolderBookmarks(defaults: defaults, key: smoke.folderBookmarkKey)
         #expect(smokeStore.savedFolder() == .none, "다른 저장 폴더가 기본 폴더의 감시 폴더를 읽었다")
 
         smokeStore.clear()
@@ -460,7 +460,7 @@ struct HostSafetyModelTests {
 
     @Test func userDefaultsBookmarksReportUnresolvableData() throws {
         let defaults = InMemoryDefaults()
-        let store = UserDefaultsFolderBookmarks(defaults: defaults, key: "k", securityScoped: false)
+        let store = UserDefaultsFolderBookmarks(defaults: defaults, key: "k")
         #expect(store.savedFolder() == .none)
 
         let tmp = try TempDir("bookmark")

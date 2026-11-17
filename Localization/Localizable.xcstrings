@@ -1173,34 +1173,6 @@
         }
       }
     },
-    "%@ 등록 해제" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unregister %@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@の登録を解除"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消注册 %@"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消註冊 %@"
-          }
-        }
-      }
-    },
     "%@ 로그를 지울까요?" : {
       "localizations" : {
         "en" : {
@@ -2359,34 +2331,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已將 %@ 加入允許清單。"
-          }
-        }
-      }
-    },
-    "%@에 Xcode 프로젝트(.xcodeproj)나 워크스페이스(.xcworkspace)가 없습니다. 프로젝트 파일이 있는 폴더를 고르세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ has no Xcode project (.xcodeproj) or workspace (.xcworkspace). Choose the folder that contains the project file."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@にXcodeプロジェクト(.xcodeproj)またはワークスペース(.xcworkspace)がありません。プロジェクトファイルがあるフォルダを選択してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 中没有 Xcode 项目（.xcodeproj）或工作区（.xcworkspace）。请选择包含项目文件的文件夹。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 中沒有 Xcode 專案 (.xcodeproj) 或工作區 (.xcworkspace)。請選擇含有專案檔案的檔案夾。"
           }
         }
       }
@@ -3667,34 +3611,6 @@
         }
       }
     },
-    "'iPhone 앱 설치…'의 명령을 터미널에서 실행해 iPhone에 RemoteDebug 앱을 설치합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Run the command from Install iPhone App… in Terminal to install the RemoteDebug app on iPhone."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「iPhoneアプリをインストール…」のコマンドをターミナルで実行し、iPhoneにRemoteDebugアプリをインストールします。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在终端中运行“安装 iPhone App…”中的命令，将 RemoteDebug App 安装到 iPhone 上。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在終端機中執行「iPhone App 安裝…」裡的命令，將 RemoteDebug App 安裝到 iPhone 上。"
-          }
-        }
-      }
-    },
     "'프로젝트 추가…'로 Xcode 프로젝트를 고르거나 이 창에 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다." : {
       "localizations" : {
         "en" : {
@@ -3719,34 +3635,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用「加入專案…」選擇 Xcode 專案，或將它拖放到這個視窗，就會為 Debug 裝置建置並發布。在 iPhone App 的建置列表中點一下「安裝」即可。"
-          }
-        }
-      }
-    },
-    "'프로젝트 추가…'로 프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 한 최근 Debug 빌드를 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Register a project folder with Add Project… and the latest Debug build made for iPhone in Xcode is published. Then tap Install in the iPhone app's build list."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「プロジェクトを追加…」でプロジェクトフォルダを登録すると、XcodeでiPhone用に作成した最新のDebugビルドを公開します。iPhoneアプリのビルド一覧で「インストール」をタップしてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通过“添加项目…”注册项目文件夹后，会发布最近一次在 Xcode 中为 iPhone 构建的 Debug 构建。在 iPhone App 的构建列表中点按“安装”即可。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用「加入專案…」註冊專案檔案夾後，會發布在 Xcode 中為 iPhone 建置的最近 Debug 建置。在 iPhone App 的建置列表中點一下「安裝」即可。"
           }
         }
       }
@@ -9553,62 +9441,6 @@
         }
       }
     },
-    "Xcode 프로젝트(.xcodeproj)가 있는 폴더를 고르세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose the folder that contains the Xcode project (.xcodeproj)."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xcodeプロジェクト(.xcodeproj)があるフォルダを選択してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请选择包含 Xcode 项目（.xcodeproj）的文件夹。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請選擇含有 Xcode 專案 (.xcodeproj) 的檔案夾。"
-          }
-        }
-      }
-    },
-    "Xcode 프로젝트가 있는 폴더를 고릅니다" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose the folder that contains the Xcode project"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xcodeプロジェクトがあるフォルダを選択します"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择包含 Xcode 项目的文件夹"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇含有 Xcode 專案的檔案夾"
-          }
-        }
-      }
-    },
     "Xcode 프로젝트를 추가하거나 창으로 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다." : {
       "localizations" : {
         "en" : {
@@ -9633,34 +9465,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "加入 Xcode 專案或將它拖放到視窗中，就會為 Debug 裝置建置並發布。"
-          }
-        }
-      }
-    },
-    "Xcode를 설치하고 Settings > Accounts에서 Apple 계정으로 로그인합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Install Xcode and log in with your Apple account in Settings > Accounts."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xcodeをインストールし、Settings > AccountsでApple アカウントにログインします。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "安装 Xcode，并在 Settings > Accounts 中用 Apple 账户登录。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "安裝 Xcode，並在 Settings > Accounts 以 Apple 帳號登入。"
           }
         }
       }
@@ -9773,62 +9577,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已在 Xcode 開始裝置 Debug 建置。註冊後，每次建置都會發布到 iPhone。"
-          }
-        }
-      }
-    },
-    "Xcode의 기본 빌드 폴더(DerivedData)에 있는 빌드를 찾으려면 그 폴더를 한 번 허용하세요. 빌드 위치를 프로젝트 폴더 안으로 둔 프로젝트는 허용 없이 찾습니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "To find builds in Xcode's default build folder (DerivedData), allow access to that folder once. Projects whose build location is inside the project folder are found without it."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "XcodeのデフォルトのビルドフォルダDerivedDataにあるビルドを見つけるには、そのフォルダを一度許可してください。ビルドの場所をプロジェクトフォルダ内にしているプロジェクトは、許可なしで見つけられます。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "要查找 Xcode 默认构建文件夹（DerivedData）中的构建，请允许访问该文件夹一次。构建位置设在项目文件夹内的项目无需允许即可找到。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "若要尋找 Xcode 預設建置檔案夾 (DerivedData) 中的建置，請先允許該檔案夾一次。若專案的建置位置設在專案檔案夾內，則不需允許就能找到。"
-          }
-        }
-      }
-    },
-    "Xcode의 빌드 폴더(DerivedData)를 고르세요. 위치는 Xcode > Settings > Locations에 있습니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose Xcode's build folder (DerivedData). Its location is in Xcode > Settings > Locations."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "XcodeのビルドフォルダDerivedDataを選択してください。場所はXcode > Settings > Locationsにあります。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请选择 Xcode 的构建文件夹（DerivedData）。位置可在 Xcode > Settings > Locations 中查看。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請選擇 Xcode 的建置檔案夾 (DerivedData)。位置在 Xcode >「Settings」>「Locations」中。"
           }
         }
       }
@@ -10473,34 +10221,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在 iPhone App 中開啟 VPN，並使用與這台 Mac 相同的 Tailscale 帳號登入。"
-          }
-        }
-      }
-    },
-    "iPhone 앱은 자기 Apple 개발자 계정으로 빌드해 설치합니다. 터미널에서 아래 명령을 실행하면 소스를 받아 빌드하고, 연결한 iPhone에 설치합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The iPhone app is built and installed with your own Apple developer account. Run the command below in Terminal to download the source, build it, and install it on the connected iPhone."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iPhoneアプリは、自分のApple Developerアカウントでビルドしてインストールします。Terminalで以下のコマンドを実行すると、ソースを取得してビルドし、接続したiPhoneにインストールします。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iPhone App 使用你自己的 Apple 开发者账户构建并安装。在终端中运行下面的命令，会下载源代码、构建，并安装到已连接的 iPhone。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iPhone App 會用你自己的 Apple 開發者帳號建置並安裝。在終端機執行下方的指令，就會下載原始碼、建置，並安裝到已連接的 iPhone。"
           }
         }
       }
@@ -11201,34 +10921,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "請用傳輸線連接 iPhone、解鎖後選擇要簽署的團隊。Xcode 會將這支 iPhone 註冊到團隊並簽署 App。"
-          }
-        }
-      }
-    },
-    "iPhone을 케이블로 연결해 잠금을 풀고, 설정 > 개인정보 보호 및 보안에서 개발자 모드를 켭니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Connect the iPhone with a cable, unlock it, and turn on Developer Mode in Settings > Privacy & Security."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iPhoneをケーブルで接続してロックを解除し、「設定」>「プライバシーとセキュリティ」でデベロッパモードをオンにします。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请用线缆连接 iPhone 并解锁，然后在“设置 > 隐私与安全性”中打开开发者模式。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請用傳輸線連接 iPhone 並解鎖，然後在「設定」>「隱私權與安全性」中開啟開發者模式。"
           }
         }
       }
@@ -15155,34 +14847,6 @@
         }
       }
     },
-    "기기용 Debug 빌드가 아직 없습니다. Xcode에서 iPhone을 대상으로 빌드하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No Debug build for devices yet. Build for iPhone in Xcode."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "デバイス用のDebugビルドがまだありません。XcodeでiPhoneをターゲットにしてビルドしてください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "还没有设备用的 Debug 构建。请在 Xcode 中以 iPhone 为目标进行构建。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "還沒有裝置用的 Debug 建置。請在 Xcode 中以 iPhone 為目標進行建置。"
-          }
-        }
-      }
-    },
     "기록 보기" : {
       "localizations" : {
         "en" : {
@@ -16819,34 +16483,6 @@
         }
       }
     },
-    "등록 해제" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unregister"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "登録を解除"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消注册"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消註冊"
-          }
-        }
-      }
-    },
     "등록을 기다리는 프로젝트 %lld개" : {
       "localizations" : {
         "en" : {
@@ -16899,62 +16535,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不註冊"
-          }
-        }
-      }
-    },
-    "등록한 프로젝트 없음" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No registered projects"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "登録したプロジェクトはありません"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有已注册的项目"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "沒有已註冊的專案"
-          }
-        }
-      }
-    },
-    "등록한 프로젝트…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Registered Projects…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "登録したプロジェクト…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已注册的项目…"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已註冊的專案…"
           }
         }
       }
@@ -20141,34 +19721,6 @@
         }
       }
     },
-    "빌드 폴더 허용…" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Allow Build Folder…"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ビルドフォルダを許可…"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "允许访问构建文件夹…"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "允許建置檔案夾…"
-          }
-        }
-      }
-    },
     "빌드는 끝났지만 iPhone 앱을 찾지 못했습니다. iPhone 앱을 만드는 스킴인지 확인하세요." : {
       "localizations" : {
         "en" : {
@@ -22203,34 +21755,6 @@
         }
       }
     },
-    "소스 보기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "View Source"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ソースを表示"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "查看源代码"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "檢視來源"
-          }
-        }
-      }
-    },
     "손상된 ZIP: %@" : {
       "localizations" : {
         "en" : {
@@ -22911,34 +22435,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "切換至執行中的 App"
-          }
-        }
-      }
-    },
-    "아래 명령을 터미널에 붙여 넣어 실행합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paste the command below into Terminal and run it."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以下のコマンドを「ターミナル」にペーストして実行します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将以下命令粘贴到“终端”中运行。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "將以下指令貼到終端機並執行。"
           }
         }
       }
@@ -31917,62 +31413,6 @@
         }
       }
     },
-    "터미널 열기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Terminal"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ターミナルを開く"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打开终端"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "打開終端機"
-          }
-        }
-      }
-    },
-    "터미널에서 `brew install xcodegen`으로 XcodeGen을 설치합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Installs XcodeGen in Terminal with `brew install xcodegen`."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ターミナルで `brew install xcodegen` を実行して XcodeGen をインストールします。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在“终端”中使用 `brew install xcodegen` 安装 XcodeGen。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在終端機中以 `brew install xcodegen` 安裝 XcodeGen。"
-          }
-        }
-      }
-    },
     "토큰이 더는 유효하지 않은 기기 %@대의 알림 등록을 지웠습니다. 그 iPhone에서 알림을 다시 켜세요." : {
       "localizations" : {
         "en" : {
@@ -33917,34 +33357,6 @@
         }
       }
     },
-    "폴더를 읽을 수 없거나 Xcode 프로젝트가 없습니다. 등록을 해제하고 다시 추가하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The folder can't be read or has no Xcode project. Remove the registration and add it again."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "フォルダを読み込めないか、Xcode プロジェクトがありません。登録を解除してから、もう一度追加してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法读取文件夹，或其中没有 Xcode 项目。请取消注册后重新添加。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無法讀取檔案夾，或其中沒有 Xcode 專案。請取消註冊後重新加入。"
-          }
-        }
-      }
-    },
     "폴더를 찾을 수 없음" : {
       "localizations" : {
         "en" : {
@@ -34367,62 +33779,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "選擇專案檔案夾或 Xcode 專案檔案"
-          }
-        }
-      }
-    },
-    "프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 빌드할 때마다 최근 Debug 빌드를 찾아 게시합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Once you register a project folder, each time you build for iPhone in Xcode it finds the latest Debug build and publishes it."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プロジェクトフォルダを登録すると、Xcode で iPhone 用にビルドするたびに最新の Debug ビルドを見つけて公開します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "注册项目文件夹后，每次在 Xcode 中为 iPhone 构建时，都会查找最新的 Debug 构建并发布。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "註冊專案檔案夾後，每次在 Xcode 為 iPhone 建置時，都會找出最近的 Debug 建置並發布。"
-          }
-        }
-      }
-    },
-    "프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 한 최근 Debug 빌드를 게시합니다." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Register a project folder and the latest Debug build made for iPhone in Xcode is published."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プロジェクトフォルダを登録すると、XcodeでiPhone用に作成した最新のDebugビルドを公開します。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "注册项目文件夹后，会发布最近一次在 Xcode 中为 iPhone 构建的 Debug 构建。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "註冊專案檔案夾後，會發布在 Xcode 中為 iPhone 建置的最近 Debug 建置。"
           }
         }
       }

@@ -83,11 +83,8 @@ public struct SetupChecklist: Sendable, Hashable {
 
     static func substeps(_ step: Step) -> [Substep] {
         guard step == .iphone else { return [] }
-        let install = HostEdition.isSandboxed
-            ? String(localized: "'iPhone 앱 설치…'의 명령을 터미널에서 실행해 iPhone에 RemoteDebug 앱을 설치합니다.")
-            : String(localized: "iPhone을 케이블로 연결하고 RemoteDebug 앱을 설치합니다.")
         return [
-            Substep(id: 1, text: install, action: .installPhoneApp),
+            Substep(id: 1, text: String(localized: "iPhone을 케이블로 연결하고 RemoteDebug 앱을 설치합니다."), action: .installPhoneApp),
             Substep(id: 2, text: String(localized: "iPhone 앱에서 VPN을 켜고 이 Mac과 같은 Tailscale 계정으로 로그인합니다.")),
             Substep(id: 3, text: String(localized: "‘iPhone 페어링…’에서 ‘RemoteDebug 앱이 있는 iPhone’을 고르고, 앱으로 QR을 읽은 뒤 확인 숫자가 같으면 허용합니다."), action: .pair),
             Substep(id: 4, text: String(localized: "케이블 없이 설치하려면 ‘iPhone 페어링…’에서 ‘앱이 아직 없는 iPhone’을 고릅니다.")),
@@ -109,9 +106,6 @@ public struct SetupChecklist: Sendable, Hashable {
             return String(localized: "iPhone에 RemoteDebug 앱을 설치하고 이 Mac과 페어링합니다.")
         case .build:
             if isDone { return String(localized: "빌드 \(String(builds))개 게시됨") }
-            if HostEdition.isSandboxed {
-                return String(localized: "'프로젝트 추가…'로 프로젝트 폴더를 등록하면 Xcode에서 iPhone용으로 한 최근 Debug 빌드를 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다.")
-            }
             return String(localized: "'프로젝트 추가…'로 Xcode 프로젝트를 고르거나 이 창에 끌어 놓으면 Debug 기기용으로 빌드해 게시합니다. iPhone 앱의 빌드 목록에서 설치를 누르면 됩니다.")
         }
     }

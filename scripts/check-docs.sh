@@ -9,16 +9,14 @@
 #           번들 ID와 `-scheme` 인자는 긴 코드 조각과 코드 블록 안에서도 찾는다
 #       (d) device-test.md의 U 항목이 tunnel.md의 실기기 항목과 번호·문장까지 같은가(빠진 것, 남는 것, 중복)
 #       (e) README가 docs/의 파일을 모두 링크하는가, 문서의 상대 링크와 `#` 제목 앵커가 살아 있는가
-#       (f) scripts/check_quotes.py, scripts/check_protocol_examples.py가 있고 통과하는가
+#       (f) scripts/check_protocol_examples.py가 있고 통과하는가
 #       (g) 금지 표현(경고만)
 #       (h) docs/setup.md의 웹 페이지 절과 device-test.md의 D14에 적은 화면 문구(**…**, "…")가 페이지·Mac 앱 소스에 있는가
 #       (i) device-test.md의 D 항목이 모두 실행 순서 표에 있는가
 #
-# check_quotes.py는 Apple 원문을 내려받는다. 받지 못하면(종료 코드 2) 경고로 남기고 실패로 치지 않는다.
-# RD_QUOTES_CACHE_DIR를 주면 그 폴더의 원문 사본을 쓴다.
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-USAGE='사용: scripts/check-docs.sh [--help]   (RD_QUOTES_CACHE_DIR=<폴더>를 주면 Apple 원문 사본으로 인용을 검사한다)'
+USAGE='사용: scripts/check-docs.sh [--help]'
 
 case "${1:-}" in
   -h|--help) echo "$USAGE"; exit 0 ;;
@@ -70,8 +68,7 @@ def read(path):
 
 
 REQUIRED = ["README.md", "README.ko.md", "project.yml", "docs/setup.md", "docs/device-test.md", "docs/device-test-results.md",
-            "docs/protocol.md", "docs/protocol-addenda.md", "docs/tunnel.md", "docs/architecture.md",
-            "docs/appstore-review.md"]
+            "docs/protocol.md", "docs/protocol-addenda.md", "docs/tunnel.md", "docs/architecture.md"]
 text = {}
 for path in sorted(set(REQUIRED + glob.glob("docs/*.md")), key=lambda p: (p != "README.md", p)):
     try:
@@ -324,7 +321,7 @@ if usage not in readme:
 
 # (f) 기존 검사
 helpers_ok = True
-for helper in ("scripts/check_protocol_examples.py", "scripts/check_quotes.py"):
+for helper in ("scripts/check_protocol_examples.py",):
     if not os.path.isfile(helper) or not os.access(helper, os.R_OK):
         fail(f"{helper}: 파일이 없거나 읽을 수 없다")
         helpers_ok = False
@@ -338,23 +335,6 @@ if helpers_ok:
         lines = [l.lstrip("- ").strip() for l in output if l.startswith("- ")]
         for line in lines or output[-1:] or ["종료 코드 %d" % protocol.returncode]:
             fail(f"check_protocol_examples.py: {line}")
-
-    quote_args = [sys.executable, "-I", "scripts/check_quotes.py", "docs/appstore-review.md"]
-    cache_dir = os.environ.get("RD_QUOTES_CACHE_DIR", "")
-    if cache_dir:
-        quote_args += ["--cache-dir", cache_dir]
-    try:
-        quotes = subprocess.run(quote_args, capture_output=True, text=True, timeout=120)
-    except subprocess.TimeoutExpired:
-        warnings.append("check_quotes.py: 120초 안에 Apple 원문을 받지 못해 인용을 검사하지 못했다")
-    else:
-        if quotes.returncode == 2:
-            reason = (quotes.stdout + quotes.stderr).strip().splitlines()
-            warnings.append("check_quotes.py: Apple 원문을 받지 못해 인용을 검사하지 못했다: " + (reason[-1] if reason else "원인 없음"))
-        elif quotes.returncode != 0:
-            lines = [l.strip(" -") for l in quotes.stdout.splitlines() if l.startswith(" - ")]
-            for line in lines or ["종료 코드 %d" % quotes.returncode]:
-                fail(f"check_quotes.py: {line}")
 
 # (h) 설치 웹 페이지 절차의 화면 문구. 굵은 글씨(**…**)와 큰따옴표("…") 문구가 페이지·Mac 앱 소스에 글자 그대로 있는가.
 #     `<`가 든 문구(자리표시)와 코드 조각은 보지 않는다.

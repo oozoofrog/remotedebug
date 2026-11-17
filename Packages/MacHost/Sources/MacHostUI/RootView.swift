@@ -61,7 +61,6 @@ final class AuthKeyDraft {
 public struct RootView: View {
     @Environment(HostModel.self) private var model
     @Environment(ProjectsModel.self) private var projects: ProjectsModel?
-    @Environment(LinkedProjectsModel.self) private var linkedProjects: LinkedProjectsModel?
     @Environment(AgentDesk.self) private var agentDesk: AgentDesk?
     @State private var selection: SidebarItem
     @State private var showingImporter = false
@@ -150,9 +149,7 @@ public struct RootView: View {
             PairingSheet()
         }
         .sheet(isPresented: $showingPhoneInstall) {
-            if HostEdition.isSandboxed {
-                PhoneAppGuideSheet()
-            } else if let phoneInstaller {
+            if let phoneInstaller {
                 PhoneAppInstallSheet().environment(phoneInstaller)
             }
         }
@@ -168,21 +165,9 @@ public struct RootView: View {
         .environment(importQueue)
         .environment(authKey)
         .environment(\.showPairing, PairingPresenter { showingPairing = true })
-        .environment(\.showPhoneInstall, HostEdition.isSandboxed || phoneInstaller != nil ? PhoneAppInstallPresenter { showingPhoneInstall = true } : nil)
+        .environment(\.showPhoneInstall, phoneInstaller != nil ? PhoneAppInstallPresenter { showingPhoneInstall = true } : nil)
         .environment(\.showNetwork, NetworkPresenter { selection = .network })
         .environment(\.connectProjects, ProjectConnector { urls in
-            if HostEdition.isSandboxed {
-                // 샌드박스판은 빌드하지 않고 등록만 한다. 프로젝트 파일을 놓았으면 그 폴더를 등록한다.
-                guard let linkedProjects else { return }
-                selection = .apps
-                Task {
-                    for url in urls {
-                        let isContainer = ["xcodeproj", "xcworkspace"].contains(url.pathExtension)
-                        await linkedProjects.add(isContainer ? url.deletingLastPathComponent() : url)
-                    }
-                }
-                return
-            }
             guard let projects else { return }
             selection = .apps
             Task { for url in urls { await projects.connectAndBuild(url) } }

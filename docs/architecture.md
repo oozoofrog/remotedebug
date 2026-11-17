@@ -3,7 +3,7 @@
 ## 목표와 비목표
 
 - 목표: Mac에서 만든 개발 서명(디버그) 빌드를, 공식 Tailscale 앱 없이 각 앱에 내장한 Swiftail(순수 Swift tailnet 노드)만으로 페어링한 iPhone에 설치한다.
-- 비목표: App Store 제출, xcodebuild 대행, 사용자 tailnet 정책 수정, 다중 사용자 권한. 제출 가능 여부는 `appstore-review.md`에 판정으로 남긴다.
+- 비목표: App Store 제출, xcodebuild 대행, 사용자 tailnet 정책 수정, 다중 사용자 권한.
 
 ## 구성
 
@@ -38,7 +38,7 @@
 | --- | --- | --- | --- |
 | A1 | iOS 설치기(`appstored`/`itunesstored`)가 NE의 `NEProxySettings`를 따라 호스트 HTTPS에 접속한다 | 실기기: 호스트 `session` 이벤트에 설치기 `User-Agent`의 매니페스트·IPA 요청이 찍히는지 | 대체됨: 터널 확장이 IP 패킷을 tailnet으로 중계하는 패킷 터널이라 프록시 설정을 쓰지 않는다([tunnel.md](tunnel.md)). 설치기의 요청이 호스트에 닿는지는 실기기에서 확인한다 |
 | A2 | Swiftail 노드가 NE 메모리 한도(보고치 50MiB) 안에서 상주한다 | 실기기: 확장의 phys_footprint 기록(D3) | 노드의 버퍼 한도 조정. 그래도 초과하면 설계를 다시 본다 |
-| A3 | App Sandbox 켠 Mac 앱에서 tailnet 노드가 동작한다 | 로컬: 샌드박스 앱으로 가짜 tailnet E2E | 샌드박스 예외 최소 추가, 안 되면 비샌드박스 배포로 전환하고 판정서에 반영 |
+| A3 | App Sandbox 켠 Mac 앱에서 tailnet 노드가 동작한다 | 로컬: 샌드박스 앱으로 가짜 tailnet E2E | 샌드박스 예외 최소 추가, 안 되면 비샌드박스 배포로 전환 |
 | A4 | 개발 서명 IPA가 OTA(`itms-services`)로 설치된다 | 실기기 설치 | Ad Hoc 서명 또는 USB 설치 안내 |
 
 A1·A2·A4는 실기기 없이는 확정할 수 없다. 확정 전에는 "동작함"이라고 보고하지 않는다.
@@ -53,7 +53,7 @@ A1·A2·A4는 실기기 없이는 확정할 수 없다. 확정 전에는 "동작
 | 킷 | `Packages/RemoteDebugKit/` | 공용 모델, 디버그 빌드 검증, IPA·매니페스트 생성, `rdvalidate` CLI |
 | Mac 앱 | `Apps/Mac/` | 호스트 UI와 흐름 |
 | iPhone 앱 | `Apps/iOS/`, `Apps/iOSTunnel/` | 클라이언트 UI, VPN 관리, 터널 확장 |
-| 문서 | `docs/` | 프로토콜, 구조, 판정서, 설정·실기기 절차 |
+| 문서 | `docs/` | 프로토콜, 구조, 설정·실기기 절차 |
 
 ### 킷 공개 API (구현 계약)
 
@@ -85,7 +85,7 @@ public enum OTAManifest { public static func make(bundleId: String, version: Str
 - 설치 토큰은 1회용·노드 결속·만료형이다. 세션 없이는 IPA에 접근할 수 없다.
 - 디버그 한정은 Mac 앱(정책)과 호스트 로직(재검증)이 이중으로 막고, iOS 자체도 배포 서명 IPA의 OTA 설치를 받지 않는다.
 - 비밀(인증 키)은 Keychain에만 저장하고 로그에 남기지 않는다. 인증 키는 처음 로그인에만 쓰고 노드 상태는 `stateDir`에 남는다.
-- 판정서가 다루는 App Store 규정과 별개로, 이 앱은 내부 배포(Xcode·TestFlight 내부 테스트)를 전제로 한다.
+- 이 앱은 내부 배포(Xcode·TestFlight 내부 테스트)를 전제로 한다.
 
 ## 빌드와 검증 체계
 

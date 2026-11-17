@@ -6,7 +6,7 @@
 
 ## 변경 이유
 
-초기 설계는 터널 확장이 로컬 HTTP CONNECT 프록시를 띄우고 `NEProxySettings`로 시스템 프록시를 지정하는 방식이었다. Apple의 TN3120은 이를 명시적으로 권장하지 않는다(판정서 `appstore-review.md`의 TN3120 인용 참조). 그래서 터널 확장은 **IP 패킷을 tailnet으로 중계하는 일반 VPN**이다.
+초기 설계는 터널 확장이 로컬 HTTP CONNECT 프록시를 띄우고 `NEProxySettings`로 시스템 프록시를 지정하는 방식이었다. Apple의 TN3120은 이를 명시적으로 권장하지 않는다. 그래서 터널 확장은 **IP 패킷을 tailnet으로 중계하는 일반 VPN**이다.
 
 설치기를 포함한 시스템 전체가 일반 VPN처럼 tailnet 경로로 호스트에 닿는다. "설치기가 프록시 설정을 따르는가"라는 미확인 가정(A1)이 사라진다. Tailscale 공식 iOS 앱과 같은 구조다.
 

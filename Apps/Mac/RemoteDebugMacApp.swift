@@ -42,7 +42,6 @@ struct RemoteDebugMacApp: App {
                         .environment(appDelegate.agentDesk)
                         .environment(appDelegate.updatePage)
                         .environment(appDelegate.phoneInstaller)
-                        .environment(appDelegate.linkedProjects)
                         .environment(appDelegate.push)
                 case .failed(let failure):
                     LaunchFailureView(
@@ -130,8 +129,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var updatePage: UpdatePageModel?
     /// 연결한 iPhone에 RemoteDebug iPhone 앱을 빌드해 설치한다. 테스트 호스트와 실행 실패 때는 없다.
     private(set) var phoneInstaller: PhoneAppInstaller?
-    /// 샌드박스판의 프로젝트 등록(최근 빌드 찾기).
-    private(set) var linkedProjects: LinkedProjectsModel?
     /// 페어링한 iPhone에 새 빌드·파일 알림을 보낸다. 테스트 호스트와 실행 실패 때는 없다.
     private(set) var push: PushModel?
     let options: LaunchOptions
@@ -176,7 +173,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let appPaths = try storage(options)
                 paths = appPaths
                 lock = try StateDirLock.acquire(root: appPaths.root)
-                let bookmarks = UserDefaultsFolderBookmarks(defaults: defaults, key: options.folderBookmarkKey, securityScoped: HostEdition.isSandboxed)
+                let bookmarks = UserDefaultsFolderBookmarks(defaults: defaults, key: options.folderBookmarkKey)
                 let model = HostModel(core: SwiftailHostCore(paths: appPaths), paths: appPaths, bookmarks: bookmarks, id8: options.nodeID8,
                                       advertiser: BonjourAdvertiser())
                 model.controlURL = options.controlURL
@@ -193,16 +190,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.launch = launch
         super.init()
         if !options.isTesting, case .ready(let model) = launch, let paths {
-            // 샌드박스판은 공식 Tailscale의 실행 파일을 실행하지 않는다(업데이트 페이지 없음).
-            let updatePage: UpdatePageModel? = HostEdition.isSandboxed ? nil : UpdatePageModel(root: paths.root, server: SwiftailUpdatePage())
+            let updatePage = UpdatePageModel(root: paths.root, server: SwiftailUpdatePage())
             self.updatePage = updatePage
             let source = (Bundle.main.object(forInfoDictionaryKey: "RDSourceRoot") as? String).flatMap { $0.isEmpty ? nil : URL(fileURLWithPath: $0) }
             phoneInstaller = PhoneAppInstaller(root: paths.root, sourceRoot: source)
-            if HostEdition.isSandboxed {
-                let linked = LinkedProjectsModel(defaults: defaults) { [weak model] url in _ = await model?.importBuild(url) }
-                linked.start()
-                linkedProjects = linked
-            }
             // 첫 목록(앱을 켤 때 있던 항목)은 기준선으로만 삼도록 불러오기 전에 연결한다.
             let push = PushModel(host: model, defaults: defaults)
             self.push = push
