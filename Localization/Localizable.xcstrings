@@ -2577,6 +2577,68 @@
         }
       }
     },
+    "%@에 페어링을 요청합니다. 이 링크는 다른 앱이나 웹 페이지에서 열렸을 수 있으니, 직접 연 Mac 앱의 링크일 때만 진행하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requesting pairing with %@. This link may have been opened from another app or a web page, so continue only if it's a link from the Mac app you opened yourself."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@にペアリングをリクエストします。このリンクは別のアプリやWebページから開かれた可能性があります。ご自身で開いたMacアプリのリンクである場合のみ続けてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将向 %@ 请求配对。此链接可能来自其他 App 或网页，请仅在它是您亲自打开的 Mac App 中的链接时继续。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將向 %@ 要求配對。此連結可能來自其他 App 或網頁，請僅在它是您親自開啟的 Mac App 中的連結時繼續。"
+          }
+        }
+      }
+    },
+    "%@에 페어링을 요청합니다. 이 링크는 다른 앱이나 웹 페이지에서 열렸을 수 있으니, 직접 연 Mac 앱의 링크일 때만 진행하세요. 새 Mac이 승인하기 전까지는 지금 Mac(%@)을 계속 사용합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requesting pairing with %1$@. This link may have been opened from another app or a web page, so continue only if it's a link from the Mac app you opened yourself. This Mac (%2$@) stays in use until the new Mac approves."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@にペアリングをリクエストします。このリンクは別のアプリやWebページから開かれた可能性があります。ご自身で開いたMacアプリのリンクである場合のみ続けてください。新しいMacが承認するまでは、現在のMac (%2$@) を引き続き使用します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@에 페어링을 요청합니다. 이 링크는 다른 앱이나 웹 페이지에서 열렸을 수 있으니, 직접 연 Mac 앱의 링크일 때만 진행하세요. 새 Mac이 승인하기 전까지는 지금 Mac(%2$@)을 계속 사용합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将向 %1$@ 请求配对。此链接可能来自其他 App 或网页，请仅在它是您亲自打开的 Mac App 中的链接时继续。在新 Mac 批准之前，将继续使用当前的 Mac（%2$@）。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將向 %1$@ 要求配對。此連結可能來自其他 App 或網頁，請僅在它是您親自開啟的 Mac App 中的連結時繼續。在新的 Mac 核准之前，會繼續使用目前的 Mac (%2$@)。"
+          }
+        }
+      }
+    },
     "%@에서 Xcode 프로젝트(.xcodeproj, .xcworkspace)를 찾지 못했습니다." : {
       "localizations" : {
         "en" : {
@@ -3801,6 +3863,34 @@
         }
       }
     },
+    "60초 안에 Mac에 닿지 못했습니다. 이 iPhone의 VPN이 켜져 있고 Mac과 같은 tailnet에 있는지 확인하세요. Tailnet Lock을 쓰면 이 iPhone의 서명이 필요합니다. 확인한 뒤 같은 QR 코드를 다시 읽으세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't reach the Mac within 60 seconds. Check that this iPhone's VPN is on and that it is on the same tailnet as the Mac. With Tailnet Lock, this iPhone needs to be signed. Then scan the same QR code again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "60秒以内にMacに接続できませんでした。このiPhoneのVPNがオンで、Macと同じtailnetにあることを確認してください。Tailnet Lockを使っている場合は、このiPhoneへの署名が必要です。確認したら、同じQRコードをもう一度読み取ってください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "60 秒内未能连接到 Mac。请确认此 iPhone 的 VPN 已开启，且与 Mac 在同一个 tailnet 中。如果使用了 Tailnet Lock，此 iPhone 需要签名。确认后请重新扫描同一个 QR 码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "60 秒內無法連線到 Mac。請確認此 iPhone 的 VPN 已開啟，且與 Mac 位於同一個 tailnet。若使用 Tailnet Lock，此 iPhone 需要簽署。確認後請重新掃描同一個 QR 碼。"
+          }
+        }
+      }
+    },
     "APNs 인증 키(.p8) 파일이 아닙니다. Apple Developer의 Keys에서 받은 AuthKey_….p8 파일을 고르세요." : {
       "localizations" : {
         "en" : {
@@ -4921,34 +5011,6 @@
         }
       }
     },
-    "Mac 앱에서 ‘%@’의 페어링 요청을 승인하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Approve the pairing request from ‘%@’ in the Mac app."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Macアプリで「%@」のペアリングリクエストを承認してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "请在 Mac App 上批准“%@”的配对请求。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "請在 Mac App 中核准「%@」的配對要求。"
-          }
-        }
-      }
-    },
     "Mac 앱에서 빌드를 공유한 뒤 새로고침하세요." : {
       "localizations" : {
         "en" : {
@@ -5033,30 +5095,30 @@
         }
       }
     },
-    "Mac 앱의 페어링 화면에 있는 QR 코드를 스캔하거나 주소와 코드를 입력하세요." : {
+    "Mac 앱의 페어링 화면에 있는 QR 코드를 스캔하세요. Mac이 보낸 링크를 이 iPhone에서 열어도 됩니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Scan the QR code on the Mac app's Pairing screen, or enter the address and code."
+            "value" : "Scan the QR code on the Mac app's Pairing screen. You can also open a link sent from the Mac on this iPhone."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Macアプリのペアリング画面にあるQRコードをスキャンするか、アドレスとコードを入力してください。"
+            "value" : "Macアプリのペアリング画面にあるQRコードをスキャンしてください。Macから送られたリンクをこのiPhoneで開いても構いません。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "扫描 Mac App 配对界面中的 QR 码，或输入地址和代码。"
+            "value" : "请扫描 Mac App 配对界面中的 QR 码。也可以在此 iPhone 上打开 Mac 发来的链接。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "請掃描 Mac App 配對畫面中的 QR 碼，或輸入位址與代碼。"
+            "value" : "請掃描 Mac App 配對畫面中的 QR 碼。也可以在此 iPhone 上開啟 Mac 傳來的連結。"
           }
         }
       }
@@ -5145,58 +5207,30 @@
         }
       }
     },
-    "Mac 주소 (예: my-mac.example.ts.net)" : {
+    "Mac 주소는 .ts.net으로 끝나는 이름이어야 합니다. Mac에 표시된 QR 코드나 링크를 사용하세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac address (e.g. my-mac.example.ts.net)"
+            "value" : "The Mac address must be a name ending in .ts.net. Use the QR code or link shown on the Mac."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Macのアドレス (例: my-mac.example.ts.net)"
+            "value" : "Macのアドレスは.ts.netで終わる名前である必要があります。Macに表示されているQRコードまたはリンクを使用してください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac 地址（例如 my-mac.example.ts.net）"
+            "value" : "Mac 地址必须是以 .ts.net 结尾的名称。请使用 Mac 上显示的 QR 码或链接。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac 位址 (例如：my-mac.example.ts.net)"
-          }
-        }
-      }
-    },
-    "Mac 주소는 .ts.net으로 끝나는 이름이어야 합니다. Mac에 표시된 링크나 주소를 사용하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The Mac address must be a name ending in .ts.net. Use the link or address shown on the Mac."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Macのアドレスは.ts.netで終わる名前にしてください。Macに表示されているリンクまたはアドレスを使用してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mac 地址必须是以 .ts.net 结尾的名称。请使用 Mac 上显示的链接或地址。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mac 位址必須是以 .ts.net 結尾的名稱。請使用 Mac 上顯示的連結或位址。"
+            "value" : "Mac 位址必須是以 .ts.net 結尾的名稱。請使用 Mac 上顯示的 QR 碼或連結。"
           }
         }
       }
@@ -5225,6 +5259,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mac 配對"
+          }
+        }
+      }
+    },
+    "Mac 화면의 숫자와 같은지 확인하고, 같으면 Mac 앱에서 ‘%@’의 페어링을 승인하세요. 다르면 취소하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check that the number matches the one on the Mac screen. If it does, approve the pairing for “%@” in the Mac app. If not, cancel."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macの画面の数字と同じか確認し、同じならMacアプリで「%@」のペアリングを承認してください。違う場合はキャンセルしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请确认数字与 Mac 屏幕上的一致。一致的话，请在 Mac App 中批准“%@”的配对；不一致请取消。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請確認數字與 Mac 螢幕上的一致。一致的話，請在 Mac App 中核准「%@」的配對；不一致請取消。"
           }
         }
       }
@@ -5309,6 +5371,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "與 Mac 不同"
+          }
+        }
+      }
+    },
+    "Mac과 짝을 맺었지만 Mac 정보를 받지 못했습니다. VPN 연결을 확인하고 Mac에서 QR 코드를 새로 열어 다시 페어링하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paired with the Mac, but couldn't get the Mac's information. Check the VPN connection, open a new QR code on the Mac, and pair again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macとペアになりましたが、Macの情報を取得できませんでした。VPN接続を確認し、MacでQRコードを新しく開いて、もう一度ペアリングしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已与 Mac 配对，但未能获取 Mac 的信息。请检查 VPN 连接，在 Mac 上重新打开 QR 码后再次配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已與 Mac 配對，但無法取得 Mac 的資訊。請檢查 VPN 連線，在 Mac 上重新開啟 QR 碼後再次配對。"
           }
         }
       }
@@ -5505,6 +5595,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mac 上發布新建置，或從 Mac 傳送檔案或連結時會通知你。通知內容會經過 Apple 推播伺服器。"
+          }
+        }
+      }
+    },
+    "Mac에 연결하는 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecting to the Mac"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macに接続しています"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在连接 Mac"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在連線到 Mac"
           }
         }
       }
@@ -5873,6 +5991,34 @@
         }
       }
     },
+    "Mac에서 시간 안에 승인하지 않았습니다. Mac에서 QR 코드를 새로 열고 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Mac didn't approve in time. Open a new QR code on the Mac and try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macで時間内に承認されませんでした。MacでQRコードを新しく開いて、もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 未在规定时间内批准。请在 Mac 上重新打开 QR 码后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 未在時限內核准。請在 Mac 上重新開啟 QR 碼後再試一次。"
+          }
+        }
+      }
+    },
     "Mac에서 알 수 없는 응답을 받았습니다. 잠시 뒤 다시 시도하세요." : {
       "localizations" : {
         "en" : {
@@ -5929,30 +6075,30 @@
         }
       }
     },
-    "Mac에서 페어링을 거절했습니다. 다시 하려면 Mac에서 새 코드를 여세요." : {
+    "Mac에서 페어링을 거절했습니다. 다시 하려면 Mac에서 QR 코드를 새로 여세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The Mac declined pairing. To try again, open a new code on the Mac."
+            "value" : "The Mac declined the pairing. To try again, open a new QR code on the Mac."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Macでペアリングが拒否されました。やり直すには、Macで新しいコードを開いてください。"
+            "value" : "Macがペアリングを拒否しました。もう一度行うには、MacでQRコードを新しく開いてください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac 拒绝了配对。要重试，请在 Mac 上打开新代码。"
+            "value" : "Mac 拒绝了配对。如需重试，请在 Mac 上重新打开 QR 码。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac 已拒絕配對。若要重試，請在 Mac 上開啟新的代碼。"
+            "value" : "Mac 拒絕了配對。若要重試，請在 Mac 上重新開啟 QR 碼。"
           }
         }
       }
@@ -6261,6 +6407,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Mac 正在確認建置"
+          }
+        }
+      }
+    },
+    "Mac이 이 QR 코드를 받아 주지 않았습니다. 만료됐거나 이미 사용한 코드입니다. Mac에서 QR 코드를 새로 여세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Mac didn't accept this QR code. It has expired or was already used. Open a new QR code on the Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MacがこのQRコードを受け付けませんでした。有効期限が切れているか、すでに使用済みのコードです。MacでQRコードを新しく開いてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 未接受此 QR 码。它已过期或已被使用。请在 Mac 上重新打开 QR 码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 未接受此 QR 碼。它已過期或已被使用。請在 Mac 上重新開啟 QR 碼。"
+          }
+        }
+      }
+    },
+    "Mac이 페어링 절차와 다르게 응답해 멈췄습니다. Mac 앱과 이 앱을 최신 버전으로 맞추세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing stopped because the Mac responded differently from the pairing procedure. Update both the Mac app and this app to the latest version."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macがペアリング手順と異なる応答をしたため停止しました。Macアプリとこのアプリを最新バージョンに揃えてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 的响应与配对流程不符，已停止。请将 Mac App 和此 App 都更新到最新版本。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 的回應與配對流程不符，已停止。請將 Mac App 和此 App 都更新到最新版本。"
           }
         }
       }
@@ -17457,6 +17659,34 @@
         }
       }
     },
+    "링크로 페어링할까요?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pair using this link?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリンクでペアリングしますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用此链接配对？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用此連結配對？"
+          }
+        }
+      }
+    },
     "링크를 보내지 못했습니다: %@" : {
       "localizations" : {
         "en" : {
@@ -17513,30 +17743,30 @@
         }
       }
     },
-    "링크에 Mac 주소가 없습니다. Mac에 표시된 링크를 다시 복사하세요." : {
+    "링크의 Tailscale 키가 Tailnet Lock으로 서명된 형식이라 쓸 수 없습니다. 이 iPhone에서 먼저 Tailscale에 로그인한 뒤 Mac에서 QR 코드를 새로 여세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The link has no Mac address. Copy the link shown on the Mac again."
+            "value" : "The Tailscale key in the link is in the Tailnet Lock-signed format and can't be used. Sign in to Tailscale on this iPhone first, then open a new QR code on the Mac."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "リンクにMacのアドレスが含まれていません。Macに表示されているリンクをもう一度コピーしてください。"
+            "value" : "リンクのTailscaleキーはTailnet Lockで署名された形式のため使用できません。このiPhoneで先にTailscaleにログインしてから、MacでQRコードを新しく開いてください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "链接中没有 Mac 地址。请重新拷贝 Mac 上显示的链接。"
+            "value" : "链接中的 Tailscale 密钥是经 Tailnet Lock 签名的格式，无法使用。请先在此 iPhone 上登录 Tailscale，然后在 Mac 上重新打开 QR 码。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "連結中沒有 Mac 位址。請重新拷貝 Mac 上顯示的連結。"
+            "value" : "連結中的 Tailscale 金鑰是經 Tailnet Lock 簽署的格式，無法使用。請先在此 iPhone 上登入 Tailscale，然後在 Mac 上重新開啟 QR 碼。"
           }
         }
       }
@@ -18573,6 +18803,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已核發"
+          }
+        }
+      }
+    },
+    "방금 연결한 VPN은 Mac에 닿기까지 최대 1분 걸릴 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A VPN that was just connected can take up to a minute to reach the Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続したばかりのVPNは、Macに届くまで最大1分かかることがあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刚连接的 VPN 最长可能需要 1 分钟才能连通 Mac。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剛連線的 VPN 最長可能需要 1 分鐘才能連通 Mac。"
           }
         }
       }
@@ -20987,30 +21245,30 @@
         }
       }
     },
-    "설정에서 RemoteDebug의 카메라 접근을 허용하거나, 이전 화면에서 주소와 코드를 직접 입력하세요." : {
+    "설정에서 RemoteDebug의 카메라 접근을 허용하거나, Mac이 보낸 페어링 링크를 이 iPhone에서 여세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allow RemoteDebug camera access in Settings, or go back and enter the address and code manually."
+            "value" : "Allow RemoteDebug camera access in Settings, or open the pairing link sent from the Mac on this iPhone."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "「設定」で RemoteDebug のカメラへのアクセスを許可するか、前の画面でアドレスとコードを直接入力してください。"
+            "value" : "「設定」でRemoteDebugのカメラへのアクセスを許可するか、Macから送られたペアリングリンクをこのiPhoneで開いてください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请在“设置”中允许 RemoteDebug 访问相机，或在上一屏幕中手动输入地址和代码。"
+            "value" : "请在“设置”中允许 RemoteDebug 访问相机，或在此 iPhone 上打开 Mac 发来的配对链接。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "請在「設定」中允許 RemoteDebug 使用相機，或回到上一個畫面直接輸入位址與代碼。"
+            "value" : "請在「設定」中允許 RemoteDebug 使用相機，或在此 iPhone 上開啟 Mac 傳來的配對連結。"
           }
         }
       }
@@ -22287,30 +22545,30 @@
         }
       }
     },
-    "승인한 Mac의 주소가 링크와 다릅니다. Mac에 표시된 링크로 다시 페어링하세요." : {
+    "승인한 Mac의 주소가 링크와 다릅니다. Mac에 표시된 QR 코드로 다시 페어링하세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The approved Mac's address differs from the link. Pair again using the link shown on the Mac."
+            "value" : "The approved Mac's address doesn't match the link. Pair again with the QR code shown on the Mac."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "承認した Mac のアドレスがリンクと異なります。Mac に表示されているリンクでもう一度ペアリングしてください。"
+            "value" : "承認したMacのアドレスがリンクと一致しません。Macに表示されているQRコードでもう一度ペアリングしてください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已批准的 Mac 的地址与链接不一致。请使用 Mac 上显示的链接重新配对。"
+            "value" : "已批准的 Mac 的地址与链接不一致。请使用 Mac 上显示的 QR 码重新配对。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已核准的 Mac 位址與連結不同。請使用 Mac 上顯示的連結重新配對。"
+            "value" : "已核准的 Mac 位址與連結不一致。請使用 Mac 上顯示的 QR 碼重新配對。"
           }
         }
       }
@@ -23839,6 +24097,34 @@
         }
       }
     },
+    "앱이 화면에서 벗어나 페어링이 중단되었습니다. Mac에서 QR 코드를 새로 열고 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing was interrupted because the app left the screen. Open a new QR code on the Mac and try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリが画面から離れたため、ペアリングが中断されました。MacでQRコードを新しく開いて、もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由于 App 离开了屏幕，配对已中断。请在 Mac 上重新打开 QR 码后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "由於 App 離開了畫面，配對已中斷。請在 Mac 上重新開啟 QR 碼後再試一次。"
+          }
+        }
+      }
+    },
     "업데이트" : {
       "localizations" : {
         "en" : {
@@ -24703,6 +24989,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重新尋找已連線的 iPhone 與簽署團隊"
+          }
+        }
+      }
+    },
+    "연결한 상대가 QR 코드를 낸 Mac인지 확인하지 못해 페어링을 멈췄습니다. Mac에서 QR 코드를 새로 열고 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pairing stopped because it couldn't be confirmed that the other side is the Mac that showed the QR code. Open a new QR code on the Mac and try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続した相手がQRコードを表示したMacであることを確認できなかったため、ペアリングを停止しました。MacでQRコードを新しく開いて、もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法确认所连接的对象就是显示该 QR 码的 Mac，配对已停止。请在 Mac 上重新打开 QR 码后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法確認所連線的對象就是顯示該 QR 碼的 Mac，配對已停止。請在 Mac 上重新開啟 QR 碼後再試一次。"
           }
         }
       }
@@ -26309,6 +26623,34 @@
         }
       }
     },
+    "이 iPhone의 VPN이 tailnet에 연결되어 있지 않아 Mac에 연결하지 않았습니다. VPN을 켠 뒤 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This iPhone's VPN isn't connected to the tailnet, so it didn't connect to the Mac. Turn on the VPN and try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このiPhoneのVPNがtailnetに接続されていないため、Macには接続しませんでした。VPNをオンにしてから、もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 iPhone 的 VPN 未连接到 tailnet，因此未连接 Mac。请开启 VPN 后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 iPhone 的 VPN 未連線到 tailnet，因此未連線到 Mac。請開啟 VPN 後再試一次。"
+          }
+        }
+      }
+    },
     "이 tailnet은 tailnet lock을 씁니다. QR의 키로 처음 들어온 iPhone은 서명 기기에서 서명해야 이 Mac에 닿습니다. 서명한 뒤 새 QR로 다시 페어링하세요." : {
       "localizations" : {
         "en" : {
@@ -26449,30 +26791,30 @@
         }
       }
     },
-    "이 기기에서는 카메라를 쓸 수 없습니다. 이전 화면에서 주소와 코드를 직접 입력하세요." : {
+    "이 기기에서는 카메라를 쓸 수 없습니다. Mac이 보낸 페어링 링크를 이 iPhone에서 여세요." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The camera isn't available on this device. Go back and enter the address and code manually."
+            "value" : "The camera isn't available on this device. Open the pairing link sent from the Mac on this iPhone."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このデバイスではカメラを使用できません。前の画面でアドレスとコードを直接入力してください。"
+            "value" : "このデバイスではカメラを使用できません。Macから送られたペアリングリンクをこのiPhoneで開いてください。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此设备无法使用相机。请在上一屏幕中手动输入地址和代码。"
+            "value" : "此设备无法使用相机。请在此 iPhone 上打开 Mac 发来的配对链接。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此裝置無法使用相機。請回到上一個畫面直接輸入位址與代碼。"
+            "value" : "此裝置無法使用相機。請在此 iPhone 上開啟 Mac 傳來的配對連結。"
           }
         }
       }
@@ -26557,6 +26899,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "刪除這筆記錄"
+          }
+        }
+      }
+    },
+    "이 링크는 이전 버전 Mac 앱이 만든 것입니다. Mac 앱을 최신 버전으로 올린 뒤 QR 코드를 새로 여세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This link was made by an older version of the Mac app. Update the Mac app, then open a new QR code."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このリンクは古いバージョンのMacアプリで作成されたものです。Macアプリを最新バージョンに更新してから、QRコードを新しく開いてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此链接由旧版 Mac App 生成。请将 Mac App 更新到最新版本，然后重新打开 QR 码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此連結由舊版 Mac App 產生。請將 Mac App 更新到最新版本，然後重新開啟 QR 碼。"
           }
         }
       }
@@ -29107,34 +29477,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "位址(FQDN)"
-          }
-        }
-      }
-    },
-    "주소와 코드로 입력" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enter Address and Code"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アドレスとコードを入力"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "输入地址和代码"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "輸入位址和代碼"
           }
         }
       }
@@ -32455,6 +32797,34 @@
         }
       }
     },
+    "페어링 링크가 손상되었습니다. Mac에서 QR 코드를 새로 여세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The pairing link is damaged. Open a new QR code on the Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングリンクが壊れています。MacでQRコードを新しく開いてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对链接已损坏。请在 Mac 上重新打开 QR 码。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配對連結已損毀。請在 Mac 上重新開啟 QR 碼。"
+          }
+        }
+      }
+    },
     "페어링 링크를 복사했습니다." : {
       "localizations" : {
         "en" : {
@@ -32539,34 +32909,6 @@
         }
       }
     },
-    "페어링 요청을 보내는 중" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sending pairing request"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペアリングリクエストを送信中"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在发送配对请求"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在傳送配對請求"
-          }
-        }
-      }
-    },
     "페어링 요청을 처리하지 못했습니다: %@" : {
       "localizations" : {
         "en" : {
@@ -32619,34 +32961,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "配對請求已過期。請從 iPhone 重新請求。"
-          }
-        }
-      }
-    },
-    "페어링 요청이 만료되었습니다. Mac에서 새 코드를 열고 다시 시도하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The pairing request expired. Open a new code on the Mac and try again."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペアリングリクエストの有効期限が切れました。Mac で新しいコードを開いて、やり直してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配对请求已过期。请在 Mac 上打开新代码后重试。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配對請求已過期。請在 Mac 上開啟新代碼後再試一次。"
           }
         }
       }
@@ -32791,34 +33105,6 @@
         }
       }
     },
-    "페어링 코드 8자" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "8-character pairing code"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペアリングコード 8 文字"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "8 位配对代码"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配對代碼 8 個字元"
-          }
-        }
-      }
-    },
     "페어링 코드가 맞지 않거나 만료되었습니다. Mac에 표시된 코드를 확인하고 다시 입력하세요." : {
       "localizations" : {
         "en" : {
@@ -32871,34 +33157,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "配對代碼錯誤或已過期。請使用新代碼再試一次。"
-          }
-        }
-      }
-    },
-    "페어링 코드는 8자입니다. Mac에 표시된 코드를 다시 확인하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The pairing code is 8 characters. Check the code shown on the Mac again."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペアリングコードは 8 文字です。Mac に表示されているコードをもう一度確認してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配对代码为 8 位。请再次核对 Mac 上显示的代码。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配對代碼為 8 個字元。請再次確認 Mac 上顯示的代碼。"
           }
         }
       }
@@ -33015,34 +33273,6 @@
         }
       }
     },
-    "페어링 코드에 쓰지 않는 글자가 들어 있습니다. Mac에 표시된 코드를 다시 확인하세요." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The pairing code contains characters that aren't used. Check the code shown on the Mac again."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペアリングコードに使用できない文字が含まれています。Mac に表示されているコードをもう一度確認してください。"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配对代码中含有不使用的字符。请再次核对 Mac 上显示的代码。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "配對代碼包含不使用的字元。請再次確認 Mac 上顯示的代碼。"
-          }
-        }
-      }
-    },
     "페어링되지 않은 기기입니다. 이 기기를 쓰려면 페어링하세요." : {
       "localizations" : {
         "en" : {
@@ -33095,6 +33325,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法開啟配對。"
+          }
+        }
+      }
+    },
+    "페어링하지 못했습니다. 잠시 뒤 Mac에서 QR 코드를 새로 열고 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't pair. Wait a moment, open a new QR code on the Mac, and try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングできませんでした。しばらくしてから、MacでQRコードを新しく開いて、もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配对失败。请稍后在 Mac 上重新打开 QR 码后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配對失敗。請稍後在 Mac 上重新開啟 QR 碼後再試一次。"
           }
         }
       }
@@ -35005,6 +35263,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "好"
+          }
+        }
+      }
+    },
+    "확인 숫자" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Confirmation number"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認用の数字"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确认数字"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認數字"
           }
         }
       }

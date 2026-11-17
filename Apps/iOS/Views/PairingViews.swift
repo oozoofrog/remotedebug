@@ -1,21 +1,15 @@
 import PhoneClientKit
 import SwiftUI
 
-/// QR 스캔 버튼과 직접 입력(Mac 주소 + 코드).
+/// QR 스캔 버튼. 페어링은 QR과 Mac이 보낸 링크로만 시작한다.
 struct PairingForm: View {
-    var pair: (_ host: String, _ code: String) -> Void
     var handleScanned: (_ text: String) -> String?
     /// 페어링을 시작한 뒤(시트를 닫을 때) 부른다.
     var onSubmit: () -> Void
-    /// `true`면 QR 스캔이 주 동작이고, 주소와 코드 입력은 접어 둔다(페어링 전 첫 화면).
-    var collapsesManualEntry = false
+    /// `true`면 눈에 띄는 버튼으로 보인다(페어링 전 첫 화면).
+    var isPrimary = false
 
-    @State private var host = ""
-    @State private var code = ""
     @State private var showsScanner = false
-    @FocusState private var focus: Field?
-
-    private enum Field { case host, code }
 
     var body: some View {
         scanButton
@@ -25,17 +19,11 @@ struct PairingForm: View {
                     onSubmit()
                 }
             }
-
-        if collapsesManualEntry {
-            DisclosureGroup("주소와 코드로 입력") { manualEntry }
-        } else {
-            manualEntry
-        }
     }
 
     @ViewBuilder private var scanButton: some View {
-        let label = Label("QR 코드 스캔", systemImage: "qrcode.viewfinder").frame(maxWidth: .infinity, alignment: collapsesManualEntry ? .center : .leading)
-        if collapsesManualEntry {
+        let label = Label("QR 코드 스캔", systemImage: "qrcode.viewfinder").frame(maxWidth: .infinity, alignment: isPrimary ? .center : .leading)
+        if isPrimary {
             Button { showsScanner = true } label: { label }
                 .bold()
                 .buttonStyle(.borderedProminent)
@@ -44,45 +32,9 @@ struct PairingForm: View {
                 .bold()
         }
     }
-
-    @ViewBuilder private var manualEntry: some View {
-        TextField("Mac 주소 (예: my-mac.example.ts.net)", text: $host)
-            .textContentType(.URL)
-            .keyboardType(.URL)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .focused($focus, equals: .host)
-            .submitLabel(.next)
-            .onSubmit { focus = .code }
-            .accessibilityLabel("Mac 주소")
-
-        TextField("페어링 코드 8자", text: $code)
-            .textInputAutocapitalization(.characters)
-            .autocorrectionDisabled()
-            .font(.body.monospaced())
-            .focused($focus, equals: .code)
-            .submitLabel(.go)
-            .onSubmit(submit)
-            .accessibilityLabel("페어링 코드")
-
-        Button("페어링 요청", action: submit)
-            .disabled(!canSubmit)
-    }
-
-    private var canSubmit: Bool {
-        !host.trimmingCharacters(in: .whitespaces).isEmpty && !code.trimmingCharacters(in: .whitespaces).isEmpty
-    }
-
-    private func submit() {
-        guard canSubmit else { return }
-        focus = nil
-        pair(host, code)
-        code = ""
-        onSubmit()
-    }
 }
 
-/// VPN 대기·요청 중·승인 대기.
+/// VPN 대기·Mac에 연결 중·승인 대기.
 struct PairingProgressSection: View {
     var state: PhoneViewState
     var cancel: () -> Void
@@ -101,21 +53,29 @@ struct PairingProgressSection: View {
             switch state.phase {
             case .requestingPairing:
                 Section("페어링") {
-                    HStack(spacing: 12) {
-                        ProgressView()
-                        Text("페어링 요청을 보내는 중")
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                            Text("Mac에 연결하는 중")
+                        }
+                        Text("방금 연결한 VPN은 Mac에 닿기까지 최대 1분 걸릴 수 있습니다.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     }
                     .accessibilityElement(children: .combine)
                     Button("페어링 취소", role: .destructive, action: cancel)
                 }
             case .waitingApproval(let deviceName):
                 Section("페어링") {
+                    if let code = state.confirmationCode {
+                        ConfirmationCodeView(code: code)
+                    }
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 12) {
                             ProgressView()
                             Text("Mac의 승인을 기다리는 중").font(.headline)
                         }
-                        Text("Mac 앱에서 ‘\(deviceName)’의 페어링 요청을 승인하세요.")
+                        Text("Mac 화면의 숫자와 같은지 확인하고, 같으면 Mac 앱에서 ‘\(deviceName)’의 페어링을 승인하세요. 다르면 취소하세요.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -129,6 +89,33 @@ struct PairingProgressSection: View {
                 EmptyView()
             }
         }
+    }
+}
+
+/// Mac 화면의 숫자와 견주는 확인 숫자(6자리). 세 자리씩 끊어 크게 보인다.
+struct ConfirmationCodeView: View {
+    var code: String
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("확인 숫자")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(Self.grouped(code))
+                .font(.system(size: 44, weight: .semibold, design: .monospaced))
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("확인 숫자 \(code.map(String.init).joined(separator: " "))")
+    }
+
+    /// `482915` → `482 915`.
+    static func grouped(_ code: String) -> String {
+        guard code.count == 6 else { return code }
+        return String(code.prefix(3)) + " " + String(code.suffix(3))
     }
 }
 

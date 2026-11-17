@@ -8,7 +8,8 @@ struct PhoneViewState {
     var host: PairedHost?
     var pairingExpiresAt: Date?
     var queuedPairingHost: String?
-    var pendingReplacementHost: String?
+    /// 시작하기 전에 사용자에게 묻는 페어링.
+    var pendingPairing: PendingPairingPrompt?
     /// Mac이 공유 중인 빌드. 이 앱 자신의 빌드는 뺀다(업데이트 앱에서 설치한다).
     var builds: [BuildDescriptor] = []
     var buildsLoadedAt: Date?
@@ -51,8 +52,16 @@ struct PhoneViewState {
     var nodeFQDN: String?
     /// 진행 중이거나 VPN을 기다리는 페어링의 Mac 주소.
     var pairingHost: String?
+    /// 승인 대기 중 Mac 화면의 숫자와 견줄 확인 숫자(6자리).
+    var confirmationCode: String?
     /// 업데이트 앱과 지금 VPN을 켠 쪽.
     var vpnPair = VPNPairState()
+}
+
+/// 사용자에게 시작 여부를 묻는 페어링. `fromLink`는 앱 밖에서 배달된 링크(아니면 다른 Mac으로 바꾸는 경우).
+struct PendingPairingPrompt: Equatable {
+    var host: String
+    var fromLink: Bool
 }
 
 /// 업데이트 앱(RD 업데이트)의 설치 여부와 지금 VPN을 켠 쪽.
@@ -76,7 +85,7 @@ extension PhoneViewState {
             host: model.host,
             pairingExpiresAt: model.pairingExpiresAt,
             queuedPairingHost: model.queuedPairing?.host,
-            pendingReplacementHost: model.pendingReplacement?.host,
+            pendingPairing: model.pendingConfirmation.map { PendingPairingPrompt(host: $0.host, fromLink: $0.reason == .openedLink) },
             builds: AppBuildFilter.hiding(Bundle.main.bundleIdentifier, in: model.builds),
             buildsLoadedAt: model.buildsLoadedAt,
             refreshError: model.refreshError,
@@ -97,6 +106,7 @@ extension PhoneViewState {
         self.vpnAutoStarted = model.vpnAutoStarted
         self.directConnected = model.isDirectConnected
         self.pairingHost = model.pairingHost
+        self.confirmationCode = model.confirmationCode
         self.agentBoard = model.agentBoard
         self.agentError = model.agentError
         self.vpnPair.hasNewerStoreBuild = SelfUpdate.candidate(in: model.builds, bundleID: Bundle.main.bundleIdentifier, installedAt: installedAt) != nil
@@ -127,12 +137,11 @@ extension PhoneViewState {
 /// 화면의 의도. 실제 앱은 `ClientModel`·`TunnelController`에 연결한다.
 @MainActor
 struct PhoneActions {
-    var pair: (_ host: String, _ code: String) -> Void
-    /// QR로 읽은 글자. 페어링 링크가 아니면 안내 문구를 돌려준다.
+    /// QR로 읽은 글자. 페어링 QR이 아니면 안내 문구를 돌려준다.
     var handleScanned: (_ text: String) -> String?
     var cancelPairing: () -> Void
-    var confirmReplacement: () -> Void
-    var dismissReplacement: () -> Void
+    var confirmPending: () -> Void
+    var dismissPending: () -> Void
     var refresh: @MainActor @Sendable () async -> Void
     var install: (BuildDescriptor) -> Void
     var clearInstall: (_ buildID: String) -> Void

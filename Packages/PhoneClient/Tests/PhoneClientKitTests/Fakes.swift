@@ -53,18 +53,6 @@ enum Examples {
       "expiresAt": "2026-11-11T09:07:00Z"
     }
     """
-    static let pairApproved = """
-    {
-      "requestId": "pr_7c1e55d0",
-      "state": "approved",
-      "host": {
-        "hostId": "h_4be0c7a1",
-        "hostName": "작업용 Mac",
-        "fqdn": "rd-mac-ab12cd34.example-tailnet.ts.net"
-      }
-    }
-    """
-    static func pair(_ state: String) -> String { #"{"requestId":"pr_7c1e55d0","state":"\#(state)"}"# }
     static let sessionCreated = """
     {
       "sessionId": "s_52d9a07e",
@@ -306,6 +294,102 @@ final class TestClock: PollingClock {
     }
 }
 
+/// `PairingService`의 가짜. 링크 글자는 `remotedebug://pair#h=<호스트>&s=<표식>[&k=<인증 키>][&bad=<이유>]` 꼴로 읽는다.
+/// `join`은 설정한 확인 숫자를 알리고, `holds`면 `release()`나 취소를 기다린다.
+final class FakePairing: PairingService {
+    struct JoinCall: Equatable, Sendable { var host: String; var deviceName: String }
+    enum Outcome: Sendable { case approved(name: String), failed(PairingFailure) }
+
+    private struct State {
+        var calls: [JoinCall] = []
+        var cancelled = 0
+        var outcome: Outcome = .approved(name: "작업용 Mac")
+        var code: String? = "482915"
+        var holds = false
+        var waiter: CheckedContinuation<Void, Never>?
+    }
+    private let state = Mutex(State())
+
+    var calls: [JoinCall] { state.withLock { $0.calls } }
+    var cancelledJoins: Int { state.withLock { $0.cancelled } }
+    func setOutcome(_ outcome: Outcome) { state.withLock { $0.outcome = outcome } }
+    func setCode(_ code: String?) { state.withLock { $0.code = code } }
+    func setHolds(_ holds: Bool) { state.withLock { $0.holds = holds } }
+
+    /// 멈춘 `join`을 이어 가고 더는 멈추지 않는다.
+    func release() {
+        let waiter = state.withLock { s -> CheckedContinuation<Void, Never>? in
+            s.holds = false
+            defer { s.waiter = nil }
+            return s.waiter
+        }
+        waiter?.resume()
+    }
+
+    func read(link: String) throws(PairingOfferIssue) -> PairingProposal {
+        guard let hash = link.firstIndex(of: "#") else { throw .notAnOffer }
+        var values: [String: String] = [:]
+        for pair in link[link.index(after: hash)...].split(separator: "&") {
+            let parts = pair.split(separator: "=", maxSplits: 1)
+            if parts.count == 2 { values[String(parts[0])] = String(parts[1]) }
+        }
+        switch values["bad"] {
+        case "secret": throw .invalidSecret
+        case "authkey": throw .invalidAuthKey
+        case "wrapped": throw .wrappedAuthKey
+        case "host": throw .invalidHost
+        default: break
+        }
+        guard let host = values["h"] else { throw .invalidHost }
+        return PairingProposal(link: link, host: host, expires: t0.addingTimeInterval(300), authKey: values["k"], payload: values["s"] ?? "")
+    }
+
+    func join(
+        _ proposal: PairingProposal, deviceName: String,
+        awaitingApproval: @escaping @Sendable (String) -> Void
+    ) async throws(PairingFailure) -> JoinedHost {
+        let (code, holds) = state.withLock { s -> (String?, Bool) in
+            s.calls.append(JoinCall(host: proposal.host, deviceName: deviceName))
+            return (s.code, s.holds)
+        }
+        if let code { awaitingApproval(code) }
+        if holds {
+            await withTaskCancellationHandler {
+                await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+                    let resumeNow = state.withLock { s -> Bool in
+                        guard s.holds, !Task.isCancelled else { return true }
+                        s.waiter = c
+                        return false
+                    }
+                    if resumeNow { c.resume() }
+                }
+            } onCancel: {
+                let waiter = state.withLock { s -> CheckedContinuation<Void, Never>? in
+                    defer { s.waiter = nil }
+                    return s.waiter
+                }
+                waiter?.resume()
+            }
+        }
+        if Task.isCancelled {
+            state.withLock { $0.cancelled += 1 }
+            throw .cancelled
+        }
+        switch state.withLock({ $0.outcome }) {
+        case .failed(let failure): throw failure
+        case .approved(let name): return JoinedHost(host: proposal.host, stableID: "stable-mac-1", name: name, pairedAt: t0)
+        }
+    }
+}
+
+/// 시험용 링크 글자.
+func pairingLink(host: String = hostFQDN, secret: String = "s1", key: String? = nil, bad: String? = nil) -> String {
+    var link = "remotedebug://pair#v=1&h=\(host)&s=\(secret)"
+    if let key { link += "&k=\(key)" }
+    if let bad { link += "&bad=\(bad)" }
+    return link
+}
+
 @MainActor
 struct Harness {
     let transport = FakeTransport()
@@ -313,6 +397,7 @@ struct Harness {
     let tunnel: FakeTunnel
     let store: InMemoryPairedHostStore
     let clock: TestClock
+    let pairing = FakePairing()
     let model: ClientModel
 
     init(
@@ -321,13 +406,14 @@ struct Harness {
         clock: TestClock = TestClock(),
         policy: HostPolicy = .tailnetOnly,
         timing: ClientModel.Timing = .standard,
-        push: PushSetup? = nil
+        push: PushSetup? = nil,
+        deviceName: String = "내 iPhone"
     ) {
         self.tunnel = FakeTunnel(tunnel)
         self.store = InMemoryPairedHostStore(host: storedHost)
         self.clock = clock
         self.model = ClientModel(
-            deviceName: "내 iPhone",
+            deviceName: deviceName,
             client: ClientInfo(osVersion: "26.1", appVersion: "0.1.0"),
             transport: transport,
             store: store,
@@ -335,6 +421,7 @@ struct Harness {
             tunnel: self.tunnel,
             clock: clock,
             hostPolicy: policy,
+            pairingService: pairing,
             timing: timing,
             push: push
         )

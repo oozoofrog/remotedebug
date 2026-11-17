@@ -76,10 +76,12 @@ public enum InstallState: Equatable, Sendable {
 ///
 /// 화면 상태와 읽을 값:
 /// - 페어링 안 됨: `phase == .unpaired`.
-/// - 페어링 요청 보내는 중: `phase == .requestingPairing`.
-/// - Mac 승인 대기: `phase == .waitingApproval(deviceName:)`, 남은 시간은 `pairingExpiresAt`. 취소는 `cancelPairing()`.
+/// - Mac에 연결하는 중(짝 맺기와 마무리): `phase == .requestingPairing`.
+/// - Mac 승인 대기: `phase == .waitingApproval(deviceName:)`. Mac 화면의 숫자와 견줄 `confirmationCode`,
+///   남은 시간은 `pairingExpiresAt`. 취소는 `cancelPairing()`.
 /// - VPN이 켜지면 이어 할 페어링: `queuedPairing`(취소는 `cancelPairing()`).
-/// - 다른 Mac으로 바꿀지 확인: `pendingReplacement`(`confirmReplacement()` / `dismissReplacement()`).
+/// - 시작하기 전에 사용자에게 물을 페어링(열린 링크, 다른 Mac으로 바꿈): `pendingConfirmation`
+///   (`confirmPending()` / `dismissPending()`).
 /// - VPN: `tunnel`(`.off`, `.connecting`, `.disconnecting`, `.needsLogin(authURL:)`, `.failed`, `.connected`). 동작이 VPN 때문에 멈췄으면 `needsTunnel`.
 /// - 빌드 목록: `builds`. 한 번이라도 받았으면 `buildsLoadedAt`이 있다(받았는데 비어 있으면 게시된 빌드가 없는 것).
 ///   새로고침 중이면 `isRefreshing`, 마지막 새로고침이 실패했으면 `refreshError`.
@@ -162,7 +164,9 @@ public final class ClientModel {
     }
 
     public struct Timing: Sendable {
-        public var pairingPollInterval: Duration
+        /// 짝을 맺은 직후 Mac 정보(`GET /v1/info`)를 받지 못했을 때 다시 묻는 간격(최대 3번 묻는다).
+        public var pairingInfoRetryInterval: Duration
+        /// 승인 대기 화면에 보이는 남은 시간(Mac의 승인 제한과 같게 둔다).
         public var pairingTimeout: TimeInterval
         public var sessionPollInterval: Duration
         public var sessionTimeout: TimeInterval
@@ -176,7 +180,7 @@ public final class ClientModel {
         public var autoOffCheckInterval: Duration
 
         public init(
-            pairingPollInterval: Duration = .seconds(1),
+            pairingInfoRetryInterval: Duration = .seconds(1),
             pairingTimeout: TimeInterval = 120,
             sessionPollInterval: Duration = .seconds(1),
             sessionTimeout: TimeInterval = 600,
@@ -186,7 +190,7 @@ public final class ClientModel {
             autoOffDelay: TimeInterval = 30,
             autoOffCheckInterval: Duration = .seconds(1)
         ) {
-            self.pairingPollInterval = pairingPollInterval
+            self.pairingInfoRetryInterval = pairingInfoRetryInterval
             self.pairingTimeout = pairingTimeout
             self.sessionPollInterval = sessionPollInterval
             self.sessionTimeout = sessionTimeout
@@ -204,12 +208,14 @@ public final class ClientModel {
 
     public private(set) var phase: Phase = .unpaired
     public private(set) var host: PairedHost?
-    /// 승인 대기의 마감 시각(호스트의 `expiresAt`과 로컬 제한 중 이른 쪽). 승인 대기가 아니면 `nil`.
+    /// 승인 대기의 마감 시각. 승인 대기가 아니면 `nil`.
     public private(set) var pairingExpiresAt: Date?
-    /// VPN이 연결되면 보낼 페어링. VPN이 꺼진 채 링크를 열었을 때 생긴다.
-    public private(set) var queuedPairing: PairingLink?
-    /// 이미 페어링한 Mac이나 진행 중인 페어링과 다른 링크를 받았다. 사용자가 확인해야 페어링을 시작한다.
-    public private(set) var pendingReplacement: PairingLink?
+    /// 승인 대기 중 Mac 화면의 숫자와 견줄 확인 숫자(6자리). 승인 대기가 아니면 `nil`. 로그·저장에 남기지 않는다.
+    public private(set) var confirmationCode: String?
+    /// VPN이 연결되면 이어 할 페어링. VPN이 꺼진 채 링크를 열었을 때 생긴다.
+    public private(set) var queuedPairing: PairingProposal?
+    /// 사용자가 확인해야 시작하는 페어링: 앱 밖에서 열린 링크, 이미 페어링한 Mac이나 진행 중인 페어링과 다른 Mac.
+    public private(set) var pendingConfirmation: PairingConfirmation?
     public private(set) var builds: [BuildDescriptor] = []
     /// 빌드 목록을 마지막으로 받은 시각. 아직 받지 못했으면 `nil`.
     public private(set) var buildsLoadedAt: Date?
@@ -276,6 +282,7 @@ public final class ClientModel {
     private let tunnelController: any TunnelControlling
     private let clock: any PollingClock
     private let policy: HostPolicy
+    private let pairingService: any PairingService
     private let timing: Timing
     private let receivedStore: ReceivedFileStore
     /// 같은 네트워크 직접 연결. 없으면 모든 요청이 VPN(tailnet) 경로로 간다.
@@ -285,17 +292,17 @@ public final class ClientModel {
 
     // MARK: 내부 상태
 
-    private struct PairingPoll { var link: PairingLink; var requestID: String; var deadline: Date }
     private struct ActiveSession { var sessionID: String; var installURL: URL; var deadline: Date }
     private struct Running { var token: UUID; var task: Task<Void, Never> }
     private struct VPNNotConnected: Error {}
-    private struct PairingRun { var token: UUID; var link: PairingLink; var task: Task<Void, Never> }
+    private struct PairingRun { var token: UUID; var proposal: PairingProposal; var task: Task<Void, Never> }
 
     @ObservationIgnored private var refreshQueued = false
-    @ObservationIgnored private var pairingPoll: PairingPoll?
     @ObservationIgnored private var pairing: PairingRun?
-    /// 마지막으로 승인된 링크. 같은 링크가 다시 들어오면(1회용 코드라 다시 보내면 실패한다) 무시한다.
-    @ObservationIgnored private var lastApprovedLink: PairingLink?
+    /// 확인 숫자를 받을 수 있는 짝 맺기의 토큰. 짝 맺기가 끝나면 비운다(늦게 온 숫자를 버리는 데 쓴다).
+    @ObservationIgnored private var approvalToken: UUID?
+    /// 마지막으로 승인된 제안의 지문. 같은 QR이 다시 들어오면(1회용이라 다시 보내면 거절된다) 무시한다.
+    @ObservationIgnored private var lastApprovedFingerprint: Data?
     @ObservationIgnored private var installTasks: [String: Running] = [:]
     @ObservationIgnored private var downloadTasks: [String: Task<Void, Never>] = [:]
     @ObservationIgnored private var activeSessions: [String: ActiveSession] = [:]
@@ -330,6 +337,7 @@ public final class ClientModel {
         tunnel: any TunnelControlling,
         clock: any PollingClock = SystemPollingClock(),
         hostPolicy: HostPolicy = .tailnetOnly,
+        pairingService: any PairingService = UnavailablePairingService(),
         timing: Timing = .standard,
         logBook: DeviceLogBook? = nil,
         crashBook: CrashBook? = nil,
@@ -348,6 +356,7 @@ public final class ClientModel {
         self.tunnelController = tunnel
         self.clock = clock
         self.policy = hostPolicy
+        self.pairingService = pairingService
         self.timing = timing
         self.direct = direct
         self.logBook = logBook ?? DeviceLogBook()
@@ -406,98 +415,100 @@ public final class ClientModel {
 
     // MARK: 페어링
 
-    /// 앱이 받은 URL을 처리한다. 페어링 링크가 아니면 `false`.
-    /// 이미 페어링한 Mac이나 진행 중인 페어링과 다른 링크면 바로 시작하지 않고 `pendingReplacement`에 둔다.
+    /// 앱이 받은 URL을 처리한다. `remotedebug://pair` 링크가 아니면 `false`.
+    /// 링크는 어디서든 올 수 있으므로 시작하기 전에 Mac 주소를 보이고 사용자에게 묻는다(`pendingConfirmation`).
+    /// 읽지 못한 링크는 `lastError`에 안내를 남긴다.
     @discardableResult
     public func handle(url: URL) -> Bool {
-        do {
-            let link = try PairingLink.parse(url: url, policy: policy)
-            request(link, confirmed: false)
-            return true
-        } catch {
-            if error == .notPairingLink { return false }
-            lastError = error.userMessage
-            return true
-        }
-    }
-
-    /// 사용자가 직접 입력한 코드와 Mac 주소로 페어링한다. 입력 자체가 사용자의 확인이므로 바로 시작한다.
-    public func pair(code: String, host: String) {
-        do {
-            request(try PairingLink(host: host, code: code, policy: policy), confirmed: true)
+        let text = url.absoluteString
+        guard PairingInput.isPairingAddress(text) else { return false }
+        do throws(PairingOfferIssue) {
+            request(try PairingInput.read(text, with: pairingService, policy: policy), source: .openedLink)
         } catch {
             lastError = error.userMessage
         }
+        return true
     }
 
-    /// 링크(QR 등)로 페어링한다. `handle(url:)`과 같이 다른 Mac으로 바뀌면 확인을 거친다.
-    public func pair(link: PairingLink) {
-        request(link, confirmed: false)
+    /// 앱 안의 카메라로 읽은 QR 글자로 페어링한다. 앱 안에서 읽은 글자는 OS의 링크 배달을 거치지 않으므로 묻지 않고
+    /// 시작한다(다른 Mac으로 바뀌는 경우만 `handle(url:)`처럼 묻는다).
+    /// 페어링 QR이 아니면 안내 문구를 돌려주고 아무것도 시작하지 않는다.
+    public func pair(scanned text: String) -> String? {
+        do throws(PairingOfferIssue) {
+            request(try PairingInput.read(text, with: pairingService, policy: policy), source: .scanned)
+            return nil
+        } catch {
+            return error.userMessage
+        }
     }
 
-    /// `pendingReplacement`의 링크로 페어링을 시작한다. 진행 중이던 페어링은 그만둔다.
+    /// `pendingConfirmation`의 제안으로 페어링을 시작한다. 진행 중이던 페어링은 그만둔다.
     /// 지금 페어링한 Mac은 새 Mac이 승인할 때까지 그대로 남는다.
-    public func confirmReplacement() {
-        guard let link = pendingReplacement else { return }
-        pendingReplacement = nil
-        startPairing(link)
+    public func confirmPending() {
+        guard let pending = pendingConfirmation else { return }
+        pendingConfirmation = nil
+        startPairing(pending.proposal)
     }
 
-    /// `pendingReplacement`를 버린다. 아무 상태도 바꾸지 않는다.
-    public func dismissReplacement() {
-        pendingReplacement = nil
+    /// `pendingConfirmation`을 버린다. 아무 상태도 바꾸지 않는다.
+    public func dismissPending() {
+        pendingConfirmation = nil
     }
 
     /// 진행 중이거나 VPN을 기다리는 페어링을 그만둔다. 페어링한 Mac과 VPN은 그대로 둔다.
     public func cancelPairing() {
         pairing?.task.cancel()
         pairing = nil
-        pairingPoll = nil
+        approvalToken = nil
         pairingExpiresAt = nil
+        confirmationCode = nil
         queuedPairing = nil
         if phase == .requestingPairing || isWaitingApproval { phase = settledPhase }
     }
 
-    private func request(_ link: PairingLink, confirmed: Bool) {
-        // 링크가 다른 정책으로 만들어졌을 수 있으므로 이 모델의 정책으로 다시 확인한다.
-        guard let validHost = policy.validatedHost(link.host), validHost == link.host else {
-            lastError = PairingLinkError.hostNotAllowed.userMessage
+    private enum PairingSource { case openedLink, scanned }
+
+    private func request(_ proposal: PairingProposal, source: PairingSource) {
+        // 제안이 다른 정책으로 읽혔을 수 있으므로 이 모델의 정책으로 다시 확인한다.
+        guard let validHost = policy.validatedHost(proposal.host), validHost == proposal.host else {
+            lastError = PairingOfferIssue.hostNotAllowed.userMessage
             return
         }
-        // 같은 링크가 다시 들어왔다(QR을 다시 찍음, URL 중복 전달). 1회용 코드를 다시 보내지 않는다.
-        if link == inFlightPairingLink { return }
-        if link == lastApprovedLink, host?.fqdn == link.host { return }
-        if !confirmed, needsConfirmation(link) {
-            pendingReplacement = link
+        // 같은 링크가 다시 들어왔다(QR을 다시 찍음, URL 중복 전달). 1회용 제안을 다시 보내지 않는다.
+        if proposal == inFlightProposal { return }
+        if proposal.fingerprint == lastApprovedFingerprint, host?.fqdn == proposal.host { return }
+        if let reason = confirmationReason(for: proposal, source: source) {
+            pendingConfirmation = PairingConfirmation(proposal: proposal, reason: reason)
             return
         }
-        pendingReplacement = nil
-        startPairing(link)
+        pendingConfirmation = nil
+        startPairing(proposal)
     }
 
-    private func needsConfirmation(_ link: PairingLink) -> Bool {
-        if let host, host.fqdn != link.host { return true }
-        if let other = inFlightPairingLink, other != link { return true }
-        return false
+    private func confirmationReason(for proposal: PairingProposal, source: PairingSource) -> PairingConfirmation.Reason? {
+        if source == .openedLink { return .openedLink }
+        if let host, host.fqdn != proposal.host { return .replacement }
+        if let other = inFlightProposal, other != proposal { return .replacement }
+        return nil
     }
 
     /// 진행 중이거나 VPN을 기다리는 페어링의 Mac 주소.
-    public var pairingHost: String? { inFlightPairingLink?.host }
+    public var pairingHost: String? { inFlightProposal?.host }
 
-    /// 진행 중(요청·승인 대기)이거나 VPN을 기다리는 페어링의 링크.
-    private var inFlightPairingLink: PairingLink? {
-        pairingPoll?.link ?? pairing?.link ?? queuedPairing
+    /// 진행 중(연결·승인 대기)이거나 VPN을 기다리는 페어링의 제안.
+    private var inFlightProposal: PairingProposal? {
+        pairing?.proposal ?? queuedPairing
     }
 
-    private func startPairing(_ link: PairingLink) {
+    private func startPairing(_ proposal: PairingProposal) {
         cancelPairing()
         lastError = nil
-        log(.info, "pairing", "페어링 시작: \(link.host)")
-        // 링크에 Tailscale 키가 있으면 로그인 없이 VPN을 켠다. 페어링은 VPN이 연결되면 이어 간다.
-        let startsWithKey = link.authKey != nil && tunnelController.currentState() != .connected && connectWithAuthKey != nil
-        guard ensureTunnel(queue: .pair(link)) else {
-            if startsWithKey, let key = link.authKey, let connect = connectWithAuthKey {
-                log(.info, "vpn", "링크의 Tailscale 키로 VPN 켜는 중")
+        log(.info, "pairing", "페어링 시작: \(proposal.host)")
+        // 제안에 Tailscale 키가 있으면 로그인 없이 VPN을 켠다. 이미 연결돼 있으면 쓰지 않는다. 페어링은 VPN이 연결되면 이어 간다.
+        let startsWithKey = proposal.authKey != nil && tunnelController.currentState() != .connected && connectWithAuthKey != nil
+        guard ensureTunnel(queue: .pair(proposal)) else {
+            if startsWithKey, let key = proposal.authKey, let connect = connectWithAuthKey {
+                log(.info, "vpn", "페어링 제안의 Tailscale 키로 VPN 켜는 중")
                 lastError = nil
                 Task { await connect(key) }
             } else {
@@ -506,8 +517,8 @@ public final class ClientModel {
             return
         }
         let token = UUID()
-        pairing = PairingRun(token: token, link: link, task: Task { [weak self] in
-            await self?.runPairing(link, token: token)
+        pairing = PairingRun(token: token, proposal: proposal, task: Task { [weak self] in
+            await self?.runPairing(proposal, token: token)
         })
     }
 
@@ -523,126 +534,113 @@ public final class ClientModel {
         pairing?.token == token && !Task.isCancelled
     }
 
-    private func runPairing(_ link: PairingLink, token: UUID) async {
-        defer { if pairing?.token == token { pairing = nil } }
+    private func runPairing(_ proposal: PairingProposal, token: UUID) async {
+        defer {
+            if pairing?.token == token { pairing = nil }
+            if approvalToken == token { approvalToken = nil }
+        }
         phase = .requestingPairing
-        guard let api = makeAPI(link.host) else {
-            phase = settledPhase
-            lastError = PairingLinkError.hostNotAllowed.userMessage
-            return
-        }
+        confirmationCode = nil
+        approvalToken = token
 
-        let started: PairRequestState
-        do {
-            started = try await api.requestPairing(code: link.code, deviceName: deviceName)
+        let joined: JoinedHost
+        do throws(PairingFailure) {
+            joined = try await pairingService.join(proposal, deviceName: PairingDeviceName.sanitized(deviceName)) { [weak self] code in
+                Task { @MainActor in self?.receiveConfirmationCode(code, token: token) }
+            }
         } catch {
-            guard ownsPairing(token), !(error is CancellationError) else { return }
-            phase = settledPhase
-            lastError = Self.message(for: error)
+            approvalToken = nil
+            guard ownsPairing(token) else { return }
+            if let message = error.userMessage { failPairing(message) } else { endPairingQuietly() }
             return
         }
+        approvalToken = nil
         guard ownsPairing(token) else { return }
-
-        let now = clock.now
-        var deadline = now.addingTimeInterval(timing.pairingTimeout)
-        if let expiresAt = started.expiresAt, expiresAt > now, expiresAt < deadline { deadline = expiresAt }
-        let poll = PairingPoll(link: link, requestID: started.requestId, deadline: deadline)
-        pairingPoll = poll
-        pairingExpiresAt = deadline
-        phase = .waitingApproval(deviceName: deviceName)
-        if started.state != .pending {
-            await apply(started, poll: poll, token: token)
+        // 짝을 맺은 주소는 제안의 주소와 같아야 한다.
+        guard joined.host == proposal.host else {
+            failPairing(Self.pairedAddressMismatchMessage)
             return
         }
-        await pollPairing(api: api, poll: poll, token: token)
+        phase = .requestingPairing
+        confirmationCode = nil
+        pairingExpiresAt = nil
+        log(.info, "pairing", "짝 맺기 승인됨: \(joined.host)")
+        await finishPairing(joined, proposal: proposal, token: token)
     }
 
-    private func pollPairing(api: HostAPI, poll: PairingPoll, token: UUID) async {
-        while true {
-            if clock.now >= poll.deadline {
-                await finishPairingAfterDeadline(api: api, poll: poll, token: token)
-                return
-            }
-            do { try await clock.sleep(for: timing.pairingPollInterval) } catch { return }
-            guard ownsPairing(token) else { return }
-            let state: PairRequestState
+    /// Mac이 확인된 뒤 받은 확인 숫자를 화면에 올린다.
+    private func receiveConfirmationCode(_ code: String, token: UUID) {
+        guard approvalToken == token, pairing?.token == token else { return }
+        confirmationCode = code
+        pairingExpiresAt = clock.now.addingTimeInterval(timing.pairingTimeout)
+        phase = .waitingApproval(deviceName: PairingDeviceName.sanitized(deviceName))
+        log(.info, "pairing", "Mac의 승인을 기다리는 중")
+    }
+
+    /// 짝을 맺은 뒤 `GET /v1/info`로 Mac 정보를 받아 이 iPhone의 페어링 기록(공용 설정)으로 둔다.
+    private func finishPairing(_ joined: JoinedHost, proposal: PairingProposal, token: UUID) async {
+        guard let api = makeAPI(joined.host) else {
+            failPairing(PairingOfferIssue.hostNotAllowed.userMessage)
+            return
+        }
+        var received: InfoResponse?
+        for attempt in 0..<Self.pairingInfoAttempts {
             do {
-                state = try await api.pairingState(requestID: poll.requestID)
-            } catch let error as HostAPIError where error.isConnectionFailure {
-                guard ownsPairing(token) else { return }
-                continue  // 일시적 끊김은 마감까지 다시 시도한다.
+                received = try await api.info()
+                break
             } catch {
                 guard ownsPairing(token), !(error is CancellationError) else { return }
-                failPairing(Self.message(for: error))
-                return
+                if attempt + 1 < Self.pairingInfoAttempts {
+                    do { try await clock.sleep(for: timing.pairingInfoRetryInterval) } catch { return }
+                    guard ownsPairing(token) else { return }
+                }
             }
-            guard ownsPairing(token) else { return }
-            if state.state == .pending { continue }
-            await apply(state, poll: poll, token: token)
+        }
+        guard ownsPairing(token) else { return }
+        guard let info = received else {
+            failPairing(Self.pairingInfoFailedMessage)
             return
         }
-    }
-
-    /// 로컬 마감이 지나면 호스트에 한 번 더 묻고 그 답을 따른다(호스트는 결정된 요청을 1시간 보관한다).
-    /// 답을 못 받거나 아직 대기 중이면 만료로 끝낸다.
-    private func finishPairingAfterDeadline(api: HostAPI, poll: PairingPoll, token: UUID) async {
-        let state = try? await api.pairingState(requestID: poll.requestID)
-        guard ownsPairing(token) else { return }
-        if let state, state.state != .pending {
-            await apply(state, poll: poll, token: token)
-        } else {
-            failPairing(Self.pairingExpiredMessage)
-        }
-    }
-
-    private func apply(_ state: PairRequestState, poll: PairingPoll, token: UUID) async {
-        guard ownsPairing(token) else { return }
-        switch state.state {
-        case .pending:
+        // 정보를 준 주소는 짝을 맺은 주소와 같아야 한다. 저장하는 주소는 실제로 페어링한 주소다.
+        // 테스트 정책의 루프백만 예외다(가짜 호스트의 fqdn은 루프백이 아니다).
+        let isLoopbackTest = policy.allowsLoopback && HostPolicy.loopbackHost(joined.host) != nil
+        if !isLoopbackTest, HostPolicy.normalizedName(info.fqdn) != joined.host {
+            failPairing(Self.pairedAddressMismatchMessage)
             return
-        case .denied:
-            failPairing(Self.pairingDeniedMessage)
-        case .expired:
-            failPairing(Self.pairingExpiredMessage)
-        case .approved:
-            guard let summary = state.host else {
-                failPairing(HostAPIError.invalidResponse(status: 200, "approved without host").userMessage)
-                return
-            }
-            // 승인 응답의 주소는 링크의 주소와 같아야 한다. 저장하는 주소는 실제로 페어링한 주소다.
-            // 테스트 정책의 루프백 링크만 예외다(가짜 호스트의 fqdn은 루프백이 아니다).
-            let isLoopbackTest = policy.allowsLoopback && HostPolicy.loopbackHost(poll.link.host) != nil
-            if !isLoopbackTest, HostPolicy.normalizedName(summary.fqdn) != poll.link.host {
-                failPairing(Self.pairedAddressMismatchMessage)
-                return
-            }
-            let paired = PairedHost(hostId: summary.hostId, hostName: summary.hostName, fqdn: poll.link.host, pairedAt: clock.now)
-            pairingPoll = nil
-            pairingExpiresAt = nil
-            if host?.fqdn != paired.fqdn || host?.hostId != paired.hostId {
-                resetHostScopedState()
-            }
-            host = paired
-            phase = .paired
-            log(.info, "pairing", "페어링 승인: \(paired.hostName) (\(paired.fqdn))")
-            lastApprovedLink = poll.link
-            do {
-                try store.save(paired)
-                lastError = nil
-            } catch {
-                lastError = Self.saveFailedMessage
-            }
-            await refresh()
         }
+        let paired = PairedHost(hostId: info.hostId, hostName: info.hostName, fqdn: joined.host, pairedAt: clock.now,
+                                updatePage: PairedHost.validUpdatePage(info.updatePage))
+        pairingExpiresAt = nil
+        if host?.fqdn != paired.fqdn || host?.hostId != paired.hostId {
+            resetHostScopedState()
+        }
+        host = paired
+        phase = .paired
+        log(.info, "pairing", "페어링 승인: \(paired.hostName) (\(paired.fqdn))")
+        lastApprovedFingerprint = proposal.fingerprint
+        do {
+            try store.save(paired)
+            lastError = nil
+        } catch {
+            lastError = Self.saveFailedMessage
+        }
+        await refresh()
     }
 
     private func failPairing(_ message: String) {
         log(.warning, "pairing", "페어링 실패: \(message)")
-        pairingPoll = nil
-        pairingExpiresAt = nil
-        phase = settledPhase
+        endPairingQuietly()
         lastError = message
     }
+
+    private func endPairingQuietly() {
+        pairingExpiresAt = nil
+        confirmationCode = nil
+        phase = settledPhase
+    }
+
+    /// 짝을 맺은 직후 `GET /v1/info`를 묻는 횟수.
+    private static let pairingInfoAttempts = 3
 
     // MARK: 빌드 목록
 
@@ -1151,34 +1149,26 @@ public final class ClientModel {
 
     // MARK: 폴링 중단·재개
 
-    /// 진행 확인(페어링 승인·설치 진행)을 멈춘다. 앱이 백그라운드로 가거나 화면이 사라질 때 부른다.
-    /// 상태는 그대로 두고 `resumePolling()`으로 이어 간다.
+    /// 진행 확인(설치 진행)을 멈추고 진행 중인 짝 맺기를 그만둔다. 앱이 백그라운드로 가거나 화면이 사라질 때 부른다.
+    /// 설치 상태는 그대로 두고 `resumePolling()`으로 이어 간다. 짝 맺기는 연결과 1회용 제안이 걸려 있어 이어 갈 수 없다.
     public func stopPolling() {
         isBackgrounded = true
         backgroundCount += 1
-        pairing?.task.cancel()
-        pairing = nil
-        // 요청을 보내기 전·응답 전이면 이어 갈 것이 없으므로 페어링 전 상태로 돌린다.
-        if phase == .requestingPairing, pairingPoll == nil { phase = settledPhase }
+        if pairing != nil {
+            cancelPairing()
+            lastError = Self.pairingInterruptedMessage
+        }
         for running in installTasks.values { running.task.cancel() }
         installTasks = [:]
         resumeTask?.cancel()
         resumeTask = nil
     }
 
-    /// 멈춘 진행 확인을 다시 시작한다. 마감이 지났으면 호스트에 한 번 물어 결과를 정한다.
+    /// 멈춘 설치 진행 확인을 다시 시작한다.
     public func resumePolling() {
         // 앱이 다시 활성이 됐다. 네트워크가 바뀌었을 수 있으니 직접 경로를 다시 찾는다.
         noteNetworkChange()
         isBackgrounded = false
-        if pairing == nil, let poll = pairingPoll, let api = makeAPI(poll.link.host) {
-            let token = UUID()
-            pairing = PairingRun(token: token, link: poll.link, task: Task { [weak self] in
-                guard let self else { return }
-                defer { if self.pairing?.token == token { self.pairing = nil } }
-                await self.pollPairing(api: api, poll: poll, token: token)
-            })
-        }
         if let current = host, let api = makeAPI(current.fqdn) {
             for (id, active) in activeSessions where installTasks[id] == nil {
                 startSessionPolling(buildID: id, api: api, active: active)
@@ -1193,9 +1183,9 @@ public final class ClientModel {
         await forgetPushRegistration()
         stopPolling()
         cancelPairing()
-        pendingReplacement = nil
+        pendingConfirmation = nil
         refreshQueued = false
-        lastApprovedLink = nil
+        lastApprovedFingerprint = nil
         resetHostScopedState()
         store.clear()
         direct?.forget()
@@ -1442,7 +1432,7 @@ public final class ClientModel {
             || !installTasks.isEmpty || !activeSessions.isEmpty || installs.values.contains(where: \.isInProgress)
             || downloadTasks.keys.contains { !directDownloads.contains($0) }
             || fileDownloads.contains { $0.value == .downloading && !directDownloads.contains($0.key) }
-            || pairing != nil || pairingPoll != nil || queuedPairing != nil
+            || pairing != nil || queuedPairing != nil
     }
 
     /// 자동으로 켠 VPN을 쓸 일이 없어졌는지 주기적으로 본다. 다시 부르면 새로 센다.
@@ -1487,11 +1477,11 @@ public final class ClientModel {
         guard needsTunnel || queuedPairing != nil || refreshQueued else { return }
         needsTunnel = false
         if let message = lastError, Self.tunnelMessages.contains(message) { lastError = nil }
-        let link = queuedPairing
+        let queued = queuedPairing
         queuedPairing = nil
         let runRefresh = refreshQueued
         refreshQueued = false
-        if let link { startPairing(link) }
+        if let queued { startPairing(queued) }
         if runRefresh {
             resumeTask?.cancel()
             resumeTask = Task { [weak self] in
@@ -1501,7 +1491,7 @@ public final class ClientModel {
         }
     }
 
-    private enum Deferred { case pair(PairingLink), refresh }
+    private enum Deferred { case pair(PairingProposal), refresh }
 
     /// VPN이 연결돼 있으면 `true`. 아니면 안내를 띄우고, 연결되면 이어 할 동작을 기억한다.
     /// 페어링과 새로고침은 따로 기억하므로 서로 지우지 않는다.
@@ -1514,7 +1504,7 @@ public final class ClientModel {
         }
         needsTunnel = true
         switch action {
-        case .pair(let link): queuedPairing = link
+        case .pair(let proposal): queuedPairing = proposal
         case .refresh: refreshQueued = true
         case nil: break
         }
@@ -1863,9 +1853,9 @@ public final class ClientModel {
     }
 
     public nonisolated static let tunnelConnectFailedMessage = String(localized: "VPN을 켜지 못했습니다. 잠시 뒤 VPN을 다시 켜세요.")
-    public nonisolated static let pairingDeniedMessage = String(localized: "Mac에서 페어링을 거절했습니다. 다시 하려면 Mac에서 새 코드를 여세요.")
-    public nonisolated static let pairingExpiredMessage = String(localized: "페어링 요청이 만료되었습니다. Mac에서 새 코드를 열고 다시 시도하세요.")
-    public nonisolated static let pairedAddressMismatchMessage = String(localized: "승인한 Mac의 주소가 링크와 다릅니다. Mac에 표시된 링크로 다시 페어링하세요.")
+    public nonisolated static let pairedAddressMismatchMessage = String(localized: "승인한 Mac의 주소가 링크와 다릅니다. Mac에 표시된 QR 코드로 다시 페어링하세요.")
+    public nonisolated static let pairingInfoFailedMessage = String(localized: "Mac과 짝을 맺었지만 Mac 정보를 받지 못했습니다. VPN 연결을 확인하고 Mac에서 QR 코드를 새로 열어 다시 페어링하세요.")
+    public nonisolated static let pairingInterruptedMessage = String(localized: "앱이 화면에서 벗어나 페어링이 중단되었습니다. Mac에서 QR 코드를 새로 열고 다시 시도하세요.")
     public nonisolated static let saveFailedMessage = String(localized: "페어링 정보를 저장하지 못했습니다. 앱을 다시 열면 다시 페어링해야 합니다.")
     public nonisolated static let hostChangedMessage = String(localized: "이 주소의 Mac이 페어링한 Mac과 다릅니다. 다시 페어링하세요.")
     public nonisolated static let openFailedMessage = String(localized: "설치 창을 열지 못했습니다. 설치를 다시 누르세요.")
