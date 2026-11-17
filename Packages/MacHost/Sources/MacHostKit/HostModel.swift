@@ -1099,7 +1099,19 @@ public final class HostModel {
 
     /// 알림을 보낼 수 있는 기기: 지금 제어 서버의 기기 중 개발 환경 토큰을 등록한 것.
     public var pushRecipients: [DeviceEntry] {
-        activeDevices.filter { $0.isPushRegistered && $0.push?.environment == "development" }
+        Self.uniquePushRecipients(activeDevices.filter { $0.isPushRegistered && $0.push?.environment == "development" })
+    }
+
+    /// 같은 알림 등록(토큰·앱·환경)을 가진 항목은 가장 최근에 페어링한 하나만 남긴다. 순서는 그대로 둔다.
+    /// iPhone을 다시 페어링하면 기기 id와 노드가 바뀌어 예전 항목이 같은 토큰을 든 채 남을 수 있다.
+    nonisolated static func uniquePushRecipients(_ devices: [DeviceEntry]) -> [DeviceEntry] {
+        var newest: [PushRegistration: DeviceEntry] = [:]
+        for device in devices {
+            guard let push = device.push else { continue }
+            if let held = newest[push], held.pairedAt >= device.pairedAt { continue }
+            newest[push] = device
+        }
+        return devices.filter { device in device.push.map { newest[$0]?.id == device.id } ?? false }
     }
 
     // MARK: 같은 네트워크 직접 연결

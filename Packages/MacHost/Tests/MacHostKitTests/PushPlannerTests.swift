@@ -19,6 +19,16 @@ func pushFile(_ id: String, name: String, link: String? = nil) -> ResourceDescri
 
 @Suite("알림 판단 규칙")
 struct PushPlannerTests {
+    @Test func repairedPhoneWithTheSameTokenIsOneRecipient() {
+        let push = PushRegistration(token: "aa", bundleId: "example.app", environment: "development")
+        func device(_ id: String, _ pairedAt: TimeInterval, _ push: PushRegistration?) -> DeviceEntry {
+            DeviceEntry(id: id, name: id, nodeStableId: "n-\(id)", nodeName: id, loginName: "", pairedAt: Date(timeIntervalSince1970: pairedAt), push: push)
+        }
+        let other = PushRegistration(token: "bb", bundleId: "example.app", environment: "development")
+        let list = [device("old", 1, push), device("other", 2, other), device("new", 3, push)]
+        #expect(HostModel.uniquePushRecipients(list).map(\.id) == ["other", "new"])
+    }
+
     @Test func firstObservationIsOnlyABaseline() {
         var tracker = PushTracker()
         #expect(tracker.observe(builds: [pushBuild("b_1")], resources: [pushFile("r_1", name: "a.txt")]).isEmpty)
