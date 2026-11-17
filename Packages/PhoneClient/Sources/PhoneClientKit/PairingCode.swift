@@ -8,9 +8,10 @@ public enum PairingCodeError: Error, Equatable, Sendable {
     case invalidCodeCharacters
 }
 
-/// 예전 코드 페어링(protocol §2, 서버 경로 `/v1/pair/request`)의 코드: Crockford base32 8자.
-/// 앱의 페어링은 Swiftail 페어링(QR·링크)으로 옮겼고 이 앱은 코드를 입력받지 않는다. Mac 호스트 시험이
-/// 서버의 예전 경로를 부르는 데만 `HostAPI.requestPairing`과 함께 남아 있다. 하이픈·공백·대소문자를 무시하고,
+/// 설치 웹 페이지의 코드 페어링(protocol §2, 서버 경로 `/v1/pair/request`)의 코드: Crockford base32 8자.
+/// 앱이 없는 iPhone은 이 코드로 첫 설치를 하고, 앱이 설치된 뒤의 페어링은 Swiftail 페어링(QR·링크)이라
+/// 이 앱은 코드를 입력받지 않는다. 서버의 코드 경로와 코드 읽기 규칙을 Mac 호스트 시험과 설치 웹 페이지 시험이
+/// 견주는 데 `HostAPI.requestPairing`과 함께 남아 있다. 하이픈·공백·대소문자를 무시하고,
 /// Crockford 규칙대로 `O`→`0`, `I`/`L`→`1`로 읽는다. `U`는 쓰지 않는 글자라 거부한다.
 public struct PairingCode: Hashable, Sendable {
     /// 정규화한 8자(예: `K7M29QXD`). 로그에 남기지 않는다.

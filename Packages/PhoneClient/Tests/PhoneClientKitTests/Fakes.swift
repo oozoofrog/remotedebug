@@ -202,11 +202,14 @@ final class FakeTunnel: TunnelControlling {
     /// 지금 VPN을 켠 쪽. `nil`이면 상태에서 정한다(꺼짐이면 없음, 아니면 이 앱).
     var holder: VPNHolder?
     var vpnHolder: VPNHolder { holder ?? (state == .off ? .none : .thisApp) }
+    /// 자동으로 켠 뒤에 알게 된 VPN 보유자(켜기를 부른 사이 바깥 VPN이 켜져 있었던 경우).
+    var holderAfterAutoStart: VPNHolder?
     private var continuations: [AsyncStream<TunnelState>.Continuation] = []
 
     func connectAutomatically() async throws {
         autoStartCount += 1
         if let autoStartError { throw autoStartError }
+        if let holderAfterAutoStart { holder = holderAfterAutoStart }
         set(autoStartResult)
     }
 
@@ -307,6 +310,12 @@ final class FakePairing: PairingService {
         var code: String? = "482915"
         var holds = false
         var waiter: CheckedContinuation<Void, Never>?
+        /// 첫 `join`은 취소를 무시하고 `releaseFirstJoin()`까지 멈춘다(취소된 앞 작업이 늦게 돌아오는 순서를 만든다).
+        var firstJoinIgnoresCancel = false
+        var firstJoinWaiter: CheckedContinuation<Void, Never>?
+        var firstJoinReleased = false
+        /// 가장 최근 `join`의 확인 숫자 알림.
+        var approval: (@Sendable (String) -> Void)?
     }
     private let state = Mutex(State())
 
@@ -315,6 +324,23 @@ final class FakePairing: PairingService {
     func setOutcome(_ outcome: Outcome) { state.withLock { $0.outcome = outcome } }
     func setCode(_ code: String?) { state.withLock { $0.code = code } }
     func setHolds(_ holds: Bool) { state.withLock { $0.holds = holds } }
+    func setFirstJoinIgnoresCancel(_ value: Bool) { state.withLock { $0.firstJoinIgnoresCancel = value } }
+
+    /// 취소를 무시하고 멈춘 첫 `join`을 돌려보낸다.
+    func releaseFirstJoin() {
+        let waiter = state.withLock { s -> CheckedContinuation<Void, Never>? in
+            s.firstJoinReleased = true
+            defer { s.firstJoinWaiter = nil }
+            return s.firstJoinWaiter
+        }
+        waiter?.resume()
+    }
+
+    /// 가장 최근 `join`이 확인 숫자를 알린 것처럼 알린다(`setCode(nil)`로 미뤄 둔 경우).
+    func announce(_ code: String) {
+        let approval = state.withLock { $0.approval }
+        approval?(code)
+    }
 
     /// 멈춘 `join`을 이어 가고 더는 멈추지 않는다.
     func release() {
@@ -348,11 +374,22 @@ final class FakePairing: PairingService {
         _ proposal: PairingProposal, deviceName: String,
         awaitingApproval: @escaping @Sendable (String) -> Void
     ) async throws(PairingFailure) -> JoinedHost {
-        let (code, holds) = state.withLock { s -> (String?, Bool) in
+        let (code, holds, ignoresCancel) = state.withLock { s -> (String?, Bool, Bool) in
             s.calls.append(JoinCall(host: proposal.host, deviceName: deviceName))
-            return (s.code, s.holds)
+            s.approval = awaitingApproval
+            return (s.code, s.holds, s.firstJoinIgnoresCancel && s.calls.count == 1)
         }
         if let code { awaitingApproval(code) }
+        if ignoresCancel {
+            await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
+                let resumeNow = state.withLock { s -> Bool in
+                    if s.firstJoinReleased { return true }
+                    s.firstJoinWaiter = c
+                    return false
+                }
+                if resumeNow { c.resume() }
+            }
+        }
         if holds {
             await withTaskCancellationHandler {
                 await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in

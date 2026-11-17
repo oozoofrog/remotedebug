@@ -15923,6 +15923,34 @@
         }
       }
     },
+    "다른 VPN이 켜져 있습니다. 이 앱의 VPN을 켜면 페어링을 이어서 진행합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another VPN is on. Turn on this app’s VPN to continue pairing."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のVPNがオンになっています。このアプリのVPNをオンにすると、ペアリングを続行します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已开启其他 VPN。开启此 App 的 VPN 后将继续配对。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已開啟其他 VPN。開啟此 App 的 VPN 後會繼續配對。"
+          }
+        }
+      }
+    },
     "다른 계정으로 로그인" : {
       "localizations" : {
         "en" : {
