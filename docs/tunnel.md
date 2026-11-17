@@ -150,4 +150,4 @@ Network Extension은 터널을 만들 때 한 번만 위임 인터페이스를 �
 ## 남은 위험
 
 - Swiftail은 Tailscale 제어 서버 프로토콜을 직접 구현한 것이다. 호환성은 Swiftail의 시험과 위 실기기 항목으로 확인하고, Swiftail을 올릴 때 다시 확인한다.
-- Swiftail 의존성은 저장소의 고정된 리비전을 쓴다. 로컬 체크아웃으로 바꾸는 방법은 [README](../README.md#working-on-this-repository)에 있다.
+- Swiftail 의존성은 저장소의 고정된 리비전을 쓴다. 리비전은 `RemoteDebug.xcodeproj/project.pbxproj`와 `Packages/SwiftailHost/Package.swift`에 있다. 로컬 체크아웃으로 바꾸는 방법은 [README](../README.md#working-on-this-repository)에 있다.

@@ -7,7 +7,6 @@
 | Mac | Apple silicon | arm64 |
 | macOS | 26.0 이상 | 27.2 |
 | Xcode | iOS·macOS 26.0 SDK 이상. 확인한 버전은 오른쪽 하나뿐이다 | 27.2 (27B48), Swift 6.4.2 |
-| XcodeGen | `xcodegen` 명령 | 2.46.0 |
 | 인터넷 | 처음 빌드할 때 Xcode(SwiftPM)가 [Swiftail](https://github.com/oozoofrog/Swiftail)을 공개 저장소의 고정한 리비전으로 받는다. Go나 미리 만든 바이너리는 필요 없다 | |
 | iPhone | iOS 26.0 이상, 개발자 모드 켜짐. 앱과 설치할 Debug 빌드의 개발 프로필에 그 기기가 들어 있어야 한다 | 실기기 확인하지 않음 |
 | 시뮬레이터 | arm64. VPN 확장은 쓸 수 없다 | iPhone 18 Pro, iOS 27.2 |
@@ -55,7 +54,7 @@ ACL 태그는 선택 사항이다. `tag:rd-mac`, `tag:rd-phone`을 쓰면 iPhone
 
 1. `Config/Signing.local.xcconfig.example`을 `Config/Signing.local.xcconfig`로 복사하고 `DEVELOPMENT_TEAM`에 10자 팀 ID를 넣는다. 팀 ID는 developer.apple.com의 Account > Membership details에 있다. iPhone 대상들이 같은 팀으로 서명돼야 한다.
 2. 기본 앞부분의 번들 ID는 그 ID를 등록한 팀에서만 쓸 수 있다. 다른 팀으로 서명하면 같은 파일에 `RD_BUNDLE_PREFIX = dev.<팀 ID 소문자>`처럼 그 팀이 쓸 수 있는 앞부분을 넣는다. Mac 앱의 **iPhone 앱 설치…**는 이 값을 자동으로 정한다([Mac 앱으로 iPhone 앱 설치](#mac-앱으로-iphone-앱-설치)).
-3. `xcodegen generate --spec project.yml`로 프로젝트를 만든다.
+3. Xcode에서 `RemoteDebug.xcodeproj`를 연다. 프로젝트 파일은 저장소에 있고 팀 ID는 들어 있지 않다. 대상과 빌드 설정은 Xcode에서 직접 고친다.
 4. Xcode에서 `RemoteDebugPhone`과 `RemoteDebugTunnel`의 Signing & Capabilities를 차례로 연다. Network Extensions 항목에 Packet Tunnel이 있고 프로필 오류가 없으면 그 계정에서 쓸 수 있다. 번들 ID를 쓸 수 없다는 오류가 나오면 2단계를 다시 본다. 권한을 지원하지 않는다는 오류가 나오면 그 계정으로는 iPhone 앱을 만들 수 없다.
 
 사용 중인 Apple 계정이 이 권한을 쓸 수 있는지는 확인하지 않음. 무료 계정에서 가능한지도 확인하지 않음. App ID를 등록하거나 권한을 켜는 일은 계정 소유자가 직접 승인해야 한다.
@@ -75,12 +74,12 @@ Xcode 자동 서명은 연결한 iPhone을 개발자 계정에 등록할 수 있
 ## 빌드와 실행
 
 ```sh
-xcodegen generate --spec project.yml
 open RemoteDebug.xcodeproj
 ```
 
-- 앱과 패키지는 소스만으로 빌드된다. Swiftail은 Xcode가 패키지로 받는다.
-- Swiftail을 로컬 체크아웃으로 쓰려면 SwiftPM 명령에는 환경 변수 `SWIFTAIL_PATH`에 그 폴더를 주고(폴더 이름은 `Swiftail`이어야 한다), Xcode 프로젝트는 `xcodegen generate --spec project-localswiftail.yml`로 만든다. 이 명세는 이 저장소 옆의 `../Swiftail` 폴더를 쓴다.
+- 앱과 패키지는 소스만으로 빌드된다. Swiftail은 Xcode가 패키지로 받는다. 고정한 리비전은 `RemoteDebug.xcodeproj/project.pbxproj`의 패키지 참조와 `Packages/SwiftailHost/Package.swift` 두 곳에 있고 함께 바꾼다.
+- Swiftail을 로컬 체크아웃으로 쓰려면 SwiftPM 명령에는 환경 변수 `SWIFTAIL_PATH`에 그 폴더를 주고(폴더 이름은 `Swiftail`이어야 한다), Xcode에서는 이 저장소 옆의 `../Swiftail` 폴더를 프로젝트 탐색기에 끌어 놓는다. 같은 이름의 원격 패키지를 로컬 사본이 덮어쓴다. 그 변경은 커밋하지 않는다.
+- 시험 링크 빌드: `RemoteDebugPhone`, `RemoteDebugTunnel`, `RemoteDebugVPNTunnel`에 컴파일 조건 `RD_TEST_LINKS`를 넣어 시험 전용 도구(`remotedebug://test?…` 주소, 연결 시험, 확장의 시험 진단)를 함께 컴파일한다. `Config/Signing.local.xcconfig`에 `RD_EXTRA_SWIFT_CONDITIONS = RD_TEST_LINKS`를 넣으면 켜진다. 값이 비어 있는 기본에서는 빌드가 달라지지 않는다. 이 빌드에는 TLS 검증을 건너뛰는 도구와 Mac을 1초마다 부르는 도구가 있어 배포하지 않는다.
 - Xcode에서 스킴 `RemoteDebugMac`을 고르고 My Mac으로 실행한다.
 - 스킴 `RemoteDebugPhone`을 고르고 연결한 iPhone으로 실행한다. 실기기 설치는 기기 소유자가 승인해야 한다.
 
@@ -169,7 +168,7 @@ xcodebuild -project RemoteDebug.xcodeproj -scheme RemoteDebugPhone -destination 
 
 ### 터미널에서 iPhone 앱 설치
 
-`scripts/install-phone.sh`는 iPhone 앱을 자기 개발자 계정으로 빌드해 연결한 iPhone에 설치한다. Xcode와 XcodeGen만 있으면 되고, 소스만으로 빌드한다. 처음 빌드할 때 Xcode가 Swiftail을 받으므로 인터넷이 필요하다.
+`scripts/install-phone.sh`는 iPhone 앱을 자기 개발자 계정으로 빌드해 연결한 iPhone에 설치한다. Xcode만 있으면 되고, 소스만으로 빌드한다. 처음 빌드할 때 Xcode가 Swiftail을 받으므로 인터넷이 필요하다.
 
 ```bash
 git clone https://github.com/oozoofrog/remotedebug.git
@@ -233,7 +232,7 @@ tailnet lock이 켜진 tailnet에서는 키로 처음 들어온 iPhone이 서명
    RD_PAIR_LINK_PATH = /remotedebug/pair
    ```
 
-2. Mac 앱과 iPhone 앱을 **같은 값으로** 빌드한다(`xcodegen generate --spec project.yml` 뒤에 빌드). 호스트가 있으면 iPhone 앱(`RemoteDebugPhone`)은 `Apps/iOS/RemoteDebugPhone+Links.entitlements`로 서명되어 연결 도메인 권한 `applinks:<호스트>`가 들어간다. 자동 서명이 App ID에 Associated Domains를 켠다(계정 소유자의 승인이 필요할 수 있다). 터널 확장과 RD 업데이트 앱에는 넣지 않는다. 호스트가 비어 있으면 권한도 없고 링크는 `remotedebug://pair#…` 그대로다.
+2. Mac 앱과 iPhone 앱을 **같은 값으로** 빌드한다(`Config/Signing.local.xcconfig`를 고친 뒤 빌드). 호스트가 있으면 iPhone 앱(`RemoteDebugPhone`)은 `Apps/iOS/RemoteDebugPhone+Links.entitlements`로 서명되어 연결 도메인 권한 `applinks:<호스트>`가 들어간다. 자동 서명이 App ID에 Associated Domains를 켠다(계정 소유자의 승인이 필요할 수 있다). 터널 확장과 RD 업데이트 앱에는 넣지 않는다. 호스트가 비어 있으면 권한도 없고 링크는 `remotedebug://pair#…` 그대로다.
 3. 그 호스트에 아래 두 파일을 올린다.
 
 **`/.well-known/apple-app-site-association`**: `https://<호스트>/.well-known/apple-app-site-association`에서 리디렉션 없이 `Content-Type: application/json`으로 낸다. `appIDs`는 `<팀 ID>.<iPhone 앱 번들 ID>`다. 번들 ID는 `$(RD_BUNDLE_PREFIX).RemoteDebugPhone`이다(Mac 앱의 **iPhone 앱 설치…**나 `scripts/install-phone.sh`가 앞부분을 `dev.<팀 ID 소문자>`로 바꿨으면 그 값). 여러 팀·앞부분으로 설치하면 그 수만큼 `appIDs`에 넣는다. `components`는 페어링 경로 하나만 연다. 아래 팀 ID `ABCDE12345`는 예시다.
