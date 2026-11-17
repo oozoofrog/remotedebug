@@ -642,6 +642,8 @@ public final class ClientModel {
         }
         host = paired
         phase = .paired
+        // 같은 Mac과 다시 짝이 되면 Mac의 기기 항목이 새로 만들어져 알림 등록이 비어 있다. 이번 실행의 확인을 내려 다시 등록한다.
+        pushConfirmed = nil
         log(.info, "pairing", "페어링 승인: \(paired.hostName) (\(paired.fqdn))")
         lastApprovedFingerprint = proposal.fingerprint
         do {
