@@ -94,7 +94,7 @@ struct PublishAdviceTests {
         #expect(!mailed.steps.contains { $0.contains("email이 비어 있다") })
         // 메일 주소가 있으면 배포판은 Mac 주소 없이 메일만 쓴다.
         let release = try #require(mailed.snippet.components(separatedBy: "#else").last)
-        #expect(mailed.snippet.contains("#if DEBUG") && release.contains(#".init(email: "me@example.com")"#) && !release.contains("macHost"))
+        #expect(mailed.snippet.contains("#if DEBUG") && release.contains(#".init(email: "me@example.com", publicKeyBase64: "S0VZ")"#) && !release.contains("macHost"))
 
         // 받은 피드백 목록과 원문을 명령으로 읽는다.
         let dir = tmp.path("state/CrashLogs")

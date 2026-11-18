@@ -38,7 +38,12 @@ public struct RemoteDebugFeedbackSheet: View {
     @State private var draft = FeedbackDraft()
     @State private var message = ""
     @State private var image: Data?
+    // 배포판에서는 사용자가 켤 때만 로그를 붙인다.
+    #if DEBUG
     @State private var includesLogs = true
+    #else
+    @State private var includesLogs = false
+    #endif
     /// 지금 하고 있는 일. `nil`이면 쉬는 중이다.
     @State private var progress: String?
     @State private var collectedLogs: [String]?
@@ -186,7 +191,6 @@ public struct RemoteDebugFeedbackSheet: View {
 
     private func sendMail() async {
         draft.message = trimmed
-        #if DEBUG
         if let key = configuration.publicKeyBase64, !key.isEmpty, includesLogs || image != nil {
             let lines = await logLines()
             let shot = image
@@ -199,7 +203,6 @@ public struct RemoteDebugFeedbackSheet: View {
         } else {
             mail.diagnostics = nil
         }
-        #endif
         progress = labels.preparingMail
         let url = await mail.prepare(canSendMail: MFMailComposeViewController.canSendMail())
         progress = nil

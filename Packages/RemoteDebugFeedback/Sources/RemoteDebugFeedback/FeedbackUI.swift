@@ -27,12 +27,10 @@ struct FeedbackMailComposer: UIViewControllerRepresentable {
         controller.setToRecipients([mail.recipient])
         controller.setSubject(mail.content.subject)
         controller.setMessageBody(mail.body, isHTML: false)
-        #if DEBUG
         if let attachment = mail.attachment {
             controller.addAttachmentData(attachment.data, mimeType: FeedbackAttachment.mimeType,
                                          fileName: attachment.fileName)
         }
-        #endif
         return controller
     }
 

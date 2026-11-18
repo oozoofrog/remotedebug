@@ -38,17 +38,10 @@ public struct FeedbackAttachment: Equatable, Sendable {
     public let fileName: String
     public static let mimeType = "application/octet-stream"
 
-    #if DEBUG
     init(encryptedData: Data) {
         data = encryptedData
         fileName = "feedback-\(UUID().uuidString).afdiag"
     }
-    #else
-    private init(data: Data, fileName: String) {
-        self.data = data
-        self.fileName = fileName
-    }
-    #endif
 }
 
 public struct FeedbackMail: Identifiable, Equatable, Sendable {
@@ -63,11 +56,7 @@ public struct FeedbackMail: Identifiable, Equatable, Sendable {
                 attachmentNotice: String = "Encrypted diagnostics attached.") {
         self.recipient = recipient
         self.content = content
-        #if DEBUG
         self.attachment = attachment
-        #else
-        self.attachment = nil
-        #endif
         self.attachmentNotice = attachmentNotice
     }
 

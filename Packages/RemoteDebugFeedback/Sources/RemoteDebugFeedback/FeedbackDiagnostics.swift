@@ -1,4 +1,3 @@
-#if DEBUG
 import CryptoKit
 import Foundation
 
@@ -88,4 +87,3 @@ enum FeedbackSealing {
         return try (compressed as NSData).decompressed(using: .lzfse) as Data
     }
 }
-#endif

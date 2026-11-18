@@ -11,14 +11,12 @@ public final class FeedbackSession: ObservableObject {
     @Published public var composing: FeedbackMail?
     @Published public private(set) var status: String?
     @Published public private(set) var isCollecting = false
-    #if DEBUG
     public var diagnostics: FeedbackDiagnostics?
     @Published public var attachesDiagnostics = true
     @Published public var checklist: [FeedbackCheck] = []
     @Published public private(set) var diagnosticsFile: URL?
     private var hasFallbackAttachment = false
     private var temporaryDirectory: URL?
-    #endif
 
     public init(recipient: String, appInfo: FeedbackAppInfo, labels: FeedbackLabels = FeedbackLabels(),
                 content: @escaping (FeedbackAppInfo) -> FeedbackContent = FeedbackContent.standard) {
@@ -35,7 +33,6 @@ public final class FeedbackSession: ObservableObject {
         isCollecting = true
         defer { isCollecting = false }
         var attachment: FeedbackAttachment?
-        #if DEBUG
         clearTemporaryFile()
         hasFallbackAttachment = false
         if attachesDiagnostics, let diagnostics {
@@ -47,7 +44,6 @@ public final class FeedbackSession: ObservableObject {
                 status = labels.collectionFailed
             }
         }
-        #endif
         guard !Task.isCancelled else { return nil }
         let mail = FeedbackMail(recipient: recipient, content: content(appInfo), attachment: attachment,
                                 attachmentNotice: labels.attachmentNotice)
@@ -55,11 +51,12 @@ public final class FeedbackSession: ObservableObject {
             composing = mail
             return nil
         }
-        #if DEBUG
         if let attachment {
             hasFallbackAttachment = true
-            let directory = (temporaryRoot ?? FileManager.default.temporaryDirectory)
-                .appendingPathComponent("AppFeedback-\(UUID().uuidString)", isDirectory: true)
+            // 진단 파일은 정해진 폴더 하나에만 둔다. 새로 만들기 전에 폴더를 비워 기기에 한 개까지만 남는다.
+            let root = temporaryRoot ?? FileManager.default.temporaryDirectory
+            Self.removeLeftovers(in: root)
+            let directory = root.appendingPathComponent(Self.temporaryFolderName, isDirectory: true)
             temporaryDirectory = directory
             do {
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -71,7 +68,6 @@ public final class FeedbackSession: ObservableObject {
                 appendStatus(labels.shareFailed)
             }
         }
-        #endif
         guard let url = mail.mailtoURL else {
             openedMailLink(accepted: false)
             return nil
@@ -81,9 +77,7 @@ public final class FeedbackSession: ObservableObject {
 
     public func openedMailLink(accepted: Bool) {
         if !accepted { appendStatus(labels.unavailable) }
-        #if DEBUG
         if hasFallbackAttachment, diagnosticsFile != nil { appendStatus(labels.separateAttachment) }
-        #endif
     }
 
     public func finish(_ outcome: FeedbackOutcome) {
@@ -97,12 +91,21 @@ public final class FeedbackSession: ObservableObject {
         status = status.map { $0 + "\n" + message } ?? message
     }
 
+    nonisolated static let temporaryFolderName = "AppFeedback"
+
+    /// 앞서 남은 진단 파일을 지운다(앱이 중간에 꺼져 지우지 못한 것 포함). 앱을 시작할 때와 새 파일을 만들기 전에 부른다.
+    nonisolated static func removeLeftovers(in root: URL = FileManager.default.temporaryDirectory) {
+        let fm = FileManager.default
+        for item in (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []
+        where item.lastPathComponent == temporaryFolderName || item.lastPathComponent.hasPrefix(temporaryFolderName + "-") {
+            try? fm.removeItem(at: item)
+        }
+    }
+
     /// Call when leaving settings, after any share sheet is dismissed. Only this session's file is removed.
     public func clearTemporaryFile() {
-        #if DEBUG
         if let temporaryDirectory { try? FileManager.default.removeItem(at: temporaryDirectory) }
         temporaryDirectory = nil
         diagnosticsFile = nil
-        #endif
     }
 }

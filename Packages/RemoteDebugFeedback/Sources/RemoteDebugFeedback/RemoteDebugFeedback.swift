@@ -17,7 +17,7 @@ public enum RemoteDebugFeedback {
         public var macHost: String?
         /// 피드백 메일을 받을 주소. 없으면 메일 경로를 쓰지 않는다.
         public var email: String?
-        /// 메일에 붙는 진단을 암호화할 공개키(Mac 앱이 만든다). Debug 빌드에서만 쓴다.
+        /// 메일에 붙는 진단을 암호화할 공개키(Mac 앱이 만든다). 사용자가 로그나 화면 사진을 붙이기로 했을 때만 쓴다.
         public var publicKeyBase64: String?
 
         public init(macHost: String? = nil, email: String? = nil, publicKeyBase64: String? = nil) {
@@ -50,6 +50,7 @@ public enum RemoteDebugFeedback {
             client = FeedbackClient(endpoint: endpoint, directory: base.appendingPathComponent("RemoteDebugFeedback", isDirectory: true))
         }
         withState { $0.configuration = configuration; $0.client = client }
+        FeedbackSession.removeLeftovers()
         guard let client else { return }
         #if canImport(MetricKit) && os(iOS)
         let subscriber = CrashCollector(client: client)

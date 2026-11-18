@@ -79,4 +79,23 @@ final class FeedbackClientTests: XCTestCase {
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(report)) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["kind", "name", "bundleId", "appVersion", "crashedAt", "text", "image"])
     }
+
+    /// 기기에 남은 진단 파일은 앱을 시작할 때와 새 파일을 만들기 전에 지운다(옛 이름의 폴더 포함).
+    func testLeftoverDiagnosticFilesAreRemoved() throws {
+        let root = directory()
+        let fm = FileManager.default
+        for name in ["AppFeedback", "AppFeedback-1A2B", "Other"] {
+            let folder = root.appendingPathComponent(name, isDirectory: true)
+            try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+            try Data("x".utf8).write(to: folder.appendingPathComponent("a.afdiag"))
+        }
+        FeedbackSession.removeLeftovers(in: root)
+        XCTAssertEqual(try fm.contentsOfDirectory(atPath: root.path), ["Other"])
+    }
+
+    func testLongLogLinesAreCut() {
+        let log = FeedbackLog()
+        log.add(String(repeating: "a", count: 5000))
+        XCTAssertLessThanOrEqual(log.collect(window: 0).last?.count ?? .max, FeedbackLog.lineLimit + 80)
+    }
 }

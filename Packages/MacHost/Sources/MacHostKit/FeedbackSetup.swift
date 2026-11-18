@@ -28,13 +28,13 @@ public enum FeedbackSetup {
             \(arguments.joined(separator: ",\n    "))
         ))
         """
-        // 배포판(App Store)에는 Mac 주소와 공개키를 넣지 않는다. 사용자가 메일로 보낸다.
+        // 배포판(App Store)에는 Mac 주소를 넣지 않는다. 사용자가 메일로 보내고, 로그·화면 사진은 사용자가 켰을 때만 암호화해 붙인다.
         let start = email.isEmpty ? debugStart : """
         #if DEBUG
         \(debugStart)
         #else
         // 배포판: Mac 주소를 넣지 않는다. 사용자가 쓴 글을 메일 앱으로 보낸다.
-        RemoteDebugFeedback.start(.init(email: "\(email)"))
+        RemoteDebugFeedback.start(.init(email: "\(email)"\(publicKey.isEmpty ? "" : ", publicKeyBase64: \"\(publicKey)\"")))
         #endif
         """
         return """

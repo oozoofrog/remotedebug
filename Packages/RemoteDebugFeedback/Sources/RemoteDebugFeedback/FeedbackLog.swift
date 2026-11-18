@@ -7,6 +7,7 @@ import OSLog
 final class FeedbackLog: @unchecked Sendable {
     static let shared = FeedbackLog()
     static let limit = 500
+    static let lineLimit = 2000
 
     private let lock = NSLock()
     private var lines: [String] = []
@@ -14,7 +15,8 @@ final class FeedbackLog: @unchecked Sendable {
     func add(_ message: String, at date: Date = Date()) {
         let line = "\(ISO8601DateFormatter.fractional.string(from: date)) \(message)"
         lock.lock()
-        lines.append(line)
+        // 한 줄이 길어도 기록 전체가 커지지 않게 자른다.
+        lines.append(line.count > Self.lineLimit ? String(line.prefix(Self.lineLimit)) + "…" : line)
         if lines.count > Self.limit { lines.removeFirst(lines.count - Self.limit) }
         lock.unlock()
     }
