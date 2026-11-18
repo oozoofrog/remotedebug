@@ -599,7 +599,11 @@ public final class ProjectsModel {
         var file: ResourceDescriptor?
         var files: [ResourceDescriptor]?
         var feedback: FeedbackGuide?
+        /// `reports`의 목록이나 `report`의 원문(글).
+        var text: String?
     }
+
+    var crashLogsDir: URL { root.appendingPathComponent("CrashLogs", isDirectory: true) }
 
     func feedbackGuide(for project: ConnectedProject, email: String) -> FeedbackGuide {
         let info = feedbackInfo(project)
@@ -610,7 +614,7 @@ public final class ProjectsModel {
             "remotedebug_build로 게시하고, 사용자가 iPhone에서 피드백을 보내면 remotedebug_crash_logs에서 종류가 피드백인 항목으로 확인한다.",
         ]
         if email.isEmpty {
-            steps.insert("email이 비어 있다. Mac에 닿지 않을 때 메일로 보내게 하려면 받을 메일 주소를 사용자에게 물어 email로 다시 부른다(없어도 Mac으로는 간다).", at: 2)
+            steps.insert("email이 비어 있다. 배포판(App Store)에서 사용자가 메일로 피드백을 보내게 하거나 Mac에 닿지 않을 때 메일로 보내게 하려면, 받을 메일 주소를 사용자에게 물어 email로 다시 부른다(없어도 Debug 빌드는 Mac으로 보낸다).", at: 2)
         }
         if info.host.isEmpty {
             steps.insert("이 Mac의 주소를 아직 모른다(공유가 꺼져 있다). 사용자에게 RemoteDebug Mac 앱에서 공유를 시작해 달라고 한 뒤 다시 부른다.", at: 0)
@@ -802,6 +806,14 @@ public final class ProjectsModel {
             }
             await fileSharing.remove(path)
             return AgentResponse(ok: true, files: fileSharing.list())
+        case "reports":
+            // 둘째 줄이 종류(feedback, crash, 비우면 전체), 셋째 줄이 앱 이름·번들 ID 거르기다.
+            return AgentResponse(ok: true, text: CrashLogStore.listText(directory: crashLogsDir, contains: scheme, kind: path))
+        case "report":
+            guard !path.isEmpty, let text = CrashLogStore.reportText(directory: crashLogsDir, id: path) else {
+                return AgentResponse(ok: false, error: "\(path) 기록이 없습니다. reports로 목록을 확인하세요.")
+            }
+            return AgentResponse(ok: true, text: text)
         case "connect", "schemes", "build", "feedback":
             guard !path.isEmpty else { return AgentResponse(ok: false, error: "프로젝트 경로가 필요합니다.") }
             lastError = nil
@@ -833,7 +845,7 @@ public final class ProjectsModel {
             return AgentResponse(ok: report.ok, error: report.ok ? nil : report.message, sharing: host.sharing,
                                  installPage: host.installPage, report: report)
         default:
-            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build, feedback 중 하나를 쓰세요.")
+            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build, feedback, reports, report 중 하나를 쓰세요.")
         }
     }
 
@@ -876,10 +888,10 @@ enum AgentScript {
         """
         #!/bin/sh
         # RemoteDebug Mac 앱에 명령을 보낸다. 앱이 이 파일을 실행할 때마다 새로 쓴다.
-        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일]
+        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | reports [feedback|crash] [앱] | report <기록 id>
         dir=\(quoted(agentDir))
         bundle=\(quoted(bundleID))
-        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일]" >&2; exit 2; }
+        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | reports [feedback|crash] [앱] | report <기록 id>" >&2; exit 2; }
         cmd=$1
         path=${2:-}
         scheme=${3:-}
@@ -931,6 +943,7 @@ enum AgentScript {
         \(rd) link <주소> <이름> \(project)  # 링크(https://…, 앱스킴://…)를 이 프로젝트 구역으로 보낸다(이름은 ''로 비울 수 있다)
         \(rd) files \(project)           # 이 프로젝트 구역에 보낸 파일·링크(프로젝트를 빼면 전체)
         \(rd) feedback \(project) [메일]  # 이 앱에 크래시·피드백 보내기를 붙이는 안내와 넣을 코드
+        \(rd) reports feedback            # 앱에서 받은 피드백 목록(reports crash는 크래시 기록, report <id>는 원문)
         ```
 
         - `build`는 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 실패하면 `error`와 `report.logTail`에 컴파일 오류가, `report.logPath`에 전체 로그 경로가 있다.
@@ -947,7 +960,8 @@ enum AgentScript {
 
     /// 앱에 피드백 보내기를 붙이는 법. 전역 스킬과 프로젝트 안내가 함께 쓴다.
     static let feedbackGuidance = """
-        - 앱에 피드백 보내기(크래시 기록 포함)를 붙여 달라는 요청에는 `feedback`(MCP `remotedebug_feedback_setup`)을 부른다. 응답의 `feedback.snippet`에 이 Mac의 주소와 이 프로젝트의 공개키가 든 코드가, `feedback.steps`에 할 일이 순서대로 있다. `feedback.added`가 true면 패키지는 이미 들어 있다. 사용자에게 Mac 앱에서 코드를 복사해 달라고 하지 않는다.
+        - 앱에 피드백 보내기(크래시 기록 포함)를 붙여 달라는 요청에는 `feedback`(MCP `remotedebug_feedback_setup`)을 부른다. 응답의 `feedback.snippet`에 이 Mac의 주소와 이 프로젝트의 공개키가 든 코드가, `feedback.steps`에 할 일이 순서대로 있다. `feedback.added`가 true면 패키지는 이미 들어 있다. 사용자에게 Mac 앱에서 코드를 복사해 달라고 하지 않는다. 메일 주소를 주면 코드가 `#if DEBUG`로 나뉜다: Debug 빌드는 Mac으로 보내고, 배포판(App Store)은 Mac 주소 없이 사용자가 메일로 보낸다.
+        - 받은 피드백은 `reports feedback`(MCP `remotedebug_crash_logs`의 `kind: feedback`)으로 목록을, `report <id>`로 글·기기·앱 버전·최근 로그를 읽는다. 목록의 `사진:` 경로가 함께 온 화면 사진이다.
         """
 
     /// 버전 올리기와 게시 뒤 점검. 전역 스킬과 프로젝트 안내가 함께 쓴다.

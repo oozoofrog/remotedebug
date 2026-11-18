@@ -138,10 +138,11 @@ public struct AgentMCPServer: Sendable {
         ],
         [
             "name": "remotedebug_crash_logs",
-            "description": "페어링한 iPhone이 Mac에 보낸 크래시 기록. id 없이 부르면 목록(id, 시각, 앱, 종류, 기기, 원문 파일 경로)을, id를 주면 그 기록의 원문을 돌려준다. 종류 ips는 iOS 크래시 파일(사용자가 iPhone에서 넘긴 것), MetricKit은 RemoteDebug iPhone 앱 자신의 크래시 JSON이다. 원문은 심볼이 풀리지 않은 주소일 수 있다.",
+            "description": "iPhone이 Mac에 보낸 크래시 기록과, RemoteDebugFeedback을 붙인 앱에서 사람이 쓴 피드백(글, 화면 사진, 최근 로그). kind를 feedback으로 주면 피드백만 본다. id 없이 부르면 목록(id, 시각, 앱, 종류, 기기, 원문 파일 경로)을, id를 주면 그 기록의 원문을 돌려준다. 종류 ips는 iOS 크래시 파일(사용자가 iPhone에서 넘긴 것), MetricKit은 RemoteDebug iPhone 앱 자신의 크래시 JSON이다. 원문은 심볼이 풀리지 않은 주소일 수 있다.",
             "inputSchema": ["type": "object", "properties": [
                 "id": ["type": "string", "description": "목록의 기록 id(c_…). 비우면 목록"],
                 "contains": ["type": "string", "description": "목록에서 앱·기기·파일 이름에 이 글자가 든 기록만(대소문자 무시)"],
+                "kind": ["type": "string", "description": "feedback이면 피드백만, crash면 크래시 기록만. 비우면 전체"],
             ] as [String: Any], "required": [String]()] as [String: Any],
         ],
     ] }
@@ -204,7 +205,7 @@ public struct AgentMCPServer: Sendable {
                     }
                     return result(["content": [["type": "text", "text": text]], "isError": false])
                 }
-                let text = CrashLogStore.listText(directory: crashLogsDir, contains: arguments["contains"] as? String ?? "")
+                let text = CrashLogStore.listText(directory: crashLogsDir, contains: arguments["contains"] as? String ?? "", kind: arguments["kind"] as? String ?? "")
                 return result(["content": [["type": "text", "text": text]], "isError": false])
             }
             if name == "remotedebug_pair_decide" {
@@ -411,6 +412,8 @@ extension AgentScript {
         \(rd) build <프로젝트 폴더> [스킴]
         \(rd) schemes <프로젝트 폴더>
         \(rd) feedback <프로젝트 폴더> [메일]
+        \(rd) reports [feedback|crash] [앱 이름이나 번들 ID]
+        \(rd) report <기록 id>
         \(rd) status
         \(rd) push <파일> [프로젝트]
         \(rd) link <주소> [이름] [프로젝트]

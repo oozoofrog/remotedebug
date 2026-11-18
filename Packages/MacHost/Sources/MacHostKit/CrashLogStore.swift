@@ -128,8 +128,14 @@ public final class CrashLogStore {
     // MARK: 에이전트용
 
     /// 받은 기록 목록을 텍스트로. `filter`가 있으면 앱·기기·파일 이름에 그 글자가 든 것만.
-    public nonisolated static func listText(directory: URL, contains filter: String = "") -> String {
+    /// `kind`가 "feedback"이면 사람이 쓴 피드백만, "crash"면 크래시 기록만.
+    public nonisolated static func listText(directory: URL, contains filter: String = "", kind: String = "") -> String {
         var items = load(directory: directory)
+        switch kind {
+        case "feedback": items = items.filter { $0.kind == .feedback }
+        case "crash": items = items.filter { $0.kind != .feedback }
+        default: break
+        }
         guard !items.isEmpty else {
             return "받은 크래시 기록이 없습니다. iPhone RemoteDebug 앱이 비정상 종료된 뒤 다시 열리거나, 사용자가 iPhone 설정의 분석 데이터에서 크래시 파일을 RemoteDebug 앱으로 공유하면 Mac에 들어옵니다."
         }

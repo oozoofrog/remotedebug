@@ -92,6 +92,15 @@ struct PublishAdviceTests {
         let mailed = try #require(await model.handleAgentRequest("feedback\n\(container.path)\nme@example.com\n").feedback)
         #expect(mailed.added && mailed.snippet.contains(#"email: "me@example.com""#))
         #expect(!mailed.steps.contains { $0.contains("email이 비어 있다") })
+        // 메일 주소가 있으면 배포판은 Mac 주소 없이 메일만 쓴다.
+        let release = try #require(mailed.snippet.components(separatedBy: "#else").last)
+        #expect(mailed.snippet.contains("#if DEBUG") && release.contains(#".init(email: "me@example.com")"#) && !release.contains("macHost"))
+
+        // 받은 피드백 목록과 원문을 명령으로 읽는다.
+        let dir = tmp.path("state/CrashLogs")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        #expect(await model.handleAgentRequest("reports\nfeedback\n\n").text?.contains("받은 크래시 기록이 없습니다") == true)
+        #expect(await !model.handleAgentRequest("report\nc_none\n\n").ok)
     }
 }
 

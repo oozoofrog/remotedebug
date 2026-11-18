@@ -23,13 +23,25 @@ public enum FeedbackSetup {
         var arguments = ["macHost: \"\(host.isEmpty ? "<이 Mac의 주소>" : host)\""]
         if !email.isEmpty { arguments.append("email: \"\(email)\"") }
         if !publicKey.isEmpty { arguments.append("publicKeyBase64: \"\(publicKey)\"") }
+        let debugStart = """
+        RemoteDebugFeedback.start(.init(
+            \(arguments.joined(separator: ",\n    "))
+        ))
+        """
+        // 배포판(App Store)에는 Mac 주소와 공개키를 넣지 않는다. 사용자가 메일로 보낸다.
+        let start = email.isEmpty ? debugStart : """
+        #if DEBUG
+        \(debugStart)
+        #else
+        // 배포판: Mac 주소를 넣지 않는다. 사용자가 쓴 글을 메일 앱으로 보낸다.
+        RemoteDebugFeedback.start(.init(email: "\(email)"))
+        #endif
+        """
         return """
         import RemoteDebugFeedback
 
         // 앱을 시작할 때 한 번(App의 init이나 application(_:didFinishLaunchingWithOptions:))
-        RemoteDebugFeedback.start(.init(
-            \(arguments.joined(separator: ",\n    "))
-        ))
+        \(start)
 
         // 피드백 화면을 띄울 곳(디버그 메뉴, 설정 화면 등). 띄우기 직전 화면을 찍어 함께 보여 준다.
         .remoteDebugFeedback(isPresented: $showsFeedback)
