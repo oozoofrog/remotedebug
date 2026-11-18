@@ -16,6 +16,11 @@
 # a temporary folder first, because its contents are compressed and a byte search of the archive sees nothing.
 # The temporary folder is removed when the script ends. An archive that cannot be unpacked is an error.
 #
+# Compiled string tables (.lproj/Localizable.strings) are binary property lists that keep non-ASCII text as
+# UTF-16, so a Korean marker inside one would not be seen here. The package therefore keeps its Debug-only text
+# out of its string catalog (it lives in #if DEBUG code, FeedbackDebugStrings.swift), and the package test
+# catalogCarriesNoDebugOnlyMarker fails when a marker below appears in the catalog source.
+#
 # Swift keeps short string literals (15 bytes or less) inside instructions, where a byte search cannot see
 # them. That is why the upload path "/v1/crashes" is not a marker: the client type names stand in for it.
 #

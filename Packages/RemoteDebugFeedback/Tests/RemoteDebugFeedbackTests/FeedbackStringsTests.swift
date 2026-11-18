@@ -132,8 +132,7 @@ struct FeedbackStringsTests {
             #expect(content.body.hasPrefix("\n\n\n---\n"))
             #expect(content.body.split(separator: "\n").count == 6, "안내 줄 하나와 정해진 줄 넷")
         }
-        #expect(subjects.count == languages.count && bodies.count == languages.count)
-        #expect(Set(languages.map { _ in FeedbackContent.searchTag(bundleID: info.bundleID, build: info.build) ?? "" }).count == 1)
+        #expect(subjects.count == languages.count && bodies.count == languages.count, "제목과 안내 줄은 언어마다 다르다")
     }
 
     @Test @MainActor func textTheAppSuppliesWinsOverTheDeviceLanguage() async {
