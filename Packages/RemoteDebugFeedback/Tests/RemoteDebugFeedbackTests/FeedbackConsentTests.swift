@@ -72,8 +72,19 @@ struct FeedbackConsentTests {
         try fm.createDirectory(at: leftover, withIntermediateDirectories: true)
         try Data("x".utf8).write(to: leftover.appendingPathComponent("feedback.afdiag"))
         try Data("{}".utf8).write(to: storage.appendingPathComponent("1-queued.json"))
+        // 확인 목록에 고른 답과 메모, Mac에서 받아 둔 목록(개발 빌드).
+        let checks = directory().appendingPathComponent("RemoteDebugFeedbackChecks", isDirectory: true)
+        defer { try? fm.removeItem(at: checks.deletingLastPathComponent()) }
+        try fm.createDirectory(at: checks, withIntermediateDirectories: true)
+        try Data(#"{"pay.sheet":{"choice":"실패","note":"메모"}}"#.utf8).write(to: checks.appendingPathComponent("answers.json"))
+        try Data(#"{"items":[]}"#.utf8).write(to: checks.appendingPathComponent("checklist.json"))
 
-        RemoteDebugFeedback.setRecordingConsent(false, temporaryRoot: temporary)
+        RemoteDebugFeedback.setRecordingConsent(false, temporaryRoot: temporary, checksDirectory: checks)
+        #if DEBUG
+        #expect(!fm.fileExists(atPath: checks.appendingPathComponent("answers.json").path), "확인 목록의 답과 메모를 지운다")
+        #expect(!fm.fileExists(atPath: checks.path), "비운 폴더도 지운다")
+        #expect(RemoteDebugFeedback.storedChecksDirectory == FeedbackCheckStore.defaultDirectory(), "공개 API는 실제 폴더를 지운다")
+        #endif
         #expect(!RemoteDebugFeedback.hasRecordingConsent && !RemoteDebugFeedback.isRecordingAllowed)
         #expect(FeedbackLog.shared.recorded.isEmpty, "남긴 로그를 지운다")
         #expect(!fm.fileExists(atPath: leftover.path), "진단 파일을 지운다")

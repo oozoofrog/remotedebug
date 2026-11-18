@@ -11,6 +11,28 @@ import Testing
         return try FeedbackChecklist.make(bundleId: bundleId, json: json, now: now)
     }
 
+    /// 항목마다의 글자 수 한도 안이어도, 목록을 저장한 크기가 한도를 넘으면 받지 않는다(앱이 받아 가다 버리는 일이 없게).
+    @Test func listsOverTheEncodedSizeBudgetAreRejectedWithTheReason() throws {
+        func items(_ count: Int, steps: Int) -> [[String: Any]] {
+            (0..<count).map { index in
+                ["id": "i\(index)", "title": String(repeating: "가", count: FeedbackChecklist.maxTitleLength),
+                 "steps": String(repeating: "나", count: steps),
+                 "expect": Array(repeating: String(repeating: "다", count: FeedbackChecklist.maxExpectLength), count: FeedbackChecklist.maxExpect)]
+            }
+        }
+        // 한도를 다 채운 50개는 800KB쯤이다.
+        do throws(FeedbackChecklist.Invalid) {
+            _ = try make(items(FeedbackChecklist.maxItems, steps: FeedbackChecklist.maxStepsLength))
+            Issue.record("너무 큰 목록을 받았다")
+        } catch {
+            #expect(error.message.contains("목록이 너무 큽니다") && error.message.contains("\(FeedbackChecklist.maxEncodedBytes)바이트"))
+        }
+        #expect(FeedbackChecklist.maxEncodedBytes == 256 << 10)
+        // 한도 안의 목록은 저장한 크기도 한도 안이다.
+        let fits = try make(items(10, steps: 500))
+        #expect(try RDJSON.encoder().encode(fits).count <= FeedbackChecklist.maxEncodedBytes)
+    }
+
     @Test func acceptsItemsAndFillsDefaults() throws {
         let list = try make([
             ["id": "pay.sheet", "title": " 결제 화면이 열린다 ", "place": "설정 › 결제", "steps": "1. 결제를 누른다", "expect": ["금액이 보임"],

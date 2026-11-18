@@ -175,7 +175,21 @@ public enum RemoteDebugFeedback {
                               image: image?.base64EncodedString(),
                               attachments: attachments.isEmpty ? nil : attachments.map {
                                   .init(name: $0.name, type: $0.type, base64: $0.data.base64EncodedString())
-                              })
+                              },
+                              message: clipped(message, bytes: FeedbackClient.maxMessageBytes))
+    }
+
+    /// UTF-8로 `bytes`바이트를 넘지 않게 글자 경계에서 자른다.
+    static func clipped(_ text: String, bytes: Int) -> String {
+        guard text.utf8.count > bytes else { return text }
+        var kept = String.UnicodeScalarView(), count = 0
+        for scalar in text.unicodeScalars {
+            let width = UTF8.width(scalar)
+            guard count + width <= bytes else { break }
+            count += width
+            kept.append(scalar)
+        }
+        return String(kept)
     }
     #endif
 

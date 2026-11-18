@@ -86,6 +86,8 @@ struct FeedbackChecklistTests {
         #expect(store.items.count == FeedbackCheckStore.maxItems)
         #expect(store.items[0].title.count == 200 && store.items[0].choices.count == FeedbackCheckStore.maxChoices)
         #expect(FeedbackCheckItem("one", "답 하나", choices: ["하나"]).bounded.choices == FeedbackCheckItem.defaultChoices)
+        // Mac이 저장해 주는 가장 큰 목록(256KiB)은 언제나 받을 수 있는 크기다.
+        #expect(FeedbackCheckStore.macStoredBytes == 256 << 10 && FeedbackCheckStore.maxResponseBytes >= FeedbackCheckStore.macStoredBytes)
         store.apply(remote: Data(count: FeedbackCheckStore.maxResponseBytes + 1))
         #expect(store.items.count == FeedbackCheckStore.maxItems)
     }

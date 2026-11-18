@@ -182,6 +182,38 @@ import Testing
         #expect(!CrashLogStore.listText(directory: dir.url).contains("첨부: /"))
     }
 
+    /// 글이 같아도 첨부가 다르거나 다른 기기가 보낸 기록은 버리지 않는다. 같은 기기가 같은 것을 다시 보낸 것만 하나로 남는다.
+    @Test func sameTextWithOtherAttachmentsOrFromAnotherDeviceIsKept() throws {
+        let dir = try TempDir("crashes-dedupe")
+        let store = CrashLogStore(directory: dir.url)
+        func feedback(_ device: String, _ attachment: String?) -> DeviceCrashEvent {
+            var report = CrashReport(kind: .feedback, name: "feedback.txt", bundleId: "com.example.sample", appVersion: "1.2 (7)",
+                                     crashedAt: Date(timeIntervalSince1970: 1_794_478_500), text: "같은 글\n\n---\n앱: com.example.sample 1.2 (7)\n")
+            if let attachment { report.attachments = [.init(name: "a.txt", type: "text/plain", data: Data(attachment.utf8))] }
+            return DeviceCrashEvent(deviceId: device, deviceName: "폰", nodeName: "", report: report)
+        }
+        // 첨부가 없는 기록의 id는 글만으로 정하던 예전 값 그대로다(이미 저장한 기록과 이어진다).
+        #expect(feedback("d_1", nil).report.id == "c_4d74866afce4")
+        #expect(feedback("d_1", "하나").report.id != feedback("d_1", nil).report.id)
+        #expect(feedback("d_1", "하나").report.id != feedback("d_1", "둘").report.id)
+
+        for event in [feedback("d_1", nil), feedback("d_1", "하나"), feedback("d_1", "둘"), feedback("d_2", nil), feedback("d_2", "하나")] {
+            store.receive(event)
+        }
+        #expect(store.items.count == 5 && Set(store.items.map(\.id)).count == 5)
+        #expect(store.items.filter { $0.deviceId == "d_2" }.count == 2)
+        // 다시 보낸 것은 어느 기기 것이든 더해지지 않는다.
+        for event in [feedback("d_1", nil), feedback("d_1", "둘"), feedback("d_2", nil), feedback("d_2", "하나")] { store.receive(event) }
+        #expect(store.items.count == 5)
+        // 첨부 파일은 기록마다 따로 남는다.
+        let files = Set(store.items.flatMap { $0.attachments ?? [] }.map(\.file))
+        #expect(files.count == 3)
+        for attached in store.items.flatMap({ $0.attachments ?? [] }) {
+            #expect(FileManager.default.fileExists(atPath: try #require(store.attachmentURL(attached)).path))
+        }
+        #expect(CrashLogStore(directory: dir.url).items.count == 5)
+    }
+
     /// 보관 기록을 고를 때 보낸 쪽의 `crashedAt`이 아니라 이 Mac이 받은 시각을 쓴다.
     @Test func pruningUsesReceiveTimeNotCrashTime() throws {
         let dir = try TempDir("crashes-receive")

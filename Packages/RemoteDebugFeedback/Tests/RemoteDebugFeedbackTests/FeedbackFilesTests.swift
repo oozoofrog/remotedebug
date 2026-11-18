@@ -100,7 +100,13 @@ struct FeedbackFilesTests {
         let date = Date(timeIntervalSince1970: 1_794_478_500)
         let plain = RemoteDebugFeedback.report(message: "느려요", details: "", date: date)
         let plainObject = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(plain)) as? [String: Any])
-        #expect(Set(plainObject.keys) == ["kind", "name", "bundleId", "appVersion", "crashedAt", "text"])
+        #expect(Set(plainObject.keys) == ["kind", "name", "bundleId", "appVersion", "crashedAt", "text", "message"])
+        // 사용자가 쓴 글은 따로도 적어 보낸다(Mac이 글과 로그를 가르는 데 쓴다). 글 없이 보내면 빈 글자다.
+        #expect(plainObject["message"] as? String == "느려요")
+        let empty = RemoteDebugFeedback.report(message: "", details: "최근 로그\n줄", date: date)
+        #expect(empty.message == "" && empty.text.hasPrefix(RemoteDebugFeedback.emptyMessageMark + "\n\n---\n"))
+        let long = RemoteDebugFeedback.report(message: String(repeating: "가", count: FeedbackClient.maxMessageBytes), details: "", date: date)
+        #expect((long.message?.utf8.count ?? 0) <= FeedbackClient.maxMessageBytes && long.message?.isEmpty == false)
 
         let files = [FeedbackFile(name: "photo-1.jpg", type: "image/jpeg", data: Data("jpeg".utf8)),
                      FeedbackFile(name: "note.txt", type: "text/plain", data: Data("note".utf8))]

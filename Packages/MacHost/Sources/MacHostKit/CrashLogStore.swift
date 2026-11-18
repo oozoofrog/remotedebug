@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Observation
 import RDModels
@@ -30,6 +31,9 @@ public final class CrashLogStore {
         public var issueURL: String?
         /// 이슈로 올린 시각.
         public var issueFiledAt: Date?
+        /// 피드백에서 사용자가 쓴 글만 따로 받은 값(`CrashReport.message`). 옛 클라이언트가 보낸 기록에는 없다(`nil`).
+        /// 이슈 본문의 글은 이 값에서 읽는다(원문에는 로그가 함께 있다).
+        public var message: String?
 
         /// 이슈 주소 끝의 번호(`…/issues/12`의 12).
         public var issueNumber: Int? {
@@ -88,17 +92,18 @@ public final class CrashLogStore {
     /// 받은 시각은 코어가 알려 준 값(`event.receivedAt`), 없으면 지금이다.
     func receive(_ event: DeviceCrashEvent) {
         let report = event.report
-        guard !items.contains(where: { $0.id == report.id }) else { return }
+        guard let id = Self.recordID(for: event, among: items) else { return }
         // 첨부는 기록 id와 순번을 앞에 붙인 이름으로 같은 폴더에 둔다. 이름은 경로 마디가 없게 고친다.
         let attached: [Attached] = directory == nil ? [] : report.attachments.prefix(CrashReport.maxAttachments).enumerated().map { index, attachment -> Attached in
             let name = CrashReport.Attachment.safeName(attachment.name)
-            return Attached(name: name, file: "\(report.id)-\(index + 1)-\(name)", bytes: attachment.data.count)
+            return Attached(name: name, file: "\(id)-\(index + 1)-\(name)", bytes: attachment.data.count)
         }
-        var item = Item(id: report.id, kind: report.kind, name: report.name, bundleId: report.bundleId,
+        var item = Item(id: id, kind: report.kind, name: report.name, bundleId: report.bundleId,
                         appVersion: report.appVersion, crashedAt: report.crashedAt, receivedAt: event.receivedAt ?? now(),
                         deviceId: event.deviceId, deviceName: event.deviceName,
-                        file: "\(report.id).\(report.kind.fileExtension)",
-                        imageFile: report.image == nil || directory == nil ? nil : "\(report.id).\(report.image?.first == 0x89 ? "png" : "jpg")")
+                        file: "\(id).\(report.kind.fileExtension)",
+                        imageFile: report.image == nil || directory == nil ? nil : "\(id).\(report.image?.first == 0x89 ? "png" : "jpg")")
+        item.message = report.kind == .feedback ? report.message : nil
         item.attachments = attached.isEmpty ? nil : attached
         item.checks = report.checks.isEmpty ? nil : report.checks
         // 확인 목록의 답은 원문 끝에 붙여, 화면과 에이전트가 같은 글에서 읽는다.
@@ -124,6 +129,17 @@ public final class CrashLogStore {
         save()
         purgeHandled()
         if let saved = items.first(where: { $0.id == item.id }) { onReceived?(saved) }
+    }
+
+    /// 받은 기록을 저장할 id. 같은 기기가 같은 기록(글과 첨부가 같은 것)을 다시 보낸 것이면 `nil`.
+    ///
+    /// 보통은 내용으로 정한 `report.id` 그대로다. 다른 기기가 같은 내용을 보냈으면 버리지 않고, 기기를 섞어 만든 id로 따로 둔다.
+    nonisolated static func recordID(for event: DeviceCrashEvent, among items: [Item]) -> String? {
+        let base = event.report.id
+        guard let same = items.first(where: { $0.id == base }) else { return base }
+        guard same.deviceId != event.deviceId else { return nil }
+        let other = "c_" + SHA256.hash(data: Data((base + "\n" + event.deviceId).utf8)).prefix(6).map { String(format: "%02x", $0) }.joined()
+        return items.contains { $0.id == other } ? nil : other
     }
 
     /// 이 기록을 올린 이슈의 주소를 적는다. 이미 적혀 있으면 그대로 두고 그 기록을 돌려준다. 그런 기록이 없으면 `nil`.

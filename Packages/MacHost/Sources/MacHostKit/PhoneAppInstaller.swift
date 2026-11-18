@@ -45,7 +45,10 @@ public struct PhoneAppInstallError: Error, Equatable, Sendable {
     public init(_ message: String) { self.message = message }
 
     /// `xcodebuild`·`devicectl` 출력에서 사용자가 고칠 수 있는 원인을 찾는다. 모르면 마지막 오류 줄.
-    public static func explain(_ output: String, step: String) -> PhoneAppInstallError {
+    ///
+    /// `redacting`을 켜면 도구가 낸 줄을 그대로 싣는 경우에 경로, 기기 식별자, 호스트 이름을 가린다
+    /// (이 Mac 밖으로 나가는 글: 케이블 설치의 실패 이유는 iPhone으로 간다).
+    public static func explain(_ output: String, step: String, redacting: Bool = false) -> PhoneAppInstallError {
         let lower = output.lowercased()
         let rules: [(needles: [String], message: String)] = [
             (["no accounts", "no account for team", "sign in with your apple id", "not signed in"],
@@ -71,7 +74,8 @@ public struct PhoneAppInstallError: Error, Equatable, Sendable {
         }
         let lastError = output.split(separator: "\n").last { $0.contains("error:") || $0.contains("Error") }
         if let lastError {
-            let line = lastError.trimmingCharacters(in: .whitespaces)
+            var line = lastError.trimmingCharacters(in: .whitespaces)
+            if redacting { line = FeedbackIssue.clip(FeedbackScrubber.scrub(line), 300) }
             return PhoneAppInstallError(String(localized: "\(step)에 실패했습니다. \(line)"))
         }
         return PhoneAppInstallError(String(localized: "\(step)에 실패했습니다. 기록을 확인하세요."))
@@ -196,7 +200,11 @@ public struct PhoneAppTools: PhoneAppTooling {
     }
 
     /// 프로세스를 돌리고 출력(표준 출력+오류)을 돌려준다. `log`가 있으면 덧붙인다.
-    static func run(_ executable: String, _ arguments: [String], log: URL?, cwd: URL? = nil) async -> (code: Int32, output: String) {
+    ///
+    /// `timeout`(초)을 주면 그 안에 끝나지 않은 프로세스를 멈추고(`SIGTERM`, `terminationGrace`초 뒤에도 살아 있으면 `SIGKILL`)
+    /// `timedOutCode`를 돌려준다.
+    static func run(_ executable: String, _ arguments: [String], log: URL?, cwd: URL? = nil,
+                    timeout: TimeInterval? = nil) async -> (code: Int32, output: String) {
         await Task.detached(priority: .userInitiated) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: executable)
@@ -220,16 +228,47 @@ public struct PhoneAppTools: PhoneAppTooling {
             } catch {
                 return (127, "\(executable)을 실행하지 못했습니다: \(error.localizedDescription)")
             }
+            // 기한이 있어 `availableData`로 막혀 기다리지 않고 `poll`로 읽는다.
+            let descriptor = pipe.fileHandleForReading.fileDescriptor
+            let deadline = timeout.map { Date().addingTimeInterval($0) }
+            var timedOut = false
+            var buffer = [UInt8](repeating: 0, count: 64 << 10)
             while true {
-                let chunk = pipe.fileHandleForReading.availableData
-                if chunk.isEmpty { break }
+                var wait: Int32 = -1
+                if let deadline {
+                    let left = deadline.timeIntervalSinceNow
+                    guard left > 0 else { timedOut = true; break }
+                    wait = Int32((min(left, 60) * 1000).rounded(.up))
+                }
+                var polled = pollfd(fd: descriptor, events: Int16(POLLIN), revents: 0)
+                let ready = poll(&polled, 1, wait)
+                if ready == 0 { continue }
+                if ready < 0 { if errno == EINTR { continue } else { break } }
+                let count = read(descriptor, &buffer, buffer.count)
+                if count < 0, errno == EINTR { continue }
+                guard count > 0 else { break }
+                let chunk = Data(buffer[0..<count])
                 collected.append(chunk)
                 try? handle?.write(contentsOf: chunk)
+            }
+            guard !timedOut else {
+                process.terminate()
+                let killAt = Date().addingTimeInterval(terminationGrace)
+                while process.isRunning, Date() < killAt { usleep(50_000) }
+                if process.isRunning { kill(process.processIdentifier, SIGKILL) }
+                process.waitUntilExit()
+                try? handle?.write(contentsOf: Data("\n(기한 \(Int(timeout ?? 0))초를 넘겨 멈췄습니다)\n".utf8))
+                return (timedOutCode, String(decoding: collected, as: UTF8.self))
             }
             process.waitUntilExit()
             return (process.terminationStatus, String(decoding: collected, as: UTF8.self))
         }.value
     }
+
+    /// `run`이 기한을 넘겨 멈춘 프로세스에 돌려주는 종료 코드. 실제 종료 코드와 겹치지 않는다.
+    static let timedOutCode = Int32.min
+    /// 기한을 넘긴 프로세스에 `SIGTERM`을 보낸 뒤 `SIGKILL`까지 기다리는 시간(초).
+    static let terminationGrace: TimeInterval = 5
 }
 
 /// Mac 앱이 iPhone 앱을 빌드해 연결한 iPhone에 설치한다.

@@ -146,6 +146,22 @@ struct CrashTests {
         ]
         for body in invalid { #expect(await fixture.request("POST", "/v1/crashes", body: body).status == 400) }
     }
+    @Test("따로 적은 글(message): 피드백에만 읽고 길이를 자른다. 없으면 없는 채로 넘긴다")
+    func 따로적은글() async throws {
+        let fixture = try HostFixture()
+        func sent(_ fields: [String: Any]) async throws -> CrashReport {
+            #expect(await fixture.request("POST", "/v1/crashes", body: try jsonText(fields)).status == 202)
+            guard case .deviceCrash(let event) = fixture.events.next() else { throw HostErrors.make("bad_request", "크래시 사건 없음") }
+            return event.report
+        }
+        #expect(try await sent(["kind": "feedback", "text": "느려요\n\n---\n로그", "message": "느려요"]).message == "느려요")
+        #expect(try await sent(["kind": "feedback", "text": "(글 없이 보냄)\n\n---\n로그 2", "message": ""]).message == "")
+        #expect(try await sent(["kind": "feedback", "text": "옛 클라이언트"]).message == nil)
+        #expect(try await sent(["kind": "ips", "text": "크래시", "message": "x"]).message == nil)
+        let long = try await sent(["kind": "feedback", "text": "긴 글", "message": String(repeating: "가", count: CrashReport.maxMessageBytes)])
+        #expect((long.message?.utf8.count ?? 0) <= CrashReport.maxMessageBytes && long.message?.isEmpty == false)
+        #expect(try await sent(["kind": "feedback", "text": "글자가 아닌 값", "message": 3]).message == nil, "글자가 아닌 값은 없는 것으로 본다")
+    }
     @Test("글 없는 피드백: 패키지가 첫 줄에 표시를 적어 보내므로 받는다. text가 아예 비면 거절한다")
     func 글없는피드백() async throws {
         let fixture = try HostFixture()
@@ -178,6 +194,15 @@ struct CrashTests {
         #expect(await fixture.request("/v1/feedback/checklist/other.app").status == 200)
         #expect(await fixture.request("/v1/feedback/checklist/bad%20id").status == 400)
         #expect(await fixture.request("POST", "/v1/feedback/checklist/com.example.app", body: "{}").status == 405)
+        // Mac 앱이 저장할 때 지키는 크기까지는 그대로 준다. 그보다 큰 파일은 빈 목록으로 답한다.
+        func padded(_ bytes: Int) -> Data {
+            let head = #"{"bundleId":"com.example.app","items":[],"pad":""#, tail = "\"}"
+            return Data((head + String(repeating: "x", count: bytes - head.utf8.count - tail.utf8.count) + tail).utf8)
+        }
+        try padded(FeedbackChecklist.maxEncodedBytes).write(to: fixture.directory.appendingPathComponent("checklist-com.example.app.json"))
+        #expect(try responseData(await fixture.request("/v1/feedback/checklist/com.example.app")).count == FeedbackChecklist.maxEncodedBytes)
+        try padded(FeedbackChecklist.maxEncodedBytes + 1).write(to: fixture.directory.appendingPathComponent("checklist-com.example.app.json"))
+        #expect(try responseData(await fixture.request("/v1/feedback/checklist/com.example.app")).count < 100)
         // 저장된 것이 JSON 객체가 아니면 빈 목록으로 답한다.
         try Data("broken".utf8).write(to: fixture.directory.appendingPathComponent("checklist-com.example.app.json"))
         let broken = await fixture.request("/v1/feedback/checklist/com.example.app")

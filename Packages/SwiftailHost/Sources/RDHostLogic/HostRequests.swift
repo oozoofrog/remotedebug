@@ -41,7 +41,8 @@ extension HostLogic {
             // 앱(번들 ID)의 확인 목록. 없으면 빈 목록을 준다. 다른 `/v1/*`처럼 페어링한 기기만 받는다.
             guard FeedbackChecklist.isValidBundleID(route.parameter) else { throw HostErrors.make("bad_request", "bundleId가 올바르지 않습니다.") }
             let stored = options.feedbackChecklist(route.parameter).flatMap { data in
-                data.count <= 1 << 20 && (try? JSONSerialization.jsonObject(with: data)) is [String: Any] ? data : nil
+                // Mac 앱이 저장할 때 지키는 한도(`FeedbackChecklist.maxEncodedBytes`)까지 준다. 더 큰 파일은 손댄 것이므로 없는 것으로 본다.
+                data.count <= FeedbackChecklist.maxEncodedBytes && (try? JSONSerialization.jsonObject(with: data)) is [String: Any] ? data : nil
             }
             return HostResponse(status: 200, headers: [("Content-Type", "application/json"), ("Cache-Control", "no-store")],
                                 body: .bytes(stored.map(Array.init) ?? Array(("{\"bundleId\":\"" + route.parameter + "\",\"items\":[]}").utf8)))
@@ -201,6 +202,10 @@ extension HostLogic {
                                      appVersion: hostTruncate(input.string("appVersion"), bytes: 200),
                                      crashedAt: min(RDTimestamp.parse(input.string("crashedAt")) ?? receivedAt, receivedAt), text: text, image: image, attachments: attachments)
         report.checks = checks
+        // 사용자가 쓴 글만 따로 적은 값. 새 클라이언트가 피드백에 붙인다(빈 글자도 값이다). 받는 Mac이 글과 로그를 가르는 데 쓴다.
+        if kind == .feedback, input.value("message") is String {
+            report.message = try hostTruncate(input.string("message"), bytes: CrashReport.maxMessageBytes)
+        }
         guard let device = devices[peer.stableID] else { return deny("not_paired", peer: peer, path: path) }
         emit(.deviceCrash(.init(deviceId: device.id, deviceName: device.name, nodeName: device.nodeName, report: report)), receivedAt: receivedAt)
         return object(["accepted": 1], status: 202)

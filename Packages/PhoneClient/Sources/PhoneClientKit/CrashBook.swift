@@ -15,6 +15,8 @@ public final class CrashBook {
         public var appVersion: String
         public var crashedAt: Date
         public var sent: Bool
+        /// 피드백에서 사용자가 쓴 글만 따로 둔 값(`CrashReport.message`). 옛 기록에는 없다.
+        public var message: String?
 
         /// 목록에 보일 이름: 번들 ID의 마지막 마디, 없으면 파일 이름.
         public var title: String {
@@ -50,7 +52,7 @@ public final class CrashBook {
     @discardableResult
     public func add(_ report: CrashReport) -> Item? {
         let item = Item(id: report.id, kind: report.kind, name: report.name, bundleId: report.bundleId,
-                        appVersion: report.appVersion, crashedAt: report.crashedAt, sent: false)
+                        appVersion: report.appVersion, crashedAt: report.crashedAt, sent: false, message: report.message)
         guard !items.contains(where: { $0.id == item.id }) else { return nil }
         if let url = fileURL(item) {
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -108,8 +110,10 @@ public final class CrashBook {
 
     public func report(_ item: Item) -> CrashReport? {
         text(item).map {
-            CrashReport(kind: item.kind, name: item.name, bundleId: item.bundleId, appVersion: item.appVersion, crashedAt: item.crashedAt, text: $0, image: image(item),
-                        attachments: attachments(item))
+            var report = CrashReport(kind: item.kind, name: item.name, bundleId: item.bundleId, appVersion: item.appVersion, crashedAt: item.crashedAt, text: $0, image: image(item),
+                                     attachments: attachments(item))
+            report.message = item.message
+            return report
         }
     }
 

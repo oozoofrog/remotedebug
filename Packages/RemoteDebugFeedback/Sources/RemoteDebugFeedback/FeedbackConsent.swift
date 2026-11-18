@@ -71,29 +71,40 @@ public extension RemoteDebugFeedback {
     /// 로그 기록 동의를 남기거나 거둔다. 사용자가 설명을 읽고 동의한 뒤에만 `true`로 부른다
     /// (`RemoteDebugFeedbackConsentToggle`이 그 화면이다).
     /// `false`로 부르면 이 패키지가 기기에 남긴 것을 모두 지운다: 메모리의 로그, 임시 폴더의 진단 파일,
-    /// Debug 빌드에서 Mac에 보내지 못해 쌓아 둔 기록.
+    /// Debug 빌드에서 Mac에 보내지 못해 쌓아 둔 기록과 확인 목록에 고른 답·메모.
     static func setRecordingConsent(_ granted: Bool) {
-        setRecordingConsent(granted, temporaryRoot: FileManager.default.temporaryDirectory)
+        setRecordingConsent(granted, temporaryRoot: FileManager.default.temporaryDirectory, checksDirectory: storedChecksDirectory)
     }
 
     /// 이 패키지가 기기에 남긴 로그와 파일을 지운다. 동의 여부는 바꾸지 않는다.
     static func deleteRecorded() {
-        deleteRecorded(temporaryRoot: FileManager.default.temporaryDirectory)
+        deleteRecorded(temporaryRoot: FileManager.default.temporaryDirectory, checksDirectory: storedChecksDirectory)
     }
 }
 
 extension RemoteDebugFeedback {
-    static func setRecordingConsent(_ granted: Bool, temporaryRoot: URL) {
-        withState { $0.consent }.set(granted)
-        if !granted { deleteRecorded(temporaryRoot: temporaryRoot) }
+    /// 확인 목록과 고른 답을 두는 폴더(Debug 빌드에만 있다). 배포 빌드에는 그 폴더도 이름도 없다.
+    static var storedChecksDirectory: URL? {
+        #if DEBUG
+        FeedbackCheckStore.defaultDirectory()
+        #else
+        nil
+        #endif
     }
 
-    /// `temporaryRoot`: 진단 파일을 두는 임시 폴더의 부모(시험에서 바꿔 넣는다).
-    static func deleteRecorded(temporaryRoot: URL) {
+    static func setRecordingConsent(_ granted: Bool, temporaryRoot: URL, checksDirectory: URL? = nil) {
+        withState { $0.consent }.set(granted)
+        if !granted { deleteRecorded(temporaryRoot: temporaryRoot, checksDirectory: checksDirectory) }
+    }
+
+    /// `temporaryRoot`: 진단 파일을 두는 임시 폴더의 부모. `checksDirectory`: 확인 목록의 답을 두는 폴더(시험에서 바꿔 넣는다).
+    static func deleteRecorded(temporaryRoot: URL, checksDirectory: URL? = nil) {
         FeedbackLog.shared.clear()
         FeedbackSession.removeLeftovers(in: temporaryRoot)
         #if DEBUG
         if let directory = withState({ $0.storage }) { FeedbackClient.removeQueued(in: directory) }
+        // 확인 목록에 고른 답과 메모(사용자가 적은 글)와 Mac에서 받아 둔 목록.
+        if let checksDirectory { FeedbackCheckStore.removeStored(in: checksDirectory) }
         #endif
     }
 }
