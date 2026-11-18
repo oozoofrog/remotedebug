@@ -599,11 +599,57 @@ public final class ProjectsModel {
         var file: ResourceDescriptor?
         var files: [ResourceDescriptor]?
         var feedback: FeedbackGuide?
+        /// `checklist`가 저장했거나 읽은 확인 목록.
+        var checklist: FeedbackChecklist?
         /// `reports`의 목록이나 `report`의 원문(글).
         var text: String?
     }
 
     var crashLogsDir: URL { root.appendingPathComponent("CrashLogs", isDirectory: true) }
+
+    /// 앱마다 남긴 확인 목록을 두는 폴더. 코어가 `GET /v1/feedback/checklist/<번들 ID>`로 여기서 읽어 준다.
+    var checklistsDir: URL { FeedbackChecklist.directory(publishDirectory: root.appendingPathComponent("Published").path) }
+
+    /// `checklist` 명령: `argument`가 비면 읽기, `clear`면 지우기, JSON이나 JSON 파일 경로면 바꿔 넣기.
+    func checklistResponse(bundleId: String, argument: String) -> AgentResponse {
+        let bundleId = bundleId.trimmingCharacters(in: .whitespaces), argument = argument.trimmingCharacters(in: .whitespaces)
+        guard FeedbackChecklist.isValidBundleID(bundleId) else {
+            return AgentResponse(ok: false, error: "앱의 번들 ID가 필요합니다(예: com.example.app). 받은 값: \(bundleId)")
+        }
+        let file = checklistsDir.appendingPathComponent(bundleId + ".json")
+        switch argument {
+        case "":
+            guard let data = try? Data(contentsOf: file), let stored = try? RDJSON.decoder().decode(FeedbackChecklist.self, from: data) else {
+                return AgentResponse(ok: true, text: "\(bundleId)에 남긴 확인 목록이 없습니다.")
+            }
+            return AgentResponse(ok: true, checklist: stored)
+        case "clear":
+            try? FileManager.default.removeItem(at: file)
+            return AgentResponse(ok: true, text: "\(bundleId)의 확인 목록을 지웠습니다. 앱이 피드백 화면을 다시 열면 사라집니다.")
+        default:
+            var json = Data(argument.utf8)
+            if !argument.hasPrefix("[") && !argument.hasPrefix("{") {
+                let source = URL(fileURLWithPath: argument)
+                guard let size = (try? source.resourceValues(forKeys: [.fileSizeKey]))?.fileSize, size <= 1 << 20,
+                      let data = try? Data(contentsOf: source) else {
+                    return AgentResponse(ok: false, error: "항목 JSON 파일을 읽을 수 없습니다(1MB 이하): \(argument)")
+                }
+                json = data
+            }
+            do throws(FeedbackChecklist.Invalid) {
+                let checklist = try FeedbackChecklist.make(bundleId: bundleId, json: json, now: now())
+                guard let data = try? RDJSON.encoder().encode(checklist),
+                      (try? FileManager.default.createDirectory(at: checklistsDir, withIntermediateDirectories: true)) != nil,
+                      (try? data.write(to: file, options: .atomic)) != nil else {
+                    return AgentResponse(ok: false, error: "확인 목록을 저장하지 못했습니다.")
+                }
+                return AgentResponse(ok: true, checklist: checklist,
+                                     text: "항목 \(checklist.items.count)개를 저장했습니다. 사용자가 Debug 빌드에서 피드백 화면을 열면 보입니다(그 iPhone의 RemoteDebug VPN이 켜져 있어야 새로 받는다).")
+            } catch {
+                return AgentResponse(ok: false, error: error.message)
+            }
+        }
+    }
 
     func feedbackGuide(for project: ConnectedProject, email: String) -> FeedbackGuide {
         let info = feedbackInfo(project)
@@ -814,6 +860,9 @@ public final class ProjectsModel {
                 return AgentResponse(ok: false, error: "\(path) 기록이 없습니다. reports로 목록을 확인하세요.")
             }
             return AgentResponse(ok: true, text: text)
+        case "checklist":
+            // 둘째 줄이 번들 ID, 셋째 줄이 항목 JSON(파일 경로나 한 줄 JSON), `clear`, 또는 빈 줄(읽기)이다.
+            return checklistResponse(bundleId: path, argument: scheme)
         case "connect", "schemes", "build", "feedback":
             guard !path.isEmpty else { return AgentResponse(ok: false, error: "프로젝트 경로가 필요합니다.") }
             lastError = nil
@@ -845,7 +894,7 @@ public final class ProjectsModel {
             return AgentResponse(ok: report.ok, error: report.ok ? nil : report.message, sharing: host.sharing,
                                  installPage: host.installPage, report: report)
         default:
-            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build, feedback, reports, report 중 하나를 쓰세요.")
+            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build, feedback, checklist, reports, report 중 하나를 쓰세요.")
         }
     }
 
@@ -888,10 +937,10 @@ enum AgentScript {
         """
         #!/bin/sh
         # RemoteDebug Mac 앱에 명령을 보낸다. 앱이 이 파일을 실행할 때마다 새로 쓴다.
-        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | reports [feedback|crash] [앱] | report <기록 id>
+        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id>
         dir=\(quoted(agentDir))
         bundle=\(quoted(bundleID))
-        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | reports [feedback|crash] [앱] | report <기록 id>" >&2; exit 2; }
+        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id>" >&2; exit 2; }
         cmd=$1
         path=${2:-}
         scheme=${3:-}
@@ -901,6 +950,10 @@ enum AgentScript {
           push) project=$scheme; scheme= ;;
           link) project=${4:-} ;;
           files) project=$path; path= ;;
+        esac
+        # checklist의 셋째 인자는 항목 JSON 파일이다(clear와 빈 값은 그대로).
+        case "$cmd" in
+          checklist) case "$scheme" in ""|clear|/*) ;; *) scheme="$PWD/$scheme" ;; esac ;;
         esac
         # 경로를 받는 명령만 상대 경로를 절대 경로로 바꾼다(id·주소는 그대로).
         case "$cmd" in
@@ -944,6 +997,7 @@ enum AgentScript {
         \(rd) files \(project)           # 이 프로젝트 구역에 보낸 파일·링크(프로젝트를 빼면 전체)
         \(rd) feedback \(project) [메일]  # 이 앱에 크래시·피드백 보내기를 붙이는 안내와 넣을 코드
         \(rd) reports feedback            # 앱에서 받은 피드백 목록(reports crash는 크래시 기록, report <id>는 원문)
+        \(rd) checklist <번들 ID> [항목 JSON 파일|clear]  # 사용자가 Debug 빌드에서 확인할 것과 고를 답을 남긴다(인자 없이 부르면 지금 목록)
         ```
 
         - `build`는 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 실패하면 `error`와 `report.logTail`에 컴파일 오류가, `report.logPath`에 전체 로그 경로가 있다.
@@ -961,7 +1015,8 @@ enum AgentScript {
     /// 앱에 피드백 보내기를 붙이는 법. 전역 스킬과 프로젝트 안내가 함께 쓴다.
     static let feedbackGuidance = """
         - 앱에 피드백 보내기(크래시 기록 포함)를 붙여 달라는 요청에는 `feedback`(MCP `remotedebug_feedback_setup`)을 부른다. 응답의 `feedback.snippet`에 이 Mac의 주소와 이 프로젝트의 공개키가 든 코드가, `feedback.steps`에 할 일이 순서대로 있다. `feedback.added`가 true면 패키지는 이미 들어 있다. 사용자에게 Mac 앱에서 코드를 복사해 달라고 하지 않는다. 메일 주소를 주면 코드가 `#if DEBUG`로 나뉜다: Debug 빌드는 Mac으로 보내고, 배포판(App Store)은 Mac 주소 없이 사용자가 메일로 보낸다.
-        - 받은 피드백은 `reports feedback`(MCP `remotedebug_crash_logs`의 `kind: feedback`)으로 목록을, `report <id>`로 글·기기·앱 버전·최근 로그를 읽는다. 목록의 `사진:` 경로가 함께 온 화면 사진이다.
+        - 받은 피드백은 `reports feedback`(MCP `remotedebug_crash_logs`의 `kind: feedback`)으로 목록을, `report <id>`로 글·기기·앱 버전·최근 로그를 읽는다. 목록에서 기록 아랫줄의 `첨부:` 경로가 사용자가 골라 붙인 사진과 파일이다(기록 하나에 5개, 합쳐 1.5MB까지. 옛 기록은 `사진:` 경로 하나). 받은 파일은 읽기만 하고 실행하지 않는다.
+        - 빌드를 게시한 뒤 사용자가 기기에서 봐야 할 것이 있으면 `checklist <번들 ID> <항목 JSON 파일>`(MCP `remotedebug_feedback_checklist`)로 이번에 바뀐 것만 확인 목록에 남긴다. 항목은 `id`, `title`, `place`(어디서), `steps`(할 일), `expect`(보여야 하는 것들), `choices`(고를 답 2~6개, 비우면 통과·실패), `since`(이 항목이 바뀐 빌드 번호. 앞선 빌드의 답은 세지 않는다), `stage`(묶음 이름)이고 50개까지다. 사용자에게 앱의 피드백 화면을 열어 "확인할 것"에 답하고 보내 달라고 한 뒤, `reports feedback`과 `report <id>`로 원문 끝의 "확인 목록의 답"을 읽는다. 확인이 끝난 항목은 목록에서 빼고, 다 끝나면 `checklist <번들 ID> clear`로 지운다. Debug 빌드에만 보이고 배포판에는 없다.
         """
 
     /// 버전 올리기와 게시 뒤 점검. 전역 스킬과 프로젝트 안내가 함께 쓴다.

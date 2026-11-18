@@ -28,7 +28,7 @@ public enum FeedbackSetup {
             \(arguments.joined(separator: ",\n    "))
         ))
         """
-        // 배포판(App Store)에는 Mac 주소를 넣지 않는다. 사용자가 메일로 보내고, 로그·화면 사진은 사용자가 켰을 때만 암호화해 붙인다.
+        // 배포판(App Store)에는 Mac 주소를 넣지 않는다. 사용자가 메일로 보내고, 로그는 사용자가 켰을 때만 암호화해 붙인다. 사용자가 고른 사진과 파일은 메일에 그대로 붙는다.
         let start = email.isEmpty ? debugStart : """
         #if DEBUG
         \(debugStart)
@@ -43,7 +43,7 @@ public enum FeedbackSetup {
         // 앱을 시작할 때 한 번(App의 init이나 application(_:didFinishLaunchingWithOptions:))
         \(start)
 
-        // 피드백 화면을 띄울 곳(디버그 메뉴, 설정 화면 등). 띄우기 직전 화면을 찍어 함께 보여 준다.
+        // 피드백 화면을 띄울 곳(디버그 메뉴, 설정 화면 등). 화면은 저절로 찍지 않고, 사용자가 사진과 파일을 골라 붙인다(5개, 합쳐 1.5MB까지).
         .remoteDebugFeedback(isPresented: $showsFeedback)
 
         // 피드백에 함께 갈 로그(선택). os.Logger로 남긴 이 앱의 최근 로그는 자동으로 모은다.

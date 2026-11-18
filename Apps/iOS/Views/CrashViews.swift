@@ -147,7 +147,7 @@ struct CrashDetailView: View {
     }
 }
 
-/// RemoteDebug 앱에 대한 피드백을 적어 Mac에 보낸다.
+/// RemoteDebug 앱에 대한 피드백을 적어 Mac에 보낸다. 사진과 파일은 사용자가 고른 것만 붙는다.
 struct FeedbackComposer: View {
     var canSendNow: Bool
     var actions: SettingsActions
@@ -155,8 +155,14 @@ struct FeedbackComposer: View {
     @State private var message = ""
     @State private var includesLogs = true
     @State private var isSending = false
-    @State private var image: Data?
-    @State private var picked: PhotosPickerItem?
+    /// 붙일 사진과 파일. 보낼 때까지 메모리에만 둔다(수와 크기는 `CrashReport`의 한도까지).
+    @State private var attachments: [CrashReport.Attachment] = []
+    @State private var attachNotice: String?
+    @State private var pickedPhotos: [PhotosPickerItem] = []
+    @State private var photoNumber = 0
+    @State private var picksFile = false
+
+    private var isFull: Bool { attachments.count >= CrashReport.maxAttachments }
 
     var body: some View {
         Form {
@@ -168,18 +174,48 @@ struct FeedbackComposer: View {
                 Text("무엇이 문제인가요?")
             }
             Section {
-                if let image, let preview = UIImage(data: image) {
-                    Image(uiImage: preview)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 180)
-                        .frame(maxWidth: .infinity)
-                        .accessibilityLabel("붙일 화면 사진")
-                    Button("사진 빼기", role: .destructive) { self.image = nil }
+                ForEach(Array(attachments.enumerated()), id: \.offset) { index, attachment in
+                    HStack(spacing: 10) {
+                        Image(systemName: attachment.type.hasPrefix("image/") ? "photo" : "doc")
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(attachment.name).lineLimit(1).truncationMode(.middle)
+                            Text(Int64(attachment.data.count).formatted(.byteCount(style: .file)))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button(role: .destructive) {
+                            attachments.remove(at: index)
+                            attachNotice = nil
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("\(attachment.name) 빼기")
+                    }
                 }
-                PhotosPicker(selection: $picked, matching: .images) {
-                    Label("화면 사진 고르기", systemImage: "photo")
+                PhotosPicker(selection: $pickedPhotos, maxSelectionCount: max(1, CrashReport.maxAttachments - attachments.count),
+                             matching: .images) {
+                    Label("사진 첨부", systemImage: "photo")
                 }
+                .disabled(isFull)
+                Button {
+                    picksFile = true
+                } label: {
+                    Label("파일 첨부", systemImage: "paperclip")
+                }
+                .disabled(isFull)
+            } header: {
+                Text("첨부")
+            } footer: {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("사진과 파일을 5개까지 붙일 수 있습니다. 파일 하나는 1MB, 모두 합쳐 1.5MB까지이고 사진은 크기를 줄여 붙입니다.")
+                    if let attachNotice { Text(attachNotice).foregroundStyle(.red) }
+                }
+            }
+            Section {
                 Toggle("최근 진단 로그 붙이기", isOn: $includesLogs)
             } footer: {
                 Text(canSendNow
@@ -189,18 +225,32 @@ struct FeedbackComposer: View {
         }
         .navigationTitle("피드백 보내기")
         .navigationBarTitleDisplayMode(.inline)
-        .onChange(of: picked) { _, item in
+        .onChange(of: pickedPhotos) { _, items in
+            guard !items.isEmpty else { return }
+            pickedPhotos = []
             Task {
-                guard let data = try? await item?.loadTransferable(type: Data.self), let photo = UIImage(data: data) else { return }
-                image = Self.compressed(photo)
+                attachNotice = nil
+                for item in items {
+                    guard let data = try? await item.loadTransferable(type: Data.self), let photo = UIImage(data: data),
+                          let jpeg = Self.compressed(photo) else {
+                        attachNotice = String(localized: "사진을 읽을 수 없습니다.")
+                        continue
+                    }
+                    photoNumber += 1
+                    add(.init(name: "photo-\(photoNumber).jpg", type: "image/jpeg", data: jpeg))
+                }
             }
+        }
+        .fileImporter(isPresented: $picksFile, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+            attachNotice = nil
+            for url in (try? result.get()) ?? [] { addFile(url) }
         }
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("보내기") {
                     isSending = true
                     Task {
-                        await actions.sendFeedback(message, includesLogs, image)
+                        await actions.sendFeedback(message, includesLogs, attachments)
                         dismiss()
                     }
                 }
@@ -209,16 +259,51 @@ struct FeedbackComposer: View {
         }
     }
 
-    /// 긴 변을 1600픽셀 아래로 줄이고 Mac이 받는 한도(1MB)에 들어올 때까지 JPEG 품질을 낮춘다.
+    /// 한도 안이면 붙이고, 아니면 까닭을 알린다.
+    private func add(_ attachment: CrashReport.Attachment) {
+        switch CrashReport.attachmentRefusal(adding: attachment.data.count, to: attachments) {
+        case nil: attachments.append(attachment)
+        case .tooMany: attachNotice = String(localized: "첨부는 5개까지 붙일 수 있습니다.")
+        case .tooLarge: attachNotice = String(localized: "1MB가 넘는 파일은 붙일 수 없습니다: \(attachment.name)")
+        case .totalTooLarge: attachNotice = String(localized: "첨부는 모두 합쳐 1.5MB까지 붙일 수 있습니다.")
+        }
+    }
+
+    /// 고른 파일을 읽어 붙인다. 파일을 다른 곳에 복사해 두지 않는다. 사진 파일은 줄여서, 나머지는 크기를 먼저 보고 읽는다.
+    private func addFile(_ url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        let name = url.lastPathComponent
+        let type = UTType(filenameExtension: url.pathExtension)
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+        if type?.conforms(to: .image) == true, size <= 50 << 20, let photo = UIImage(contentsOfFile: url.path),
+           let jpeg = Self.compressed(photo) {
+            add(.init(name: url.deletingPathExtension().lastPathComponent + ".jpg", type: "image/jpeg", data: jpeg))
+            return
+        }
+        guard size <= CrashReport.maxAttachmentBytes else {
+            attachNotice = String(localized: "1MB가 넘는 파일은 붙일 수 없습니다: \(name)")
+            return
+        }
+        guard let data = try? Data(contentsOf: url), !data.isEmpty else {
+            attachNotice = String(localized: "파일을 읽을 수 없습니다: \(name)")
+            return
+        }
+        add(.init(name: name, type: type?.preferredMIMEType ?? "application/octet-stream", data: data))
+    }
+
+    /// 긴 변을 1600픽셀 아래로 줄이고 사진 한 장의 한도에 들어올 때까지 JPEG 품질과 크기를 낮춘다.
     static func compressed(_ photo: UIImage) -> Data? {
         let longest = max(photo.size.width, photo.size.height) * photo.scale
-        let scale = min(1, 1600 / max(longest, 1))
-        let size = CGSize(width: photo.size.width * photo.scale * scale, height: photo.size.height * photo.scale * scale)
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let resized = UIGraphicsImageRenderer(size: size, format: format).image { _ in photo.draw(in: CGRect(origin: .zero, size: size)) }
-        for quality in [0.7, 0.5, 0.3, 0.15] {
-            if let data = resized.jpegData(compressionQuality: quality), data.count <= 900 << 10 { return data }
+        for side in [1600.0, 1200, 800] {
+            let scale = min(1, side / max(longest, 1))
+            let size = CGSize(width: photo.size.width * photo.scale * scale, height: photo.size.height * photo.scale * scale)
+            let format = UIGraphicsImageRendererFormat()
+            format.scale = 1
+            let resized = UIGraphicsImageRenderer(size: size, format: format).image { _ in photo.draw(in: CGRect(origin: .zero, size: size)) }
+            for quality in [0.7, 0.5, 0.3] {
+                if let data = resized.jpegData(compressionQuality: quality), data.count <= CrashReport.maxAttachedImageBytes { return data }
+            }
         }
         return nil
     }

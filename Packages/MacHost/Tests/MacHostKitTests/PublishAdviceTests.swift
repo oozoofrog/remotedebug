@@ -104,6 +104,53 @@ struct PublishAdviceTests {
     }
 }
 
+extension PublishAdviceTests {
+    /// 에이전트가 앱의 확인 목록을 남기고, 읽고, 지운다. 코어는 같은 파일을 iPhone에 내준다.
+    @Test func checklistCommandSetsGetsAndClears() async throws {
+        let tmp = try TempDir("checklist")
+        let model = ProjectsModel(root: tmp.path("state"), builder: AdviceBuilder(app: tmp.path("p/App.app")),
+                                  scanner: DerivedDataScanner(root: tmp.path("DerivedData")),
+                                  now: { Date(timeIntervalSince1970: 1_794_478_500) }) { _ in nil }
+        let file = FeedbackChecklist.file(bundleId: "com.example.app", publishDirectory: tmp.path("state/Published").path)
+
+        let none = await model.handleAgentRequest("checklist\ncom.example.app\n\n")
+        #expect(none.ok && none.checklist == nil && none.text?.contains("없습니다") == true)
+
+        // MCP는 항목을 한 줄 JSON으로, rd는 파일 경로로 넘긴다.
+        let inline = #"[{"id":"launch","title":"앱이 켜진다"},{"id":"pay.sheet","title":"결제 화면이 열린다","place":"설정 › 결제","expect":["금액이 보임"],"choices":["보임","안 보임","모르겠음"],"since":59,"stage":"결제"}]"#
+        let set = await model.handleAgentRequest("checklist\ncom.example.app\n\(inline)\n")
+        #expect(set.ok && set.checklist?.items.map(\.id) == ["launch", "pay.sheet"])
+        #expect(set.checklist?.items.first?.choices == FeedbackChecklist.defaultChoices)
+        let onDisk = try RDJSON.decoder().decode(FeedbackChecklist.self, from: Data(contentsOf: file))
+        #expect(onDisk == set.checklist && onDisk.updatedAt == Date(timeIntervalSince1970: 1_794_478_500))
+
+        let source = tmp.path("items.json")
+        try Data(#"{"items":[{"id":"only","title":"하나만"}]}"#.utf8).write(to: source)
+        let fromFile = await model.handleAgentRequest("checklist\ncom.example.app\n\(source.path)\n")
+        #expect(fromFile.ok && fromFile.checklist?.items.map(\.id) == ["only"])
+        #expect(await model.handleAgentRequest("checklist\ncom.example.app\n\n").checklist?.items.map(\.id) == ["only"])
+
+        // 틀린 목록은 저장하지 않고 까닭을 돌려준다.
+        let bad = await model.handleAgentRequest("checklist\ncom.example.app\n[{\"id\":\"a\"}]\n")
+        #expect(!bad.ok && bad.error?.contains("title") == true)
+        #expect(await !model.handleAgentRequest("checklist\ncom.example.app\n\(tmp.path("missing.json").path)\n").ok)
+        #expect(await !model.handleAgentRequest("checklist\n../escape\n[]\n").ok)
+        #expect(await !model.handleAgentRequest("checklist\n\n\n").ok)
+        #expect(await model.handleAgentRequest("checklist\ncom.example.app\n\n").checklist?.items.map(\.id) == ["only"])
+
+        let cleared = await model.handleAgentRequest("checklist\ncom.example.app\nclear\n")
+        #expect(cleared.ok && !FileManager.default.fileExists(atPath: file.path))
+        #expect(await model.handleAgentRequest("checklist\ncom.example.app\n\n").checklist == nil)
+    }
+
+    @Test func checklistIsInTheScriptAndTheGuidance() {
+        let script = AgentScript.text(agentDir: "/tmp/agent", bundleID: "dev.example.RemoteDebug")
+        #expect(script.contains("checklist <번들 ID> [항목 JSON 파일|clear]"))
+        #expect(script.contains(#"checklist) case "$scheme" in ""|clear|/*) ;; *) scheme="$PWD/$scheme" ;; esac ;;"#))
+        #expect(AgentScript.feedbackGuidance.contains("remotedebug_feedback_checklist") && AgentScript.feedbackGuidance.contains("확인 목록의 답"))
+    }
+}
+
 private struct AdviceBuilder: ProjectBuilding {
     let app: URL
     func schemes(container: URL) async throws -> [String] { ["App"] }

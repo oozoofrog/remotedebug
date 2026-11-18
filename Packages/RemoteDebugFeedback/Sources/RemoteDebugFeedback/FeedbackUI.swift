@@ -31,6 +31,9 @@ struct FeedbackMailComposer: UIViewControllerRepresentable {
             controller.addAttachmentData(attachment.data, mimeType: FeedbackAttachment.mimeType,
                                          fileName: attachment.fileName)
         }
+        for file in mail.files {
+            controller.addAttachmentData(file.data, mimeType: file.type, fileName: file.name)
+        }
         return controller
     }
 

@@ -134,9 +134,9 @@ import RemoteDebugFeedback
 RemoteDebugFeedback.start(.init(
     macHost: "<Mac address>",           // builds installed through RemoteDebug send straight to the Mac
     email: "<address for feedback>",    // optional: used when the Mac is unreachable, and by release builds
-    publicKeyBase64: "<public key>"     // optional: Debug builds attach encrypted logs and the screenshot to the mail
+    publicKeyBase64: "<public key>"     // optional: logs the user chooses to attach are encrypted into the mail
 ))
-.remoteDebugFeedback(isPresented: $showsFeedback)      // form with text, screenshot, and recent logs
+.remoteDebugFeedback(isPresented: $showsFeedback)      // form with text, photos and files the user picks, and recent logs
 ```
 
 - Drop an encrypted mail attachment (`.afdiag`) on the Mac app's crash and feedback screen to open it. The key stays in that Mac's keychain.

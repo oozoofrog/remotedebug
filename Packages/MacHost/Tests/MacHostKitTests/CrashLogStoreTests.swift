@@ -87,6 +87,101 @@ import Testing
         #expect(files.count == CrashLogStore.perDeviceLimit + 1)
     }
 
+    private func feedback(_ n: Int, attachments: [CrashReport.Attachment]) -> DeviceCrashEvent {
+        DeviceCrashEvent(deviceId: "d_a", deviceName: "폰", nodeName: "rd-phone-1",
+                         report: CrashReport(kind: .feedback, name: "f\(n).txt", bundleId: "com.example.app", appVersion: "1",
+                                             crashedAt: Date(timeIntervalSince1970: Double(n)), text: "feedback \(n)", attachments: attachments))
+    }
+
+    /// 첨부는 기록 옆에 고친 이름으로 저장되고, 목록 글에 경로가 나온다.
+    @Test func attachmentsAreStoredBesideTheReportWithSafeNames() throws {
+        let dir = try TempDir("crashes-attached")
+        let store = CrashLogStore(directory: dir.url)
+        store.receive(feedback(1, attachments: [.init(name: "../../../escape.sh", type: "text/x-shellscript", data: Data("#!/bin/sh".utf8)),
+                                                .init(name: "photo-1.jpg", type: "image/jpeg", data: Data("jpeg".utf8))]))
+        let item = try #require(store.items.first)
+        let attached = try #require(item.attachments)
+        #expect(attached.map(\.name) == ["escape.sh", "photo-1.jpg"])
+        #expect(attached.map(\.file) == ["\(item.id)-1-escape.sh", "\(item.id)-2-photo-1.jpg"])
+        #expect(attached.map(\.bytes) == [9, 4])
+        let urls = attached.compactMap(store.attachmentURL)
+        #expect(urls.count == 2)
+        for url in urls {
+            #expect(url.deletingLastPathComponent().standardizedFileURL == dir.url.standardizedFileURL)
+            let permissions = try #require(FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int)
+            #expect(permissions & 0o111 == 0, "실행 권한이 없다")
+        }
+        #expect(try Data(contentsOf: urls[1]) == Data("jpeg".utf8))
+
+        let list = CrashLogStore.listText(directory: dir.url, kind: "feedback")
+        #expect(list.contains("\n    첨부: \(urls[0].path) (9바이트)"))
+        #expect(list.contains("\n    첨부: \(urls[1].path) (4바이트)"))
+        // 다시 읽어도 첨부가 남아 있다.
+        #expect(CrashLogStore(directory: dir.url).items.first?.attachments == attached)
+    }
+
+    /// 지우거나 보관 한도로 밀려난 기록은 첨부 파일도 함께 지운다.
+    @Test func retentionAndRemovalDeleteAttachmentFiles() throws {
+        let dir = try TempDir("crashes-attached-retention")
+        let clock = TickingClock()
+        let store = CrashLogStore(directory: dir.url, now: { clock.tick() })
+        store.receive(feedback(0, attachments: [.init(name: "old.txt", data: Data("old".utf8))]))
+        let old = try #require(store.items.first?.attachments?.first.flatMap(store.attachmentURL))
+        #expect(FileManager.default.fileExists(atPath: old.path))
+        for n in 1...CrashLogStore.perDeviceLimit { store.receive(feedback(n, attachments: [.init(name: "a.txt", data: Data("a".utf8))])) }
+        #expect(!FileManager.default.fileExists(atPath: old.path))
+        #expect(store.items.count == CrashLogStore.perDeviceLimit)
+
+        for item in store.items { store.remove(item.id) }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: dir.url.path) == ["index.json"])
+    }
+
+    /// 확인 목록의 답은 원문 끝에 글로 붙어, 화면과 에이전트가 같은 글에서 읽는다.
+    @Test func checkAnswersAreAppendedToTheStoredText() throws {
+        let dir = try TempDir("crashes-checks")
+        let store = CrashLogStore(directory: dir.url)
+        var event = feedback(1, attachments: [])
+        event.report.checks = [.init(id: "pay.sheet", title: "결제 화면이 열린다", answer: "안 보임", note: "빈 화면", build: "59", answeredAt: "2026-11-13T05:05:01.000Z"),
+                               .init(id: "launch", title: "앱이 켜진다")]
+        store.receive(event)
+        let item = try #require(store.items.first)
+        #expect(item.id == event.report.id && item.checks == event.report.checks)
+        let text = try #require(CrashLogStore.reportText(directory: dir.url, id: item.id))
+        #expect(text.hasPrefix("feedback 1\n---\n확인 목록의 답 (1/2개 답함)"))
+        #expect(text.contains("- [안 보임] pay.sheet: 결제 화면이 열린다 (빌드 59, 2026-11-13T05:05:01.000Z)\n  메모: 빈 화면"))
+        #expect(text.contains("- [답 없음] launch: 앱이 켜진다"))
+        #expect(store.text(item) == text)
+        #expect(CrashLogStore.listText(directory: dir.url).contains("\n    확인 목록의 답: 1/2개 답함"))
+        #expect(CrashLogStore(directory: dir.url).items.first?.checks == event.report.checks)
+
+        let memory = CrashLogStore(directory: nil)
+        memory.receive(event)
+        #expect(memory.text(try #require(memory.items.first))?.contains("확인 목록의 답") == true)
+    }
+
+    /// 옛 기록(첨부 없음, 사진 한 장)은 그대로 읽히고 목록 글의 `사진:`도 남는다. 폴더 밖을 가리키는 저장 이름은 쓰지 않는다.
+    @Test func oldRecordsAndUnsafeStoredNames() throws {
+        let dir = try TempDir("crashes-old")
+        let store = CrashLogStore(directory: dir.url)
+        store.receive(DeviceCrashEvent(deviceId: "d_a", deviceName: "폰", nodeName: "rd-phone-1",
+                                       report: CrashReport(kind: .feedback, name: "f.txt", bundleId: "com.example.app", appVersion: "1",
+                                                           crashedAt: Date(timeIntervalSince1970: 1), text: "옛 피드백", image: Data([0x89, 0x50]))))
+        let item = try #require(store.items.first)
+        #expect(item.attachments == nil && item.imageFile == "\(item.id).png")
+        let list = CrashLogStore.listText(directory: dir.url)
+        #expect(list.contains("  사진: ") && !list.contains("첨부: /"))
+        // 첨부 필드가 없던 때의 index.json도 읽힌다.
+        let index = dir.url.appendingPathComponent("index.json")
+        var objects = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: index)) as? [[String: Any]])
+        #expect(objects[0]["attachments"] == nil)
+        objects[0]["attachments"] = [["name": "x", "file": "../outside.txt", "bytes": 1], ["name": "y", "file": ".hidden", "bytes": 1]]
+        try JSONSerialization.data(withJSONObject: objects).write(to: index)
+        let reloaded = CrashLogStore(directory: dir.url)
+        #expect(reloaded.items.first?.attachments?.count == 2)
+        #expect(reloaded.items.first?.attachments?.compactMap(reloaded.attachmentURL).isEmpty == true)
+        #expect(!CrashLogStore.listText(directory: dir.url).contains("첨부: /"))
+    }
+
     /// 보관 기록을 고를 때 보낸 쪽의 `crashedAt`이 아니라 이 Mac이 받은 시각을 쓴다.
     @Test func pruningUsesReceiveTimeNotCrashTime() throws {
         let dir = try TempDir("crashes-receive")

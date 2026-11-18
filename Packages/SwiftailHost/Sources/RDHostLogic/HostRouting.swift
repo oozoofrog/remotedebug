@@ -44,6 +44,7 @@ extension HostLogic {
             else if direct && path.count == 4 && path[0] == "v1" && path[1] == "builds" && path[3] == "cable-install" {
                 name = "cableInstall"; parameter = path[2]; methods = ["POST"]
             }
+            else if path.count == 4 && Array(path.prefix(3)) == ["v1", "feedback", "checklist"] { name = "checklist"; parameter = path[3] }
             else if path.count == 5 && Array(path.prefix(3)) == ["v1", "agent", "requests"] && path[4] == "cancel" {
                 name = "agentCancel"; parameter = path[3]; methods = ["POST"]
             } else if !direct {

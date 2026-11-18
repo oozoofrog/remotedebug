@@ -36,11 +36,13 @@ final class HostFixture: @unchecked Sendable {
         let clock = TestClock()
         self.clock = clock
         let queue = events
+        let folder = directory
         host = try HostLogic(options: .init(publishDirectory: directory.path,
             info: { .init(hostID: "h_1", hostName: "Mac", fqDN: "rd-mac-1.example.ts.net", appVersion: "1.0") },
             baseURL: { "https://rd-mac-1.example.ts.net" }, now: { clock.now() }, limits: limits,
             direct: { direct ? .init(id: "0123456789abcdef", port: 49152, spki: "c3BraQ==") : nil },
-            events: { _ in }, eventDetails: { queue.push($0) }, cableInstaller: cableInstaller))
+            events: { _ in }, eventDetails: { queue.push($0) }, cableInstaller: cableInstaller,
+            feedbackChecklist: { try? Data(contentsOf: folder.appendingPathComponent("checklist-" + $0 + ".json")) }))
         if paired { try host.setDevices([device()]) }
     }
     deinit { host.close(); try? FileManager.default.removeItem(at: directory) }

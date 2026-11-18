@@ -134,9 +134,9 @@ import RemoteDebugFeedback
 RemoteDebugFeedback.start(.init(
     macHost: "<Mac 주소>",              // RemoteDebug로 설치한 빌드가 Mac으로 바로 보낸다
     email: "<받을 메일 주소>",           // 선택. Mac에 닿지 않을 때와 배포 빌드의 경로
-    publicKeyBase64: "<공개키>"         // 선택. Debug 빌드가 메일에 로그·화면 사진을 암호화해 붙인다
+    publicKeyBase64: "<공개키>"         // 선택. 사용자가 붙이기로 한 로그를 메일에 암호화해 붙인다
 ))
-.remoteDebugFeedback(isPresented: $showsFeedback)      // 글, 화면 사진, 최근 로그를 받는 피드백 화면
+.remoteDebugFeedback(isPresented: $showsFeedback)      // 글, 사용자가 고른 사진·파일, 최근 로그를 받는 피드백 화면
 ```
 
 - 메일로 온 암호화 첨부(`.afdiag`)는 Mac 앱의 **크래시·피드백** 화면에 끌어다 놓으면 풀린다. 키는 그 Mac의 키체인에만 있다.

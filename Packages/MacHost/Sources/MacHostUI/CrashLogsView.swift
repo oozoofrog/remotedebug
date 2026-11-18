@@ -36,7 +36,10 @@ struct CrashLogsView: View {
                     }
                     .frame(minWidth: 240, idealWidth: 280, maxWidth: 360)
                     if let selected {
-                        CrashText(text: store.text(selected), image: store.imageURL(selected))
+                        CrashText(text: store.text(selected), image: store.imageURL(selected),
+                                  attachments: (selected.attachments ?? []).compactMap { one in
+                                      store.attachmentURL(one).map { CrashText.Attachment(name: one.name, bytes: one.bytes, url: $0) }
+                                  })
                             .id(selected.id)
                             .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
                     } else {
@@ -134,6 +137,15 @@ private struct CrashRow: View {
 private struct CrashText: View {
     let text: String?
     var image: URL?
+    var attachments: [Attachment] = []
+
+    struct Attachment: Identifiable {
+        var name: String
+        var bytes: Int
+        var url: URL
+        var id: URL { url }
+        var isPicture: Bool { ["jpg", "jpeg", "png"].contains(url.pathExtension.lowercased()) }
+    }
 
     var body: some View {
         ScrollView([.vertical, .horizontal]) {
@@ -143,7 +155,35 @@ private struct CrashText: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxHeight: 420)
-                        .accessibilityLabel("피드백에 붙은 화면 사진")
+                        .accessibilityLabel("피드백에 붙은 사진")
+                }
+                if !attachments.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("첨부 \(attachments.count)개").font(.headline)
+                        ForEach(attachments) { attachment in
+                            // 받은 파일은 앱에서 열지 않는다. 사진만 미리 보이고 나머지는 Finder에서 고른다.
+                            if attachment.isPicture, let picture = NSImage(contentsOf: attachment.url) {
+                                Image(nsImage: picture)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(maxHeight: 320)
+                                    .accessibilityLabel(attachment.name)
+                            }
+                            HStack(spacing: 8) {
+                                Image(systemName: attachment.isPicture ? "photo" : "doc")
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
+                                Text(attachment.name).lineLimit(1).truncationMode(.middle)
+                                Text(Int64(attachment.bytes).formatted(.byteCount(style: .file)))
+                                    .foregroundStyle(.secondary)
+                                Button("Finder에서 보기") {
+                                    NSWorkspace.shared.activateFileViewerSelecting([attachment.url])
+                                }
+                                .accessibilityLabel("\(attachment.name) Finder에서 보기")
+                            }
+                            .font(.callout)
+                        }
+                    }
                 }
                 Text(text ?? String(localized: "기록 파일을 읽을 수 없습니다."))
                     .font(.callout.monospaced())

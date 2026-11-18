@@ -488,7 +488,9 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 ```
 
 - `kind`: `ips`(iOS가 만든 크래시 파일, 사용자가 iPhone 앱으로 넘긴 것), `metrickit`(앱이 자기 크래시를 MetricKit에서 받은 JSON), `feedback`(사람이 앱에서 쓴 피드백, `text`가 내용). 다른 값은 `400 bad_request`.
-- `image`: 선택. 화면 사진(JPEG나 PNG)의 base64. `kind`가 `feedback`일 때만 받고, 풀었을 때 1MB를 넘거나 base64가 아니면 `400 bad_request`.
+- `image`: 선택. 사진 한 장(JPEG나 PNG)의 base64. 옛 클라이언트가 쓰던 필드이고 계속 받는다. `kind`가 `feedback`일 때만 받고, 풀었을 때 1MB를 넘거나 base64가 아니면 `400 bad_request`.
+- `attachments`: 선택. 사용자가 피드백에 붙인 사진과 파일의 배열 `[{"name":"photo-1.jpg","type":"image/jpeg","base64":"…"}]`. `kind`가 `feedback`일 때만 받고 5개까지다. 하나는 풀었을 때 1MB(1,048,576바이트), 모두 합쳐 1536KB까지이고, 넘거나 비었거나 base64가 아니면 `400 bad_request`. 합계 1536KB는 base64로 2MB여서 `text` 한도와 함께 본문 한도 4MB에 들어간다. `name`은 경로 마디와 제어 문자, 앞의 점을 없애고 100바이트로 줄인다. `type`(MIME)은 100바이트에서 자르고 없으면 `application/octet-stream`이다. 이 필드를 모르는 옛 호스트는 무시하고 글만 받는다.
+- `checks`: 선택. 확인 목록(L.4)에 사용자가 고른 답의 배열 `[{"id":"pay.sheet","title":"…","answer":"보임","note":"…","build":"59","answeredAt":"2026-11-13T05:05:01.000Z"}]`. `kind`가 `feedback`일 때만 받고 50개까지다. `answer`가 빈 글자면 아직 답하지 않은 항목이다. `id`가 비면 `400 bad_request`, 나머지 글자는 길이를 잘라 받는다(`title` 600, `answer` 120, `note` 800, `build`와 `answeredAt` 40바이트). 개발 빌드만 보낸다. 이 필드를 모르는 옛 호스트는 무시한다.
 - `text`: 원문. 비어 있거나 1536KB를 넘으면 `400 bad_request`. 본문 전체는 4MB까지 읽는다.
 - `name`, `bundleId`, `appVersion`: 200바이트에서 자른다. `crashedAt`이 ISO-8601 시각이 아니면 받은 시각으로 바꾼다.
 - 응답: `202`와 `{"accepted":1}`.
@@ -501,20 +503,34 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 
 `report`는 L.1의 본문을 정리한 것이다.
 
+### L.4 `GET /v1/feedback/checklist/<bundleId>`
+
+에이전트가 개발 빌드의 사용자에게 남기는 확인 목록이다. 인증은 `POST /v1/crashes`와 같다(허용 목록의 기기, §3). `bundleId`는 영문, 숫자, 점, 붙임표이고 255바이트 이하이며, 아니면 `400 bad_request`.
+
+```
+{"bundleId":"com.example.app","updatedAt":"2026-11-13T05:05:01Z","items":[{"id":"pay.sheet","title":"결제 화면이 열린다","place":"설정 › 결제","steps":"결제를 누른다","expect":["금액이 보임"],"choices":["보임","안 보임","모르겠음"],"since":59,"stage":"결제"}]}
+```
+
+- 남긴 목록이 없으면 `200`과 `{"bundleId":"…","items":[]}`를 준다.
+- 항목: `id`(영문, 숫자, 점, 밑줄, 붙임표, 64자까지, 목록 안에서 하나뿐), `title`(200자), `place`(선택, 200자), `steps`(선택, 2000자), `expect`(10줄까지, 한 줄 300자), `choices`(서로 다른 답 2~6개, 한 개 40자. 비우면 `통과`, `실패`), `since`(선택, 이 항목이 바뀐 빌드 번호. 그보다 앞선 빌드에서 고른 답은 세지 않는다), `stage`(선택, 묶음 이름, 80자). 목록 하나에 50개까지다. 한도를 넘는 목록은 자르지 않고 저장할 때 거절한다.
+- Mac 앱은 목록을 호스트 저장 폴더의 `FeedbackChecklists/<bundleId>.json`에 앱마다 하나씩 둔다. 에이전트 명령 `checklist <번들 ID> [항목 JSON 파일|clear]`과 MCP 도구 `remotedebug_feedback_checklist`(`bundle_id`, `items`, `clear`)가 바꿔 넣고, 읽고, 지운다.
+- `RemoteDebugFeedback` 패키지는 Debug 빌드에서만 이 목록을 쓴다. 피드백 화면을 열 때 받아 가고, 받은 것은 앱 데이터 폴더의 `RemoteDebugFeedbackChecks/checklist.json`에 하나만 남겨 Mac에 닿지 않을 때 보인다. Mac의 목록이 비어 있으면 앱이 코드로 정한 목록(`RemoteDebugFeedback.checklist`)을 쓴다. 답은 `answers.json` 하나에, 지금 목록에 있는 항목 것만 남긴다(메모는 200자까지). 답은 L.1의 `checks`로 피드백과 함께 가고, 메일 경로에서는 암호화한 `.afdiag` 안의 `checklist`에 들어간다. Release 빌드에는 이 기능의 코드와 파일이 없다.
+- Mac 앱은 받은 답을 그 피드백의 원문 끝에 `확인 목록의 답`으로 적는다.
+
 ### L.3 앱 동작
 
 - iPhone 앱은 자신의 크래시를 MetricKit에서 받아 다음 실행 때 기록으로 만든다. 다른 앱의 기록은 iOS가 앱에 내주지 않으므로, 사용자가 설정 앱의 분석 데이터에서 `.ips` 파일을 공유로 넘기거나 파일에서 가져온다.
 - iPhone 앱의 빌드 목록에서 설치된 앱마다 **크래시 기록**을 열면 그 앱(번들 ID가 같은 것)의 기록만 보이고, iPhone 설정 앱을 여는 버튼이 있다. 버튼은 분석 데이터 화면 주소(`App-prefs:Privacy&path=PROBLEM_REPORTING/DIAGNOSTIC_USAGE_DATA`)를 먼저 시도한다. iOS 27.2 시뮬레이터에서는 이 주소가 설정 앱의 첫 화면만 열었다.
-- iPhone 앱의 설정 > 크래시·피드백에서 RemoteDebug 앱에 대한 피드백을 적어 보낸다. 사진 보관함에서 고른 화면 사진과 최근 진단 로그 100줄을 붙일 수 있다.
-- 다른 앱은 저장소 루트의 Swift 패키지 `RemoteDebugFeedback`(iOS 17 이상)을 넣는다. 패키지는 자기 크래시(`metrickit`)를 모아 보내고, 피드백 화면 하나에서 글, 화면 사진(띄우기 직전 화면이나 고른 사진), 최근 로그(앱이 `log`로 남긴 줄과 이 앱의 시스템 로그 최근 15분, 300줄까지)를 받는다.
-- 피드백은 먼저 Mac으로 직접 보낸다(`feedback`). 요청은 그 iPhone의 RemoteDebug VPN을 지나므로 페어링한 기기의 요청으로 인증된다. Mac에 닿지 않으면 메일로 보내거나 저장했다가(30개까지) 다음에 보낸다. Mac 주소가 없는 빌드는 메일만 쓴다.
-- 메일 경로: iOS 메일 작성 화면을 띄우고, 메일 계정이 없으면 `mailto:` 링크를 연다. 공개키가 설정돼 있고 사용자가 로그나 화면 사진을 붙이기로 하면, 그것을 JSON으로 묶어 암호화한 파일(`.afdiag`, 평문 2MB 이하)을 붙인다. Release 빌드에서는 로그 붙이기가 꺼진 채로 시작한다. 진단 파일은 기기의 임시 폴더 한 곳에 한 개까지만 남고, 앱을 시작할 때와 새 파일을 만들기 전에 지운다.
+- iPhone 앱의 설정 > 크래시·피드백에서 RemoteDebug 앱에 대한 피드백을 적어 보낸다. 사용자가 고른 사진과 파일(L.1의 `attachments` 한도까지), 최근 진단 로그 100줄을 붙일 수 있다. 사진은 긴 변 1600픽셀 아래의 JPEG로 줄여 한 장에 300KB를 넘지 않게 하고, 1MB가 넘는 파일은 자르지 않고 받지 않는다. 보내지 못한 기록의 첨부는 기록마다 파일 하나로 남겼다가 Mac이 받으면 지운다(기록은 50개까지).
+- 다른 앱은 저장소 루트의 Swift 패키지 `RemoteDebugFeedback`(iOS 17 이상)을 넣는다. 패키지는 자기 크래시(`metrickit`)를 모아 보내고, 피드백 화면 하나에서 글, 사용자가 고른 사진과 파일(화면을 저절로 찍지 않는다. 한도는 iPhone 앱과 같다), 최근 로그(앱이 `log`로 남긴 줄과 이 앱의 시스템 로그 최근 15분, 300줄까지)를 받는다.
+- 피드백은 먼저 Mac으로 직접 보낸다(`feedback`). 요청은 그 iPhone의 RemoteDebug VPN을 지나므로 페어링한 기기의 요청으로 인증된다. Mac에 닿지 않으면 메일로 보내거나 저장했다가(30개, 합쳐 16MB까지. 넘으면 오래된 것부터 지운다) 다음에 보낸다. 고른 사진과 파일은 보낼 때까지 메모리에만 두고 따로 복사해 두지 않는다. Mac 주소가 없는 빌드는 메일만 쓴다.
+- 메일 경로: iOS 메일 작성 화면을 띄우고, 메일 계정이 없으면 `mailto:` 링크를 연다. 사용자가 고른 사진과 파일은 메일 작성 화면에 그대로 붙인다(`mailto:` 링크로는 붙일 수 없어, 메일 앱에서 직접 붙이라고 알린다). 공개키가 설정돼 있고 사용자가 로그를 붙이기로 하면, 로그를 JSON으로 묶어 암호화한 파일(`.afdiag`, 평문 2MB 이하)을 붙인다. Release 빌드에서는 로그 붙이기가 꺼진 채로 시작한다. 진단 파일은 기기의 임시 폴더 한 곳에 한 개까지만 남고, 앱을 시작할 때와 새 파일을 만들기 전에 지운다.
 - `.afdiag` 형식: 머리말 `AFDIAG1\0`(8바이트), 공개키 SHA-256의 앞 8바이트, HPKE 캡슐화 키 32바이트, 암호문. HPKE는 X25519, HKDF-SHA256, ChaCha20-Poly1305이고 info는 `AppFeedback diagnostics v1`, 평문은 LZFSE로 압축한 JSON(2MB까지)이다. 머리말 16바이트는 인증 데이터로 묶는다.
 - 개인키는 Mac 키체인(서비스 `RemoteDebug feedback diagnostics`, 계정 `<프로젝트 이름> v1`)에만 둔다. Mac 앱의 **크래시·피드백** 화면에 파일을 끌어다 놓거나 **암호화된 진단 열기…**로 고르면 풀어서 목록에 넣는다. 명령줄에서는 `scripts/feedback_diagnostics.swift`가 같은 형식을 다룬다.
 - Mac 앱의 앱 화면(앱 줄의 더 보기 메뉴 > 크래시·피드백 보내기 추가)은 패키지를 쓰지 않는 프로젝트에 넣는 방법, 키 만들기, Mac 주소·메일 주소·공개키가 든 코드를 보여 준다.
 - 실기기에서 확인하지 않은 것: 다른 앱의 요청이 VPN을 지나 Mac에 닿는지, 메일 작성 화면과 첨부, 받은 첨부를 Mac에서 푸는 전체 경로.
 - 기록은 iPhone에 50개까지 남기고, 페어링한 Mac과 VPN이 연결되면 보내지 않은 것을 보낸다.
-- Mac 앱은 `CrashLogs/`에 원문 파일과 `index.json`을 두고(200개까지) **크래시** 화면과 MCP 도구 `remotedebug_crash_logs`로 보여 준다. 같은 내용의 기록은 한 번만 남긴다.
+- Mac 앱은 `CrashLogs/`에 원문 파일과 `index.json`을 두고(200개까지) **크래시** 화면과 MCP 도구 `remotedebug_crash_logs`로 보여 준다. 같은 내용의 기록은 한 번만 남긴다. 피드백의 첨부는 같은 폴더에 `<기록 id>-<순번>-<고친 이름>`으로 두고 기록을 지울 때(보관 한도로 밀려날 때 포함) 함께 지운다. Mac 앱은 첨부를 열거나 실행하지 않고 Finder에서 보여 주기만 하며, 목록 글에는 기록 아랫줄에 `첨부: <경로>`로 나온다.
 
 ## M. iPhone 앱 두 개와 공용 VPN 신원
 

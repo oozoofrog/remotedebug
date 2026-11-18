@@ -198,7 +198,11 @@ public final class SwiftailHostCore: HostCore, Sendable {
                     // 설치 페이지 코드로 요청이 오면 앱용 QR은 닫는다: 페어링은 한 번에 하나다.
                     if case .pairRequest(let event) = detail.event, event.confirmationCode == nil { self?.closeOfferInBackground(run: run) }
                 },
-                cableInstaller: layout.cableInstaller.map(CableInstallBridge.init)
+                cableInstaller: layout.cableInstaller.map(CableInstallBridge.init),
+                // 확인 목록은 Mac 앱이 게시 폴더 옆에 번들 ID마다 파일 하나로 둔다(FeedbackChecklistStore).
+                feedbackChecklist: { bundleId in
+                    try? Data(contentsOf: FeedbackChecklist.file(bundleId: bundleId, publishDirectory: config.publishDir))
+                }
             ))
         } catch let error as APIErrorBody {
             throw error

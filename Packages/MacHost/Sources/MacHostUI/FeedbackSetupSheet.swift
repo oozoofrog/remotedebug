@@ -20,7 +20,7 @@ struct FeedbackSetupSheet: View {
             step(1, String(localized: "Xcode에서 File > Add Package Dependencies…를 열고 이 주소를 넣어 \(FeedbackSetup.packageName)을 앱 대상에 추가합니다.")) {
                 copyable(FeedbackSetup.packageURL)
             }
-            step(2, String(localized: "Mac에 닿지 않을 때 메일로도 받으려면 받을 주소를 적습니다(선택). 키를 만들면 Debug 빌드가 메일에 로그와 화면 사진을 암호화해 붙이고, 이 Mac의 크래시·피드백 화면에서만 열 수 있습니다.")) {
+            step(2, String(localized: "Mac에 닿지 않을 때 메일로도 받으려면 받을 주소를 적습니다(선택). 키를 만들면 사용자가 붙이기로 한 로그가 메일에 암호화돼 붙고, 이 Mac의 크래시·피드백 화면에서만 열 수 있습니다. 사용자가 고른 사진과 파일은 메일에 그대로 붙습니다.")) {
                 HStack {
                     TextField("받을 메일 주소", text: $email)
                         .textFieldStyle(.roundedBorder)
