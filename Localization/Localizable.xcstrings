@@ -18589,6 +18589,34 @@
         }
       }
     },
+    "미리 볼 수 없는 사진입니다(JPEG나 PNG가 아니거나 읽을 수 없습니다)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This picture can't be previewed (it isn't a JPEG or PNG, or it can't be read)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この写真はプレビューできません(JPEGでもPNGでもないか、読み込めません)。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法预览这张照片（不是 JPEG 或 PNG，或者无法读取）。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法預覽這張照片（不是 JPEG 或 PNG，或者無法讀取）。"
+          }
+        }
+      }
+    },
     "미리보기" : {
       "localizations" : {
         "en" : {

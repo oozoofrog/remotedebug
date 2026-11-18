@@ -1,4 +1,6 @@
+import CoreGraphics
 import Foundation
+import ImageIO
 import RDModels
 import Testing
 @testable import MacHostKit
@@ -228,6 +230,60 @@ import Testing
         #expect(names.contains("r999.ips"), "가장 최근에 받은 기록이 남는다")
         #expect(!names.contains("r0.ips"), "가장 먼저 받은 기록이 지워진다")
         #expect(store.items.count == CrashLogStore.perDeviceLimit)
+    }
+}
+
+/// 기기가 보낸 사진은 앞머리가 JPEG나 PNG일 때만, 줄인 그림으로 푼다.
+@Suite struct ReceivedPictureTests {
+    private func encoded(_ type: String, width: Int, height: Int) throws -> Data {
+        let context = try #require(CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.setFillColor(CGColor(red: 0.2, green: 0.6, blue: 0.9, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        let image = try #require(context.makeImage())
+        let data = NSMutableData()
+        let destination = try #require(CGImageDestinationCreateWithData(data, type as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, image, nil)
+        #expect(CGImageDestinationFinalize(destination))
+        return data as Data
+    }
+
+    @Test func jpegAndPNGAreDecodedAsBoundedThumbnails() throws {
+        let png = try encoded("public.png", width: 400, height: 200), jpeg = try encoded("public.jpeg", width: 300, height: 600)
+        #expect(ReceivedPicture.format(of: png) == .png && ReceivedPicture.format(of: jpeg) == .jpeg)
+        let small = try #require(ReceivedPicture.thumbnail(of: png))
+        #expect(small.image.width == 400 && small.image.height == 200)
+        // 긴 변을 한도 아래로 줄인다(원본을 통째로 그리지 않는다).
+        let bounded = try #require(ReceivedPicture.thumbnail(of: jpeg, maxPixelSize: 100))
+        #expect(max(bounded.image.width, bounded.image.height) == 100 && bounded.image.width == 50)
+        #expect(ReceivedPicture.maxPixelSize == 1600)
+
+        let dir = try TempDir("picture")
+        let file = dir.path("c_000000000000-1-photo.jpg")
+        try jpeg.write(to: file)
+        #expect(ReceivedPicture.thumbnail(at: file) != nil)
+        #expect(ReceivedPicture.thumbnail(at: dir.path("nosuch.jpg")) == nil)
+        #expect(ReceivedPicture.thumbnail(at: dir.url) == nil, "폴더는 풀지 않는다")
+    }
+
+    /// 확장자가 사진이어도 앞머리가 JPEG·PNG가 아니면 디코더에 넘기지 않는다.
+    @Test func otherFormatsAndBrokenFilesAreNotDecoded() throws {
+        let tiff = try encoded("public.tiff", width: 10, height: 10), gif = try encoded("com.compuserve.gif", width: 10, height: 10)
+        #expect(ReceivedPicture.format(of: tiff) == nil && ReceivedPicture.thumbnail(of: tiff) == nil)
+        #expect(ReceivedPicture.format(of: gif) == nil && ReceivedPicture.thumbnail(of: gif) == nil)
+        for text in ["%PDF-1.7\n", "<svg xmlns=\"http://www.w3.org/2000/svg\"/>", "<html>", "", "BM"] {
+            #expect(ReceivedPicture.thumbnail(of: Data(text.utf8)) == nil, "\(text)")
+        }
+        // 앞머리만 사진인 파일: 형식은 맞아 보이지만 풀리지 않는다.
+        let fakePNG = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]) + Data("not a picture".utf8)
+        let fakeJPEG = Data([0xFF, 0xD8, 0xFF, 0xE0]) + tiff
+        #expect(ReceivedPicture.format(of: fakePNG) == .png && ReceivedPicture.thumbnail(of: fakePNG) == nil)
+        #expect(ReceivedPicture.format(of: fakeJPEG) == .jpeg && ReceivedPicture.thumbnail(of: fakeJPEG) == nil)
+        // 너무 큰 파일은 읽지 않는다.
+        let dir = try TempDir("picture-large")
+        let large = dir.path("large.png")
+        try (try encoded("public.png", width: 8, height: 8) + Data(count: ReceivedPicture.maxFileBytes)).write(to: large)
+        #expect(ReceivedPicture.thumbnail(at: large) == nil)
     }
 }
 

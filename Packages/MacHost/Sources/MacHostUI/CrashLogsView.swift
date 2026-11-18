@@ -209,24 +209,16 @@ private struct CrashText: View {
     var body: some View {
         ScrollView([.vertical, .horizontal]) {
             VStack(alignment: .leading, spacing: 12) {
-                if let image, let picture = NSImage(contentsOf: image) {
-                    Image(nsImage: picture)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 420)
-                        .accessibilityLabel("피드백에 붙은 사진")
+                if let image {
+                    ReceivedPictureView(url: image, maxHeight: 420, label: Text("피드백에 붙은 사진"))
                 }
                 if !attachments.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("첨부 \(attachments.count)개").font(.headline)
                         ForEach(attachments) { attachment in
                             // 받은 파일은 앱에서 열지 않는다. 사진만 미리 보이고 나머지는 Finder에서 고른다.
-                            if attachment.isPicture, let picture = NSImage(contentsOf: attachment.url) {
-                                Image(nsImage: picture)
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(maxHeight: 320)
-                                    .accessibilityLabel(attachment.name)
+                            if attachment.isPicture {
+                                ReceivedPictureView(url: attachment.url, maxHeight: 320, label: Text(verbatim: attachment.name))
                             }
                             HStack(spacing: 8) {
                                 Image(systemName: attachment.isPicture ? "photo" : "doc")
@@ -250,6 +242,39 @@ private struct CrashText: View {
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
             .padding(12)
+        }
+    }
+}
+
+/// 기기가 보낸 사진 하나. 파일의 앞머리가 JPEG나 PNG일 때만, 메인 스레드 밖에서 줄인 그림으로 풀어 보인다
+/// (`ReceivedPicture`). 그 밖의 파일은 풀지 않고 자리만 보인다.
+private struct ReceivedPictureView: View {
+    let url: URL
+    let maxHeight: CGFloat
+    let label: Text
+    @State private var picture: ReceivedPicture.Thumbnail?
+    @State private var loaded = false
+
+    var body: some View {
+        Group {
+            if let picture {
+                Image(decorative: picture.image, scale: 1)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: maxHeight)
+                    .accessibilityLabel(label)
+            } else if loaded {
+                Label("미리 볼 수 없는 사진입니다(JPEG나 PNG가 아니거나 읽을 수 없습니다).", systemImage: "photo")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else {
+                ProgressView().controlSize(.small)
+            }
+        }
+        .task(id: url) {
+            let url = url
+            picture = await Task.detached(priority: .userInitiated) { ReceivedPicture.thumbnail(at: url) }.value
+            loaded = true
         }
     }
 }
