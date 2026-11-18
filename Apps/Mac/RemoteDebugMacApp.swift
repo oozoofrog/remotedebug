@@ -230,6 +230,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         return await model.shareLink(url, title: title, project: project)
                     }),
                 publishedBuilds: { [weak model] in (model?.builds ?? []).map(\.descriptor) },
+                feedbackInfo: { [weak model] project in
+                    (model?.status?.fqdn ?? "", (try? model?.feedbackPublicKey(for: project)) ?? "")
+                },
                 importer: { [weak model] url in await model?.importBuild(url) })
             if AgentFeature.isEnabled {
                 let desk = AgentDesk(

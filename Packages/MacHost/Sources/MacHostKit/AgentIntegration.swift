@@ -121,6 +121,14 @@ public struct AgentMCPServer: Sendable {
         tool("remotedebug_schemes", "Xcode 프로젝트를 RemoteDebug에 연결하고 스킴 목록을 돌려준다.", path: true, scheme: false),
         tool("remotedebug_build", "Xcode 프로젝트를 Debug 기기용으로 빌드해 iPhone이 설치할 수 있게 게시한다. 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 설치는 사용자가 iPhone에서 누른다. 소스를 고쳤으면 빌드 전에 빌드 번호(CFBundleVersion, CURRENT_PROJECT_VERSION)를 올린다: iPhone은 설치된 앱을 버전과 빌드 번호로 알아보므로 번호가 그대로면 새 빌드가 설치됐는지 구분할 수 없다. 지금 게시된 번호는 remotedebug_status의 projects[].published에 있다. 응답의 report.notes는 Mac이 찾은 점검 사항이다(버전이 그대로인 새 실행 파일, 낮아진 빌드 번호, 곧 만료되는 프로필, 꺼진 공유, 바뀌지 않은 빌드). 고칠 수 있으면 고쳐 다시 게시하고 나머지는 사용자에게 옮긴다. 게시한 뒤에는 게시한 버전과 빌드 번호, 들어간 변경, 커밋하지 않은 변경으로 만든 빌드인지, iPhone에서 먼저 확인할 화면을 사용자에게 알린다.", path: true, scheme: true),
         [
+            "name": "remotedebug_feedback_setup",
+            "description": "앱에 크래시·피드백 보내기(Swift 패키지 RemoteDebugFeedback)를 붙일 때 부른다. 프로젝트를 연결하고, 이 Mac의 주소와 그 프로젝트의 공개키가 든 코드(feedback.snippet), 패키지 주소와 제품 이름, 이미 들어 있는지(feedback.added), 할 일(feedback.steps)을 돌려준다. 사용자에게 Mac 앱에서 코드를 복사해 달라고 하지 않아도 된다. 받은 피드백은 remotedebug_crash_logs로 읽는다.",
+            "inputSchema": ["type": "object", "properties": [
+                "project_path": ["type": "string", "description": "프로젝트 폴더나 .xcodeproj, .xcworkspace의 절대 경로"],
+                "email": ["type": "string", "description": "Mac에 닿지 않을 때 피드백을 받을 메일 주소(선택). 사용자에게 물어서 넣는다"],
+            ] as [String: Any], "required": ["project_path"]] as [String: Any],
+        ],
+        [
             "name": "remotedebug_device_logs",
             "description": "페어링한 iPhone의 RemoteDebug 앱이 Mac에 보낸 진단 로그(앱 시작, VPN, 페어링, 빌드 목록, 설치·업데이트 진행). 기기마다 최근 줄을 돌려준다.",
             "inputSchema": ["type": "object", "properties": [
@@ -220,6 +228,11 @@ public struct AgentMCPServer: Sendable {
                     return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "url이 필요합니다."]])
                 }
                 let data = await send("link", url, Self.oneLine(arguments["title"]), Self.oneLine(arguments["project"]))
+                let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
+                return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
+            }
+            if name == "remotedebug_feedback_setup" {
+                let data = await send("feedback", arguments["project_path"] as? String ?? "", Self.oneLine(arguments["email"]), "")
                 let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
                 return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
             }
@@ -382,10 +395,11 @@ extension AgentScript {
 
         - `remotedebug_build`: `project_path`(프로젝트 폴더의 절대 경로), `scheme`(선택)
         - `remotedebug_schemes`: `project_path`
+        - `remotedebug_feedback_setup`: `project_path`, `email`(선택). 앱에 크래시·피드백 보내기를 붙일 때 넣을 코드와 할 일
         - `remotedebug_pairing_code`: RemoteDebug 앱이 아직 없는 iPhone용 설치 페이지 코드와 그 페이지 링크. 앱이 있는 iPhone은 사용자에게 Mac 앱의 'iPhone 페어링…' > 'RemoteDebug 앱이 있는 iPhone'의 QR로 페어링해 달라고 한다.
         - `remotedebug_pair_requests`, `remotedebug_pair_decide`: 허용을 기다리는 요청을 보고 거부할 수 있다. 허용은 할 수 없다: 사용자에게 RemoteDebug Mac 앱 화면에서 허용해 달라고 한다.
         - `remotedebug_device_logs`: iPhone 앱이 보낸 진단 로그. iPhone에서 설치·업데이트·연결이 안 될 때 먼저 본다.
-        - `remotedebug_crash_logs`: iPhone이 보낸 크래시 기록과 사람이 앱에서 쓴 피드백(목록의 종류가 `피드백`). `id` 없이 부르면 목록, `id`를 주면 원문. 설치한 앱이 iPhone에서 죽는다고 하면 먼저 본다. 기록이 없으면 사용자에게 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 그 앱의 기록을 열고 공유 버튼으로 RemoteDebug에 넘겨 달라고 한다. RemoteDebug iPhone 앱 자신의 크래시는 앱을 다시 열면 자동으로 들어온다. 앱에 피드백 보내기 기능을 붙여 달라는 요청에는 저장소(https://github.com/oozoofrog/remotedebug)의 Swift 패키지 `RemoteDebugFeedback`(iOS 17 이상)을 앱 대상에 추가하고, 앱 시작 때 `RemoteDebugFeedback.start(.init(macHost:email:publicKeyBase64:))`, 피드백을 띄울 화면에 `.remoteDebugFeedback(isPresented:)`를 넣는다. Mac 주소와 공개키가 든 코드는 Mac 앱 앱 화면에서 그 앱 줄의 더 보기 메뉴 > "크래시·피드백 보내기 추가"에 있고, 받을 메일 주소는 사용자에게 묻는다. 패키지는 글, 화면 사진, 최근 로그를 Mac으로 바로 보내고, 닿지 않으면 메일로 보낸다. 메일에 붙어 온 `.afdiag` 파일은 Mac 앱의 크래시·피드백 화면에서 연다. 원문 파일은 `~/Library/Application Support/RemoteDebug/CrashLogs`에 있다.
+        - `remotedebug_crash_logs`: iPhone이 보낸 크래시 기록과 사람이 앱에서 쓴 피드백(목록의 종류가 `피드백`). `id` 없이 부르면 목록, `id`를 주면 원문. 설치한 앱이 iPhone에서 죽는다고 하면 먼저 본다. 기록이 없으면 사용자에게 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 그 앱의 기록을 열고 공유 버튼으로 RemoteDebug에 넘겨 달라고 한다. RemoteDebug iPhone 앱 자신의 크래시는 앱을 다시 열면 자동으로 들어온다. 앱에 피드백 보내기를 붙이는 법은 `remotedebug_feedback_setup`이 돌려준다. 패키지는 글, 화면 사진, 최근 로그를 Mac으로 바로 보내고, 닿지 않으면 메일로 보낸다. 메일에 붙어 온 `.afdiag` 파일은 Mac 앱의 크래시·피드백 화면에서 연다. 원문 파일은 `~/Library/Application Support/RemoteDebug/CrashLogs`에 있다.
         - `remotedebug_push_file`: `file_path`(절대 경로)의 파일을 iPhone RemoteDebug 앱으로 보낸다. 같은 이름의 이전 파일은 바뀐다. `project`(선택)에 연결한 프로젝트의 이름이나 `.xcodeproj`·`.xcworkspace` 경로를 주면 iPhone 파일 탭의 그 프로젝트 구역에, 비우면 공통 구역에 넣는다. 작업 중인 프로젝트의 파일이면 그 프로젝트를 준다. 사용자는 iPhone 앱의 파일 탭에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다.
         - `remotedebug_push_link`: `url`(https://… 또는 앱스킴://… 딥 링크), `title`(선택), `project`(선택, 위와 같다)를 iPhone으로 보낸다. 사용자가 iPhone 파일 탭의 링크를 눌러 Safari나 디버그 중인 앱으로 연다.
         - `remotedebug_files`: 보낸 파일·링크 목록. 항목의 `project`가 구역이고 없으면 공통이다. `project`(선택)를 주면 그 구역만 본다.
@@ -396,6 +410,7 @@ extension AgentScript {
         ```sh
         \(rd) build <프로젝트 폴더> [스킴]
         \(rd) schemes <프로젝트 폴더>
+        \(rd) feedback <프로젝트 폴더> [메일]
         \(rd) status
         \(rd) push <파일> [프로젝트]
         \(rd) link <주소> [이름] [프로젝트]
@@ -409,6 +424,7 @@ extension AgentScript {
         - 실패하면 `error`와 `report.logTail`에 컴파일 오류가, `report.logPath`에 전체 로그 경로가 있다.
         - `report.published`가 게시된 빌드다. 비어 있고 `ok`가 true면 결과가 전과 같아 다시 게시하지 않은 것이다.
         \(AgentScript.versionGuidance)
+        \(AgentScript.feedbackGuidance)
         - Mac은 게시까지만 한다. 설치는 페어링한 iPhone의 RemoteDebug 앱이나 설치 페이지(`installPage`)에서 사용자가 누른다.
         - `sharing`이 false면 iPhone이 빌드를 받을 수 없다. 사용자에게 RemoteDebug 앱에서 공유를 시작하라고 알린다.
         - 서명 오류(프로비저닝 프로필, 기기 미등록)는 여기서 고칠 수 없다. Xcode에서 한 번 기기용으로 빌드하라고 사용자에게 알린다.

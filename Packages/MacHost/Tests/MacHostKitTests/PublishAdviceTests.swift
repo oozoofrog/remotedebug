@@ -73,6 +73,26 @@ struct PublishAdviceTests {
         #expect(again.ok && again.report?.published.isEmpty == true)
         #expect(again.report?.notes?.contains { $0.contains("새로 게시하지 않았습니다") } == true)
     }
+
+    /// 에이전트가 사람 손을 빌리지 않고 피드백 패키지 설정 코드를 받는다.
+    @Test func feedbackCommandReturnsTheSnippetWithHostAndKey() async throws {
+        let tmp = try TempDir("feedback")
+        let container = tmp.path("src/App/App.xcodeproj").standardizedFileURL
+        try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
+        let model = ProjectsModel(root: tmp.path("state"), builder: AdviceBuilder(app: tmp.path("p/App.app")),
+                                  scanner: DerivedDataScanner(root: tmp.path("DerivedData")),
+                                  feedbackInfo: { _ in ("rd-mac-1a2b3c4d.tail0001.ts.net", "S0VZ") }) { _ in nil }
+
+        let plain = try #require(await model.handleAgentRequest("feedback\n\(container.path)\n\n").feedback)
+        #expect(!plain.added && plain.product == "RemoteDebugFeedback")
+        #expect(plain.snippet.contains(#"macHost: "rd-mac-1a2b3c4d.tail0001.ts.net""#) && plain.snippet.contains(#"publicKeyBase64: "S0VZ""#))
+        #expect(!plain.snippet.contains("email:") && plain.steps.contains { $0.contains("email이 비어 있다") })
+
+        try Data("RemoteDebugFeedback".utf8).write(to: container.appendingPathComponent("project.pbxproj"))
+        let mailed = try #require(await model.handleAgentRequest("feedback\n\(container.path)\nme@example.com\n").feedback)
+        #expect(mailed.added && mailed.snippet.contains(#"email: "me@example.com""#))
+        #expect(!mailed.steps.contains { $0.contains("email이 비어 있다") })
+    }
 }
 
 private struct AdviceBuilder: ProjectBuilding {

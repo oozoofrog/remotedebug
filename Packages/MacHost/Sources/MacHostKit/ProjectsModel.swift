@@ -143,6 +143,19 @@ public final class ProjectsModel {
     public typealias Importer = @MainActor (URL) async -> ImportOutcome?
     /// 지금 게시돼 있는 빌드. 새 빌드의 버전을 앞선 빌드와 견준다.
     public typealias PublishedBuilds = @MainActor () -> [BuildDescriptor]
+    /// 피드백 패키지 설정에 넣을 이 Mac의 주소와 프로젝트의 공개키. 모르면 빈 글자.
+    public typealias FeedbackInfo = @MainActor (ConnectedProject) -> (host: String, publicKey: String)
+
+    /// 에이전트가 앱에 `RemoteDebugFeedback`을 붙일 때 쓰는 안내(`feedback` 명령).
+    public struct FeedbackGuide: Codable, Sendable, Hashable {
+        public var packageURL: String
+        public var product: String
+        /// 프로젝트가 이미 패키지를 쓰고 있다.
+        public var added: Bool
+        /// 앱에 넣을 코드. 이 Mac의 주소와 프로젝트의 공개키가 들어 있다.
+        public var snippet: String
+        public var steps: [String]
+    }
 
     struct Stored: Codable, Sendable {
         var projects: [ConnectedProject] = []
@@ -183,6 +196,7 @@ public final class ProjectsModel {
     @ObservationIgnored private let scanner: DerivedDataScanner
     @ObservationIgnored private let importer: Importer
     @ObservationIgnored private let publishedBuilds: PublishedBuilds
+    @ObservationIgnored private let feedbackInfo: FeedbackInfo
     @ObservationIgnored private let hostStatus: @MainActor () -> HostStatus
     @ObservationIgnored private let openPairing: PairingOpener
     @ObservationIgnored private let pairingRequests: PairingRequests
@@ -208,6 +222,7 @@ public final class ProjectsModel {
         fileSharing: FileSharing = .unavailable,
         now: @escaping @Sendable () -> Date = { Date() },
         publishedBuilds: @escaping PublishedBuilds = { [] },
+        feedbackInfo: @escaping FeedbackInfo = { _ in ("", "") },
         importer: @escaping Importer
     ) {
         self.root = root
@@ -221,6 +236,7 @@ public final class ProjectsModel {
         self.now = now
         self.importer = importer
         self.publishedBuilds = publishedBuilds
+        self.feedbackInfo = feedbackInfo
     }
 
     public var agentDir: URL { root.appendingPathComponent("agent", isDirectory: true) }
@@ -582,6 +598,26 @@ public final class ProjectsModel {
         var requests: [PairRequestInfo]?
         var file: ResourceDescriptor?
         var files: [ResourceDescriptor]?
+        var feedback: FeedbackGuide?
+    }
+
+    func feedbackGuide(for project: ConnectedProject, email: String) -> FeedbackGuide {
+        let info = feedbackInfo(project)
+        var steps = [
+            "프로젝트에 Swift 패키지 \(FeedbackSetup.packageURL)를 추가하고 제품 \(FeedbackSetup.packageName)(iOS 17 이상)을 앱 대상에 연결한다.",
+            "snippet의 start 호출을 앱 시작 코드에 한 번 넣는다.",
+            "피드백을 띄울 화면에 .remoteDebugFeedback(isPresented:)를 붙이고 그 값을 켜는 단추를 둔다.",
+            "remotedebug_build로 게시하고, 사용자가 iPhone에서 피드백을 보내면 remotedebug_crash_logs에서 종류가 피드백인 항목으로 확인한다.",
+        ]
+        if email.isEmpty {
+            steps.insert("email이 비어 있다. Mac에 닿지 않을 때 메일로 보내게 하려면 받을 메일 주소를 사용자에게 물어 email로 다시 부른다(없어도 Mac으로는 간다).", at: 2)
+        }
+        if info.host.isEmpty {
+            steps.insert("이 Mac의 주소를 아직 모른다(공유가 꺼져 있다). 사용자에게 RemoteDebug Mac 앱에서 공유를 시작해 달라고 한 뒤 다시 부른다.", at: 0)
+        }
+        return FeedbackGuide(packageURL: FeedbackSetup.packageURL, product: FeedbackSetup.packageName,
+                             added: FeedbackSetup.isAdded(to: project),
+                             snippet: FeedbackSetup.snippet(host: info.host, email: email, publicKey: info.publicKey), steps: steps)
     }
 
     struct AgentProject: Codable {
@@ -766,12 +802,17 @@ public final class ProjectsModel {
             }
             await fileSharing.remove(path)
             return AgentResponse(ok: true, files: fileSharing.list())
-        case "connect", "schemes", "build":
+        case "connect", "schemes", "build", "feedback":
             guard !path.isEmpty else { return AgentResponse(ok: false, error: "프로젝트 경로가 필요합니다.") }
             lastError = nil
             guard let project = await connect(URL(fileURLWithPath: path)) else {
                 defer { lastError = nil }
                 return AgentResponse(ok: false, error: lastError ?? "프로젝트를 연결하지 못했습니다.")
+            }
+            if command == "feedback" {
+                // 셋째 줄이 받을 메일 주소(선택)다.
+                return AgentResponse(ok: true, projects: [agentProject(project)],
+                                     feedback: feedbackGuide(for: project, email: scheme.trimmingCharacters(in: .whitespaces)))
             }
             let list = await loadSchemes(for: project)
             if command != "build" {
@@ -792,7 +833,7 @@ public final class ProjectsModel {
             return AgentResponse(ok: report.ok, error: report.ok ? nil : report.message, sharing: host.sharing,
                                  installPage: host.installPage, report: report)
         default:
-            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build 중 하나를 쓰세요.")
+            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build, feedback 중 하나를 쓰세요.")
         }
     }
 
@@ -835,10 +876,10 @@ enum AgentScript {
         """
         #!/bin/sh
         # RemoteDebug Mac 앱에 명령을 보낸다. 앱이 이 파일을 실행할 때마다 새로 쓴다.
-        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]
+        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일]
         dir=\(quoted(agentDir))
         bundle=\(quoted(bundleID))
-        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴]" >&2; exit 2; }
+        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일]" >&2; exit 2; }
         cmd=$1
         path=${2:-}
         scheme=${3:-}
@@ -851,7 +892,7 @@ enum AgentScript {
         esac
         # 경로를 받는 명령만 상대 경로를 절대 경로로 바꾼다(id·주소는 그대로).
         case "$cmd" in
-          push|connect|schemes|build) case "$path" in ""|/*) ;; *) path="$PWD/$path" ;; esac ;;
+          push|connect|schemes|build|feedback) case "$path" in ""|/*) ;; *) path="$PWD/$path" ;; esac ;;
         esac
         alive() { [ -f "$dir/pid" ] && kill -0 "$(cat "$dir/pid")" 2>/dev/null; }
         if ! alive; then
@@ -889,11 +930,13 @@ enum AgentScript {
         \(rd) push <파일> \(project)     # 파일을 iPhone RemoteDebug 앱의 이 프로젝트 구역으로 보낸다(프로젝트를 빼면 공통 구역)
         \(rd) link <주소> <이름> \(project)  # 링크(https://…, 앱스킴://…)를 이 프로젝트 구역으로 보낸다(이름은 ''로 비울 수 있다)
         \(rd) files \(project)           # 이 프로젝트 구역에 보낸 파일·링크(프로젝트를 빼면 전체)
+        \(rd) feedback \(project) [메일]  # 이 앱에 크래시·피드백 보내기를 붙이는 안내와 넣을 코드
         ```
 
         - `build`는 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 실패하면 `error`와 `report.logTail`에 컴파일 오류가, `report.logPath`에 전체 로그 경로가 있다.
         - `report.published`가 게시된 빌드다. 비어 있고 `ok`가 true면 결과가 전과 같아 다시 게시하지 않은 것이다.
         \(AgentScript.versionGuidance)
+        \(AgentScript.feedbackGuidance)
         - Mac은 게시까지만 한다. 설치는 페어링한 iPhone의 RemoteDebug 앱이나 설치 페이지(`installPage`)에서 사용자가 누른다.
         - `sharing`이 false면 iPhone이 빌드를 받을 수 없다. 사용자에게 RemoteDebug 앱에서 공유를 시작하라고 알린다.
         - 보낸 파일·링크는 프로젝트 구역으로 나뉜다. 프로젝트는 연결한 프로젝트의 이름이나 `.xcodeproj`·`.xcworkspace` 경로로 정한다. 연결한 프로젝트가 아니면 `error`에 쓸 수 있는 이름이 나온다. `files`의 항목에 `project`가 없으면 공통 구역이다.
@@ -901,6 +944,11 @@ enum AgentScript {
         - 서명 오류(프로비저닝 프로필, 기기 미등록)는 이 명령으로 고칠 수 없다. Xcode에서 한 번 기기용으로 빌드하라고 사용자에게 알린다.
         """
     }
+
+    /// 앱에 피드백 보내기를 붙이는 법. 전역 스킬과 프로젝트 안내가 함께 쓴다.
+    static let feedbackGuidance = """
+        - 앱에 피드백 보내기(크래시 기록 포함)를 붙여 달라는 요청에는 `feedback`(MCP `remotedebug_feedback_setup`)을 부른다. 응답의 `feedback.snippet`에 이 Mac의 주소와 이 프로젝트의 공개키가 든 코드가, `feedback.steps`에 할 일이 순서대로 있다. `feedback.added`가 true면 패키지는 이미 들어 있다. 사용자에게 Mac 앱에서 코드를 복사해 달라고 하지 않는다.
+        """
 
     /// 버전 올리기와 게시 뒤 점검. 전역 스킬과 프로젝트 안내가 함께 쓴다.
     static let versionGuidance = """

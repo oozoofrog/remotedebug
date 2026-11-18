@@ -18,6 +18,7 @@ The Mac app's **에이전트에 설치…** (Install for agents) adds an MCP ser
 | --- | --- |
 | `remotedebug_status` | Whether the Mac is sharing, the install page address, connected projects with the version and build number each last published |
 | `remotedebug_schemes` | Connect an Xcode project (`project_path`) and list its schemes |
+| `remotedebug_feedback_setup` | The code to add crash and feedback reporting to an app (with this Mac's address and the project's public key) and the steps. `project_path`, optional `email` |
 | `remotedebug_build` | Build `project_path` (optional `scheme`) for device in Debug and publish it. Waits until the build ends. `report.notes` in the response lists what to check: a changed binary under an unchanged version, a lowered build number, a profile about to expire, sharing turned off |
 | `remotedebug_pairing_code` | Open a 5-minute pairing code for an iPhone without the app. Returns the code and the install page link (`installPage`) |
 | `remotedebug_pair_requests` | Pairing requests waiting for approval (device name, tailnet node name, login, expiry) |

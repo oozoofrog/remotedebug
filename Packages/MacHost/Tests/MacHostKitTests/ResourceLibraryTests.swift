@@ -119,7 +119,7 @@ import Testing
 
     @Test func scriptKeepsIdsAndAddresses() {
         let script = AgentScript.text(agentDir: "/tmp/rd", bundleID: "com.example")
-        #expect(script.contains("push|connect|schemes|build) case \"$path\""))
+        #expect(script.contains("push|connect|schemes|build|feedback) case \"$path\""))
     }
 }
 
