@@ -151,7 +151,7 @@ extension PublishAdviceTests {
     }
 }
 
-private struct AdviceBuilder: ProjectBuilding {
+struct AdviceBuilder: ProjectBuilding {
     let app: URL
     func schemes(container: URL) async throws -> [String] { ["App"] }
     func build(container: URL, scheme: String, log: URL) async throws {

@@ -20,6 +20,8 @@ import Testing
         #expect(list.bundleId == "com.example.app" && list.updatedAt == now && list.items.count == 2)
         #expect(list.items[0].title == "결제 화면이 열린다" && list.items[0].choices == ["보임", "안 보임", "모르겠음"] && list.items[0].since == 59)
         #expect(list.items[1].choices == FeedbackChecklist.defaultChoices && list.items[1].since == nil && list.items[1].expect.isEmpty)
+        // 답을 주지 않으면 통과·실패·확인 못함이다. 해 보지 못한 것이 실패나 잊은 것과 섞이지 않는다.
+        #expect(FeedbackChecklist.defaultChoices == ["통과", "실패", "확인 못함"] && FeedbackChecklist.untestedChoice == "확인 못함")
         // {"items": […]} 모양도 받는다.
         #expect(try make(["items": [["id": "a", "title": "하나"]]]).items.map(\.id) == ["a"])
         // 저장한 모양이 다시 읽힌다.

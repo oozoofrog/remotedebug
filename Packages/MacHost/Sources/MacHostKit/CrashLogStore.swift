@@ -24,6 +24,13 @@ public final class CrashLogStore {
         public var attachments: [Attached]?
         /// 확인 목록에 사용자가 고른 답(개발 빌드의 피드백). 원문 파일 끝에도 글로 적는다. 없으면 `nil`.
         public var checks: [CrashReport.Check]?
+        /// 이 문의를 처리했다고 표시한 시각. 그때부터 `handledRetentionDays`일 뒤에 기록과 첨부를 지운다. 표시하지 않았으면 `nil`.
+        public var handledAt: Date?
+
+        /// 처리했다고 표시한 기록을 지울 시각. 표시하지 않았으면 `nil`.
+        public var deletesAt: Date? {
+            handledAt?.addingTimeInterval(TimeInterval(CrashLogStore.handledRetentionDays) * 86_400)
+        }
 
         /// 목록에 보일 이름: 번들 ID의 마지막 마디, 없으면 파일 이름.
         public var title: String {
@@ -44,6 +51,8 @@ public final class CrashLogStore {
     public nonisolated static let limit = 200
     /// 기기 하나에서 보관하는 기록 수. 넘으면 그 기기의 기록 가운데 받은 시각이 오래된 것부터 지운다.
     public nonisolated static let perDeviceLimit = 50
+    /// 처리했다고 표시한 기록을 두는 날 수. 지나면 기록과 첨부 파일을 지운다(받은 파일은 문의를 처리하고 90일 뒤에 지운다는 약속).
+    public nonisolated static let handledRetentionDays = 90
 
     /// 최근 크래시가 앞.
     public private(set) var items: [Item] = []
@@ -57,6 +66,7 @@ public final class CrashLogStore {
         self.directory = directory
         self.now = now
         if let directory { items = Self.load(directory: directory) }
+        purgeHandled()
     }
 
     /// 받은 기록을 저장한다. 같은 기기가 같은 기록을 다시 보내면 그대로 둔다.
@@ -97,6 +107,43 @@ public final class CrashLogStore {
         for old in items where !kept.contains(old.id) { removeFile(old) }
         items = items.filter { kept.contains($0.id) }.sorted { $0.crashedAt > $1.crashedAt }
         save()
+        purgeHandled()
+    }
+
+    /// 문의를 처리했다고 표시하거나 표시를 지운다. 표시한 날부터 `handledRetentionDays`일 뒤에 지워진다.
+    /// 이미 표시한 기록을 다시 표시해도 날짜는 처음 것 그대로다. 그런 기록이 없으면 `nil`.
+    @discardableResult
+    public func setHandled(_ id: String, _ handled: Bool) -> Item? {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
+        if handled {
+            if items[index].handledAt == nil { items[index].handledAt = now() }
+        } else {
+            items[index].handledAt = nil
+        }
+        save()
+        return items[index]
+    }
+
+    /// 처리했다고 표시한 지 `handledRetentionDays`일이 지난 기록을 원문·사진·첨부 파일과 함께 지운다. 지운 수를 돌려준다.
+    /// 표시하지 않은 기록은 건드리지 않는다(수 한도로만 밀려난다). 앱을 켤 때, 기록을 받을 때, 목록을 볼 때 부른다.
+    @discardableResult
+    public func purgeHandled() -> Int {
+        let expired = Self.expired(items, now: now())
+        guard !expired.isEmpty else { return 0 }
+        for item in items where expired.contains(item.id) { removeFile(item) }
+        items.removeAll { expired.contains($0.id) }
+        save()
+        return expired.count
+    }
+
+    /// 에이전트에게 보이는 날짜(`2026-11-18`). 이 Mac의 시간대로 적는다.
+    public nonisolated static func dayText(_ date: Date) -> String {
+        date.formatted(Date.ISO8601FormatStyle(timeZone: .current).year().month().day())
+    }
+
+    /// 지울 때가 된 기록의 id.
+    nonisolated static func expired(_ items: [Item], now: Date) -> Set<String> {
+        Set(items.filter { $0.deletesAt.map { $0 <= now } ?? false }.map(\.id))
     }
 
     /// 남길 기록의 id: 기기마다 받은 시각이 최근인 `perDeviceLimit`개, 그 가운데 전체에서 받은 시각이 최근인 `limit`개.
@@ -187,10 +234,12 @@ public final class CrashLogStore {
                 attachmentURL(one, in: directory).map { "\n    첨부: \($0.path) (\(one.bytes)바이트)" }
             }.joined() + (item.checks.map { checks in
                 "\n    확인 목록의 답: \(checks.filter { !$0.answer.isEmpty }.count)/\(checks.count)개 답함(원문 끝에 있다)"
+            } ?? "") + (item.handledAt.map { handled in
+                "\n    처리함: \(dayText(handled))" + (item.deletesAt.map { " (\(dayText($0)) 뒤에 첨부와 함께 지운다)" } ?? "")
             } ?? "")
             return "\(item.id)  \(item.crashedAt.formatted(stamp))  \(item.bundleId.isEmpty ? item.name : item.bundleId) \(item.appVersion)  [\(item.kind.label)]  \(item.deviceName)  \(directory.appendingPathComponent(item.file).path)\(item.imageFile.map { "  사진: " + directory.appendingPathComponent($0).path } ?? "")" + attached
         }
-        return (["# 크래시·피드백 \(items.count)개 (id, 시각, 앱, 종류, 기기, 원문 파일. 아랫줄의 `첨부:`는 사용자가 붙인 사진·파일)"] + lines).joined(separator: "\n")
+        return (["# 크래시·피드백 \(items.count)개 (id, 시각, 앱과 빌드, 종류, 기기, 원문 파일. 아랫줄의 `첨부:`는 사용자가 붙인 사진·파일, `처리함:`은 처리했다고 표시한 날)"] + lines).joined(separator: "\n")
     }
 
     /// 기록 하나의 원문. `maxBytes`를 넘으면 앞부분만 돌려주고 파일 경로를 알려 준다.

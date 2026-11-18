@@ -146,6 +146,19 @@ struct CrashTests {
         ]
         for body in invalid { #expect(await fixture.request("POST", "/v1/crashes", body: body).status == 400) }
     }
+    @Test("글 없는 피드백: 패키지가 첫 줄에 표시를 적어 보내므로 받는다. text가 아예 비면 거절한다")
+    func 글없는피드백() async throws {
+        let fixture = try HostFixture()
+        let text = "(글 없이 보냄)\n\n---\n앱: com.example.sample 1.2 (7)\n기기: iPhone16,2, iOS 18.1\n"
+        let body = try jsonText(["kind": "feedback", "bundleId": "com.example.sample", "appVersion": "1.2 (7)", "text": text,
+                                 "checks": [["id": "launch", "title": "앱이 켜진다", "answer": "확인 못함", "build": "7"]]])
+        #expect(await fixture.request("POST", "/v1/crashes", body: body).status == 202)
+        guard case .deviceCrash(let event) = fixture.events.next() else { Issue.record("크래시 사건 없음"); return }
+        #expect(event.report.text == text && event.report.appVersion == "1.2 (7)")
+        #expect(event.report.checks.map(\.answer) == ["확인 못함"])
+        let blank = try jsonText(["kind": "feedback", "text": " \n", "checks": [["id": "launch", "answer": "통과"]]])
+        #expect(await fixture.request("POST", "/v1/crashes", body: blank).status == 400)
+    }
     @Test("확인 목록: 페어링한 기기만 받고, 없으면 빈 목록")
     func 확인목록() async throws {
         let unpaired = try HostFixture(paired: false)

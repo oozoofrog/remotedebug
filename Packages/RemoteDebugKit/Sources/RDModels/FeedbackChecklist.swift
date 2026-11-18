@@ -13,7 +13,7 @@ public struct FeedbackChecklist: Codable, Sendable, Hashable {
         public var steps: String?
         /// 보여야 하는 것.
         public var expect: [String]
-        /// 고를 답. 주지 않으면 `통과`, `실패`.
+        /// 고를 답. 주지 않으면 `통과`, `실패`, `확인 못함`.
         public var choices: [String]
         /// 이 항목이 바뀐 빌드 번호. 그보다 앞선 빌드에서 고른 답은 세지 않는다.
         public var since: Int?
@@ -37,7 +37,9 @@ public struct FeedbackChecklist: Codable, Sendable, Hashable {
     public static let maxChoices = 6
     /// 항목 하나의 `expect` 줄 수 한도.
     public static let maxExpect = 10
-    public static let defaultChoices = ["통과", "실패"]
+    /// 해 보지 못했다는 답. 실패와도, 아직 답하지 않은 것과도 다르다.
+    public static let untestedChoice = "확인 못함"
+    public static let defaultChoices = ["통과", "실패", untestedChoice]
     /// 글자 수 한도.
     public static let maxIDLength = 64, maxTitleLength = 200, maxPlaceLength = 200, maxStepsLength = 2000
     public static let maxExpectLength = 300, maxChoiceLength = 40, maxStageLength = 80

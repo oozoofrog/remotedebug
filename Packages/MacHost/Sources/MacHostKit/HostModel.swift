@@ -1523,11 +1523,14 @@ extension HostModel {
         guard let plain = opened else { return failure }
         var image: Data?
         var text = String(decoding: plain, as: UTF8.self)
+        var bundleId = "", appVersion = ""
         if var object = (try? JSONSerialization.jsonObject(with: plain)) as? [String: Any] {
             // 옛 패키지가 진단 파일에 넣던 사진은 따로 저장하고 글에서는 뺀다. 지금은 사진과 파일이 메일에 그대로 붙어 온다.
             if var diagnostics = object["diagnostics"] as? [String: Any] {
                 image = (diagnostics.removeValue(forKey: "screenshotBase64") as? String).flatMap { Data(base64Encoded: $0) }
                 object["diagnostics"] = diagnostics
+                // 새 패키지는 어느 앱의 어느 빌드에서 온 것인지 함께 넣는다. 목록에 그대로 보인다.
+                (bundleId, appVersion) = Self.diagnosticsApp(diagnostics["app"])
             }
             if let pretty = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]) {
                 text = String(decoding: pretty, as: UTF8.self)
@@ -1536,8 +1539,16 @@ extension HostModel {
         let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? Date()
         let name = url.deletingPathExtension().lastPathComponent + ".json"
         crashLogs.receive(DeviceCrashEvent(deviceId: "", deviceName: String(localized: "메일 첨부"), nodeName: "",
-                                           report: CrashReport(kind: .feedback, name: name, bundleId: "", appVersion: "", crashedAt: modified, text: text, image: image)))
+                                           report: CrashReport(kind: .feedback, name: name, bundleId: bundleId, appVersion: appVersion, crashedAt: modified, text: text, image: image)))
         return nil
+    }
+
+    /// 진단 파일의 `app`(`bundleId`, `version`, `build`)에서 번들 ID와 `1.2 (7)` 모양의 버전을 읽는다. 없거나 모양이 다르면 빈 글자.
+    nonisolated static func diagnosticsApp(_ value: Any?) -> (bundleId: String, appVersion: String) {
+        guard let app = value as? [String: Any] else { return ("", "") }
+        func text(_ key: String) -> String { String((app[key] as? String ?? "").prefix(200)) }
+        let version = text("version"), build = text("build")
+        return (text("bundleId"), build.isEmpty ? version : "\(version) (\(build))")
     }
 }
 

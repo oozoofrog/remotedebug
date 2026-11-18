@@ -18219,6 +18219,34 @@
         }
       }
     },
+    "문의를 처리한 날을 적어 둔다. 그날부터 %lld일 뒤에 이 기록과 첨부를 지운다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Record the day this inquiry was handled. The log and its attachments are deleted %lld days after that day"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この問い合わせに対応した日を記録する。その日から %lld 日後にこの履歴と添付を削除する"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "记下处理此咨询的日期。从那天起 %lld 天后删除此记录及其附件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記下處理此詢問的日期。從那天起 %lld 天後刪除這筆記錄及其附件"
+          }
+        }
+      }
+    },
     "미리보기" : {
       "localizations" : {
         "en" : {
@@ -30233,6 +30261,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "沒有要處理的配對請求。"
+          }
+        }
+      }
+    },
+    "처리함 · %@ 뒤 지움" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Handled · deleted after %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対応済み · %@ 以降に削除"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已处理 · %@ 之后删除"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已處理 · %@ 之後刪除"
+          }
+        }
+      }
+    },
+    "처리함 표시 지우기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear Handled Mark"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対応済みを取り消す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消已处理标记"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "取消已處理標記"
+          }
+        }
+      }
+    },
+    "처리함으로 표시" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mark as Handled"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対応済みにする"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标记为已处理"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "標示為已處理"
           }
         }
       }

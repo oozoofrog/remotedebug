@@ -233,6 +233,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 feedbackInfo: { [weak model] project in
                     (model?.status?.fqdn ?? "", (try? model?.feedbackPublicKey(for: project)) ?? "")
                 },
+                reportHandling: .init(
+                    mark: { [weak model] id, handled in model?.crashLogs.setHandled(id, handled) },
+                    purge: { [weak model] in model?.crashLogs.purgeHandled() }),
                 importer: { [weak model] url in await model?.importBuild(url) })
             if AgentFeature.isEnabled {
                 let desk = AgentDesk(
