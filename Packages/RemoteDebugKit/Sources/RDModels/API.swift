@@ -188,7 +188,7 @@ public struct SessionStatus: Codable, Sendable, Hashable {
     public var bytesServed: Int64
     public var size: Int64
     public var expiresAt: Date
-    /// USB 케이블 설치(docs/protocol-addenda.md Q)가 실패한 이유. 그 밖에는 없다.
+    /// USB 케이블 설치(docs/protocol-addenda.md R)가 실패한 이유. 그 밖에는 없다.
     public var message: String?
 
     public init(sessionId: String, buildId: String, state: SessionState, bytesServed: Int64, size: Int64, expiresAt: Date, message: String? = nil) {
@@ -226,7 +226,7 @@ public struct SessionStatus: Codable, Sendable, Hashable {
     }
 }
 
-/// `POST /v1/builds/{id}/cable-install` 응답(201) (docs/protocol-addenda.md Q). 진행은 `GET /v1/sessions/{id}`로 본다.
+/// `POST /v1/builds/{id}/cable-install` 응답(201) (docs/protocol-addenda.md R). 진행은 `GET /v1/sessions/{id}`로 본다.
 public struct CableInstallResponse: Codable, Sendable, Hashable {
     public var sessionId: String
     public var state: SessionState

@@ -21,11 +21,11 @@ public enum HostOrigin: Sendable, Hashable {
     case tailnet(HostPeer)
     /// 같은 네트워크 직접 연결 리스너(protocol-addenda O). 상대의 IP만 안다. 누구인지는 로직이 토큰으로 가린다.
     /// `interface`는 연결이 들어온 이 Mac의 네트워크 인터페이스 이름(`en0`, `anri0`). 모르면 nil.
-    /// USB 케이블 설치(protocol-addenda Q)가 어느 iPhone의 케이블인지 가리는 데만 쓴다.
+    /// USB 케이블 설치(protocol-addenda R)가 어느 iPhone의 케이블인지 가리는 데만 쓴다.
     case direct(remoteIP: String, interface: String? = nil)
 }
 
-/// USB 케이블로 꽂은 iPhone에 IPA를 설치하는 쪽(protocol-addenda Q). Mac 앱이 구현한다(`devicectl`).
+/// USB 케이블로 꽂은 iPhone에 IPA를 설치하는 쪽(protocol-addenda R). Mac 앱이 구현한다(`devicectl`).
 public protocol HostCableInstalling: Sendable {
     /// 이 인터페이스가 USB로 꽂은 iPhone의 것이면 그 기기의 식별자(UDID). 아니면 nil.
     func device(onInterface name: String) -> String?

@@ -187,6 +187,11 @@ public final class DirectRoute {
         return true
     }
 
+    /// 케이블 경로를 써 볼 만한가: `mayReach`이고 케이블이 꽂혀 있다. Mac에 꽂은 것인지는 찾아봐야 안다.
+    public func mayReachByCable(_ host: PairedHost) -> Bool {
+        network.isCablePlugged && mayReach(host)
+    }
+
     /// 직접 경로의 API. 쓸 수 없으면 `nil`.
     /// 처음이거나 다시 찾을 때가 됐으면 마지막 주소 확인(1초)과 Bonjour 찾기(2초)를 함께 한다.
     public func api(for host: PairedHost, client: ClientInfo, timeouts: HostAPI.Timeouts) async -> HostAPI? {

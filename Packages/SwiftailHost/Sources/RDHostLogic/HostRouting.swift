@@ -39,7 +39,7 @@ extension HostLogic {
         case ["v1", "direct", "enroll"] where !direct: name = "enroll"; methods = ["POST"]
         default:
             if path.count == 3 && path[0] == "v1" && path[1] == "resources" { name = "resource"; parameter = path[2] }
-            // 진행 확인은 두 리스너 모두 받는다. 직접 연결에서는 케이블 설치(addenda Q)의 세션을 본다.
+            // 진행 확인은 두 리스너 모두 받는다. 직접 연결에서는 케이블 설치(addenda R)의 세션을 본다.
             else if path.count == 3 && path[0] == "v1" && path[1] == "sessions" { name = "sessionStatus"; parameter = path[2] }
             else if direct && path.count == 4 && path[0] == "v1" && path[1] == "builds" && path[3] == "cable-install" {
                 name = "cableInstall"; parameter = path[2]; methods = ["POST"]

@@ -15,7 +15,7 @@ extension HostLogic {
         var ipaStarted = false
         var covered: [Range<UInt64>] = []
         var inflight = 0
-        /// USB 케이블 설치가 실패한 이유(protocol-addenda Q).
+        /// USB 케이블 설치가 실패한 이유(protocol-addenda R).
         var message: String?
         var terminal: Bool { state == .completed || state == .expired || state == .failed }
         var bytesServed: UInt64 { covered.reduce(0) { $0 + $1.countValue } }
@@ -60,7 +60,7 @@ extension HostLogic {
                        "expiresAt": hostTimestamp(session.expires)], status: 201)
     }
 
-    // MARK: USB 케이블 설치 (protocol-addenda Q)
+    // MARK: USB 케이블 설치 (protocol-addenda R)
 
     /// 케이블 설치를 받을 수 없는 요청이면 그 오류. 받지 않는 Mac은 경로가 없는 것처럼 답한다(iPhone은 VPN 설치로 넘어간다).
     func cableInstallRefusal(_ request: HostRequest) -> APIErrorBody? {

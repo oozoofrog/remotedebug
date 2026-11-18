@@ -4,7 +4,7 @@ import Testing
 
 @testable import MacHostKit
 
-// USB 케이블 설치(docs/protocol-addenda.md Q)의 Mac 쪽: 인터페이스 → iPhone, IPA 풀기 → 설치.
+// USB 케이블 설치(docs/protocol-addenda.md R)의 Mac 쪽: 인터페이스 → iPhone, IPA 풀기 → 설치.
 
 private struct FakeFinder: CableDeviceFinding {
     var serials: [String: String]

@@ -41,7 +41,7 @@
 		<string>_remotedebug._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>같은 Wi-Fi에 있는 페어링한 Mac을 찾아 VPN 없이 연결합니다.</string>
+	<string>같은 Wi-Fi에 있거나 USB 케이블로 연결한 페어링한 Mac을 찾아 VPN 없이 연결합니다.</string>
 	<key>RDAppGroup</key>
 	<string>group.$(RD_BUNDLE_PREFIX).RemoteDebug</string>
 	<key>UIApplicationSceneManifest</key>

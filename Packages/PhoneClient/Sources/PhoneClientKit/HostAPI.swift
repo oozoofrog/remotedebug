@@ -154,6 +154,13 @@ public struct HostAPI: Sendable {
         try await call("POST", ["v1", "builds", Self.checkedID(buildID), "sessions"], bodyData: nil, timeout: timeouts.createSession, expect: SessionResponse.self)
     }
 
+    /// USB 케이블로 꽂은 이 iPhone에 Mac이 빌드를 설치하게 한다(docs/protocol-addenda.md R). 케이블 직접 경로에서만 부른다.
+    /// 진행은 `sessionStatus(sessionID:)`로 본다. 이 경로를 모르는 이전 Mac은 `404 not_found`를 준다.
+    public func startCableInstall(buildID: String) async throws -> CableInstallResponse {
+        try await call("POST", ["v1", "builds", Self.checkedID(buildID), "cable-install"], bodyData: nil, timeout: timeouts.createSession,
+                       expect: CableInstallResponse.self)
+    }
+
     public func sessionStatus(sessionID: String) async throws -> SessionStatus {
         try await call("GET", ["v1", "sessions", Self.checkedID(sessionID)], expect: SessionStatus.self)
     }

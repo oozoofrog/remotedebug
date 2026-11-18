@@ -113,7 +113,7 @@ public enum VPNStatusText {
     public static let direct = String(localized: "직접 연결(같은 Wi-Fi, VPN 없이)")
     public static let directDetail = String(localized: "같은 Wi-Fi의 Mac과 직접 주고받습니다. 앱을 설치할 때만 VPN을 자동으로 켭니다.")
     public static let directWithVPNDetail = String(localized: "빌드 목록·파일·로그는 같은 Wi-Fi로 Mac과 직접 주고받습니다.")
-    /// VPN은 꺼져 있고 USB 케이블로 Mac과 직접 주고받는다(docs/protocol-addenda.md Q).
+    /// VPN은 꺼져 있고 USB 케이블로 Mac과 직접 주고받는다(docs/protocol-addenda.md R).
     public static let cable = String(localized: "USB 연결(케이블, VPN 없이)")
     public static let cableDetail = String(localized: "USB 케이블로 Mac과 직접 주고받습니다. 앱 설치도 케이블로 합니다.")
     public static let cableWithVPNDetail = String(localized: "빌드 목록·파일·로그·앱 설치는 USB 케이블로 Mac과 직접 주고받습니다.")

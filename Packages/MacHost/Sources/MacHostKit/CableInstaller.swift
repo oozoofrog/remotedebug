@@ -1,7 +1,7 @@
 import Foundation
 import IOKit
 
-// USB 케이블 설치(docs/protocol-addenda.md Q)의 Mac 쪽: 요청이 들어온 네트워크 인터페이스가 어느 iPhone의 케이블인지
+// USB 케이블 설치(docs/protocol-addenda.md R)의 Mac 쪽: 요청이 들어온 네트워크 인터페이스가 어느 iPhone의 케이블인지
 // 알아내고, 게시한 IPA를 풀어 `devicectl`로 그 iPhone에 설치한다.
 
 /// 네트워크 인터페이스가 USB로 꽂은 iPhone의 것인지 알아낸다. 시험은 가짜를 넣는다.

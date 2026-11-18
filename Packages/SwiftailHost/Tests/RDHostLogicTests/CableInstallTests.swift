@@ -5,7 +5,7 @@ import Testing
 
 @testable import RDHostLogic
 
-// USB 케이블 설치(docs/protocol-addenda.md Q): 직접 연결 리스너에서만, 토큰으로 인증한 기기가,
+// USB 케이블 설치(docs/protocol-addenda.md R): 직접 연결 리스너에서만, 토큰으로 인증한 기기가,
 // 요청이 들어온 케이블의 iPhone에만 설치시킬 수 있다.
 
 /// `anri0`와 `en11`은 UDID `00008120-000000000000001E`인 iPhone의 케이블이다. 설치는 시험이 끝낸다.

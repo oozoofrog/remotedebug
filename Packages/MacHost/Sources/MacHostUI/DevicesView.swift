@@ -164,7 +164,7 @@ struct DeviceRow: View {
                 }
                 .font(.callout)
                 if device.isDirectEnrolled {
-                    Label("같은 네트워크 직접 연결 등록됨", systemImage: "wifi")
+                    Label("직접 연결 등록됨(같은 네트워크·USB 케이블)", systemImage: "wifi")
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }

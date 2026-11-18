@@ -163,6 +163,22 @@ struct InstallStatusView: View {
             }
             .font(.footnote)
             .foregroundStyle(.secondary)
+        case .installingOverCable:
+            progressLine("Mac이 USB 케이블로 설치하는 중")
+        case .installedOverCable:
+            VStack(alignment: .leading, spacing: 6) {
+                Label("설치 완료", systemImage: "checkmark.circle.fill")
+                    .foregroundStyle(.green)
+                    .font(.subheadline.bold())
+                Text("Mac이 USB 케이블로 설치를 마쳤습니다. 홈 화면에서 앱을 여세요.")
+                    .font(.footnote)
+                Label(InstallState.developerModeHint, systemImage: "hammer")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button("확인") { actions.clearInstall(build.id) }
+                    .font(.footnote)
+                    .buttonStyle(.borderless)
+            }
         case .completed:
             VStack(alignment: .leading, spacing: 6) {
                 Label("전송 완료", systemImage: "checkmark.circle.fill")

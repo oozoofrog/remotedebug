@@ -6131,6 +6131,118 @@
         }
       }
     },
+    "Mac이 USB 케이블로 설치를 마쳤습니다. 홈 화면에서 앱을 여세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Mac finished installing over the USB cable. Open the app from the Home Screen."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MacがUSBケーブルでインストールを完了しました。ホーム画面からアプリを開いてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 已通过 USB 连接线完成安装。请从主屏幕打开 App。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 已透過 USB 連接線完成安裝。請從主畫面打開 App。"
+          }
+        }
+      }
+    },
+    "Mac이 USB 케이블로 설치를 마쳤습니다. 홈 화면에서 앱을 여세요. %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Mac finished installing over the USB cable. Open the app from the Home Screen. %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MacがUSBケーブルでインストールを完了しました。ホーム画面からアプリを開いてください。%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 已通过 USB 连接线完成安装。请从主屏幕打开 App。%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 已透過 USB 連接線完成安裝。請從主畫面打開 App。%@"
+          }
+        }
+      }
+    },
+    "Mac이 USB 케이블로 설치하는 중" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Mac is installing over the USB cable"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MacがUSBケーブルでインストール中"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 正在通过 USB 连接线安装"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 正在透過 USB 連接線安裝"
+          }
+        }
+      }
+    },
+    "Mac이 USB 케이블로 설치하지 못했습니다. iPhone의 잠금을 풀고 케이블을 확인한 뒤 다시 설치하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The Mac couldn't install over the USB cable. Unlock the iPhone, check the cable, and install again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MacがUSBケーブルでインストールできませんでした。iPhoneのロックを解除し、ケーブルを確認してから、もう一度インストールしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 无法通过 USB 连接线安装。请解锁 iPhone 并检查连接线，然后重新安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac 無法透過 USB 連接線安裝。請解鎖 iPhone 並檢查連接線，然後重新安裝。"
+          }
+        }
+      }
+    },
     "Mac이 iPhone의 요청을 받지 않습니다" : {
       "localizations" : {
         "en" : {
@@ -8457,6 +8569,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Team ID 為 10 個英文大寫字母與數字。"
+          }
+        }
+      }
+    },
+    "USB 연결(케이블, VPN 없이)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB connection (cable, no VPN)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB接続(ケーブル、VPNなし)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB 连接（连接线，无需 VPN）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USB 連線(連接線,不使用 VPN)"
+          }
+        }
+      }
+    },
+    "USB 케이블로 Mac과 직접 주고받습니다. 앱 설치도 케이블로 합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exchanges data directly with the Mac over the USB cable. Apps are installed over the cable too."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USBケーブルでMacと直接やり取りします。アプリのインストールもケーブルで行います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过 USB 连接线与 Mac 直接通信。App 也通过连接线安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "透過 USB 連接線直接與 Mac 收發。App 也透過連接線安裝。"
+          }
+        }
+      }
+    },
+    "USB 케이블로 이 Mac에 꽂은 페어링한 iPhone도 이 연결을 씁니다. 그때는 Wi-Fi와 VPN 없이 주고받고, 앱 설치도 케이블로 합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A paired iPhone plugged into this Mac with a USB cable uses this connection too. It then needs neither Wi-Fi nor VPN, and apps are installed over the cable."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "USBケーブルでこのMacに接続したペアリング済みのiPhoneも、この接続を使います。その場合はWi-FiもVPNも使わずにやり取りし、アプリのインストールもケーブルで行います。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通过 USB 连接线连接到这台 Mac 的已配对 iPhone 也使用此连接。此时无需 Wi-Fi 和 VPN，App 也通过连接线安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以 USB 連接線接上這部 Mac 的已配對 iPhone 也會使用此連線。此時不需 Wi-Fi 與 VPN，App 也透過連接線安裝。"
           }
         }
       }
@@ -12591,34 +12787,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "同一個 Wi-Fi 上已配對的 iPhone 不需 VPN 就能收發建置列表、檔案與記錄。同一個網路上的其他裝置也能連到這個連接埠，但沒有已配對 iPhone 的權杖就什麼都收不到。App 安裝仍然透過 VPN 進行。"
-          }
-        }
-      }
-    },
-    "같은 네트워크 직접 연결 등록됨" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Same-network direct connection registered"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "同じネットワークでの直接接続を登録済み"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已注册同一网络直接连接"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已註冊同一網路的直接連線"
           }
         }
       }
@@ -19497,6 +19665,34 @@
         }
       }
     },
+    "빌드 목록·파일·로그·앱 설치는 USB 케이블로 Mac과 직접 주고받습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The build list, files, logs, and app installs go directly to the Mac over the USB cable."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ビルドリスト・ファイル・ログ・アプリのインストールは、USBケーブルで Mac と直接やり取りします。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "构建列表、文件、日志和 App 安装通过 USB 连接线与 Mac 直接收发。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建置列表、檔案、記錄與 App 安裝會透過 USB 連接線直接與 Mac 往來。"
+          }
+        }
+      }
+    },
     "빌드 목록·파일·로그는 같은 Wi-Fi로 Mac과 직접 주고받습니다." : {
       "localizations" : {
         "en" : {
@@ -19717,6 +19913,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "匯入建置檔案（.app、.ipa）與監視檔案夾"
+          }
+        }
+      }
+    },
+    "빌드 파일(IPA)을 풀지 못했습니다. 다시 게시한 뒤 설치하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't unpack the build file (IPA). Publish it again, then install."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ビルドファイル(IPA)を展開できませんでした。もう一度公開してからインストールしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法解压构建文件（IPA）。请重新发布后再安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法解壓縮建置檔案（IPA）。請重新發佈後再安裝。"
           }
         }
       }
@@ -21807,6 +22031,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安裝後，代理程式在任何專案中都能透過 RemoteDebug 進行建置與發布。會在使用者全域設定中加入 MCP 伺服器 remotedebug 與技能 remotedebug。"
+          }
+        }
+      }
+    },
+    "설치할 빌드를 풀 폴더를 만들지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't create a folder to unpack the build for installation."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストールするビルドを展開するフォルダを作成できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法创建用于解压待安装构建的文件夹。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法建立用來解壓縮待安裝建置的檔案夾。"
           }
         }
       }
@@ -28949,6 +29201,34 @@
         }
       }
     },
+    "제한 시간 안에 USB 케이블 설치가 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't confirm that the USB cable install finished in time. Check on the Home Screen whether the app was installed, and install again if not."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "制限時間内にUSBケーブルでのインストールが完了したか確認できませんでした。ホーム画面でアプリがインストールされているか確認し、ない場合はもう一度インストールしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法确认 USB 连接线安装是否在限定时间内完成。请在主屏幕上确认 App 是否已安装，如果没有，请重新安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法確認 USB 連接線安裝是否已在時限內完成。請在主畫面確認 App 是否已安裝，若沒有請重新安裝。"
+          }
+        }
+      }
+    },
     "제한 시간 안에 전송이 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요." : {
       "localizations" : {
         "en" : {
@@ -29477,6 +29757,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "直接連線"
+          }
+        }
+      }
+    },
+    "직접 연결 등록됨(같은 네트워크·USB 케이블)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Direct connection registered (same network or USB cable)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "直接接続を登録済み(同じネットワーク・USBケーブル)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已注册直接连接（同一网络或 USB 连接线）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已註冊直接連線（同一網路或 USB 連接線）"
           }
         }
       }

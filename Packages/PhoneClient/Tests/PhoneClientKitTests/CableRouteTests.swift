@@ -4,7 +4,7 @@ import Testing
 
 @testable import PhoneClientKit
 
-// USB 케이블 직접 연결(docs/protocol-addenda.md Q): 케이블 인터페이스 고르기, 링크 로컬 주소, 경로 선택, 화면 문구.
+// USB 케이블 직접 연결(docs/protocol-addenda.md R): 케이블 인터페이스 고르기, 링크 로컬 주소, 경로 선택, 화면 문구.
 
 private let cableAddress = "fe80::1c2d:3e4f:5a6b:7c8d%anpi0"
 private let wifiAddress = "192.168.0.10"
@@ -186,6 +186,125 @@ struct CableRouteTests {
         let decoded = try JSONDecoder().decode(DirectCredential.self, from: Data(old.utf8))
         #expect(decoded.lastLink == nil)
         #expect(decoded.lastAddress == wifiAddress)
+    }
+
+    // MARK: 설치
+
+    private static let buildID = "b_9f3a1c2e"
+    private static let installPath = "/v1/builds/b_9f3a1c2e/cable-install"
+    private static let sessionPath = "/v1/sessions/s_52d9a07e"
+    private static let started = #"{"sessionId":"s_52d9a07e","state":"downloading"}"#
+
+    /// 케이블만 꽂혀 있고(Wi-Fi 없음) VPN은 꺼져 있다.
+    private func cabled() async -> (DirectHarness, FakeTransport) {
+        let h = DirectHarness(enrolled: credential(last: nil))
+        h.network.isOnLocalNetwork = false
+        h.network.isCablePlugged = true
+        let mac = h.serveMac(at: cableAddress)
+        h.browser.result = DirectEndpoint(host: cableAddress, port: directPort, link: .cable)
+        await h.model.restore()
+        return (h, mac)
+    }
+
+    private func failedStatus(message: String?) throws -> String {
+        let status = SessionStatus(sessionId: "s_52d9a07e", buildId: Self.buildID, state: .failed, bytesServed: 0, size: 52_428_800,
+                                   expiresAt: Date(timeIntervalSince1970: 1_794_387_600), message: message)
+        return String(decoding: try RDJSON.encoder().encode(status), as: UTF8.self)
+    }
+
+    @Test func installOverTheCableNeedsNoVPNAndNoInstallerSheet() async throws {
+        let (h, mac) = await cabled()
+        mac.on("POST", Self.installPath, .json(Self.started, status: 201))
+        mac.on("GET", Self.sessionPath, .json(try Examples.sessionStatus(.downloading)), .json(try Examples.sessionStatus(.completed, served: 52_428_800)))
+
+        h.model.install(try Examples.buildDescriptor())
+        #expect(h.model.installs[Self.buildID] == .preparing)
+        await h.model.waitForBackgroundWork()
+
+        #expect(h.model.installs[Self.buildID] == .installedOverCable)
+        #expect(h.model.installs[Self.buildID]?.message?.hasPrefix("Mac이 USB 케이블로 설치를 마쳤습니다.") == true)
+        #expect(h.opener.opened.isEmpty)
+        #expect(h.tunnel.autoStartCount == 0)
+        #expect(h.tailnet.requests.isEmpty)
+        let request = try #require(mac.requests.first { $0.url?.path == Self.installPath })
+        #expect(request.value(forHTTPHeaderField: "Authorization") == DirectHarness.authorization)
+        #expect(request.timeoutInterval == 60)
+        #expect(mac.count("GET", Self.sessionPath) == 2)
+        h.model.clearInstall(Self.buildID)
+        #expect(h.model.installs[Self.buildID] == nil)
+    }
+
+    @Test func cableInstallFailureShowsTheReasonFromTheMac() async throws {
+        let (h, mac) = await cabled()
+        mac.on("POST", Self.installPath, .json(Self.started, status: 201))
+        mac.on("GET", Self.sessionPath, .json(try failedStatus(message: "iPhone이 잠겨 있습니다. 잠금을 풀고 다시 설치하세요.")))
+        h.model.install(try Examples.buildDescriptor())
+        await h.model.waitForBackgroundWork()
+        #expect(h.model.installs[Self.buildID] == .failed(message: "iPhone이 잠겨 있습니다. 잠금을 풀고 다시 설치하세요."))
+    }
+
+    @Test func cableInstallFailureWithoutAReasonHasItsOwnText() async throws {
+        let (h, mac) = await cabled()
+        mac.on("POST", Self.installPath, .json(Self.started, status: 201))
+        mac.on("GET", Self.sessionPath, .json(try failedStatus(message: nil)))
+        h.model.install(try Examples.buildDescriptor())
+        await h.model.waitForBackgroundWork()
+        #expect(h.model.installs[Self.buildID] == .failed(message: ClientModel.cableInstallFailedMessage))
+    }
+
+    @Test(arguments: [("not_found", 404), ("cable_required", 409)])
+    func macWithoutCableInstallFallsBackToTheVPNInstall(code: String, status: Int) async throws {
+        // 케이블 설치를 모르는 이전 Mac, 또는 Mac에 꽂은 케이블이 아니라고 답한 Mac.
+        let (h, mac) = await cabled()
+        mac.on("POST", Self.installPath, .error(code, status: status))
+        h.serveTailnet()
+        h.tailnet.on("POST", "/v1/builds/b_9f3a1c2e/sessions", .json(Examples.sessionCreated, status: 201))
+        h.tailnet.on("GET", Self.sessionPath, .json(try Examples.sessionStatus(.completed, served: 52_428_800)))
+
+        h.model.install(try Examples.buildDescriptor())
+        await h.model.waitForBackgroundWork()
+
+        #expect(h.model.installs[Self.buildID] == .completed)
+        #expect(h.tunnel.autoStartCount == 1)
+        #expect(h.opener.opened.count == 1)
+        #expect(mac.count("POST", Self.installPath) == 1)
+    }
+
+    @Test func buildErrorsFromTheMacAreShownNotRetriedOverVPN() async throws {
+        let (h, mac) = await cabled()
+        mac.on("POST", Self.installPath, .error("build_changed", status: 409))
+        h.model.install(try Examples.buildDescriptor())
+        await h.model.waitForBackgroundWork()
+        guard case .failed = h.model.installs[Self.buildID] else {
+            Issue.record("실패 상태가 아니다")
+            return
+        }
+        #expect(h.tunnel.autoStartCount == 0)
+        #expect(h.tailnet.requests.isEmpty)
+    }
+
+    @Test func installOnWiFiStillGoesThroughTheVPN() async throws {
+        // 같은 네트워크 직접 연결에서는 이전처럼 VPN으로 설치한다(케이블 설치를 요청하지 않는다).
+        let h = DirectHarness()
+        let mac = h.serveMac()
+        h.serveTailnet()
+        h.tailnet.on("POST", "/v1/builds/b_9f3a1c2e/sessions", .json(Examples.sessionCreated, status: 201))
+        h.tailnet.on("GET", Self.sessionPath, .json(try Examples.sessionStatus(.completed, served: 52_428_800)))
+        await h.model.restore()
+
+        h.model.install(try Examples.buildDescriptor())
+        await h.model.waitForBackgroundWork()
+
+        #expect(h.model.installs[Self.buildID] == .completed)
+        #expect(mac.count("POST", Self.installPath) == 0)
+        #expect(h.tunnel.autoStartCount == 1)
+    }
+
+    @Test func cableStatesAreInProgressAndFinished() {
+        #expect(InstallState.installingOverCable.isInProgress)
+        #expect(!InstallState.installedOverCable.isInProgress)
+        #expect(InstallState.installedOverCable.showsDeveloperModeHint)
+        #expect(InstallState.installingOverCable.progress == nil)
     }
 
     // MARK: 화면

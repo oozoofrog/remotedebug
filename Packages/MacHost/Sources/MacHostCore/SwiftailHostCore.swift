@@ -39,7 +39,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
         public var pairingPort: UInt16
         /// 제안 링크의 연결 도메인 주소(Info.plist `RDPairLinkBase`). nil이면 `remotedebug://pair`.
         public var pairingLinkBase: PairingLinkBase?
-        /// USB 케이블로 꽂은 iPhone에 설치하는 도구(protocol-addenda Q). nil이면 케이블 설치를 받지 않는다.
+        /// USB 케이블로 꽂은 iPhone에 설치하는 도구(protocol-addenda R). nil이면 케이블 설치를 받지 않는다.
         public var cableInstaller: CableInstaller?
 
         public init(directDirectory: URL? = nil, legacyStateDirectory: URL? = nil, pairingDirectory: URL? = nil,
@@ -1049,7 +1049,7 @@ final class CoreLogFile: Sendable {
     }
 }
 
-/// 로직의 케이블 설치 요청을 Mac 앱의 도구(`CableInstaller`)로 넘긴다(protocol-addenda Q).
+/// 로직의 케이블 설치 요청을 Mac 앱의 도구(`CableInstaller`)로 넘긴다(protocol-addenda R).
 struct CableInstallBridge: HostCableInstalling {
     let installer: CableInstaller
 

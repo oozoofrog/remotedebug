@@ -2,7 +2,7 @@ import Foundation
 import PhoneClientKit
 import UIKit
 
-/// 같은 네트워크·USB 케이블 직접 연결(docs/protocol-addenda.md O, Q)의 실제 구성: Keychain, Bonjour, 네트워크 경로, 공개 키 고정 TLS.
+/// 같은 네트워크·USB 케이블 직접 연결(docs/protocol-addenda.md O, R)의 실제 구성: Keychain, Bonjour, 네트워크 경로, 공개 키 고정 TLS.
 ///
 /// 두 iPhone 앱은 같은 tailnet 기기라 Mac의 토큰이 하나다. 그래서 등록 값은 App Group 이름의
 /// Keychain 그룹에 두어 함께 쓴다. 그 그룹을 쓸 수 없는 빌드에서는 앱마다 따로 저장한다.

@@ -55,6 +55,8 @@ struct AdvancedSettings: View {
 
     static let directFooter = String(localized: "같은 Wi-Fi의 페어링한 iPhone이 VPN 없이 빌드 목록·파일·로그를 주고받습니다. 같은 네트워크의 다른 기기도 이 포트에 접속할 수는 있지만, 페어링한 iPhone의 토큰이 없으면 아무것도 받지 못합니다. 앱 설치는 계속 VPN으로 합니다.")
 
+    static let cableFooter = String(localized: "USB 케이블로 이 Mac에 꽂은 페어링한 iPhone도 이 연결을 씁니다. 그때는 Wi-Fi와 VPN 없이 주고받고, 앱 설치도 케이블로 합니다.")
+
     /// "직접 연결" 줄의 상태 문구.
     static func directStatusText(_ model: HostModel) -> String {
         guard model.directEnabled else { return String(localized: "꺼짐") }
@@ -79,8 +81,12 @@ struct AdvancedSettings: View {
             } header: {
                 Text("직접 연결")
             } footer: {
-                Text(Self.directFooter)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(Self.directFooter)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(Self.cableFooter)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
 
             TailscaleTokenSection()
