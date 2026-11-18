@@ -24,7 +24,7 @@ Mac 앱의 **에이전트에 설치…**는 Claude Code와 Codex에 MCP 서버 `
 | `remotedebug_pair_requests` | 허용을 기다리는 페어링 요청(기기 이름, tailnet 노드 이름, 로그인, 만료 시각) |
 | `remotedebug_pair_decide` | 요청을 거부한다(`request_id`). 허용은 할 수 없다: 허용은 Mac 앱 화면에서만 한다 |
 | `remotedebug_device_logs` | iPhone 앱이 보낸 진단 로그(앱 시작, VPN, 페어링, 빌드 목록, 설치, 업데이트) |
-| `remotedebug_crash_logs` | iPhone이 보낸 크래시 기록 목록과 원문 |
+| `remotedebug_crash_logs` | iPhone이 보낸 크래시 기록과 피드백의 목록과 원문. `id`와 `handled`를 주면 문의를 처리했다고 표시하고, 그날부터 90일 뒤에 기록과 첨부를 지운다 |
 | `remotedebug_push_file`, `remotedebug_push_link` | 페어링한 iPhone에 파일(`file_path`)이나 링크(`url`, 선택 `title`)를 보낸다. 선택 `project`(연결한 프로젝트의 이름이나 `.xcodeproj`·`.xcworkspace` 경로)를 주면 그 프로젝트 구역에, 비우면 공통 구역에 넣는다 |
 | `remotedebug_files` | 보낸 목록을 구역과 함께 본다. 선택 `project`로 한 구역만 본다 |
 
@@ -131,15 +131,23 @@ RemoteDebug로 설치한 앱에서 생긴 문제를 Mac에서 바로 볼 수 있
 ```swift
 import RemoteDebugFeedback
 
+#if DEBUG
 RemoteDebugFeedback.start(.init(
-    macHost: "<Mac 주소>",              // RemoteDebug로 설치한 빌드가 Mac으로 바로 보낸다
-    email: "<받을 메일 주소>",           // 선택. Mac에 닿지 않을 때와 배포 빌드의 경로
+    macHost: "<Mac 주소>",              // Debug 빌드가 Mac으로 바로 보낸다. 배포판에 주소가 남지 않게 #if DEBUG 안에 둔다
+    email: "<받을 메일 주소>",           // 선택. Mac에 닿지 않을 때의 경로
     publicKeyBase64: "<공개키>"         // 선택. 사용자가 붙이기로 한 로그를 메일에 암호화해 붙인다
 ))
+#else
+RemoteDebugFeedback.start(.init(email: "<받을 메일 주소>", publicKeyBase64: "<공개키>"))   // 배포 빌드는 메일만 쓴다
+#endif
 .remoteDebugFeedback(isPresented: $showsFeedback)      // 글, 사용자가 고른 사진·파일, 최근 로그를 받는 피드백 화면
+RemoteDebugFeedbackConsentSection()                    // 설정 화면에 두는 로그 기록 동의 스위치
 ```
 
+- 배포 빌드는 사용자가 동의 스위치를 켜기 전에는 로그를 남기지 않고, Mac으로 보내는 코드와 확인 목록이 들어가지 않는다. 글 없이도 첨부, 로그, 확인 목록의 답이 있으면 보낼 수 있다.
 - 메일로 온 암호화 첨부(`.afdiag`)는 Mac 앱의 **크래시·피드백** 화면에 끌어다 놓으면 풀린다. 키는 그 Mac의 키체인에만 있다.
+- 문의를 처리한 기록은 **처리함으로 표시**해 둔다. 그날부터 90일 뒤에 Mac 앱이 기록과 첨부를 지운다.
+- 넣는 차례, 동의, 남기는 것과 한도, 처리방침 점검 목록, 배포 전 확인(`scripts/check-feedback-release.sh`)은 [패키지 안내](Packages/RemoteDebugFeedback/README.md)에 있다.
 - 패키지는 iOS 17 이상이다.
 
 - 패키지를 넣지 않은 앱: iPhone 빌드 목록의 **크래시 기록**에서 iPhone 설정을 열고, 분석 데이터의 `.ips` 파일을 공유로 RemoteDebug에 넘긴다.

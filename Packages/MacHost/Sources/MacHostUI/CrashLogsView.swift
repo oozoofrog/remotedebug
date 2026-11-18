@@ -50,6 +50,8 @@ struct CrashLogsView: View {
             }
         }
         .navigationTitle("크래시·피드백")
+        // 처리한 지 오래된 기록은 목록을 보일 때도 지운다(앱을 오래 켜 두는 경우).
+        .task { store.purgeHandled() }
         .searchable(text: $search, placement: .toolbar, prompt: "앱·기기 검색")
         .dropDestination(for: URL.self) { urls, _ in
             importDiagnostics(urls)
@@ -89,6 +91,17 @@ struct CrashLogsView: View {
                         Label("Finder에서 보기", systemImage: "folder")
                     }
                 }
+                Button {
+                    if let selected { store.setHandled(selected.id, selected.handledAt == nil) }
+                } label: {
+                    if selected?.handledAt == nil {
+                        Label("처리함으로 표시", systemImage: "checkmark.circle")
+                    } else {
+                        Label("처리함 표시 지우기", systemImage: "checkmark.circle.fill")
+                    }
+                }
+                .disabled(selected == nil)
+                .help("문의를 처리한 날을 적어 둔다. 그날부터 \(CrashLogStore.handledRetentionDays)일 뒤에 이 기록과 첨부를 지운다")
                 Button(role: .destructive) {
                     if let selected { store.remove(selected.id) }
                 } label: {
@@ -128,6 +141,12 @@ private struct CrashRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+            if let deletes = item.deletesAt {
+                Label("처리함 · \(deletes.formatted(date: .abbreviated, time: .omitted)) 뒤 지움", systemImage: "checkmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)

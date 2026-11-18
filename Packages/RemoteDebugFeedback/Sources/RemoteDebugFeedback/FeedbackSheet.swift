@@ -23,16 +23,22 @@ public struct RemoteDebugFeedbackLabels: Sendable {
     public var disclosure = "앱 버전과 기기 종류가 함께 개발자에게 갑니다."
     public var notConfigured = "이 빌드는 피드백을 보낼 곳이 설정되지 않았습니다."
     public var collectingLogs = "로그를 모으는 중…"
-    public var sendingToMac = "개발자의 Mac으로 보내는 중…"
     public var preparingMail = "메일을 준비하는 중…"
-    public var saving = "저장하는 중…"
     public var sent = "보냈습니다."
+    public var mail = FeedbackLabels()
+    /// 설정 화면에 두는 로그 기록 동의 스위치의 문구(`RemoteDebugFeedbackConsentSection(labels: labels.consent)`).
+    public var consent = RemoteDebugFeedbackConsentLabels()
+    #if DEBUG
+    // Mac으로 보내는 길과 확인 목록은 개발 빌드에만 있어, 그 문구도 배포 빌드에 들어가지 않는다.
+    public var sendingToMac = "개발자의 Mac으로 보내는 중…"
+    public var saving = "저장하는 중…"
     public var unreachable = "지금은 개발자의 Mac에 닿지 않습니다."
     public var sendByMail = "메일로 보내기"
     public var sendLater = "저장하고 나중에 보내기"
     public var saved = "저장해 두었습니다. RemoteDebug 앱의 VPN을 켜고 이 앱을 다시 열면 보냅니다."
-    public var mail = FeedbackLabels()
-    #if DEBUG
+    public var unansweredOnly = "답하지 않은 것만 보기"
+    public var resetChecks = "답 모두 지우기"
+    public var resetChecksConfirm = "이 기기에서 고른 답과 메모를 모두 지울까요?"
     public var checklist = "확인할 것"
     public var checklistFooter = "개발 빌드에만 보입니다. 고른 답은 피드백과 함께 갑니다."
     public var unansweredChecks = "아직 답하지 않은 것"
@@ -57,8 +63,8 @@ public struct RemoteDebugFeedbackLabels: Sendable {
     }
 }
 
-/// 피드백을 적어 보내는 화면. Mac으로 바로 보내고, 닿지 않으면 메일이나 나중에 보내기를 고르게 한다.
-/// 화면을 저절로 찍지 않는다. 사진과 파일은 사용자가 고른 것만 붙는다.
+/// 피드백을 적어 보내는 화면. Debug 빌드는 Mac으로 바로 보내고, 닿지 않으면 메일이나 나중에 보내기를 고르게 한다. 배포 빌드는 메일로만 보낸다.
+/// 화면을 저절로 찍지 않는다. 사진과 파일은 사용자가 고른 것만 붙는다. 글이 없어도 첨부, 로그, 확인 목록의 답이 있으면 보낼 수 있다.
 public struct RemoteDebugFeedbackSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
@@ -72,6 +78,11 @@ public struct RemoteDebugFeedbackSheet: View {
     @State private var picksFile = false
     #if DEBUG
     @StateObject private var checks = FeedbackCheckStore()
+    /// "답하지 않은 것만 보기"를 켠 때에 이미 답이 있던 항목. 켠 뒤에 답한 항목은 메모를 적을 수 있게 그대로 보인다.
+    @State private var hiddenChecks: Set<String>?
+    @State private var asksReset = false
+    /// 답을 지울 때마다 바꿔, 줄에 남은 메모 입력을 새로 그린다.
+    @State private var resetCount = 0
     #endif
     // 배포판에서는 사용자가 켤 때만 로그를 붙인다.
     #if DEBUG
@@ -92,19 +103,34 @@ public struct RemoteDebugFeedbackSheet: View {
         let configuration = RemoteDebugFeedback.configuration
         self.configuration = configuration
         let draft = FeedbackDraft()
-        let info = FeedbackAppInfo(name: RemoteDebugFeedback.appName, version: RemoteDebugFeedback.shortVersion,
-                                   build: RemoteDebugFeedback.buildNumber,
-                                   system: ProcessInfo.processInfo.operatingSystemVersionString,
-                                   device: RemoteDebugFeedback.deviceModel)
+        let usageNotice = labels.mail.usageNotice
         _draft = State(initialValue: draft)
-        _mail = StateObject(wrappedValue: FeedbackSession(recipient: configuration.email ?? "", appInfo: info, labels: labels.mail) { info in
-            FeedbackContent(subject: "\(info.name) feedback", body: draft.message + FeedbackContent.standard(info).body)
+        _mail = StateObject(wrappedValue: FeedbackSession(recipient: configuration.email ?? "", appInfo: RemoteDebugFeedback.appInfo, labels: labels.mail) { info in
+            FeedbackContent.standard(info, message: draft.message, usageNotice: usageNotice)
         })
     }
 
     private var hasMail: Bool { !(configuration.email ?? "").isEmpty }
-    private var hasMac: Bool { RemoteDebugFeedback.client != nil }
+    private var hasMac: Bool {
+        #if DEBUG
+        RemoteDebugFeedback.client != nil
+        #else
+        false
+        #endif
+    }
+    private var hasKey: Bool { !(configuration.publicKeyBase64 ?? "").isEmpty }
     private var trimmed: String { message.trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// 로그를 붙일 수 있는가: 기록이 허용돼 있고(배포 빌드에서는 사용자의 동의), 실어 보낼 길(Mac이나 암호화 키)이 있을 때.
+    private var canAttachLogs: Bool { RemoteDebugFeedback.isRecordingAllowed && (hasMac || hasKey) }
+    private var attachesLogs: Bool { includesLogs && canAttachLogs }
+    /// 보낼 것이 있는가. 글이 없어도 첨부, 로그, 확인 목록의 답 가운데 하나가 있으면 보낸다.
+    private var hasContent: Bool {
+        var has = !trimmed.isEmpty || !files.items.isEmpty || attachesLogs
+        #if DEBUG
+        has = has || !checks.answeredIDs.isEmpty
+        #endif
+        return has
+    }
 
     public var body: some View {
         NavigationStack {
@@ -121,7 +147,8 @@ public struct RemoteDebugFeedbackSheet: View {
                 }
                 attachmentSection
                 Section {
-                    Toggle(labels.includeLogs, isOn: $includesLogs)
+                    // 기록에 동의하지 않았으면 붙일 로그가 없으므로 스위치를 보이지 않는다.
+                    if canAttachLogs { Toggle(labels.includeLogs, isOn: $includesLogs) }
                 } footer: {
                     Text(hasMac || hasMail ? labels.disclosure : labels.notConfigured)
                 }
@@ -144,13 +171,22 @@ public struct RemoteDebugFeedbackSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button(labels.close) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(labels.send) { Task { await send() } }
-                        .disabled(progress != nil || trimmed.isEmpty || !(hasMac || hasMail))
+                        .disabled(progress != nil || !hasContent || !(hasMac || hasMail))
                 }
             }
+            #if DEBUG
             .confirmationDialog(labels.unreachable, isPresented: $asksRoute, titleVisibility: .visible) {
                 if hasMail { Button(labels.sendByMail) { Task { await sendMail() } } }
                 Button(labels.sendLater) { Task { await sendLater() } }
             }
+            .confirmationDialog(labels.resetChecksConfirm, isPresented: $asksReset, titleVisibility: .visible) {
+                Button(labels.resetChecks, role: .destructive) {
+                    checks.reset()
+                    hiddenChecks = hiddenChecks == nil ? nil : []
+                    resetCount += 1
+                }
+            }
+            #endif
             .sheet(item: $mail.composing) { mail in
                 FeedbackMailComposer(mail: mail, onFinish: self.mail.finish).ignoresSafeArea()
             }
@@ -191,15 +227,20 @@ public struct RemoteDebugFeedbackSheet: View {
         if !checks.items.isEmpty {
             Section {
                 LabeledContent(labels.unansweredChecks, value: "\(checks.unansweredCount)/\(checks.items.count)")
+                Toggle(labels.unansweredOnly, isOn: Binding(get: { hiddenChecks != nil },
+                                                            set: { hiddenChecks = $0 ? checks.answeredIDs : nil }))
+                Button(labels.resetChecks, role: .destructive) { asksReset = true }
+                    .disabled(checks.answers.isEmpty)
             } header: {
                 Text(labels.checklist)
             } footer: {
                 Text(labels.checklistFooter)
             }
-            ForEach(checks.stages, id: \.title) { stage in
+            ForEach(checks.stages(hiding: hiddenChecks ?? []), id: \.title) { stage in
                 Section {
                     ForEach(stage.items) { item in
                         FeedbackCheckRow(item: item, store: checks, labels: labels)
+                            .id("\(item.id)#\(resetCount)")
                     }
                 } header: {
                     if !stage.title.isEmpty { Text(stage.title) }
@@ -277,7 +318,7 @@ public struct RemoteDebugFeedbackSheet: View {
 
     /// 붙일 로그. 한 번 모은 것은 이 화면에서 다시 모으지 않는다.
     private func logLines() async -> [String] {
-        guard includesLogs else { return [] }
+        guard attachesLogs else { return [] }
         if let collectedLogs { return collectedLogs }
         progress = labels.collectingLogs
         let lines = await Task.detached { FeedbackLog.shared.collect() }.value
@@ -285,18 +326,19 @@ public struct RemoteDebugFeedbackSheet: View {
         return lines
     }
 
+    #if DEBUG
     private func report() async -> FeedbackReport {
         let lines = await logLines()
         let details = lines.isEmpty ? "" : "\n최근 로그\n" + lines.joined(separator: "\n")
         var report = RemoteDebugFeedback.report(message: trimmed, details: details, attachments: files.items, date: Date())
-        #if DEBUG
         if !checks.items.isEmpty { report.checks = checks.reportChecks }
-        #endif
         return report
     }
+    #endif
 
     private func send() async {
         notice = nil
+        #if DEBUG
         guard let client = RemoteDebugFeedback.client else {
             await sendMail()
             return
@@ -310,8 +352,12 @@ public struct RemoteDebugFeedbackSheet: View {
         } else {
             asksRoute = true
         }
+        #else
+        await sendMail()
+        #endif
     }
 
+    #if DEBUG
     private func sendLater() async {
         guard let client = RemoteDebugFeedback.client else { return }
         let report = await report()
@@ -326,12 +372,13 @@ public struct RemoteDebugFeedbackSheet: View {
             files = FeedbackFiles()
         }
     }
+    #endif
 
     private func sendMail() async {
         draft.message = trimmed
         // 사용자가 고른 사진과 파일은 메일에 그대로 붙인다. 로그만 암호화한 진단 파일에 넣는다.
         mail.files = files.items
-        var hasDiagnostics = includesLogs
+        var hasDiagnostics = attachesLogs
         #if DEBUG
         // 확인 목록의 답은 메일에서는 암호화한 진단 파일에 넣는다.
         mail.checklist = checks.mailChecks
@@ -339,8 +386,12 @@ public struct RemoteDebugFeedbackSheet: View {
         #endif
         if let key = configuration.publicKeyBase64, !key.isEmpty, hasDiagnostics {
             let lines = await logLines()
+            // 어느 빌드에서 온 것인지 진단 파일만 받아도 알 수 있게 앱·기기 정보를 함께 넣는다. 개인을 가리키는 값은 없다.
+            let info = mail.appInfo
+            let app = ["bundleId": info.bundleID, "name": info.name, "version": info.version, "build": info.build,
+                       "os": info.system, "device": info.device]
             mail.diagnostics = FeedbackDiagnostics(publicKeyBase64: key, disclosure: labels.disclosure) {
-                try JSONSerialization.data(withJSONObject: ["logs": lines])
+                try JSONSerialization.data(withJSONObject: ["logs": lines, "app": app])
             }
             mail.attachesDiagnostics = true
         } else {

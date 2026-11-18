@@ -24,7 +24,7 @@ The Mac app's **에이전트에 설치…** (Install for agents) adds an MCP ser
 | `remotedebug_pair_requests` | Pairing requests waiting for approval (device name, tailnet node name, login, expiry) |
 | `remotedebug_pair_decide` | Deny a request (`request_id`). It cannot approve: approval is only possible on the Mac app's screen |
 | `remotedebug_device_logs` | Diagnostic logs the iPhone app sent (app start, VPN, pairing, build list, install, update) |
-| `remotedebug_crash_logs` | Crash reports the iPhone sent: the list, or one report's text |
+| `remotedebug_crash_logs` | Crash reports and feedback the iPhone sent: the list, or one report's text. With `id` and `handled` it marks the inquiry as handled; the record and its attachments are deleted 90 days after that day |
 | `remotedebug_push_file`, `remotedebug_push_link` | Send a file (`file_path`) or link (`url`, optional `title`) to the paired iPhone. Optional `project` (a connected project's name or its `.xcodeproj`/`.xcworkspace` path) puts it in that project's area; without it the item goes to the common area |
 | `remotedebug_files` | List what was sent, each item with its project area. Optional `project` filters by area |
 
@@ -131,15 +131,23 @@ Problems in apps installed through RemoteDebug show up on the Mac, in the Mac ap
 ```swift
 import RemoteDebugFeedback
 
+#if DEBUG
 RemoteDebugFeedback.start(.init(
-    macHost: "<Mac address>",           // builds installed through RemoteDebug send straight to the Mac
-    email: "<address for feedback>",    // optional: used when the Mac is unreachable, and by release builds
+    macHost: "<Mac address>",           // Debug builds send straight to the Mac; keep it inside #if DEBUG so release builds never carry the address
+    email: "<address for feedback>",    // optional: used when the Mac is unreachable
     publicKeyBase64: "<public key>"     // optional: logs the user chooses to attach are encrypted into the mail
 ))
+#else
+RemoteDebugFeedback.start(.init(email: "<address for feedback>", publicKeyBase64: "<public key>"))   // release builds use mail only
+#endif
 .remoteDebugFeedback(isPresented: $showsFeedback)      // form with text, photos and files the user picks, and recent logs
+RemoteDebugFeedbackConsentSection()                    // the log recording consent switch, for your settings screen
 ```
 
+- Release builds record no logs until the user turns the consent switch on, and contain neither the Mac upload code nor the test checklist. A feedback with no text can be sent when it carries attachments, logs or checklist answers.
 - Drop an encrypted mail attachment (`.afdiag`) on the Mac app's crash and feedback screen to open it. The key stays in that Mac's keychain.
+- Mark a record **처리함으로 표시** (Mark as Handled) once the inquiry is dealt with. The Mac app deletes the record and its attachments 90 days after that day.
+- Setup steps, consent, what is recorded and its limits, the privacy policy checklist and the release check (`scripts/check-feedback-release.sh`) are in the [package guide](Packages/RemoteDebugFeedback/README.md) (Korean).
 - The package needs iOS 17 or later.
 
 - Apps without the package: open the crash record button in the iPhone build list, open iPhone Settings, and share the `.ips` file from Analytics Data into RemoteDebug.

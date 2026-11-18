@@ -4,6 +4,7 @@ import OSLog
 #endif
 
 /// 피드백에 붙일 로그. 앱이 `RemoteDebugFeedback.log`로 남긴 줄과, 이 앱이 시스템 로그에 남긴 최근 줄을 모은다.
+/// 기록이 허용되지 않은 동안(배포 빌드에서 사용자가 동의하기 전)에는 남기지도 모으지도 않는다.
 final class FeedbackLog: @unchecked Sendable {
     static let shared = FeedbackLog()
     static let limit = 500
@@ -11,8 +12,14 @@ final class FeedbackLog: @unchecked Sendable {
 
     private let lock = NSLock()
     private var lines: [String] = []
+    private let isAllowed: @Sendable () -> Bool
+
+    init(isAllowed: @escaping @Sendable () -> Bool = { RemoteDebugFeedback.isRecordingAllowed }) {
+        self.isAllowed = isAllowed
+    }
 
     func add(_ message: String, at date: Date = Date()) {
+        guard isAllowed() else { return }
         let line = "\(ISO8601DateFormatter.fractional.string(from: date)) \(message)"
         lock.lock()
         // 한 줄이 길어도 기록 전체가 커지지 않게 자른다.
@@ -27,6 +34,13 @@ final class FeedbackLog: @unchecked Sendable {
         return lines
     }
 
+    /// 남긴 줄을 모두 지운다.
+    func clear() {
+        lock.lock()
+        lines.removeAll()
+        lock.unlock()
+    }
+
     /// 앱이 남긴 줄인가. 앱 실행 파일이 직접 남겼거나, Apple 것이 아닌 하위 시스템 이름이 붙은 줄만 받는다.
     /// 시스템 라이브러리가 이 프로세스 안에서 남긴 줄은 뺀다.
     static func isFromApp(subsystem: String, sender: String, process: String) -> Bool {
@@ -36,6 +50,7 @@ final class FeedbackLog: @unchecked Sendable {
 
     /// 앱이 남긴 줄과 최근 `window`초 동안 이 프로세스가 시스템 로그에 남긴 줄(시스템 라이브러리의 줄 제외)을 시각 순으로. 최근 `limit`줄까지.
     func collect(window: TimeInterval = 900, limit: Int = 300) -> [String] {
+        guard isAllowed() else { return [] }
         var all = recorded
         #if canImport(OSLog)
         if let store = try? OSLogStore(scope: .currentProcessIdentifier),

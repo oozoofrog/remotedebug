@@ -28,8 +28,14 @@ public enum FeedbackSetup {
             \(arguments.joined(separator: ",\n    "))
         ))
         """
-        // 배포판(App Store)에는 Mac 주소를 넣지 않는다. 사용자가 메일로 보내고, 로그는 사용자가 켰을 때만 암호화해 붙인다. 사용자가 고른 사진과 파일은 메일에 그대로 붙는다.
-        let start = email.isEmpty ? debugStart : """
+        // 배포판(App Store)에는 Mac 주소를 넣지 않는다(주소 글자가 실행 파일에 남지 않게 `#if DEBUG` 안에만 둔다).
+        // 배포판은 사용자가 메일로 보내고, 로그는 사용자가 기록에 동의하고 붙이기를 켰을 때만 암호화해 붙인다. 사용자가 고른 사진과 파일은 메일에 그대로 붙는다.
+        let start = email.isEmpty ? """
+        // Mac 주소는 Debug 빌드에만 넣는다. 배포판은 Mac으로 보내지 않는다.
+        #if DEBUG
+        \(debugStart)
+        #endif
+        """ : """
         #if DEBUG
         \(debugStart)
         #else
@@ -46,7 +52,11 @@ public enum FeedbackSetup {
         // 피드백 화면을 띄울 곳(디버그 메뉴, 설정 화면 등). 화면은 저절로 찍지 않고, 사용자가 사진과 파일을 골라 붙인다(5개, 합쳐 1.5MB까지).
         .remoteDebugFeedback(isPresented: $showsFeedback)
 
+        // 설정 화면의 Form이나 List 안(배포판에서 로그를 받으려면 필요). 사용자가 설명을 읽고 동의해야 로그를 남기고, 끄면 남긴 기록을 지운다.
+        RemoteDebugFeedbackConsentSection()
+
         // 피드백에 함께 갈 로그(선택). os.Logger로 남긴 이 앱의 최근 로그는 자동으로 모은다.
+        // 배포판에서는 사용자가 동의하기 전에는 아무것도 남기지 않는다. 건강, 위치, 사용자가 적은 글 같은 민감한 값은 넣지 않는다.
         RemoteDebugFeedback.log("결제 화면 열림")
         """
     }

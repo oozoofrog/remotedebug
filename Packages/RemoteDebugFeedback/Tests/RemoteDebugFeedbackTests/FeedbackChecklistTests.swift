@@ -104,6 +104,9 @@ struct FeedbackChecklistTests {
 
         let mail = store.mailChecks
         #expect(mail.map(\.answer) == [.unchecked, .failed] && mail[1].choice == "안 보임" && mail[1].note == "빈 화면")
+        // 해 보지 못한 것은 실패와도, 답하지 않은 것과도 다르게 간다.
+        store.choose(FeedbackCheckItem.untestedChoice, for: declared[0])
+        #expect(store.mailChecks[0].answer == .untested && store.reportChecks[0].answer == "확인 못함")
         // 고른 답이 없는 옛 모양도 읽힌다.
         let old = try JSONDecoder().decode(FeedbackCheck.self, from: Data(#"{"id":"a","title":"t","answer":"passed","note":""}"#.utf8))
         #expect(old.choice == nil && old.answer == .passed)

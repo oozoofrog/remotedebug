@@ -6,6 +6,8 @@ final class FeedbackClientTests: XCTestCase {
         FileManager.default.temporaryDirectory.appendingPathComponent("rdfeedback-\(UUID().uuidString)", isDirectory: true)
     }
 
+    // Mac으로 보내는 길은 개발 빌드에만 있다.
+    #if DEBUG
     private func reply(_ status: Int) -> FeedbackClient.Send {
         { request in (Data(), HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!) }
     }
@@ -55,8 +57,10 @@ final class FeedbackClientTests: XCTestCase {
         XCTAssertTrue(pending.isEmpty)
     }
 
+    #endif
+
     func testLogKeepsRecentLinesOnly() {
-        let log = FeedbackLog()
+        let log = FeedbackLog(isAllowed: { true })
         for index in 0..<(FeedbackLog.limit + 20) { log.add("line \(index)") }
         XCTAssertEqual(log.recorded.count, FeedbackLog.limit)
         XCTAssertTrue(log.recorded.last?.hasSuffix("line \(FeedbackLog.limit + 19)") ?? false)
@@ -69,6 +73,7 @@ final class FeedbackClientTests: XCTestCase {
         XCTAssertFalse(FeedbackLog.isFromApp(subsystem: "com.apple.network", sender: "HideFaces", process: "HideFaces"))
     }
 
+    #if DEBUG
     func testReportCarriesMessageAndKind() throws {
         let report = RemoteDebugFeedback.report(message: "느려요", details: "최근 화면: 설정", image: Data("jpeg".utf8), date: Date(timeIntervalSince1970: 1_794_478_500))
         XCTAssertEqual(report.kind, "feedback")
@@ -79,6 +84,8 @@ final class FeedbackClientTests: XCTestCase {
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(report)) as? [String: Any])
         XCTAssertEqual(Set(object.keys), ["kind", "name", "bundleId", "appVersion", "crashedAt", "text", "image"])
     }
+
+    #endif
 
     /// 기기에 남은 진단 파일은 앱을 시작할 때와 새 파일을 만들기 전에 지운다(옛 이름의 폴더 포함).
     func testLeftoverDiagnosticFilesAreRemoved() throws {
@@ -94,7 +101,7 @@ final class FeedbackClientTests: XCTestCase {
     }
 
     func testLongLogLinesAreCut() {
-        let log = FeedbackLog()
+        let log = FeedbackLog(isAllowed: { true })
         log.add(String(repeating: "a", count: 5000))
         XCTAssertLessThanOrEqual(log.collect(window: 0).last?.count ?? .max, FeedbackLog.lineLimit + 80)
     }

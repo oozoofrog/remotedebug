@@ -10,7 +10,9 @@ let package = Package(
         .library(name: "RemoteDebugFeedback", targets: ["RemoteDebugFeedback"]),
     ],
     targets: [
-        .target(name: "RemoteDebugFeedback", path: "Packages/RemoteDebugFeedback/Sources/RemoteDebugFeedback"),
+        // 개인정보 매니페스트는 리소스로 넣어야 앱의 개인정보 보고서에 잡힌다. README.md는 소스 폴더 밖에 있다.
+        .target(name: "RemoteDebugFeedback", path: "Packages/RemoteDebugFeedback/Sources/RemoteDebugFeedback",
+                resources: [.copy("PrivacyInfo.xcprivacy")]),
         .testTarget(name: "RemoteDebugFeedbackTests", dependencies: ["RemoteDebugFeedback"],
                     path: "Packages/RemoteDebugFeedback/Tests/RemoteDebugFeedbackTests"),
     ]

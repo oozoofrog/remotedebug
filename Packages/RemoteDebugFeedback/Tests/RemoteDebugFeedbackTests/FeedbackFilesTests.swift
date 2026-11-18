@@ -52,7 +52,9 @@ struct FeedbackFilesTests {
         #expect(files.items.count == FeedbackFiles.maxCount - 1 && !files.isFull)
         // 한도끼리 맞는다: 사진 다섯 장은 합계 안에, 합계(base64)와 글은 본문 한도 안에 들어간다.
         #expect(FeedbackFiles.maxImageBytes * FeedbackFiles.maxCount <= FeedbackFiles.maxTotalBytes)
+        #if DEBUG
         #expect(FeedbackFiles.maxTotalBytes * 4 / 3 + FeedbackClient.maxTextBytes < FeedbackClient.maxBodyBytes)
+        #endif
     }
 
     @Test func imagesAreShrunkToTheImageLimit() throws {
@@ -92,6 +94,8 @@ struct FeedbackFilesTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path).sorted() == ["big.zip", "note.txt", "shot.png"])
     }
 
+    // Mac으로 보내는 기록의 모양과 쌓아 두는 기록. 개발 빌드에만 있다.
+    #if DEBUG
     @Test func reportCarriesAttachmentsAndStaysCompatibleWithoutThem() throws {
         let date = Date(timeIntervalSince1970: 1_794_478_500)
         let plain = RemoteDebugFeedback.report(message: "느려요", details: "", date: date)
@@ -159,6 +163,8 @@ struct FeedbackFilesTests {
         #expect(await client.submit(report) == false)
         #expect(await client.pending().isEmpty)
     }
+
+    #endif
 
     @Test @MainActor func mailCarriesPickedFilesAndMailtoSaysItCannot() async throws {
         let files = [FeedbackFile(name: "photo-1.jpg", type: "image/jpeg", data: Data("jpeg".utf8))]
