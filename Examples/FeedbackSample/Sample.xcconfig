@@ -1,0 +1,16 @@
+// 피드백 예제 앱(FeedbackSample)의 설정. 팀과 번들 ID 앞부분은 저장소의 Config/Signing.xcconfig와
+// Config/Signing.local.xcconfig(저장소에 올리지 않는다)를 그대로 쓴다. 번들 ID는 $(RD_BUNDLE_PREFIX).FeedbackSample이다.
+//
+// 아래 값은 저장소에 적지 않는다. Config/Signing.local.xcconfig에 넣는다:
+//   RD_FEEDBACK_MAC_HOST = rd-mac-1a2b3c4d.tail0001.ts.net
+//   RD_FEEDBACK_PUBLIC_KEY = <공개키(base64)>
+//   RD_FEEDBACK_EMAIL = dev@example.com
+// 호스트와 공개키는 RemoteDebug Mac 앱에 이 프로젝트를 연결한 뒤 `rd feedback <이 폴더>`(MCP remotedebug_feedback_setup)가
+// 돌려주는 코드의 macHost와 publicKeyBase64 값이다. 메일 주소는 Mac에 닿지 않을 때와 Release 구성에서 쓰며 없어도 된다.
+// xcconfig는 //부터 줄 끝을 주석으로 읽는다. 공개키에 //가 들어 있으면 그 자리를 /$()/ 로 적는다.
+//
+// 기본값은 비어 있다. 아래 include가 뒤에 있어야 Signing.local.xcconfig의 값이 이 기본값을 덮는다.
+RD_FEEDBACK_MAC_HOST =
+RD_FEEDBACK_PUBLIC_KEY =
+RD_FEEDBACK_EMAIL =
+#include "../../Config/Signing.xcconfig"

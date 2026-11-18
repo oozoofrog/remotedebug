@@ -1,0 +1,277 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		F5EDBAC00000000000000001 /* RemoteDebugFeedback in Frameworks */ = {isa = PBXBuildFile; productRef = F5EDBAC00000000000000002 /* RemoteDebugFeedback */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		F5EDBAC00000000000000003 /* FeedbackSample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FeedbackSample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F5EDBAC00000000000000004 /* Sample.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Sample.xcconfig; sourceTree = "<group>"; };
+		F5EDBAC00000000000000005 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		F5EDBAC00000000000000006 /* FeedbackSample */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = FeedbackSample;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F5EDBAC00000000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F5EDBAC00000000000000001 /* RemoteDebugFeedback in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F5EDBAC00000000000000008 = {
+			isa = PBXGroup;
+			children = (
+				F5EDBAC00000000000000006 /* FeedbackSample */,
+				F5EDBAC00000000000000005 /* Info.plist */,
+				F5EDBAC00000000000000004 /* Sample.xcconfig */,
+				F5EDBAC00000000000000009 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F5EDBAC00000000000000009 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F5EDBAC00000000000000003 /* FeedbackSample.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F5EDBAC0000000000000000A /* FeedbackSample */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F5EDBAC00000000000000014 /* Build configuration list for PBXNativeTarget "FeedbackSample" */;
+			buildPhases = (
+				F5EDBAC0000000000000000B /* Sources */,
+				F5EDBAC00000000000000007 /* Frameworks */,
+				F5EDBAC0000000000000000C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				F5EDBAC00000000000000006 /* FeedbackSample */,
+			);
+			name = FeedbackSample;
+			packageProductDependencies = (
+				F5EDBAC00000000000000002 /* RemoteDebugFeedback */,
+			);
+			productName = FeedbackSample;
+			productReference = F5EDBAC00000000000000003 /* FeedbackSample.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F5EDBAC0000000000000000D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					F5EDBAC0000000000000000A = {
+						CreatedOnToolsVersion = 26.0;
+					};
+				};
+			};
+			buildConfigurationList = F5EDBAC00000000000000013 /* Build configuration list for PBXProject "FeedbackSample" */;
+			developmentRegion = ko;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				ko,
+				Base,
+			);
+			mainGroup = F5EDBAC00000000000000008;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				F5EDBAC0000000000000000E /* XCLocalSwiftPackageReference "../.." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F5EDBAC00000000000000009 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F5EDBAC0000000000000000A /* FeedbackSample */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F5EDBAC0000000000000000C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F5EDBAC0000000000000000B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F5EDBAC0000000000000000F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		F5EDBAC00000000000000010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F5EDBAC00000000000000011 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F5EDBAC00000000000000004 /* Sample.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "피드백 예제";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(RD_BUNDLE_PREFIX).FeedbackSample";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RD_SAMPLE_MAC_HOST = "$(RD_FEEDBACK_MAC_HOST)";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F5EDBAC00000000000000012 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = F5EDBAC00000000000000004 /* Sample.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "피드백 예제";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(RD_BUNDLE_PREFIX).FeedbackSample";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RD_SAMPLE_MAC_HOST = "";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F5EDBAC00000000000000013 /* Build configuration list for PBXProject "FeedbackSample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F5EDBAC0000000000000000F /* Debug */,
+				F5EDBAC00000000000000010 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F5EDBAC00000000000000014 /* Build configuration list for PBXNativeTarget "FeedbackSample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F5EDBAC00000000000000011 /* Debug */,
+				F5EDBAC00000000000000012 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		F5EDBAC0000000000000000E /* XCLocalSwiftPackageReference "../.." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F5EDBAC00000000000000002 /* RemoteDebugFeedback */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RemoteDebugFeedback;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = F5EDBAC0000000000000000D /* Project object */;
+}

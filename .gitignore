@@ -18,6 +18,7 @@ device-evidence/
 
 # Xcode 빌드 위치가 "Relative to Workspace"일 때 생기는 폴더
 /Build/
+/Examples/*/Build/
 
 # 작업 기록. 실명, 팀 ID, 로컬 경로가 들어 있다. README가 가리키는 결정 기록 하나만 올린다.
 .agent-loop/*

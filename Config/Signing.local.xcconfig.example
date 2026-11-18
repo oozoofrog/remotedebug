@@ -13,3 +13,10 @@ DEVELOPMENT_TEAM = XXXXXXXXXX
 // RD_PAIR_LINK_HOST = example.com
 // 경로를 바꿀 때만(기본 /remotedebug/pair).
 // RD_PAIR_LINK_PATH = /remotedebug/pair
+// 피드백 예제 앱(Examples/FeedbackSample)이 피드백을 보낼 곳(선택). RemoteDebug Mac 앱에 Examples/FeedbackSample을 연결한 뒤
+// `rd feedback <그 폴더>`(MCP remotedebug_feedback_setup)가 돌려주는 코드의 macHost와 publicKeyBase64 값을 넣는다.
+// Mac 주소는 Debug 구성의 Info.plist에만 들어가고 Release 구성에는 들어가지 않는다. 공개키에 //가 있으면 /$()/ 로 적는다.
+// RD_FEEDBACK_MAC_HOST = rd-mac-1a2b3c4d.tail0001.ts.net
+// RD_FEEDBACK_PUBLIC_KEY = <공개키(base64)>
+// Mac에 닿지 않을 때와 Release 구성에서 피드백 메일을 받을 주소(선택).
+// RD_FEEDBACK_EMAIL = dev@example.com
