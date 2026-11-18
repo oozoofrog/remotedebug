@@ -18,13 +18,24 @@ public final class CrashLogStore {
         public var deviceName: String
         /// `CrashLogs/` 안의 원문 파일 이름.
         public var file: String
-        /// 피드백에 붙은 화면 사진 파일 이름. 없으면 `nil`.
+        /// 옛 클라이언트가 피드백에 붙인 사진 파일 이름. 없으면 `nil`.
         public var imageFile: String?
+        /// 사용자가 피드백에 붙인 사진과 파일. 없으면 `nil`.
+        public var attachments: [Attached]?
 
         /// 목록에 보일 이름: 번들 ID의 마지막 마디, 없으면 파일 이름.
         public var title: String {
             bundleId.split(separator: ".").last.map(String.init) ?? name
         }
+    }
+
+    /// 기록 옆에 저장한 첨부 하나.
+    public struct Attached: Codable, Hashable, Sendable {
+        /// 보낸 쪽이 붙인 이름(고친 것).
+        public var name: String
+        /// `CrashLogs/` 안의 파일 이름.
+        public var file: String
+        public var bytes: Int
     }
 
     /// 보관하는 기록 수. 넘으면 이 Mac이 받은 시각이 오래된 것부터 지운다.
@@ -51,15 +62,27 @@ public final class CrashLogStore {
     func receive(_ event: DeviceCrashEvent) {
         let report = event.report
         guard !items.contains(where: { $0.id == report.id }) else { return }
-        let item = Item(id: report.id, kind: report.kind, name: report.name, bundleId: report.bundleId,
+        // 첨부는 기록 id와 순번을 앞에 붙인 이름으로 같은 폴더에 둔다. 이름은 경로 마디가 없게 고친다.
+        let attached = directory == nil ? [] : report.attachments.prefix(CrashReport.maxAttachments).enumerated().map { index, attachment in
+            let name = CrashReport.Attachment.safeName(attachment.name)
+            return Attached(name: name, file: "\(report.id)-\(index + 1)-\(name)", bytes: attachment.data.count)
+        }
+        var item = Item(id: report.id, kind: report.kind, name: report.name, bundleId: report.bundleId,
                         appVersion: report.appVersion, crashedAt: report.crashedAt, receivedAt: event.receivedAt ?? now(),
                         deviceId: event.deviceId, deviceName: event.deviceName,
                         file: "\(report.id).\(report.kind.fileExtension)",
                         imageFile: report.image == nil || directory == nil ? nil : "\(report.id).\(report.image?.first == 0x89 ? "png" : "jpg")")
+        item.attachments = attached.isEmpty ? nil : attached
         if let url = fileURL(item) {
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? Data(report.text.utf8).write(to: url, options: .atomic)
             if let image = report.image, let imageURL = imageURL(item) { try? image.write(to: imageURL, options: .atomic) }
+            for (stored, attachment) in zip(attached, report.attachments) {
+                // 실행 권한 없이 쓴다. 앱은 이 파일을 열거나 실행하지 않고 Finder에서 보여 주기만 한다.
+                guard let target = attachmentURL(stored) else { continue }
+                try? attachment.data.write(to: target, options: .atomic)
+                try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
+            }
         } else {
             memory[item.id] = report.text
         }
@@ -95,6 +118,16 @@ public final class CrashLogStore {
         return directory?.appendingPathComponent(name)
     }
 
+    /// 첨부 파일의 위치. 저장된 이름이 폴더 밖을 가리키면 `nil`.
+    public func attachmentURL(_ attached: Attached) -> URL? {
+        directory.flatMap { Self.attachmentURL(attached, in: $0) }
+    }
+
+    nonisolated static func attachmentURL(_ attached: Attached, in directory: URL) -> URL? {
+        guard !attached.file.isEmpty, !attached.file.contains("/"), !attached.file.hasPrefix(".") else { return nil }
+        return directory.appendingPathComponent(attached.file)
+    }
+
     public func text(_ item: Item) -> String? {
         if let url = fileURL(item) { return try? String(contentsOf: url, encoding: .utf8) }
         return memory[item.id]
@@ -111,6 +144,7 @@ public final class CrashLogStore {
         memory[item.id] = nil
         if let url = fileURL(item) { try? FileManager.default.removeItem(at: url) }
         if let url = imageURL(item) { try? FileManager.default.removeItem(at: url) }
+        for url in (item.attachments ?? []).compactMap(attachmentURL) { try? FileManager.default.removeItem(at: url) }
     }
 
     private func save() {
@@ -144,9 +178,12 @@ public final class CrashLogStore {
         }
         let stamp = Date.ISO8601FormatStyle()
         let lines = items.map { item in
-            "\(item.id)  \(item.crashedAt.formatted(stamp))  \(item.bundleId.isEmpty ? item.name : item.bundleId) \(item.appVersion)  [\(item.kind.label)]  \(item.deviceName)  \(directory.appendingPathComponent(item.file).path)\(item.imageFile.map { "  사진: " + directory.appendingPathComponent($0).path } ?? "")"
+            let attached = (item.attachments ?? []).compactMap { one in
+                attachmentURL(one, in: directory).map { "\n    첨부: \($0.path) (\(one.bytes)바이트)" }
+            }.joined()
+            return "\(item.id)  \(item.crashedAt.formatted(stamp))  \(item.bundleId.isEmpty ? item.name : item.bundleId) \(item.appVersion)  [\(item.kind.label)]  \(item.deviceName)  \(directory.appendingPathComponent(item.file).path)\(item.imageFile.map { "  사진: " + directory.appendingPathComponent($0).path } ?? "")" + attached
         }
-        return (["# 크래시·피드백 \(items.count)개 (id, 시각, 앱, 종류, 기기, 원문 파일)"] + lines).joined(separator: "\n")
+        return (["# 크래시·피드백 \(items.count)개 (id, 시각, 앱, 종류, 기기, 원문 파일. 아랫줄의 `첨부:`는 사용자가 붙인 사진·파일)"] + lines).joined(separator: "\n")
     }
 
     /// 기록 하나의 원문. `maxBytes`를 넘으면 앞부분만 돌려주고 파일 경로를 알려 준다.

@@ -37,14 +37,77 @@ public struct CrashReport: Codable, Sendable, Hashable {
     public var appVersion: String
     public var crashedAt: Date
     public var text: String
-    /// 피드백에 붙인 화면 사진(JPEG나 PNG). 1MB까지.
+    /// 옛 클라이언트가 피드백에 붙이던 사진 한 장(JPEG나 PNG). 1MB까지. 새 클라이언트는 `attachments`를 쓴다.
     public var image: Data?
+    /// 사용자가 피드백에 붙인 사진과 파일.
+    public var attachments: [Attachment]
 
-    /// 코어가 받는 화면 사진 크기 한도(바이트).
+    /// 피드백에 붙인 사진이나 파일 하나. JSON에서는 `{name, type, base64}`다.
+    public struct Attachment: Codable, Sendable, Hashable {
+        /// 파일 이름. 받는 쪽은 `safeName`으로 고쳐 쓴다.
+        public var name: String
+        /// MIME 종류. 모르면 `application/octet-stream`.
+        public var type: String
+        public var data: Data
+
+        public init(name: String, type: String = "application/octet-stream", data: Data) {
+            self.name = name
+            self.type = type
+            self.data = data
+        }
+
+        enum CodingKeys: String, CodingKey { case name, type, base64 }
+
+        public init(from decoder: any Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
+            type = try c.decodeIfPresent(String.self, forKey: .type) ?? "application/octet-stream"
+            guard let decoded = Data(base64Encoded: try c.decode(String.self, forKey: .base64)) else {
+                throw DecodingError.dataCorruptedError(forKey: .base64, in: c, debugDescription: "base64가 아닙니다.")
+            }
+            data = decoded
+        }
+
+        public func encode(to encoder: any Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(name, forKey: .name)
+            try c.encode(type, forKey: .type)
+            try c.encode(data.base64EncodedString(), forKey: .base64)
+        }
+
+        /// 저장할 때 쓸 파일 이름. 경로 마디, 제어 문자, 앞의 점을 없애고 100바이트 안으로 줄인다(확장자는 남긴다).
+        public static func safeName(_ raw: String) -> String {
+            let last = raw.split(whereSeparator: { $0 == "/" || $0 == "\\" }).last.map(String.init) ?? ""
+            var name = String(String.UnicodeScalarView(last.unicodeScalars.filter {
+                !CharacterSet.controlCharacters.contains($0) && !CharacterSet.newlines.contains($0) && $0 != ":"
+            })).trimmingCharacters(in: .whitespaces)
+            while name.hasPrefix(".") { name.removeFirst() }
+            guard !name.isEmpty else { return "attachment" }
+            guard name.utf8.count > 100 else { return name }
+            var ext = ""
+            if let dot = name.lastIndex(of: "."), dot != name.startIndex, name[dot...].utf8.count <= 17 {
+                ext = String(name[dot...])
+                name = String(name[..<dot])
+            }
+            while name.utf8.count + ext.utf8.count > 100 { name.removeLast() }
+            return name + ext
+        }
+    }
+
+    /// 코어가 받는 옛 `image` 크기 한도(바이트).
     public static let maxImageBytes = 1 << 20
+    /// 기록 하나에 붙이는 첨부 수 한도.
+    public static let maxAttachments = 5
+    /// 첨부 하나의 크기 한도(바이트).
+    public static let maxAttachmentBytes = 1 << 20
+    /// 기록 하나의 첨부를 모두 합친 크기 한도(바이트). base64로 2MiB가 되어, 본문(`text` 1536KB)과 함께
+    /// 코어의 `POST /v1/crashes` 본문 한도 4MiB에 들어간다.
+    public static let maxAttachmentTotalBytes = 1536 << 10
 
-    public init(kind: Kind, name: String, bundleId: String, appVersion: String, crashedAt: Date, text: String, image: Data? = nil) {
+    public init(kind: Kind, name: String, bundleId: String, appVersion: String, crashedAt: Date, text: String,
+                image: Data? = nil, attachments: [Attachment] = []) {
         self.image = image
+        self.attachments = attachments
         self.kind = kind
         self.name = name
         self.bundleId = bundleId
@@ -53,7 +116,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         self.text = text
     }
 
-    enum CodingKeys: String, CodingKey { case kind, name, bundleId, appVersion, crashedAt, text, image }
+    enum CodingKeys: String, CodingKey { case kind, name, bundleId, appVersion, crashedAt, text, image, attachments }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -64,6 +127,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         crashedAt = try c.decodeRDDate(forKey: .crashedAt)
         text = try c.decode(String.self, forKey: .text)
         image = try c.decodeIfPresent(String.self, forKey: .image).flatMap { Data(base64Encoded: $0) }
+        attachments = try c.decodeIfPresent([Attachment].self, forKey: .attachments) ?? []
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -75,6 +139,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         try c.encode(crashedAt.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true)), forKey: .crashedAt)
         try c.encode(text, forKey: .text)
         try c.encodeIfPresent(image?.base64EncodedString(), forKey: .image)
+        if !attachments.isEmpty { try c.encode(attachments, forKey: .attachments) }
     }
 
     /// 내용으로 정한 id. 같은 기록을 두 번 받아도 하나로 남는다.
@@ -86,12 +151,14 @@ public struct CrashReport: Codable, Sendable, Hashable {
     public static let maxTextBytes = 1536 << 10
 
     /// 사람이 쓴 피드백에서 기록을 만든다. `details`는 내용 아래에 붙일 참고 정보(기기, 최근 로그 등)다.
-    public static func feedback(message: String, bundleId: String, appVersion: String, details: String = "", image: Data? = nil, date: Date) -> CrashReport {
+    public static func feedback(message: String, bundleId: String, appVersion: String, details: String = "", image: Data? = nil,
+                                attachments: [Attachment] = [], date: Date) -> CrashReport {
         let stamp = date.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true))
         var text = message.trimmingCharacters(in: .whitespacesAndNewlines) + "\n\n---\n앱: \(bundleId) \(appVersion)\n보낸 시각: \(stamp)\n"
+        if !attachments.isEmpty { text += "첨부: " + attachments.map(\.name).joined(separator: ", ") + "\n" }
         if !details.isEmpty { text += details + "\n" }
         let name = "feedback-" + stamp.replacingOccurrences(of: ":", with: "") + ".txt"
-        return CrashReport(kind: .feedback, name: name, bundleId: bundleId, appVersion: appVersion, crashedAt: date, text: text, image: image)
+        return CrashReport(kind: .feedback, name: name, bundleId: bundleId, appVersion: appVersion, crashedAt: date, text: text, image: image, attachments: attachments)
     }
 
     /// .ips 파일 내용에서 기록을 만든다. 첫 줄의 JSON 머리말에서 앱과 시각을 읽고, 없으면 `fallbackDate`와 파일 이름을 쓴다.

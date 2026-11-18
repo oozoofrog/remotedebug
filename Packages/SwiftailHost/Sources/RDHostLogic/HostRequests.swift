@@ -152,10 +152,29 @@ extension HostLogic {
                 throw HostErrors.make("bad_request", "image는 feedback에만 붙일 수 있고 base64로 1MB 이하여야 합니다.")
             }
         }
+        // 사용자가 붙인 사진과 파일. 옛 클라이언트는 `image`만 보낸다.
+        let rawAttachments = try input.array("attachments")
+        guard rawAttachments.isEmpty || (kind == .feedback && rawAttachments.count <= CrashReport.maxAttachments) else {
+            throw HostErrors.make("bad_request", "attachments는 feedback에만 붙일 수 있고 \(CrashReport.maxAttachments)개 이하여야 합니다.")
+        }
+        var attachments: [CrashReport.Attachment] = []
+        for value in rawAttachments {
+            let entry = try HostJSON(value: value)
+            let encoded = try entry.string("base64").replacingOccurrences(of: "\r", with: "").replacingOccurrences(of: "\n", with: "")
+            guard let data = Data(base64Encoded: encoded), !data.isEmpty, data.count <= CrashReport.maxAttachmentBytes else {
+                throw HostErrors.make("bad_request", "첨부는 base64로 1MB 이하여야 합니다.")
+            }
+            let type = try hostTruncate(entry.string("type"), bytes: 100)
+            attachments.append(.init(name: CrashReport.Attachment.safeName(try entry.string("name")),
+                                     type: type.isEmpty ? "application/octet-stream" : type, data: data))
+        }
+        guard attachments.reduce(0, { $0 + $1.data.count }) <= CrashReport.maxAttachmentTotalBytes else {
+            throw HostErrors.make("bad_request", "첨부는 모두 합쳐 1536KB 이하여야 합니다.")
+        }
         let report = try CrashReport(kind: kind, name: hostTruncate(input.string("name"), bytes: 200),
                                      bundleId: hostTruncate(input.string("bundleId"), bytes: 200),
                                      appVersion: hostTruncate(input.string("appVersion"), bytes: 200),
-                                     crashedAt: min(RDTimestamp.parse(input.string("crashedAt")) ?? receivedAt, receivedAt), text: text, image: image)
+                                     crashedAt: min(RDTimestamp.parse(input.string("crashedAt")) ?? receivedAt, receivedAt), text: text, image: image, attachments: attachments)
         guard let device = devices[peer.stableID] else { return deny("not_paired", peer: peer, path: path) }
         emit(.deviceCrash(.init(deviceId: device.id, deviceName: device.name, nodeName: device.nodeName, report: report)), receivedAt: receivedAt)
         return object(["accepted": 1], status: 202)
