@@ -6,7 +6,7 @@ import MetricKit
 /// 앱의 문제와 피드백을 개발자에게 보낸다.
 ///
 /// - RemoteDebug로 설치한 빌드는 개발자의 Mac으로 바로 보낸다(이 iPhone에서 RemoteDebug 앱의 VPN이 켜져 있을 때).
-/// - Mac에 닿지 않거나 Mac 주소가 없는 빌드는 메일로 보낸다. Debug 빌드는 로그와 화면 사진을 암호화해 붙인다.
+/// - Mac에 닿지 않거나 Mac 주소가 없는 빌드는 메일로 보낸다. 사용자가 고른 사진과 파일은 메일에 그대로 붙고, 로그는 사용자가 켰을 때 암호화해 붙인다.
 ///
 /// ```swift
 /// RemoteDebugFeedback.start(.init(macHost: "rd-mac-….ts.net", email: "dev@example.com", publicKeyBase64: "…"))
@@ -17,7 +17,7 @@ public enum RemoteDebugFeedback {
         public var macHost: String?
         /// 피드백 메일을 받을 주소. 없으면 메일 경로를 쓰지 않는다.
         public var email: String?
-        /// 메일에 붙는 진단을 암호화할 공개키(Mac 앱이 만든다). 사용자가 로그나 화면 사진을 붙이기로 했을 때만 쓴다.
+        /// 메일에 붙는 진단을 암호화할 공개키(Mac 앱이 만든다). 사용자가 로그를 붙이기로 했을 때만 쓴다.
         public var publicKeyBase64: String?
 
         public init(macHost: String? = nil, email: String? = nil, publicKeyBase64: String? = nil) {
@@ -83,20 +83,39 @@ public enum RemoteDebugFeedback {
     }
 
     /// 화면 없이 피드백을 Mac으로 보낸다. 이번에 Mac이 받았으면 `true`, 쌓아 두기만 했거나 Mac 주소가 없으면 `false`.
+    /// `attachments`는 `FeedbackFiles`의 한도까지만 붙고 넘는 것은 빠진다.
     @discardableResult
-    public static func send(_ message: String, details: String = "", image: Data? = nil) async -> Bool {
+    public static func send(_ message: String, details: String = "", image: Data? = nil,
+                            attachments: [FeedbackFile] = []) async -> Bool {
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let client, !trimmed.isEmpty else { return false }
-        return await client.submit(report(message: trimmed, details: details, image: image, date: Date()))
+        var files = FeedbackFiles()
+        for file in attachments { try? files.add(file) }
+        return await client.submit(report(message: trimmed, details: details, image: image, attachments: files.items, date: Date()))
     }
 
-    static func report(message: String, details: String, image: Data? = nil, date: Date) -> FeedbackReport {
+    static func report(message: String, details: String, image: Data? = nil, attachments: [FeedbackFile] = [],
+                       date: Date) -> FeedbackReport {
         let stamp = ISO8601DateFormatter.fractional.string(from: date)
         var text = "\(message)\n\n---\n앱: \(bundleID) \(appVersion)\n기기: \(deviceSummary)\n보낸 시각: \(stamp)\n"
-        if !details.isEmpty { text += details + "\n" }
+        if !attachments.isEmpty { text += "첨부: " + attachments.map(\.name).joined(separator: ", ") + "\n" }
+        if !details.isEmpty {
+            // 글이 코어의 한도를 넘지 않게, 참고 정보는 뒤쪽(최근 것)만 남긴다.
+            var kept = Substring(details)
+            let room = max(0, FeedbackClient.maxTextBytes - text.utf8.count - 1)
+            if kept.utf8.count > room {
+                var start = kept.utf8.index(kept.utf8.endIndex, offsetBy: -room)
+                while start < kept.endIndex, String.Index(start, within: kept) == nil { start = kept.utf8.index(after: start) }
+                kept = kept[start...]
+            }
+            text += kept + "\n"
+        }
         return FeedbackReport(kind: "feedback", name: "feedback-\(stamp.replacingOccurrences(of: ":", with: "")).txt",
                               bundleId: bundleID, appVersion: appVersion, crashedAt: stamp, text: text,
-                              image: image?.base64EncodedString())
+                              image: image?.base64EncodedString(),
+                              attachments: attachments.isEmpty ? nil : attachments.map {
+                                  .init(name: $0.name, type: $0.type, base64: $0.data.base64EncodedString())
+                              })
     }
 
     static var bundleID: String { Bundle.main.bundleIdentifier ?? "" }
@@ -145,7 +164,7 @@ final class CrashCollector: NSObject, MXMetricManagerSubscriber, @unchecked Send
                     kind: "metrickit", name: "\(RemoteDebugFeedback.appName)-\(stamp.replacingOccurrences(of: ":", with: "")).json",
                     bundleId: RemoteDebugFeedback.bundleID,
                     appVersion: "\(crash.applicationVersion) (\(crash.metaData.applicationBuildVersion))",
-                    crashedAt: stamp, text: String(decoding: crash.jsonRepresentation(), as: UTF8.self), image: nil))
+                    crashedAt: stamp, text: String(decoding: crash.jsonRepresentation(), as: UTF8.self), image: nil, attachments: nil))
             }
         }
         guard !reports.isEmpty else { return }

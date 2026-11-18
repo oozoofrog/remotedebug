@@ -8,8 +8,17 @@ public struct FeedbackReport: Codable, Equatable, Sendable {
     public var appVersion: String
     public var crashedAt: String
     public var text: String
-    /// 화면 사진(JPEG나 PNG)의 base64. 피드백에만 붙인다.
+    /// 사진 한 장(JPEG나 PNG)의 base64. 옛 방식이고, 이 패키지는 `attachments`로 보낸다.
     public var image: String?
+    /// 사용자가 붙인 사진과 파일. 피드백에만 붙인다. 옛 Mac 앱은 이 필드를 읽지 않고 글만 받는다.
+    public var attachments: [Attachment]?
+
+    public struct Attachment: Codable, Equatable, Sendable {
+        public var name: String
+        /// MIME 종류.
+        public var type: String
+        public var base64: String
+    }
 }
 
 /// 기록을 폴더에 쌓아 두고 Mac의 `POST /v1/crashes`로 보낸다. 보내지 못한 기록은 남겨 두었다가 다음에 다시 보낸다.
@@ -18,8 +27,12 @@ public actor FeedbackClient {
 
     /// 쌓아 두는 기록 수. 넘으면 오래된 것부터 지운다.
     public static let queueLimit = 30
+    /// 쌓아 두는 기록을 모두 합친 크기 한도(바이트). 넘으면 오래된 것부터 지운다. 가장 큰 기록 네 개 분량이다.
+    public static let queueByteLimit = 16 << 20
     /// 코어가 받는 `text` 크기 한도(바이트).
     public static let maxTextBytes = 1536 << 10
+    /// 코어가 받는 본문 크기 한도(바이트). 넘는 기록은 보내지도 쌓지도 않는다.
+    public static let maxBodyBytes = 4 << 20
 
     let endpoint: URL
     let directory: URL
@@ -44,7 +57,7 @@ public actor FeedbackClient {
 
     /// 쌓지 않고 한 번 보내 본다. Mac이 받았으면 `true`.
     public func trySend(_ report: FeedbackReport) async -> Bool {
-        guard let body = try? JSONEncoder().encode(report) else { return false }
+        guard let body = try? JSONEncoder().encode(report), body.count <= Self.maxBodyBytes else { return false }
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.timeoutInterval = 5
@@ -58,13 +71,12 @@ public actor FeedbackClient {
     @discardableResult
     public func submit(_ report: FeedbackReport) async -> Bool {
         guard !report.text.isEmpty, report.text.utf8.count <= Self.maxTextBytes,
-              let data = try? JSONEncoder().encode(report) else { return false }
+              let data = try? JSONEncoder().encode(report), data.count <= Self.maxBodyBytes else { return false }
         let fm = FileManager.default
         try? fm.createDirectory(at: directory, withIntermediateDirectories: true)
         let file = directory.appendingPathComponent("\(Int(Date().timeIntervalSince1970 * 1000))-\(UUID().uuidString.prefix(8)).json")
         try? data.write(to: file, options: .atomic)
-        let files = pending()
-        for old in files.dropLast(Self.queueLimit) { try? fm.removeItem(at: old) }
+        prune()
         await flush()
         return !fm.fileExists(atPath: file.path)
     }
@@ -83,6 +95,20 @@ public actor FeedbackClient {
             case 200..<300, 400, 413: try? FileManager.default.removeItem(at: file) // 받았거나, 다시 보내도 받지 않을 본문
             default: return // 페어링 안 됨(403) 등은 나중에 다시
             }
+        }
+    }
+
+    /// 쌓인 기록이 수나 크기 한도를 넘으면 오래된 것부터 지운다. 방금 쌓은 하나는 남긴다.
+    func prune() {
+        let fm = FileManager.default
+        var files = pending()
+        for old in files.dropLast(Self.queueLimit) { try? fm.removeItem(at: old) }
+        files = Array(files.suffix(Self.queueLimit))
+        var sizes = files.map { (try? $0.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0 }
+        var total = sizes.reduce(0, +)
+        while total > Self.queueByteLimit, files.count > 1 {
+            try? fm.removeItem(at: files.removeFirst())
+            total -= sizes.removeFirst()
         }
     }
 

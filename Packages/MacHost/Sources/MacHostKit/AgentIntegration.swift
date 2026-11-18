@@ -138,7 +138,7 @@ public struct AgentMCPServer: Sendable {
         ],
         [
             "name": "remotedebug_crash_logs",
-            "description": "iPhone이 Mac에 보낸 크래시 기록과, RemoteDebugFeedback을 붙인 앱에서 사람이 쓴 피드백(글, 화면 사진, 최근 로그). kind를 feedback으로 주면 피드백만 본다. id 없이 부르면 목록(id, 시각, 앱, 종류, 기기, 원문 파일 경로)을, id를 주면 그 기록의 원문을 돌려준다. 종류 ips는 iOS 크래시 파일(사용자가 iPhone에서 넘긴 것), MetricKit은 RemoteDebug iPhone 앱 자신의 크래시 JSON이다. 원문은 심볼이 풀리지 않은 주소일 수 있다.",
+            "description": "iPhone이 Mac에 보낸 크래시 기록과, RemoteDebugFeedback을 붙인 앱에서 사람이 쓴 피드백(글, 사용자가 붙인 사진과 파일, 최근 로그). kind를 feedback으로 주면 피드백만 본다. id 없이 부르면 목록(id, 시각, 앱, 종류, 기기, 원문 파일 경로, 아랫줄에 첨부 파일 경로)을, id를 주면 그 기록의 원문을 돌려준다. 종류 ips는 iOS 크래시 파일(사용자가 iPhone에서 넘긴 것), MetricKit은 RemoteDebug iPhone 앱 자신의 크래시 JSON이다. 원문은 심볼이 풀리지 않은 주소일 수 있다.",
             "inputSchema": ["type": "object", "properties": [
                 "id": ["type": "string", "description": "목록의 기록 id(c_…). 비우면 목록"],
                 "contains": ["type": "string", "description": "목록에서 앱·기기·파일 이름에 이 글자가 든 기록만(대소문자 무시)"],
@@ -400,7 +400,7 @@ extension AgentScript {
         - `remotedebug_pairing_code`: RemoteDebug 앱이 아직 없는 iPhone용 설치 페이지 코드와 그 페이지 링크. 앱이 있는 iPhone은 사용자에게 Mac 앱의 'iPhone 페어링…' > 'RemoteDebug 앱이 있는 iPhone'의 QR로 페어링해 달라고 한다.
         - `remotedebug_pair_requests`, `remotedebug_pair_decide`: 허용을 기다리는 요청을 보고 거부할 수 있다. 허용은 할 수 없다: 사용자에게 RemoteDebug Mac 앱 화면에서 허용해 달라고 한다.
         - `remotedebug_device_logs`: iPhone 앱이 보낸 진단 로그. iPhone에서 설치·업데이트·연결이 안 될 때 먼저 본다.
-        - `remotedebug_crash_logs`: iPhone이 보낸 크래시 기록과 사람이 앱에서 쓴 피드백(목록의 종류가 `피드백`). `id` 없이 부르면 목록, `id`를 주면 원문. 설치한 앱이 iPhone에서 죽는다고 하면 먼저 본다. 기록이 없으면 사용자에게 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 그 앱의 기록을 열고 공유 버튼으로 RemoteDebug에 넘겨 달라고 한다. RemoteDebug iPhone 앱 자신의 크래시는 앱을 다시 열면 자동으로 들어온다. 앱에 피드백 보내기를 붙이는 법은 `remotedebug_feedback_setup`이 돌려준다. 패키지는 글, 화면 사진, 최근 로그를 Mac으로 바로 보내고, 닿지 않으면 메일로 보낸다. 메일에 붙어 온 `.afdiag` 파일은 Mac 앱의 크래시·피드백 화면에서 연다. 원문 파일은 `~/Library/Application Support/RemoteDebug/CrashLogs`에 있다.
+        - `remotedebug_crash_logs`: iPhone이 보낸 크래시 기록과 사람이 앱에서 쓴 피드백(목록의 종류가 `피드백`). `id` 없이 부르면 목록, `id`를 주면 원문. 설치한 앱이 iPhone에서 죽는다고 하면 먼저 본다. 기록이 없으면 사용자에게 iPhone 설정 > 개인정보 보호 및 보안 > 분석 및 향상 > 분석 데이터에서 그 앱의 기록을 열고 공유 버튼으로 RemoteDebug에 넘겨 달라고 한다. RemoteDebug iPhone 앱 자신의 크래시는 앱을 다시 열면 자동으로 들어온다. 앱에 피드백 보내기를 붙이는 법은 `remotedebug_feedback_setup`이 돌려준다. 패키지는 글, 사용자가 골라 붙인 사진과 파일(5개, 합쳐 1.5MB까지), 최근 로그를 Mac으로 바로 보내고, 닿지 않으면 메일로 보낸다. 첨부는 목록에서 기록 아랫줄의 `첨부:` 경로에 있다. 메일에 붙어 온 `.afdiag` 파일은 Mac 앱의 크래시·피드백 화면에서 연다. 원문 파일은 `~/Library/Application Support/RemoteDebug/CrashLogs`에 있다.
         - `remotedebug_push_file`: `file_path`(절대 경로)의 파일을 iPhone RemoteDebug 앱으로 보낸다. 같은 이름의 이전 파일은 바뀐다. `project`(선택)에 연결한 프로젝트의 이름이나 `.xcodeproj`·`.xcworkspace` 경로를 주면 iPhone 파일 탭의 그 프로젝트 구역에, 비우면 공통 구역에 넣는다. 작업 중인 프로젝트의 파일이면 그 프로젝트를 준다. 사용자는 iPhone 앱의 파일 탭에서 받아 파일 앱이나 공유 시트로 다른 앱에 넘긴다.
         - `remotedebug_push_link`: `url`(https://… 또는 앱스킴://… 딥 링크), `title`(선택), `project`(선택, 위와 같다)를 iPhone으로 보낸다. 사용자가 iPhone 파일 탭의 링크를 눌러 Safari나 디버그 중인 앱으로 연다.
         - `remotedebug_files`: 보낸 파일·링크 목록. 항목의 `project`가 구역이고 없으면 공통이다. `project`(선택)를 주면 그 구역만 본다.

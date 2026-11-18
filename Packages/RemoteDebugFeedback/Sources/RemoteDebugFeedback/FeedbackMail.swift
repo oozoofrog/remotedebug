@@ -49,11 +49,14 @@ public struct FeedbackMail: Identifiable, Equatable, Sendable {
     public let recipient: String
     public let content: FeedbackContent
     public let attachment: FeedbackAttachment?
+    /// Photos and files the user chose. Attached as they are; the user sees them in the compose sheet.
+    public let files: [FeedbackFile]
     public let attachmentNotice: String
 
     public init(recipient: String, content: FeedbackContent,
-                attachment: FeedbackAttachment? = nil,
+                attachment: FeedbackAttachment? = nil, files: [FeedbackFile] = [],
                 attachmentNotice: String = "Encrypted diagnostics attached.") {
+        self.files = files
         self.recipient = recipient
         self.content = content
         self.attachment = attachment
@@ -95,6 +98,7 @@ public struct FeedbackLabels: Sendable {
     public var unavailable = "Email is unavailable. Copy the address and use another email app."
     public var separateAttachment = "Email links cannot attach files. Share the encrypted file separately."
     public var collectionFailed = "Diagnostics could not be prepared. Continuing without an attachment."
+    public var separateFiles = "Email links cannot attach files. Add your photos and files in your email app."
     public var shareFailed = "The encrypted file could not be prepared for sharing."
     public var attachmentNotice = "Encrypted diagnostics attached."
     public var handedOff = "Email handed to Mail. Delivery cannot be confirmed here."

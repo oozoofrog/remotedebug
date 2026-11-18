@@ -1524,7 +1524,7 @@ extension HostModel {
         var image: Data?
         var text = String(decoding: plain, as: UTF8.self)
         if var object = (try? JSONSerialization.jsonObject(with: plain)) as? [String: Any] {
-            // 화면 사진은 따로 저장하고 글에서는 뺀다.
+            // 옛 패키지가 진단 파일에 넣던 사진은 따로 저장하고 글에서는 뺀다. 지금은 사진과 파일이 메일에 그대로 붙어 온다.
             if var diagnostics = object["diagnostics"] as? [String: Any] {
                 image = (diagnostics.removeValue(forKey: "screenshotBase64") as? String).flatMap { Data(base64Encoded: $0) }
                 object["diagnostics"] = diagnostics

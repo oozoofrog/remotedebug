@@ -78,7 +78,7 @@ public final class CrashBook {
         directory?.appendingPathComponent("\(item.id).\(item.kind.fileExtension)")
     }
 
-    /// 피드백에 붙인 화면 사진을 두는 파일.
+    /// 옛 방식으로 피드백에 붙인 사진 한 장을 두는 파일.
     func imageURL(_ item: Item) -> URL? {
         directory?.appendingPathComponent("\(item.id).image")
     }

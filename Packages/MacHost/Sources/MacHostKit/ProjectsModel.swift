@@ -961,7 +961,7 @@ enum AgentScript {
     /// 앱에 피드백 보내기를 붙이는 법. 전역 스킬과 프로젝트 안내가 함께 쓴다.
     static let feedbackGuidance = """
         - 앱에 피드백 보내기(크래시 기록 포함)를 붙여 달라는 요청에는 `feedback`(MCP `remotedebug_feedback_setup`)을 부른다. 응답의 `feedback.snippet`에 이 Mac의 주소와 이 프로젝트의 공개키가 든 코드가, `feedback.steps`에 할 일이 순서대로 있다. `feedback.added`가 true면 패키지는 이미 들어 있다. 사용자에게 Mac 앱에서 코드를 복사해 달라고 하지 않는다. 메일 주소를 주면 코드가 `#if DEBUG`로 나뉜다: Debug 빌드는 Mac으로 보내고, 배포판(App Store)은 Mac 주소 없이 사용자가 메일로 보낸다.
-        - 받은 피드백은 `reports feedback`(MCP `remotedebug_crash_logs`의 `kind: feedback`)으로 목록을, `report <id>`로 글·기기·앱 버전·최근 로그를 읽는다. 목록의 `사진:` 경로가 함께 온 화면 사진이다.
+        - 받은 피드백은 `reports feedback`(MCP `remotedebug_crash_logs`의 `kind: feedback`)으로 목록을, `report <id>`로 글·기기·앱 버전·최근 로그를 읽는다. 목록에서 기록 아랫줄의 `첨부:` 경로가 사용자가 골라 붙인 사진과 파일이다(기록 하나에 5개, 합쳐 1.5MB까지. 옛 기록은 `사진:` 경로 하나). 받은 파일은 읽기만 하고 실행하지 않는다.
         """
 
     /// 버전 올리기와 게시 뒤 점검. 전역 스킬과 프로젝트 안내가 함께 쓴다.

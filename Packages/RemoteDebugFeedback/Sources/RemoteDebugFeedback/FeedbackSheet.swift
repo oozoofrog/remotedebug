@@ -8,9 +8,15 @@ import UIKit
 public struct RemoteDebugFeedbackLabels: Sendable {
     public var title = "피드백 보내기"
     public var prompt = "무엇이 문제인가요?"
-    public var screenshot = "화면 사진"
-    public var pickPhoto = "사진 고르기"
-    public var removePhoto = "사진 빼기"
+    public var attachments = "첨부"
+    public var attachPhoto = "사진 첨부"
+    public var attachFile = "파일 첨부"
+    public var removeAttachment = "빼기"
+    public var attachmentLimits = "사진과 파일을 \(FeedbackFiles.maxCount)개까지 붙일 수 있습니다. 파일 하나는 1MB, 모두 합쳐 1.5MB까지이고 사진은 크기를 줄여 붙입니다."
+    public var tooManyAttachments = "첨부는 \(FeedbackFiles.maxCount)개까지 붙일 수 있습니다."
+    public var attachmentTooLarge = "1MB가 넘는 파일은 붙일 수 없습니다."
+    public var attachmentsTooLarge = "첨부는 모두 합쳐 1.5MB까지 붙일 수 있습니다."
+    public var attachmentUnreadable = "파일을 읽을 수 없습니다."
     public var includeLogs = "최근 로그 붙이기"
     public var send = "보내기"
     public var close = "닫기"
@@ -28,16 +34,30 @@ public struct RemoteDebugFeedbackLabels: Sendable {
     public var mail = FeedbackLabels()
 
     public init() {}
+
+    func message(for refusal: FeedbackFiles.Refusal) -> String {
+        switch refusal {
+        case .tooMany: tooManyAttachments
+        case .tooLarge: attachmentTooLarge
+        case .totalTooLarge: attachmentsTooLarge
+        case .unreadable: attachmentUnreadable
+        }
+    }
 }
 
 /// 피드백을 적어 보내는 화면. Mac으로 바로 보내고, 닿지 않으면 메일이나 나중에 보내기를 고르게 한다.
+/// 화면을 저절로 찍지 않는다. 사진과 파일은 사용자가 고른 것만 붙는다.
 public struct RemoteDebugFeedbackSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
     @StateObject private var mail: FeedbackSession
     @State private var draft = FeedbackDraft()
     @State private var message = ""
-    @State private var image: Data?
+    /// 붙일 사진과 파일. 보낼 때까지 메모리에만 두고 기기에 파일로 남기지 않는다.
+    @State private var files = FeedbackFiles()
+    @State private var attachNotice: String?
+    @State private var pickedPhotos: [PhotosPickerItem] = []
+    @State private var picksFile = false
     // 배포판에서는 사용자가 켤 때만 로그를 붙인다.
     #if DEBUG
     @State private var includesLogs = true
@@ -49,12 +69,10 @@ public struct RemoteDebugFeedbackSheet: View {
     @State private var collectedLogs: [String]?
     @State private var notice: String?
     @State private var asksRoute = false
-    @State private var picked: PhotosPickerItem?
     private let labels: RemoteDebugFeedbackLabels
     private let configuration: RemoteDebugFeedback.Configuration
 
-    /// `screenshot`은 화면을 띄우기 전에 찍어 둔 앱 화면이다.
-    public init(screenshot: Data? = nil, labels: RemoteDebugFeedbackLabels = RemoteDebugFeedbackLabels()) {
+    public init(labels: RemoteDebugFeedbackLabels = RemoteDebugFeedbackLabels()) {
         self.labels = labels
         let configuration = RemoteDebugFeedback.configuration
         self.configuration = configuration
@@ -64,7 +82,6 @@ public struct RemoteDebugFeedbackSheet: View {
                                    system: ProcessInfo.processInfo.operatingSystemVersionString,
                                    device: RemoteDebugFeedback.deviceModel)
         _draft = State(initialValue: draft)
-        _image = State(initialValue: screenshot)
         _mail = StateObject(wrappedValue: FeedbackSession(recipient: configuration.email ?? "", appInfo: info, labels: labels.mail) { info in
             FeedbackContent(subject: "\(info.name) feedback", body: draft.message + FeedbackContent.standard(info).body)
         })
@@ -85,21 +102,59 @@ public struct RemoteDebugFeedbackSheet: View {
                     Text(labels.prompt)
                 }
                 Section {
-                    if let image, let preview = UIImage(data: image) {
-                        Image(uiImage: preview)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 180)
-                            .frame(maxWidth: .infinity)
-                            .accessibilityLabel(labels.screenshot)
-                        Button(labels.removePhoto, role: .destructive) { self.image = nil }
+                    ForEach(files.items) { file in
+                        HStack(spacing: 10) {
+                            if file.isImage, let preview = UIImage(data: file.data) {
+                                Image(uiImage: preview)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 36, height: 36)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    .accessibilityHidden(true)
+                            } else {
+                                Image(systemName: "doc")
+                                    .frame(width: 36, height: 36)
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(file.name).lineLimit(1).truncationMode(.middle)
+                                Text(Int64(file.data.count).formatted(.byteCount(style: .file)))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            Button(role: .destructive) {
+                                files.remove(file.id)
+                                attachNotice = nil
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
+                            }
+                            .buttonStyle(.borderless)
+                            .accessibilityLabel("\(file.name) \(labels.removeAttachment)")
+                        }
                     }
-                    PhotosPicker(selection: $picked, matching: .images) {
-                        Label(labels.pickPhoto, systemImage: "photo")
+                    PhotosPicker(selection: $pickedPhotos, maxSelectionCount: max(1, FeedbackFiles.maxCount - files.items.count),
+                                 matching: .images) {
+                        Label(labels.attachPhoto, systemImage: "photo")
                     }
-                    Toggle(labels.includeLogs, isOn: $includesLogs)
+                    .disabled(files.isFull)
+                    Button {
+                        picksFile = true
+                    } label: {
+                        Label(labels.attachFile, systemImage: "paperclip")
+                    }
+                    .disabled(files.isFull)
                 } header: {
-                    Text(labels.screenshot)
+                    Text(labels.attachments)
+                } footer: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(labels.attachmentLimits)
+                        if let attachNotice { Text(attachNotice).foregroundStyle(.red) }
+                    }
+                }
+                Section {
+                    Toggle(labels.includeLogs, isOn: $includesLogs)
                 } footer: {
                     Text(hasMac || hasMail ? labels.disclosure : labels.notConfigured)
                 }
@@ -133,12 +188,35 @@ public struct RemoteDebugFeedbackSheet: View {
                 FeedbackMailComposer(mail: mail, onFinish: self.mail.finish).ignoresSafeArea()
             }
             .onChange(of: includesLogs) { _, _ in collectedLogs = nil }
-            .onChange(of: picked) { _, item in
+            .onChange(of: pickedPhotos) { _, items in
+                guard !items.isEmpty else { return }
+                pickedPhotos = []
                 Task {
-                    guard let data = try? await item?.loadTransferable(type: Data.self) else { return }
-                    image = FeedbackScreenshot.compressed(data)
+                    attachNotice = nil
+                    for item in items {
+                        guard let data = try? await item.loadTransferable(type: Data.self) else {
+                            attachNotice = labels.attachmentUnreadable
+                            continue
+                        }
+                        attach { try $0.addImage(data) }
+                    }
                 }
             }
+            .fileImporter(isPresented: $picksFile, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+                attachNotice = nil
+                for url in (try? result.get()) ?? [] {
+                    attach { try $0.addFile(at: url) }
+                }
+            }
+        }
+    }
+
+    /// 한도 안이면 붙이고, 아니면 까닭을 알린다.
+    private func attach(_ add: (inout FeedbackFiles) throws(FeedbackFiles.Refusal) -> Void) {
+        do throws(FeedbackFiles.Refusal) {
+            try add(&files)
+        } catch {
+            attachNotice = labels.message(for: error)
         }
     }
 
@@ -155,7 +233,7 @@ public struct RemoteDebugFeedbackSheet: View {
     private func report() async -> FeedbackReport {
         let lines = await logLines()
         let details = lines.isEmpty ? "" : "\n최근 로그\n" + lines.joined(separator: "\n")
-        return RemoteDebugFeedback.report(message: trimmed, details: details, image: image, date: Date())
+        return RemoteDebugFeedback.report(message: trimmed, details: details, attachments: files.items, date: Date())
     }
 
     private func send() async {
@@ -186,18 +264,18 @@ public struct RemoteDebugFeedbackSheet: View {
         } else {
             notice = labels.saved
             message = ""
+            files = FeedbackFiles()
         }
     }
 
     private func sendMail() async {
         draft.message = trimmed
-        if let key = configuration.publicKeyBase64, !key.isEmpty, includesLogs || image != nil {
+        // 사용자가 고른 사진과 파일은 메일에 그대로 붙인다. 로그만 암호화한 진단 파일에 넣는다.
+        mail.files = files.items
+        if let key = configuration.publicKeyBase64, !key.isEmpty, includesLogs {
             let lines = await logLines()
-            let shot = image
             mail.diagnostics = FeedbackDiagnostics(publicKeyBase64: key, disclosure: labels.disclosure) {
-                var object: [String: Any] = ["logs": lines]
-                if let shot { object["screenshotBase64"] = shot.base64EncodedString() }
-                return try JSONSerialization.data(withJSONObject: object)
+                try JSONSerialization.data(withJSONObject: ["logs": lines])
             }
             mail.attachesDiagnostics = true
         } else {
@@ -216,57 +294,20 @@ final class FeedbackDraft {
     var message = ""
 }
 
-enum FeedbackScreenshot {
-    /// 코어가 받는 화면 사진 크기 한도(바이트)보다 조금 작게 맞춘다.
-    static let maxBytes = 900 << 10
-
-    /// 지금 보이는 앱 화면. 피드백 화면을 띄우기 전에 부른다.
-    @MainActor
-    static func capture() -> Data? {
-        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-        guard let window = scenes.flatMap(\.windows).first(where: \.isKeyWindow) else { return nil }
-        let renderer = UIGraphicsImageRenderer(bounds: window.bounds)
-        let shot = renderer.image { _ in window.drawHierarchy(in: window.bounds, afterScreenUpdates: false) }
-        return compressed(shot)
-    }
-
-    static func compressed(_ data: Data) -> Data? {
-        UIImage(data: data).flatMap(compressed)
-    }
-
-    /// 긴 변을 1600픽셀 아래로 줄이고 한도에 들어올 때까지 JPEG 품질을 낮춘다.
-    static func compressed(_ image: UIImage) -> Data? {
-        let longest = max(image.size.width, image.size.height) * image.scale
-        let scale = min(1, 1600 / max(longest, 1))
-        let size = CGSize(width: image.size.width * image.scale * scale, height: image.size.height * image.scale * scale)
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = 1
-        let resized = UIGraphicsImageRenderer(size: size, format: format).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
-        for quality in [0.7, 0.5, 0.3, 0.15] {
-            if let data = resized.jpegData(compressionQuality: quality), data.count <= maxBytes { return data }
-        }
-        return nil
-    }
-}
-
 private struct FeedbackPresenter: ViewModifier {
     @Binding var isPresented: Bool
     let labels: RemoteDebugFeedbackLabels
-    @State private var screenshot: Data?
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: isPresented) { _, shown in
-                if shown { screenshot = FeedbackScreenshot.capture() }
-            }
             .sheet(isPresented: $isPresented) {
-                RemoteDebugFeedbackSheet(screenshot: screenshot, labels: labels)
+                RemoteDebugFeedbackSheet(labels: labels)
             }
     }
 }
 
 public extension View {
-    /// `isPresented`가 참이 되면 지금 화면을 찍고 피드백 화면을 띄운다.
+    /// `isPresented`가 참이 되면 피드백 화면을 띄운다.
     func remoteDebugFeedback(isPresented: Binding<Bool>, labels: RemoteDebugFeedbackLabels = RemoteDebugFeedbackLabels()) -> some View {
         modifier(FeedbackPresenter(isPresented: isPresented, labels: labels))
     }
