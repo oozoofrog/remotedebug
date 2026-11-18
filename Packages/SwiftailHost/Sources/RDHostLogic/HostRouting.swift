@@ -39,14 +39,18 @@ extension HostLogic {
         case ["v1", "direct", "enroll"] where !direct: name = "enroll"; methods = ["POST"]
         default:
             if path.count == 3 && path[0] == "v1" && path[1] == "resources" { name = "resource"; parameter = path[2] }
+            // 진행 확인은 두 리스너 모두 받는다. 직접 연결에서는 케이블 설치(addenda R)의 세션을 본다.
+            else if path.count == 3 && path[0] == "v1" && path[1] == "sessions" { name = "sessionStatus"; parameter = path[2] }
+            else if direct && path.count == 4 && path[0] == "v1" && path[1] == "builds" && path[3] == "cable-install" {
+                name = "cableInstall"; parameter = path[2]; methods = ["POST"]
+            }
             else if path.count == 5 && Array(path.prefix(3)) == ["v1", "agent", "requests"] && path[4] == "cancel" {
                 name = "agentCancel"; parameter = path[3]; methods = ["POST"]
             } else if !direct {
                 if path.count == 4 && Array(path.prefix(3)) == ["v1", "pair", "request"] { name = "pairStatus"; parameter = path[3] }
                 else if path.count == 4 && path[0] == "v1" && path[1] == "builds" && path[3] == "sessions" {
                     name = "createSession"; parameter = path[2]; methods = ["POST"]
-                } else if path.count == 3 && path[0] == "v1" && path[1] == "sessions" { name = "sessionStatus"; parameter = path[2] }
-                else if path.count == 3 && path[0] == "i" && (path[2] == "manifest.plist" || path[2] == "app.ipa") {
+                } else if path.count == 3 && path[0] == "i" && (path[2] == "manifest.plist" || path[2] == "app.ipa") {
                     name = path[2] == "manifest.plist" ? "manifest" : "ipa"; parameter = path[1]
                 }
             }
@@ -73,7 +77,7 @@ extension HostLogic {
         var agentDevice: DeviceEntry?
         let early: HostResponse? = locked {
             if !direct, let page = pageResponse(request, rawPath: rawPath) { return page }
-            if case .direct(let ip) = request.origin {
+            if case .direct(let ip, _) = request.origin {
                 switch authenticateDirect(request, ip: ip, path: hostPercentDecode(rawPath) ?? rawPath) {
                 case .success(let authenticated): peer = authenticated
                 case .failure(let response): return response.value
@@ -121,7 +125,11 @@ extension HostLogic {
             }
         }
         var verifiedBuild: UUID?
-        if route.name == "createSession" {
+        if route.name == "createSession" || route.name == "cableInstall" {
+            if route.name == "cableInstall" {
+                // 케이블 설치를 받지 않거나 케이블로 온 요청이 아니면 파일을 확인하기 전에 거절한다.
+                if let refusal = cableInstallRefusal(request) { return withProtocol(failure(refusal)) }
+            }
             guard let build = locked({ builds[route.parameter] }) else { return withProtocol(failure(HostErrors.make("build_not_found"))) }
             guard build.file.unchanged(), (try? build.file.hash()) == build.sum else {
                 return withProtocol(failure(HostErrors.make("build_changed")))

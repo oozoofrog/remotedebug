@@ -29,7 +29,7 @@ final class HostFixture: @unchecked Sendable {
     let clock: TestClock
     let events = HostEventQueue()
     static let peer = HostPeer(stableID: "n_phone", nodeName: "rd-phone-00000001", loginName: "")
-    init(paired: Bool = true, direct: Bool = false, limits: HostLogic.Limits = .init()) throws {
+    init(paired: Bool = true, direct: Bool = false, limits: HostLogic.Limits = .init(), cableInstaller: (any HostCableInstalling)? = nil) throws {
         // 패키지 리소스 묶음 옆은 eyebuild의 산출물 폴더다. 시스템 임시 폴더를 사용하지 않는다.
         directory = HostLogic.resourceRoot.deletingLastPathComponent().appendingPathComponent("host-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -40,7 +40,7 @@ final class HostFixture: @unchecked Sendable {
             info: { .init(hostID: "h_1", hostName: "Mac", fqDN: "rd-mac-1.example.ts.net", appVersion: "1.0") },
             baseURL: { "https://rd-mac-1.example.ts.net" }, now: { clock.now() }, limits: limits,
             direct: { direct ? .init(id: "0123456789abcdef", port: 49152, spki: "c3BraQ==") : nil },
-            events: { _ in }, eventDetails: { queue.push($0) }))
+            events: { _ in }, eventDetails: { queue.push($0) }, cableInstaller: cableInstaller))
         if paired { try host.setDevices([device()]) }
     }
     deinit { host.close(); try? FileManager.default.removeItem(at: directory) }

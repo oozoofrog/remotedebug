@@ -62,8 +62,10 @@ struct DirectTests {
         let fixture = try HostFixture(direct: true)
         let credentials = auth(try await fixture.enroll())
         let paths = [("GET", "/"), ("GET", "/assets/app.js"), ("POST", "/v1/pair/request"), ("GET", "/v1/pair/request/pr_1"),
-                     ("POST", "/v1/direct/enroll"), ("POST", "/v1/builds/b_1/sessions"), ("GET", "/v1/sessions/s_1"),
-                     ("GET", "/i/TOKEN/manifest.plist"), ("GET", "/i/TOKEN/app.ipa")]
+                     ("POST", "/v1/direct/enroll"), ("POST", "/v1/builds/b_1/sessions"),
+                     ("GET", "/i/TOKEN/manifest.plist"), ("GET", "/i/TOKEN/app.ipa"),
+                     // 케이블 설치를 받지 않는 Mac에서는 그 경로도 없다(addenda R).
+                     ("POST", "/v1/builds/b_1/cable-install")]
         let origin = HostOrigin.direct(remoteIP: "192.0.2.1")
         for (method, path) in paths {
             let response = await fixture.request(method, path, headers: [("authorization", credentials)], origin: origin)

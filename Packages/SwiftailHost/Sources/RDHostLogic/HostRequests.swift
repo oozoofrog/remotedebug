@@ -63,13 +63,15 @@ extension HostLogic {
             }
             return json(PairRequestState(requestId: pairing.id, state: pairing.state, host: summary))
         case "createSession": return try createSession(buildID: route.parameter, peer: peer, request: request)
+        case "cableInstall": return try startCableInstall(buildID: route.parameter, peer: peer, request: request)
         case "sessionStatus":
             guard let session = sessions[route.parameter], session.peer.stableID == peer.stableID else {
                 return deny("token_invalid", peer: peer, path: path)
             }
             expireSession(session, now: options.now())
             return json(SessionStatus(sessionId: session.id, buildId: session.buildID, state: session.state,
-                                      bytesServed: Int64(session.bytesServed), size: Int64(session.size), expiresAt: session.expires))
+                                      bytesServed: Int64(session.bytesServed), size: Int64(session.size), expiresAt: session.expires,
+                                      message: session.message))
         case "manifest", "ipa":
             guard let session = tokens[route.parameter], session.peer.stableID == peer.stableID else {
                 return deny("token_invalid", peer: peer, path: path)

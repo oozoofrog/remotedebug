@@ -29,6 +29,10 @@ public enum InstallState: Equatable, Sendable {
     case waitingForInstaller
     /// iOS 설치기가 매니페스트·IPA를 받는 중.
     case transferring(bytesServed: Int64, size: Int64)
+    /// Mac이 USB 케이블로 이 iPhone에 설치하는 중(docs/protocol-addenda.md R).
+    case installingOverCable
+    /// Mac이 USB 케이블로 설치를 마쳤다. 앱은 이미 홈 화면에 있다.
+    case installedOverCable
     /// Mac이 IPA를 끝까지 보냈다. iOS가 실제로 설치를 마쳤는지는 알 수 없다(홈 화면에서 진행된다).
     case completed
     /// 설치 세션이 만료되었다. 다시 설치하면 새 세션을 연다.
@@ -41,11 +45,13 @@ public enum InstallState: Equatable, Sendable {
     public static let completedMessage =
         String(localized: "Mac이 빌드를 모두 보냈습니다. 설치 진행은 홈 화면의 앱 아이콘에서 확인하세요. \(developerModeHint)")
     public static let expiredMessage = String(localized: "설치 세션이 만료되었습니다. 다시 설치하세요.")
+    public static let installedOverCableMessage =
+        String(localized: "Mac이 USB 케이블로 설치를 마쳤습니다. 홈 화면에서 앱을 여세요. \(developerModeHint)")
 
     public var isInProgress: Bool {
         switch self {
-        case .preparing, .waitingForInstaller, .transferring: true
-        case .completed, .expired, .failed: false
+        case .preparing, .waitingForInstaller, .transferring, .installingOverCable: true
+        case .completed, .installedOverCable, .expired, .failed: false
         }
     }
 
@@ -59,12 +65,13 @@ public enum InstallState: Equatable, Sendable {
     public var fraction: Double? { progress?.fraction }
 
     /// 개발자 모드 안내를 함께 보여 줄 상태인지(`completed`).
-    public var showsDeveloperModeHint: Bool { self == .completed }
+    public var showsDeveloperModeHint: Bool { self == .completed || self == .installedOverCable }
 
     /// 화면에 보여 줄 안내(완료·만료·실패일 때).
     public var message: String? {
         switch self {
         case .completed: Self.completedMessage
+        case .installedOverCable: Self.installedOverCableMessage
         case .expired: Self.expiredMessage
         case .failed(let message): message
         default: nil
@@ -248,8 +255,10 @@ public final class ClientModel {
     /// 지금 VPN은 앱이 자동으로 켠 것이다. 쓸 일이 없어지면 `Timing.autoOffDelay` 뒤에 끈다.
     /// 사용자가 켜거나 끈 VPN, 다른 앱의 VPN에는 `false`다.
     public private(set) var vpnAutoStarted = false
-    /// 같은 네트워크의 Mac에 VPN 없이 직접 연결해 쓰고 있다(docs/protocol-addenda.md O).
-    public private(set) var isDirectConnected = false
+    /// Mac에 VPN 없이 직접 연결해 쓰고 있으면 그 길(같은 네트워크, USB 케이블). docs/protocol-addenda.md O, R.
+    public private(set) var directLink: DirectLinkKind?
+    /// 같은 네트워크나 USB 케이블로 Mac에 VPN 없이 직접 연결해 쓰고 있다.
+    public var isDirectConnected: Bool { directLink != nil }
     /// 진단 로그. 화면과 앱(시작·VPN)도 여기에 남긴다.
     public let logBook: DeviceLogBook
     public let crashBook: CrashBook
@@ -294,7 +303,13 @@ public final class ClientModel {
 
     // MARK: 내부 상태
 
-    private struct ActiveSession { var sessionID: String; var installURL: URL; var deadline: Date }
+    /// `installURL`이 없으면 USB 케이블 설치의 세션이다(iOS 설치 창을 열지 않는다).
+    private struct ActiveSession {
+        var sessionID: String
+        var installURL: URL?
+        var deadline: Date
+        var cable: Bool { installURL == nil }
+    }
     private struct Running { var token: UUID; var task: Task<Void, Never> }
     private struct VPNNotConnected: Error {}
     private struct PairingRun { var token: UUID; var proposal: PairingProposal; var task: Task<Void, Never> }
@@ -949,7 +964,8 @@ public final class ClientModel {
             startSessionPolling(buildID: id, api: api, active: active)
             return
         }
-        guard tunnelUsable() else { return }
+        // 케이블이 꽂혀 있으면 VPN 없이 시작한다. Mac의 케이블이 아니면 작업 안에서 VPN 설치로 넘어간다.
+        guard direct?.mayReachByCable(current) == true || tunnelUsable() else { return }
         log(.info, "install", "설치 요청: \(build.displayName) \(build.version) (\(build.buildNumber)) \(id)")
         installs[id] = .preparing
         let token = UUID()
@@ -975,9 +991,9 @@ public final class ClientModel {
     /// 설치 창을 닫았거나 취소했을 때 같은 세션의 설치 창을 다시 연다. iOS 설치기를 기다릴 때만 동작한다.
     /// 호스트는 같은 세션의 매니페스트를 여러 번 내준다(docs/protocol.md 설치 세션).
     public func reopenInstaller(_ buildID: String) async {
-        guard installs[buildID] == .waitingForInstaller, let active = activeSessions[buildID] else { return }
+        guard installs[buildID] == .waitingForInstaller, let active = activeSessions[buildID], let installURL = active.installURL else { return }
         let generation = hostGeneration
-        let opened = await opener.open(active.installURL)
+        let opened = await opener.open(installURL)
         guard generation == hostGeneration else { return }
         if !opened { lastError = Self.reopenFailedMessage }
     }
@@ -994,6 +1010,12 @@ public final class ClientModel {
 
     private func runInstall(buildID id: String, api: HostAPI, token: UUID, generation: Int) async {
         defer { finishInstallTask(id, token: token) }
+        // USB 케이블로 Mac에 꽂혀 있으면 Mac이 케이블로 설치한다(VPN을 켜지 않는다).
+        if await installOverCable(buildID: id, generation: generation) { return }
+        guard generation == hostGeneration, !Task.isCancelled else {
+            if generation == hostGeneration, installs[id] == .preparing { installs[id] = nil }
+            return
+        }
         // 설치 세션을 만들기 전에 VPN이 연결돼 있게 한다(꺼져 있으면 자동으로 켠다).
         guard await connectedForTransfer() else {
             guard generation == hostGeneration, installs[id] == .preparing else { return }
@@ -1038,6 +1060,60 @@ public final class ClientModel {
         await pollSession(buildID: id, api: api, active: active, generation: generation)
     }
 
+    /// Mac이 USB 케이블로 이 iPhone에 설치하게 한다(docs/protocol-addenda.md R).
+    /// `true`면 케이블 설치로 끝까지 처리했다. `false`면 케이블 경로가 없거나 Mac이 받지 않아 VPN 설치로 가야 한다.
+    private func installOverCable(buildID id: String, generation: Int) async -> Bool {
+        guard let direct, let current = host, direct.mayReachByCable(current),
+              let api = await direct.api(for: current, client: client, timeouts: timing.requestTimeouts), api.directLink == .cable
+        else { return false }
+        guard generation == hostGeneration, !Task.isCancelled else { return false }
+        let started: CableInstallResponse
+        do {
+            started = try await api.startCableInstall(buildID: id)
+        } catch let error as HostAPIError where error.isConnectionFailure {
+            log(.info, "install", "USB 케이블 설치 요청 실패(\(error.code)), VPN 설치로 넘어감")
+            direct.connectionFailed(final: false)
+            directLink = nil
+            return false
+        } catch let error as HostAPIError where error.code == "not_paired" || error.code == "too_many_attempts" {
+            log(.info, "install", "직접 연결 토큰을 Mac이 받지 않음(\(error.code)), VPN 설치로 넘어감")
+            direct.rejected()
+            directLink = nil
+            return false
+        } catch let error as HostAPIError where Self.cableInstallUnavailableCodes.contains(error.code) {
+            // 이 Mac은 케이블 설치를 받지 않거나(이전 버전), 이 연결이 Mac에 꽂은 케이블이 아니다.
+            log(.info, "install", "Mac이 USB 케이블 설치를 받지 않음(\(error.code)), VPN 설치로 넘어감")
+            return false
+        } catch {
+            guard generation == hostGeneration else { return true }
+            if Task.isCancelled || error is CancellationError {
+                if installs[id] == .preparing { installs[id] = nil }
+                return true
+            }
+            installs[id] = Self.installState(for: error, creatingSession: true)
+            return true
+        }
+        guard generation == hostGeneration else { return true }
+        log(.info, "install", "세션 \(started.sessionId) 만듦, Mac이 USB 케이블로 설치하는 중: \(id)")
+        let active = ActiveSession(sessionID: started.sessionId, installURL: nil, deadline: clock.now.addingTimeInterval(timing.sessionTimeout))
+        activeSessions[id] = active
+        installs[id] = .installingOverCable
+        guard !Task.isCancelled else { return true }
+        await pollSession(buildID: id, api: api, active: active, generation: generation)
+        return true
+    }
+
+    /// 케이블 설치를 받지 않는다는 뜻의 오류 코드: 경로를 모르는 이전 Mac(`not_found`), 케이블로 온 요청이 아님(`cable_required`).
+    nonisolated static let cableInstallUnavailableCodes: Set<String> = ["not_found", "method_not_allowed", "cable_required"]
+
+    /// 세션 진행을 물을 API. 케이블 설치의 세션은 지금 닿는 직접 경로로 묻고, 없으면 이미 연결된 VPN으로 묻는다(VPN을 켜지는 않는다).
+    private func statusAPI(for active: ActiveSession, default api: HostAPI) async -> HostAPI? {
+        guard active.cable else { return api }
+        guard let current = host else { return nil }
+        if let direct = await direct?.api(for: current, client: client, timeouts: timing.requestTimeouts) { return direct }
+        return tunnelController.currentState() == .connected ? makeAPI(current.fqdn) : nil
+    }
+
     private func startSessionPolling(buildID id: String, api: HostAPI, active: ActiveSession) {
         let token = UUID()
         let generation = hostGeneration
@@ -1059,9 +1135,16 @@ public final class ClientModel {
             guard current() else { return }
             let status: SessionStatus
             do {
+                // 케이블 경로가 잠깐 끊겼으면(잠금, 다시 꽂기) 다음 번에 다시 묻는다.
+                guard let api = await statusAPI(for: active, default: api) else {
+                    guard current() else { return }
+                    continue
+                }
+                guard current() else { return }
                 status = try await api.sessionStatus(sessionID: active.sessionID)
             } catch let error as HostAPIError where error.isConnectionFailure {
                 guard current() else { return }
+                if active.cable { direct?.connectionFailed(final: false) }
                 continue
             } catch {
                 guard current(), !(error is CancellationError) else { return }
@@ -1069,12 +1152,12 @@ public final class ClientModel {
                 return
             }
             guard current() else { return }
-            if let terminal = Self.terminalState(status.state) {
+            if let terminal = Self.terminalState(status, cable: active.cable) {
                 log(.info, "install", "세션 \(active.sessionID) \(status.state.rawValue): \(status.bytesServed)/\(status.size)바이트")
                 conclude(id, terminal)
                 return
             }
-            let next = Self.progressState(status)
+            let next = active.cable ? InstallState.installingOverCable : Self.progressState(status)
             if case .transferring = next, installs[id]?.progress == nil {
                 log(.info, "install", "전송 시작: 세션 \(active.sessionID) \(status.state.rawValue)")
             }
@@ -1085,20 +1168,24 @@ public final class ClientModel {
     /// 로컬 마감이 지나면 호스트에 한 번 더 묻고 끝난 상태(완료·만료·실패)면 그것을 따른다.
     /// 답을 못 받거나 아직 진행 중이면 시간 초과로 끝낸다.
     private func finishSessionAfterDeadline(buildID id: String, api: HostAPI, active: ActiveSession, generation: Int) async {
-        let status = try? await api.sessionStatus(sessionID: active.sessionID)
+        var status: SessionStatus?
+        if let api = await statusAPI(for: active, default: api) { status = try? await api.sessionStatus(sessionID: active.sessionID) }
         guard !Task.isCancelled, generation == hostGeneration else { return }
-        if let status, let terminal = Self.terminalState(status.state) {
+        if let status, let terminal = Self.terminalState(status, cable: active.cable) {
             conclude(id, terminal)
         } else {
-            conclude(id, .failed(message: Self.installTimeoutMessage))
+            conclude(id, .failed(message: active.cable ? Self.cableInstallTimeoutMessage : Self.installTimeoutMessage))
         }
     }
 
-    nonisolated private static func terminalState(_ state: SessionState) -> InstallState? {
-        switch state {
-        case .completed: .completed
+    /// 케이블 설치의 세션은 Mac이 설치를 마쳤을 때 `completed`가 되고, 실패하면 이유(`message`)가 온다.
+    nonisolated private static func terminalState(_ status: SessionStatus, cable: Bool) -> InstallState? {
+        switch status.state {
+        case .completed: cable ? .installedOverCable : .completed
         case .expired: .expired
-        case .failed: .failed(message: sessionFailedMessage)
+        case .failed:
+            if cable, let message = status.message, !message.isEmpty { .failed(message: message) }
+            else { .failed(message: cable ? cableInstallFailedMessage : sessionFailedMessage) }
         case .created, .manifestServed, .downloading: nil
         }
     }
@@ -1126,6 +1213,7 @@ public final class ClientModel {
     private func conclude(_ id: String, _ state: InstallState) {
         switch state {
         case .completed: log(.info, "install", "전송 완료: \(id)")
+        case .installedOverCable: log(.info, "install", "USB 케이블 설치 완료: \(id)")
         case .expired: log(.warning, "install", "세션 만료: \(id)")
         case .failed(let message): log(.error, "install", "설치 실패: \(id): \(message)")
         default: break
@@ -1226,7 +1314,7 @@ public final class ClientModel {
         resetHostScopedState()
         store.clear()
         direct?.forget()
-        isDirectConnected = false
+        directLink = nil
         host = nil
         phase = .unpaired
         needsTunnel = false
@@ -1258,20 +1346,20 @@ public final class ClientModel {
 
     // MARK: 경로 선택 (docs/protocol-addenda.md O)
 
-    /// 네트워크 경로가 바뀌었다(Wi-Fi ↔ 셀룰러, 다른 Wi-Fi). 다음 요청에서 직접 경로를 다시 찾는다.
+    /// 네트워크 경로가 바뀌었다(Wi-Fi ↔ 셀룰러, 다른 Wi-Fi, USB 케이블을 꽂거나 뽑음). 다음 요청에서 직접 경로를 다시 찾는다.
     public func noteNetworkChange() {
         guard let direct else { return }
         direct.invalidate()
-        isDirectConnected = false
+        directLink = nil
     }
 
     /// 직접 경로가 있거나 VPN이 연결돼 있다(꺼져 있으면 자동으로 켠다).
     private func reachable(_ current: PairedHost) async -> Bool {
-        if await direct?.api(for: current, client: client, timeouts: timing.requestTimeouts) != nil {
-            isDirectConnected = true
+        if let api = await direct?.api(for: current, client: client, timeouts: timing.requestTimeouts) {
+            directLink = api.directLink ?? .network
             return true
         }
-        isDirectConnected = false
+        directLink = nil
         return await connectedForTransfer()
     }
 
@@ -1288,8 +1376,9 @@ public final class ClientModel {
         if let direct {
             for attempt in 0..<2 {
                 guard let api = await direct.api(for: current, client: client, timeouts: timing.requestTimeouts) else { break }
-                if !isDirectConnected { log(.info, "direct", "같은 네트워크의 Mac에 직접 연결") }
-                isDirectConnected = true
+                let link = api.directLink ?? .network
+                if directLink != link { log(.info, "direct", link == .cable ? "USB 케이블로 Mac에 직접 연결" : "같은 네트워크의 Mac에 직접 연결") }
+                directLink = link
                 route(true)
                 do {
                     return try await work(api)
@@ -1302,7 +1391,7 @@ public final class ClientModel {
                     break
                 }
             }
-            isDirectConnected = false
+            directLink = nil
         }
         route(false)
         guard await ensure(), let api = makeAPI(current.fqdn) else { throw VPNNotConnected() }
@@ -1915,6 +2004,8 @@ public final class ClientModel {
     public nonisolated static let untrustedInstallURLMessage = String(localized: "설치 주소가 페어링한 Mac을 가리키지 않아 열지 않았습니다. iPhone 앱과 Mac 앱을 최신 버전으로 맞추세요.")
     public nonisolated static let sessionExpiredMessage = InstallState.expiredMessage
     public nonisolated static let sessionFailedMessage = String(localized: "Mac에서 설치를 중단했습니다. Mac에서 빌드를 내렸거나 이 기기의 페어링이 해제되었을 수 있습니다. 빌드 목록을 새로고침하세요.")
+    public nonisolated static let cableInstallFailedMessage = String(localized: "Mac이 USB 케이블로 설치하지 못했습니다. iPhone의 잠금을 풀고 케이블을 확인한 뒤 다시 설치하세요.")
+    public nonisolated static let cableInstallTimeoutMessage = String(localized: "제한 시간 안에 USB 케이블 설치가 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요.")
     public nonisolated static let installTimeoutMessage = String(localized: "제한 시간 안에 전송이 끝났는지 확인하지 못했습니다. 홈 화면에서 앱이 설치되었는지 확인하고, 없으면 다시 설치하세요.")
     public nonisolated static let createSessionTimeoutMessage = String(localized: "Mac이 빌드를 확인하는 동안 응답 시간이 지났습니다. 잠시 뒤 다시 설치하세요.")
 

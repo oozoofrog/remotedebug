@@ -51,12 +51,15 @@ public final class HostLogic: HostRequestHandling, @unchecked Sendable {
         public var events: @Sendable (CoreEvent) -> Void
         public var updatePageURL: @Sendable () -> String
         public var eventDetails: (@Sendable (EmittedEvent) -> Void)?
+        /// USB 케이블 설치(protocol-addenda R). nil이면 그 경로는 `404 not_found`다.
+        public var cableInstaller: (any HostCableInstalling)?
         public init(publishDirectory: String, info: @escaping @Sendable () -> Info,
                     baseURL: @escaping @Sendable () -> String, now: @escaping @Sendable () -> Date = { Date() },
                     limits: Limits = Limits(), direct: @escaping @Sendable () -> DirectInfo? = { nil },
                     events: @escaping @Sendable (CoreEvent) -> Void,
                     updatePageURL: @escaping @Sendable () -> String = { "" },
-                    eventDetails: (@Sendable (EmittedEvent) -> Void)? = nil) {
+                    eventDetails: (@Sendable (EmittedEvent) -> Void)? = nil,
+                    cableInstaller: (any HostCableInstalling)? = nil) {
             self.publishDirectory = publishDirectory
             self.info = info
             self.baseURL = baseURL
@@ -66,6 +69,7 @@ public final class HostLogic: HostRequestHandling, @unchecked Sendable {
             self.events = events
             self.updatePageURL = updatePageURL
             self.eventDetails = eventDetails
+            self.cableInstaller = cableInstaller
         }
     }
 

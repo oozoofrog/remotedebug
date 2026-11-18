@@ -26,10 +26,10 @@ extension PhoneViewState {
 
     /// VPN 상태 이름. VoiceOver 레이블에도 쓴다.
     var vpnStatusLabel: String {
-        if !tunnelAvailable { return directConnected ? VPNStatusText.direct : String(localized: "사용할 수 없음") }
+        if !tunnelAvailable { return directLink.map(VPNStatusText.direct) ?? String(localized: "사용할 수 없음") }
         if isAutoStartingVPN { return VPNStatusText.autoStarting }
         switch tunnel {
-        case .off: return directConnected ? VPNStatusText.direct : String(localized: "꺼짐")
+        case .off: return directLink.map(VPNStatusText.direct) ?? String(localized: "꺼짐")
         case .connecting: return String(localized: "연결 중")
         case .disconnecting: return String(localized: "끄는 중")
         case .needsLogin: return String(localized: "로그인 필요")
@@ -48,15 +48,14 @@ extension PhoneViewState {
     var vpnDetail: String? {
         switch tunnel {
         case .off:
-            directConnected ? VPNStatusText.directDetail
-                : vpnAutoStartReady
+            directLink.map(VPNStatusText.directDetail) ?? (vpnAutoStartReady
                 ? String(localized: "Mac에 연결할 때 자동으로 켜고, 쓰지 않으면 30초 뒤에 끕니다.")
-                : String(localized: "Mac과 통신하려면 VPN이 켜져 있어야 합니다. 여기서 한 번 켜 두면 다음부터는 필요할 때 자동으로 켭니다.")
+                : String(localized: "Mac과 통신하려면 VPN이 켜져 있어야 합니다. 여기서 한 번 켜 두면 다음부터는 필요할 때 자동으로 켭니다."))
         case .connecting, .disconnecting: nil
         case .needsLogin(let url): url == nil ? String(localized: "tailnet 로그인 주소를 받는 중입니다.") : String(localized: "tailnet에 로그인해야 합니다. 로그인하면 자동으로 연결됩니다.")
         case .connected:
             vpnAutoStarted ? String(localized: "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다.")
-                : directConnected ? VPNStatusText.directWithVPNDetail : nil
+                : directLink.map(VPNStatusText.directWithVPNDetail)
         case .failed(let message): message
         }
     }
@@ -64,7 +63,7 @@ extension PhoneViewState {
     var vpnSymbol: String {
         if !tunnelAvailable { return "network.slash" }
         switch tunnel {
-        case .off: return directConnected ? "wifi" : "network.slash"
+        case .off: return directLink == .cable ? "cable.connector" : directConnected ? "wifi" : "network.slash"
         case .connecting: return "network"
         case .disconnecting: return "network.slash"
         case .needsLogin: return "person.badge.key"
