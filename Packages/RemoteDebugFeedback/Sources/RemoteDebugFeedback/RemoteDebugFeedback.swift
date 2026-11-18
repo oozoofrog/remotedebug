@@ -145,6 +145,7 @@ public enum RemoteDebugFeedback {
     static var client: FeedbackClient? { withState { $0.client } }
 
     /// 글 없이 보낸 피드백의 첫 줄. 받는 쪽이 빈 글과 잘린 글을 헷갈리지 않게 한다.
+    /// Mac 앱이 이 글자 그대로 찾으므로(`FeedbackIssue.directFacts`) 기기 언어로 바꾸지 않는다.
     static let emptyMessageMark = "(글 없이 보냄)"
 
     /// 보낼 것이 있는가. 글이 비어도 참고 정보(로그), 첨부, 확인 목록의 답 가운데 하나가 있으면 보낸다. 메모만 적은 항목은 답이 아니다.
@@ -154,6 +155,11 @@ public enum RemoteDebugFeedback {
             || hasFiles || checks.contains { !$0.answer.isEmpty }
     }
 
+    /// Mac으로 보내는 기록을 만든다(Debug 빌드 전용).
+    ///
+    /// 기록의 글에 적는 `(글 없이 보냄)`, `앱:`, `기기:`, `보낸 시각:`, `첨부:`와 로그 앞의 `최근 로그`는 기기 언어와 상관없이
+    /// 이 한국어 글자 그대로 둔다. Mac 앱이 이 줄들을 글자 그대로 읽어 글·기기 정보·로그를 가르고(`FeedbackIssue.directFacts`),
+    /// 에이전트도 같은 원문을 읽는다. 사용자의 화면에는 보이지 않는 글이다.
     static func report(message: String, details: String, image: Data? = nil, attachments: [FeedbackFile] = [],
                        date: Date) -> FeedbackReport {
         let stamp = ISO8601DateFormatter.fractional.string(from: date)

@@ -8,6 +8,10 @@ import Foundation
 /// 확인할 것 하나: 어디서, 무엇을 하고, 무엇이 보여야 하는지와 고를 답.
 public struct FeedbackCheckItem: Codable, Identifiable, Equatable, Sendable {
     /// 해 보지 못했다는 답. 실패와도, 아직 답하지 않은 것과도 다르다.
+    ///
+    /// 기본 답 셋은 기기 언어로 바꾸지 않는다. 이 글자가 그대로 기기에 저장되고(`answers.json`) Mac에 답으로 가며,
+    /// Mac의 `FeedbackChecklist.defaultChoices`와 같은 값이어야 하고, 메일에 붙는 진단에서는 이 값으로 해 보지 못함을 가린다.
+    /// 화면에 보일 때만 기기 언어의 이름으로 바꾼다(`displayName(for:labels:)`).
     public static let untestedChoice = "확인 못함"
     public static let defaultChoices = ["통과", "실패", untestedChoice]
 

@@ -1,15 +1,17 @@
 #if canImport(SwiftUI)
 import SwiftUI
 
-/// 로그 기록 동의 스위치에 쓰는 문구. 앱의 언어와, 그 앱이 실제로 로그에 남기는 것에 맞게 바꿔 넣는다.
+/// 로그 기록 동의 스위치에 쓰는 문구. 기본값은 기기 언어를 따른다(한국어·영어·일본어·중국어 간체·번체, 그 밖에는 영어).
+/// 기본 설명은 이 패키지가 하는 일만 말하므로, 그 앱이 실제로 로그에 남기는 것에 맞게 `explanation`을 바꿔 넣는다.
 public struct RemoteDebugFeedbackConsentLabels: Sendable {
-    public var toggle = "문제 해결용 로그 기록"
-    public var footer = "켜면 이 앱의 최근 동작 기록을 이 기기에 남기고, 피드백을 보낼 때 붙일지 고를 수 있습니다. 끄면 남긴 기록을 바로 지웁니다."
-    public var agreeTitle = "로그를 기록할까요?"
+    public var toggle = FeedbackStrings.text(.consentToggle)
+    public var footer = FeedbackStrings.text(.consentFooter)
+    public var agreeTitle = FeedbackStrings.text(.consentAgreeTitle)
     /// 무엇을 남기는지에 대한 설명. 동의 단추와 함께 보인다.
-    public var explanation = "앱이 남기는 동작 기록(화면 이동, 오류, 시각)을 최근 \(FeedbackLog.limit)줄까지 이 기기의 메모리에 두고, 앱을 끄면 사라집니다. 피드백을 보낼 때 \"최근 로그 붙이기\"를 켠 경우에만 이 기록과 이 앱의 최근 15분 시스템 로그를 암호화해서 개발자에게 보냅니다. 보낸 기록은 문제를 살펴보는 데만 쓰고, 이 스위치를 끄면 기기에 남은 기록을 지웁니다."
-    public var agree = "동의하고 켜기"
-    public var cancel = "취소"
+    public var explanation = FeedbackStrings.text(.consentExplanation, FeedbackLog.limit, FeedbackStrings.text(.sheetIncludeLogs),
+                                                  "\(Int(FeedbackLog.systemWindow) / 60)")
+    public var agree = FeedbackStrings.text(.consentAgree)
+    public var cancel = FeedbackStrings.text(.consentCancel)
 
     public init() {}
 }
