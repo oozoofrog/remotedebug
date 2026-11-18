@@ -86,12 +86,12 @@ struct PublishAdviceTests {
         let plain = try #require(await model.handleAgentRequest("feedback\n\(container.path)\n\n").feedback)
         #expect(!plain.added && plain.product == "RemoteDebugFeedback")
         #expect(plain.snippet.contains(#"macHost: "rd-mac-1a2b3c4d.tail0001.ts.net""#) && plain.snippet.contains(#"publicKeyBase64: "S0VZ""#))
-        #expect(!plain.snippet.contains("email:") && plain.steps.contains { $0.contains("email이 비어 있다") })
+        #expect(!plain.snippet.contains("email:") && plain.steps.contains { $0.contains("email이 비어 있고") })
 
         try Data("RemoteDebugFeedback".utf8).write(to: container.appendingPathComponent("project.pbxproj"))
         let mailed = try #require(await model.handleAgentRequest("feedback\n\(container.path)\nme@example.com\n").feedback)
         #expect(mailed.added && mailed.snippet.contains(#"email: "me@example.com""#))
-        #expect(!mailed.steps.contains { $0.contains("email이 비어 있다") })
+        #expect(!mailed.steps.contains { $0.contains("email이 비어 있고") })
         // 메일 주소가 있으면 배포판은 Mac 주소 없이 메일만 쓴다.
         let release = try #require(mailed.snippet.components(separatedBy: "#else").last)
         #expect(mailed.snippet.contains("#if DEBUG") && release.contains(#".init(email: "me@example.com", publicKeyBase64: "S0VZ")"#) && !release.contains("macHost"))
@@ -148,6 +148,25 @@ extension PublishAdviceTests {
         #expect(script.contains("checklist <번들 ID> [항목 JSON 파일|clear]"))
         #expect(script.contains(#"checklist) case "$scheme" in ""|clear|/*) ;; *) scheme="$PWD/$scheme" ;; esac ;;"#))
         #expect(AgentScript.feedbackGuidance.contains("remotedebug_feedback_checklist") && AgentScript.feedbackGuidance.contains("확인 목록의 답"))
+    }
+
+    /// 부른 쪽이 메일 주소를 주지 않으면 Mac 앱 설정에 저장된 주소가 들어간다.
+    @Test func feedbackCommandUsesTheAddressSavedInTheMacApp() async throws {
+        let tmp = try TempDir("feedback-mail")
+        let container = tmp.path("src/App/App.xcodeproj").standardizedFileURL
+        try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
+        let model = ProjectsModel(root: tmp.path("state"), builder: AdviceBuilder(app: tmp.path("p/App.app")),
+                                  scanner: DerivedDataScanner(root: tmp.path("DerivedData")),
+                                  feedbackInfo: { _ in ("rd-mac-1a2b3c4d.tail0001.ts.net", "S0VZ") },
+                                  savedFeedbackEmail: { " dev@example.com " }) { _ in nil }
+
+        let saved = try #require(await model.handleAgentRequest("feedback\n\(container.path)\n\n").feedback)
+        #expect(saved.email == "dev@example.com" && saved.emailSource == "macSetting")
+        #expect(saved.snippet.contains(#"email: "dev@example.com""#) && saved.snippet.contains("#if DEBUG"))
+        #expect(saved.steps.contains { $0.contains("저장해 둔 것이다") } && !saved.steps.contains { $0.contains("email이 비어 있고") })
+
+        let given = try #require(await model.handleAgentRequest("feedback\n\(container.path)\nother@example.com\n").feedback)
+        #expect(given.email == "other@example.com" && given.emailSource == "argument")
     }
 }
 

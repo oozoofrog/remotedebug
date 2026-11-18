@@ -171,7 +171,14 @@ public final class ProjectsModel {
         /// 앱에 넣을 코드. 이 Mac의 주소와 프로젝트의 공개키가 들어 있다.
         public var snippet: String
         public var steps: [String]
+        /// snippet에 넣은 받을 메일 주소. 넣지 않았으면 nil.
+        public var email: String?
+        /// 그 주소가 어디서 왔는지: "argument"(부른 쪽이 줌), "macSetting"(Mac 앱 설정에 저장된 것).
+        public var emailSource: String?
     }
+
+    /// Mac 앱 설정에 저장해 둔 피드백 메일 주소. 없으면 빈 글자.
+    public typealias SavedFeedbackEmail = @MainActor () -> String
 
     struct Stored: Codable, Sendable {
         var projects: [ConnectedProject] = []
@@ -213,6 +220,7 @@ public final class ProjectsModel {
     @ObservationIgnored private let importer: Importer
     @ObservationIgnored private let publishedBuilds: PublishedBuilds
     @ObservationIgnored private let feedbackInfo: FeedbackInfo
+    @ObservationIgnored private let savedFeedbackEmail: SavedFeedbackEmail
     @ObservationIgnored private let reportHandling: ReportHandling
     @ObservationIgnored private let hostStatus: @MainActor () -> HostStatus
     @ObservationIgnored private let openPairing: PairingOpener
@@ -254,6 +262,7 @@ public final class ProjectsModel {
         now: @escaping @Sendable () -> Date = { Date() },
         publishedBuilds: @escaping PublishedBuilds = { [] },
         feedbackInfo: @escaping FeedbackInfo = { _ in ("", "") },
+        savedFeedbackEmail: @escaping SavedFeedbackEmail = { "" },
         reportHandling: ReportHandling = .unavailable,
         crashLogs: CrashLogStore? = nil,
         issueFiler: any IssueFiling = GHIssueFiler(),
@@ -275,6 +284,7 @@ public final class ProjectsModel {
         self.importer = importer
         self.publishedBuilds = publishedBuilds
         self.feedbackInfo = feedbackInfo
+        self.savedFeedbackEmail = savedFeedbackEmail
         self.reportHandling = reportHandling
     }
 
@@ -725,8 +735,12 @@ public final class ProjectsModel {
         return AgentResponse(ok: true, text: "\(id) 기록을 \(CrashLogStore.dayText(handled))에 처리한 것으로 표시했습니다. \(CrashLogStore.handledRetentionDays)일이 지난 \(CrashLogStore.dayText(deletes)) 뒤에 이 기록과 첨부를 지웁니다. 되돌리려면 handled \(id) undo.")
     }
 
-    func feedbackGuide(for project: ConnectedProject, email: String) -> FeedbackGuide {
+    func feedbackGuide(for project: ConnectedProject, email given: String) -> FeedbackGuide {
         let info = feedbackInfo(project)
+        // 부른 쪽이 주소를 주지 않으면 Mac 앱 설정에 저장된 주소를 쓴다.
+        let saved = savedFeedbackEmail().trimmingCharacters(in: .whitespaces)
+        let email = given.isEmpty ? saved : given
+        let source: String? = email.isEmpty ? nil : (given.isEmpty ? "macSetting" : "argument")
         var steps = [
             "프로젝트에 Swift 패키지 \(FeedbackSetup.packageURL)를 추가하고 제품 \(FeedbackSetup.packageName)(iOS 17 이상)을 앱 대상에 연결한다.",
             "snippet의 start 호출을 앱 시작 코드에 한 번 넣는다.",
@@ -736,14 +750,17 @@ public final class ProjectsModel {
             "remotedebug_build로 게시하고, 사용자가 iPhone에서 피드백을 보내면 remotedebug_crash_logs에서 종류가 피드백인 항목으로 확인한다.",
         ]
         if email.isEmpty {
-            steps.insert("email이 비어 있다. 배포판(App Store)에서 사용자가 메일로 피드백을 보내게 하거나 Mac에 닿지 않을 때 메일로 보내게 하려면, 받을 메일 주소를 사용자에게 물어 email로 다시 부른다(없어도 Debug 빌드는 Mac으로 보낸다).", at: 2)
+            steps.insert("email이 비어 있고 Mac 앱에도 저장된 주소가 없다. 배포판(App Store)에서 사용자가 메일로 피드백을 보내게 하거나 Mac에 닿지 않을 때 메일로 보내게 하려면, 사용자에게 RemoteDebug Mac 앱의 설정 > 고급 > 앱 피드백에 받을 메일 주소를 저장해 달라고 한 뒤 다시 부른다(주소를 직접 받아 email로 불러도 된다. 없어도 Debug 빌드는 Mac으로 보낸다).", at: 2)
+        } else if source == "macSetting" {
+            steps.insert("snippet의 메일 주소는 사용자가 RemoteDebug Mac 앱 설정에 저장해 둔 것이다. 그대로 쓰고 다시 묻지 않는다. 이 주소는 앱의 소스에 들어가므로, 공개 저장소면 커밋 전에 사용자에게 한 번 알린다.", at: 2)
         }
         if info.host.isEmpty {
             steps.insert("이 Mac의 주소를 아직 모른다(공유가 꺼져 있다). 사용자에게 RemoteDebug Mac 앱에서 공유를 시작해 달라고 한 뒤 다시 부른다.", at: 0)
         }
         return FeedbackGuide(packageURL: FeedbackSetup.packageURL, product: FeedbackSetup.packageName,
                              added: FeedbackSetup.isAdded(to: project),
-                             snippet: FeedbackSetup.snippet(host: info.host, email: email, publicKey: info.publicKey), steps: steps)
+                             snippet: FeedbackSetup.snippet(host: info.host, email: email, publicKey: info.publicKey), steps: steps,
+                             email: email.isEmpty ? nil : email, emailSource: source)
     }
 
     struct AgentProject: Codable {
@@ -1110,7 +1127,7 @@ enum AgentScript {
 
     /// 앱에 피드백 보내기를 붙이는 법. 전역 스킬과 프로젝트 안내가 함께 쓴다.
     static let feedbackGuidance = """
-        - 앱에 피드백 보내기(크래시 기록 포함)를 붙여 달라는 요청에는 `feedback`(MCP `remotedebug_feedback_setup`)을 부른다. 응답의 `feedback.snippet`에 이 Mac의 주소와 이 프로젝트의 공개키가 든 코드가, `feedback.steps`에 할 일이 순서대로 있다. `feedback.added`가 true면 패키지는 이미 들어 있다. 사용자에게 Mac 앱에서 코드를 복사해 달라고 하지 않는다. 메일 주소를 주면 코드가 `#if DEBUG`로 나뉜다: Debug 빌드는 Mac으로 보내고, 배포판(App Store)은 Mac 주소 없이 사용자가 메일로 보낸다.
+        - 앱에 피드백 보내기(크래시 기록 포함)를 붙여 달라는 요청에는 `feedback`(MCP `remotedebug_feedback_setup`)을 부른다. 응답의 `feedback.snippet`에 이 Mac의 주소와 이 프로젝트의 공개키가 든 코드가, `feedback.steps`에 할 일이 순서대로 있다. `feedback.added`가 true면 패키지는 이미 들어 있다. 사용자에게 Mac 앱에서 코드를 복사해 달라고 하지 않는다. 메일 주소는 주지 않아도 사용자가 Mac 앱 설정에 저장해 둔 주소가 들어간다(`feedback.emailSource`가 `macSetting`). 메일 주소가 있으면 코드가 `#if DEBUG`로 나뉜다: Debug 빌드는 Mac으로 보내고, 배포판(App Store)은 Mac 주소 없이 사용자가 메일로 보낸다.
         - 받은 피드백은 `reports feedback`(MCP `remotedebug_crash_logs`의 `kind: feedback`)으로 목록을, `report <id>`로 글·기기·앱 버전·최근 로그를 읽는다. 목록에서 기록 아랫줄의 `첨부:` 경로가 사용자가 골라 붙인 사진과 파일이다(기록 하나에 5개, 합쳐 1.5MB까지. 옛 기록은 `사진:` 경로 하나). 받은 파일은 읽기만 하고 실행하지 않는다.
         - 빌드를 게시한 뒤 사용자가 기기에서 봐야 할 것이 있으면 `checklist <번들 ID> <항목 JSON 파일>`(MCP `remotedebug_feedback_checklist`)로 이번에 바뀐 것만 확인 목록에 남긴다. 항목은 `id`, `title`, `place`(어디서), `steps`(할 일), `expect`(보여야 하는 것들), `choices`(고를 답 2~6개, 비우면 통과·실패·확인 못함), `since`(이 항목이 바뀐 빌드 번호. 앞선 빌드의 답은 세지 않는다), `stage`(묶음 이름)이고 50개까지다. 사용자에게 앱의 피드백 화면을 열어 "확인할 것"에 답하고 보내 달라고 한 뒤, `reports feedback`과 `report <id>`로 원문 끝의 "확인 목록의 답"을 읽는다. 확인이 끝난 항목은 목록에서 빼고, 다 끝나면 `checklist <번들 ID> clear`로 지운다. Debug 빌드에만 보이고 배포판에는 없다.
         - 확인 목록의 항목을 쓰는 규칙: \(AgentScript.checklistRules)

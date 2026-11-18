@@ -24299,6 +24299,34 @@
         }
       }
     },
+    "앱 피드백" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Feedback"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリのフィードバック"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 反馈"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 回饋"
+          }
+        }
+      }
+    },
     "앱 화면의 프로젝트 추가로 프로젝트를 연결하면 그 폴더에서 에이전트를 실행합니다." : {
       "localizations" : {
         "en" : {
@@ -24351,6 +24379,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "App 與裝置搜尋"
+          }
+        }
+      }
+    },
+    "앱에 피드백 보내기를 붙일 때 이 주소가 코드에 들어갑니다. 에이전트가 설정 코드를 받아 갈 때도 이 주소를 함께 받습니다. 배포판 사용자는 이 주소로 메일을 보냅니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This address goes into the code when feedback is added to an app. Agents that fetch the setup code get it too. Users of release builds send their mail to this address."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリにフィードバック機能を追加すると、このアドレスがコードに入ります。エージェントが設定コードを取得するときも同じアドレスを受け取ります。リリース版のユーザーはこのアドレスにメールを送ります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为 App 添加反馈功能时，此地址会写入代码。代理获取设置代码时也会得到此地址。正式版用户会向此地址发送邮件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "為 App 加入回饋功能時，此位址會寫入程式碼。代理取得設定程式碼時也會得到此位址。正式版使用者會寄信到此位址。"
           }
         }
       }

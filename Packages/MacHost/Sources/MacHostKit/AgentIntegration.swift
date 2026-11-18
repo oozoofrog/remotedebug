@@ -125,7 +125,7 @@ public struct AgentMCPServer: Sendable {
             "description": "앱에 크래시·피드백 보내기(Swift 패키지 RemoteDebugFeedback)를 붙일 때 부른다. 프로젝트를 연결하고, 이 Mac의 주소와 그 프로젝트의 공개키가 든 코드(feedback.snippet), 패키지 주소와 제품 이름, 이미 들어 있는지(feedback.added), 할 일(feedback.steps)을 돌려준다. 사용자에게 Mac 앱에서 코드를 복사해 달라고 하지 않아도 된다. 받은 피드백은 remotedebug_crash_logs로 읽는다.",
             "inputSchema": ["type": "object", "properties": [
                 "project_path": ["type": "string", "description": "프로젝트 폴더나 .xcodeproj, .xcworkspace의 절대 경로"],
-                "email": ["type": "string", "description": "Mac에 닿지 않을 때 피드백을 받을 메일 주소(선택). 사용자에게 물어서 넣는다"],
+                "email": ["type": "string", "description": "피드백을 받을 메일 주소(선택). 비우면 사용자가 RemoteDebug Mac 앱 설정에 저장해 둔 주소를 쓴다. 저장된 주소도 없을 때만 사용자에게 묻는다"],
             ] as [String: Any], "required": ["project_path"]] as [String: Any],
         ],
         [

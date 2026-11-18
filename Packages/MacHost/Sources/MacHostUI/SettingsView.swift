@@ -49,6 +49,7 @@ struct NotificationSettings: View {
 
 /// 설정 > 고급: 같은 네트워크 직접 연결, iPhone 자동 연결(OAuth 클라이언트), iPhone 앱 업데이트, 이 Mac의 노드·IP, 제어 서버와 진단.
 struct AdvancedSettings: View {
+    @AppStorage(FeedbackSetup.emailDefaultsKey) private var feedbackEmail = ""
     @Environment(HostModel.self) private var model
     @State private var controlDraft = ""
     @State private var confirmingControlURL = false
@@ -92,6 +93,16 @@ struct AdvancedSettings: View {
             TailscaleTokenSection()
 
             UpdatePageSection()
+
+            Section {
+                TextField("받을 메일 주소", text: $feedbackEmail)
+                    .textContentType(.emailAddress)
+            } header: {
+                Text("앱 피드백")
+            } footer: {
+                Text("앱에 피드백 보내기를 붙일 때 이 주소가 코드에 들어갑니다. 에이전트가 설정 코드를 받아 갈 때도 이 주소를 함께 받습니다. 배포판 사용자는 이 주소로 메일을 보냅니다.")
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             Section("이 Mac") {
                 LabeledContent("노드 이름") { Text(model.nodeName).textSelection(.enabled) }

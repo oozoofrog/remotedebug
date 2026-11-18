@@ -233,6 +233,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 feedbackInfo: { [weak model] project in
                     (model?.status?.fqdn ?? "", (try? model?.feedbackPublicKey(for: project)) ?? "")
                 },
+                savedFeedbackEmail: { UserDefaults.standard.string(forKey: FeedbackSetup.emailDefaultsKey) ?? "" },
                 reportHandling: .init(
                     mark: { [weak model] id, handled in model?.crashLogs.setHandled(id, handled) },
                     purge: { [weak model] in model?.crashLogs.purgeHandled() }),

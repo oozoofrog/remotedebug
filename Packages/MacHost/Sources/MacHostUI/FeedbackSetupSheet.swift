@@ -8,7 +8,7 @@ struct FeedbackSetupSheet: View {
     let host: String
     @Environment(\.dismiss) private var dismiss
     @Environment(HostModel.self) private var model
-    @AppStorage("feedbackEmail") private var email = ""
+    @AppStorage(FeedbackSetup.emailDefaultsKey) private var email = ""
     @State private var publicKey = ""
     @State private var keyError: String?
 

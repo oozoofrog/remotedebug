@@ -4,6 +4,8 @@ import Foundation
 public enum FeedbackSetup {
     public static let packageName = "RemoteDebugFeedback"
     public static let packageURL = "https://github.com/oozoofrog/remotedebug"
+    /// 피드백을 받을 메일 주소를 저장하는 사용자 기본값 키(설정 화면과 패키지 안내 시트가 함께 쓴다).
+    public static let emailDefaultsKey = "feedbackEmail"
 
     /// 프로젝트가 패키지를 이미 쓰는지. 프로젝트 파일과 그 폴더의 `Package.swift`, `project.yml`에서 이름을 찾는다.
     public static func isAdded(to project: ConnectedProject) -> Bool {
