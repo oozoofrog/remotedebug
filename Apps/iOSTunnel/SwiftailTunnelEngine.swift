@@ -50,6 +50,9 @@ final class SwiftailTunnelEngine: @unchecked Sendable {
                 case .tailnetLockChanged(let lock):
                     // 화면 안내는 아직 없다. 종류와 개수만 남긴다(키는 남기지 않는다).
                     self.logger.log("Swiftail tailnet lock: \(String(describing: lock.mode), privacy: .public), 서명 기다림 \(lock.signingRequest != nil), 걸러진 피어 \(lock.filteredPeerCount)")
+                case .statusChanged:
+                    // 아래에서 사건마다 상태를 다시 읽어 보낸다.
+                    break
                 }
                 if let status = await self.status() { self.continuation.yield(.state(status)) }
             }

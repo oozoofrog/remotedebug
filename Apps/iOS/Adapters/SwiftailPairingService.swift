@@ -1,5 +1,6 @@
 import Foundation
 import PhoneClientKit
+import SwiftailBase
 import SwiftailPairing
 
 /// `PairingService`를 `SwiftailPairing`으로 구현한다.
@@ -7,6 +8,9 @@ import SwiftailPairing
 /// 이 앱의 tailnet 노드는 터널 확장에 있고 터널 확장은 `SwiftailPairing`을 링크하지 않는다.
 /// 그래서 앱은 OS 소켓 판 `PairingJoiner`로 들어온다(터널이 연결된 뒤. 이름은 터널의 MagicDNS가 푼다).
 struct SwiftailPairingService: PairingService {
+    /// 이 앱의 터널 확장이 알려 준 이 기기의 tailnet 주소들(노드의 `status.addresses`). 짝 앱이 VPN을 쥐고 있으면 비어 있다.
+    var localAddresses: @Sendable () async -> [String] = { [] }
+
     func read(link: String) throws(PairingOfferIssue) -> PairingProposal {
         let offer: PairingOffer
         do throws(PairingOfferError) {
@@ -23,12 +27,20 @@ struct SwiftailPairingService: PairingService {
         awaitingApproval: @escaping @Sendable (String) -> Void
     ) async throws(PairingFailure) -> JoinedHost {
         guard let offer = proposal.payload as? PairingOffer else { throw .unexpected }
+        // 연결의 이쪽 끝이 터널의 tailnet 주소인지 라이브러리가 견준다. OS의 인터페이스 목록에서 짐작하지 않는다.
+        guard let localAddress = Self.tailnetIPv4(in: await localAddresses()) else { throw .notOnTailnet }
         do throws(PairingError) {
-            let paired = try await PairingJoiner.pair(with: offer, deviceName: deviceName, awaitingApproval: awaitingApproval)
+            let paired = try await PairingJoiner.pair(
+                with: offer, deviceName: deviceName, localAddress: localAddress, awaitingApproval: awaitingApproval)
             return JoinedHost(host: paired.host, stableID: paired.stableID, name: paired.name, pairedAt: paired.pairedAt)
         } catch {
             throw Self.failure(for: error)
         }
+    }
+
+    /// 터널이 알려 준 주소 가운데 IPv4 하나(MagicDNS 이름은 IPv4로 먼저 풀린다).
+    static func tailnetIPv4(in addresses: [String]) -> IPAddress? {
+        addresses.lazy.compactMap { IPAddress($0) }.first { $0.isIPv4 }
     }
 
     /// `PairingOfferError` → 앱 쪽 이유.

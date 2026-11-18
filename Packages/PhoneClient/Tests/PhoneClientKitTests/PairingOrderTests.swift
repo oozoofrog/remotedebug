@@ -190,10 +190,20 @@ import Testing
         #expect(h.model.lastError == nil)
     }
 
-    @Test(arguments: [VPNHolder.thisApp, .pairedApp])
-    func theAppsOwnOrPairedTunnelCarriesThePairing(holder: VPNHolder) async {
+    @Test func thePairedAppsTunnelDoesNotCarryThePairing() async {
+        // 짝 앱이 VPN을 쥐고 있으면 이 앱은 터널의 tailnet 주소를 받을 수 없다. 이 앱의 터널을 기다린다.
         let h = Harness(tunnel: .connected)
-        h.tunnel.holder = holder
+        h.tunnel.holder = .pairedApp
+        _ = h.model.pair(scanned: pairingLink())
+        await h.model.waitForBackgroundWork()
+        #expect(h.pairing.calls.isEmpty)
+        #expect(h.model.needsTunnel)
+        #expect(h.model.lastError == ClientModel.pairingNeedsOwnTunnelMessage)
+    }
+
+    @Test func theAppsOwnTunnelCarriesThePairing() async {
+        let h = Harness(tunnel: .connected)
+        h.tunnel.holder = .thisApp
         h.serveHostInfoAndBuilds()
         var used = 0
         h.model.connectWithAuthKey = { _ in used += 1 }

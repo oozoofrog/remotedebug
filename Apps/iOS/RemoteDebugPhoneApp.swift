@@ -51,7 +51,9 @@ final class AppServices {
             store: UserDefaultsPairedHostStore(defaults: SharedContainer.defaults, legacy: .standard),
             opener: opener,
             tunnel: tunnel,
-            pairingService: SwiftailPairingService(),
+            pairingService: SwiftailPairingService(localAddresses: { [tunnel] in
+                await MainActor.run { tunnel.lastReply?.status?.tailscaleIPs ?? [] }
+            }),
             // 빌드 설정 RD_PAIR_LINK_HOST로 넣은 연결 도메인 주소. 없으면 remotedebug://pair 링크만 받는다.
             pairingLinkBase: PairingLinkBase.fromInfo(Bundle.main.infoDictionary),
             logBook: DeviceLogBook(fileURL: DeviceLogBook.defaultFileURL()),

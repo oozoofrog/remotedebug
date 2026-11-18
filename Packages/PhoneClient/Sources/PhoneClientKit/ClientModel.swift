@@ -540,13 +540,14 @@ public final class ClientModel {
         })
     }
 
-    /// 앱용 페어링이 지나갈 수 있는 터널이 연결돼 있다: 이 앱의 터널이거나, 같은 Swiftail 노드를 쓰는 짝 앱의 터널.
-    /// 바깥 tailnet VPN(공식 Tailscale 앱 등)은 다른 노드라 Mac이 승인한 기기와 이 앱의 터널이 달라진다.
+    /// 앱용 페어링이 지나갈 수 있는 터널이 연결돼 있다: 이 앱의 터널만이다.
+    /// 짝 맺기는 이 기기의 tailnet 주소를 터널 확장에게서 받아 연결의 이쪽 끝과 견준다. 짝 앱이 VPN을 쥐고 있으면
+    /// 같은 노드여도 이 앱은 그 확장에게 주소를 물을 수 없다. 바깥 tailnet VPN(공식 Tailscale 앱 등)은 다른 노드다.
     private var ownTunnelConnected: Bool {
         guard tunnelController.currentState() == .connected else { return false }
         switch tunnelController.vpnHolder {
-        case .thisApp, .pairedApp: return true
-        case .none, .other: return false
+        case .thisApp: return true
+        case .pairedApp, .none, .other: return false
         }
     }
 

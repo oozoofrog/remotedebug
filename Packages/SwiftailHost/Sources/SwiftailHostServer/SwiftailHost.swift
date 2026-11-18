@@ -128,7 +128,7 @@ public final class SwiftailHostRuntime: Sendable {
                             }
                         case .tailnetLockChanged(let lock):
                             events(.tailnetLock(lock))
-                        case .peerPathChanged:
+                        case .peerPathChanged, .statusChanged:
                             break
                         }
                     }
