@@ -56,9 +56,14 @@ public final class CrashBook {
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try? Data(report.text.utf8).write(to: url, options: .atomic)
             if let image = report.image, let imageURL = imageURL(item) { try? image.write(to: imageURL, options: .atomic) }
+            if !report.attachments.isEmpty, let attachmentsURL = attachmentsURL(item),
+               let data = try? JSONEncoder().encode(report.attachments) {
+                try? data.write(to: attachmentsURL, options: .atomic)
+            }
         } else {
             memory[item.id] = report.text
             images[item.id] = report.image
+            attached[item.id] = report.attachments.isEmpty ? nil : report.attachments
         }
         items.append(item)
         items.sort { $0.crashedAt > $1.crashedAt }
@@ -78,6 +83,19 @@ public final class CrashBook {
         directory?.appendingPathComponent("\(item.id).image")
     }
 
+    /// 피드백에 붙인 사진과 파일을 묶어 두는 파일. 기록 하나에 하나이고 Mac에 보내면 지운다.
+    /// 크기는 `CrashReport.maxAttachmentTotalBytes`(base64로 2MiB)까지다.
+    func attachmentsURL(_ item: Item) -> URL? {
+        directory?.appendingPathComponent("\(item.id).attachments")
+    }
+
+    func attachments(_ item: Item) -> [CrashReport.Attachment] {
+        if let url = attachmentsURL(item) {
+            return (try? Data(contentsOf: url)).flatMap { try? JSONDecoder().decode([CrashReport.Attachment].self, from: $0) } ?? []
+        }
+        return attached[item.id] ?? []
+    }
+
     public func image(_ item: Item) -> Data? {
         if let url = imageURL(item) { return try? Data(contentsOf: url) }
         return images[item.id]
@@ -90,13 +108,17 @@ public final class CrashBook {
 
     public func report(_ item: Item) -> CrashReport? {
         text(item).map {
-            CrashReport(kind: item.kind, name: item.name, bundleId: item.bundleId, appVersion: item.appVersion, crashedAt: item.crashedAt, text: $0, image: image(item))
+            CrashReport(kind: item.kind, name: item.name, bundleId: item.bundleId, appVersion: item.appVersion, crashedAt: item.crashedAt, text: $0, image: image(item),
+                        attachments: attachments(item))
         }
     }
 
     public func markSent(_ id: String) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].sent = true
+        // Mac이 받은 첨부는 이 기기에 남기지 않는다.
+        attached[id] = nil
+        if let url = attachmentsURL(items[index]) { try? FileManager.default.removeItem(at: url) }
         save()
     }
 
@@ -109,10 +131,13 @@ public final class CrashBook {
 
     @ObservationIgnored private var memory: [String: String] = [:]
     @ObservationIgnored private var images: [String: Data] = [:]
+    @ObservationIgnored private var attached: [String: [CrashReport.Attachment]] = [:]
 
     private func removeFile(_ item: Item) {
         memory[item.id] = nil
         images[item.id] = nil
+        attached[item.id] = nil
+        if let url = attachmentsURL(item) { try? FileManager.default.removeItem(at: url) }
         if let url = fileURL(item) { try? FileManager.default.removeItem(at: url) }
         if let url = imageURL(item) { try? FileManager.default.removeItem(at: url) }
     }

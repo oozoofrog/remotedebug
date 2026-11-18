@@ -104,6 +104,22 @@ public struct CrashReport: Codable, Sendable, Hashable {
     /// 코어의 `POST /v1/crashes` 본문 한도 4MiB에 들어간다.
     public static let maxAttachmentTotalBytes = 1536 << 10
 
+    /// 사진 한 장을 줄여 맞추는 크기(바이트). 다섯 장을 붙여도 합계 한도에 들어간다.
+    public static let maxAttachedImageBytes = 300 << 10
+
+    /// 첨부를 더 붙일 수 없는 까닭.
+    public enum AttachmentRefusal: Error, Equatable, Sendable {
+        case tooMany, tooLarge, totalTooLarge
+    }
+
+    /// `bytes` 크기의 첨부를 `existing`에 더할 수 없으면 그 까닭. 큰 파일은 자르지 않고 받지 않는다.
+    public static func attachmentRefusal(adding bytes: Int, to existing: [Attachment]) -> AttachmentRefusal? {
+        if existing.count >= maxAttachments { return .tooMany }
+        if bytes > maxAttachmentBytes { return .tooLarge }
+        if existing.reduce(bytes, { $0 + $1.data.count }) > maxAttachmentTotalBytes { return .totalTooLarge }
+        return nil
+    }
+
     public init(kind: Kind, name: String, bundleId: String, appVersion: String, crashedAt: Date, text: String,
                 image: Data? = nil, attachments: [Attachment] = []) {
         self.image = image
