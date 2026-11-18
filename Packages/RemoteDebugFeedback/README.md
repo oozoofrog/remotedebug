@@ -202,10 +202,12 @@ RemoteDebug Mac 앱이 받은 피드백을 그 앱의 GitHub 저장소에 이슈
 1. 배포판 실행 파일에 Debug 전용 코드와 Mac 주소가 없는지 확인한다. 저장소의 `scripts/check-feedback-release.sh`를 릴리스 절차에서 부른다.
 
    ```sh
-   scripts/check-feedback-release.sh --host rd-mac-1a2b3c4d.tail0001.ts.net <빌드한 App.app>
+   scripts/check-feedback-release.sh --host rd-mac-1a2b3c4d.tail0001.ts.net <스토어에 올릴 App.app 또는 App.ipa>
    ```
 
-   확인 목록과 Mac 전송의 이름·경로·문구, `rd-mac-…`과 `.ts.net` 주소를 찾으면 종료 코드 1로 끝난다. 패키지를 올린 뒤에는 같은 앱의 Debug 빌드에 `--expect-debug`로 돌려, 찾는 표시가 아직 맞는지 본다.
+   확인 목록과 Mac 전송의 이름·경로·문구, `rd-mac-…`과 `.ts.net` 주소(대소문자를 가리지 않는다)를 찾으면 종료 코드 1로 끝난다. `.ipa`와 `.zip`은 임시 폴더에 풀어서 본다. 패키지가 아예 들어 있지 않은 경로를 주면(다른 폴더를 준 경우가 많다) 실패로 끝나고, 패키지 없는 빌드를 일부러 확인하려면 `--allow-absent`를 붙인다. 파일을 읽지 못하거나 묶음을 풀지 못하면 종료 코드 3이다. 패키지를 올린 뒤에는 같은 앱의 Debug 빌드에 `--expect-debug`로 돌려, 찾는 표시가 아직 맞는지 본다. `scripts/test-check-feedback-release.sh`가 이 스크립트의 갈래를 모두 시험한다.
+
+   **스토어에 올리는 바로 그 구성으로 만든 결과물에 돌린다.** 패키지는 구성의 이름이 아니라 컴파일 조건 `DEBUG`로 갈린다. Debug를 복사해 만든 `Beta`나 `Staging` 같은 구성에 `DEBUG`가 남아 있으면(Swift Compiler - Custom Flags의 Active Compilation Conditions), 그 구성으로 만든 앱에는 Mac으로 보내는 코드와 확인 목록이 들어가고 로그 기록 동의도 묻지 않는다. Release 구성을 따로 빌드해 확인한 것으로는 그 앱을 확인한 것이 아니다. 보관(Archive)한 앱이나 내보낸 `.ipa`를 그대로 넘긴다.
 2. 동의하지 않은 상태에서 피드백 화면에 **최근 로그 붙이기**가 보이지 않는지 본다.
 3. 동의를 켰다 끄면 설정이 꺼진 채로 남는지 본다.
 4. 처리방침 점검 목록을 마쳤는지 본다.
