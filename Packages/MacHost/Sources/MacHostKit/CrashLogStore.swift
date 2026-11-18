@@ -63,7 +63,7 @@ public final class CrashLogStore {
         let report = event.report
         guard !items.contains(where: { $0.id == report.id }) else { return }
         // 첨부는 기록 id와 순번을 앞에 붙인 이름으로 같은 폴더에 둔다. 이름은 경로 마디가 없게 고친다.
-        let attached = directory == nil ? [] : report.attachments.prefix(CrashReport.maxAttachments).enumerated().map { index, attachment in
+        let attached: [Attached] = directory == nil ? [] : report.attachments.prefix(CrashReport.maxAttachments).enumerated().map { index, attachment -> Attached in
             let name = CrashReport.Attachment.safeName(attachment.name)
             return Attached(name: name, file: "\(report.id)-\(index + 1)-\(name)", bytes: attachment.data.count)
         }

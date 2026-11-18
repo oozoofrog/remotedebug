@@ -88,6 +88,43 @@ struct CrashTests {
         #expect(first.report.name == "App.ips" && first.deviceId == "d_1")
         #expect(last.report.image == Data("hello".utf8))
     }
+    @Test("첨부: 새 모양을 받고 이름을 고친다")
+    func 첨부() async throws {
+        let fixture = try HostFixture()
+        let body = try jsonText(["kind": "feedback", "text": "첨부가 있어요", "attachments": [
+            ["name": "../../photo-1.jpg", "type": "image/jpeg", "base64": Data("jpeg".utf8).base64EncodedString()],
+            ["name": "", "base64": Data("raw".utf8).base64EncodedString()],
+        ]])
+        #expect(await fixture.request("POST", "/v1/crashes", body: body).status == 202)
+        guard case .deviceCrash(let event) = fixture.events.next() else { Issue.record("크래시 사건 없음"); return }
+        #expect(event.report.attachments.map(\.name) == ["photo-1.jpg", "attachment"])
+        #expect(event.report.attachments.map(\.type) == ["image/jpeg", "application/octet-stream"])
+        #expect(event.report.attachments.first?.data == Data("jpeg".utf8) && event.report.image == nil)
+        // 옛 클라이언트의 `image`와 함께 와도 받는다.
+        let both = try jsonText(["kind": "feedback", "text": "둘 다", "image": "aGVsbG8=",
+                                 "attachments": [["name": "a.txt", "base64": "aGVsbG8="]]])
+        #expect(await fixture.request("POST", "/v1/crashes", body: both).status == 202)
+    }
+    @Test("첨부 한도: 수, 하나의 크기, 합계, 종류")
+    func 첨부한도() async throws {
+        let fixture = try HostFixture()
+        func attachment(_ bytes: Int) -> [String: Any] { ["name": "f.bin", "base64": Data(repeating: 1, count: bytes).base64EncodedString()] }
+        let invalid = try [
+            jsonText(["kind": "feedback", "text": "x", "attachments": Array(repeating: attachment(1), count: CrashReport.maxAttachments + 1)]),
+            jsonText(["kind": "feedback", "text": "x", "attachments": [attachment(CrashReport.maxAttachmentBytes + 1)]]),
+            jsonText(["kind": "feedback", "text": "x", "attachments": [attachment(CrashReport.maxAttachmentBytes), attachment(CrashReport.maxAttachmentBytes)]]),
+            jsonText(["kind": "feedback", "text": "x", "attachments": [["name": "a", "base64": "not base64!"]]]),
+            jsonText(["kind": "feedback", "text": "x", "attachments": [["name": "a", "base64": ""]]]),
+            jsonText(["kind": "feedback", "text": "x", "attachments": "nope"]),
+            jsonText(["kind": "ips", "text": "x", "attachments": [attachment(1)]]),
+        ]
+        for body in invalid { #expect(await fixture.request("POST", "/v1/crashes", body: body).status == 400) }
+        // 한도를 꽉 채운 첨부와 글이 본문 한도(4MiB) 안에 들어간다.
+        let full = try jsonText(["kind": "feedback", "text": String(repeating: "x", count: 1536 << 10),
+                                 "attachments": [attachment(CrashReport.maxAttachmentBytes), attachment(CrashReport.maxAttachmentTotalBytes - CrashReport.maxAttachmentBytes)]])
+        #expect(full.utf8.count < 4 << 20)
+        #expect(await fixture.request("POST", "/v1/crashes", body: full).status == 202)
+    }
     @Test("사진 한도와 UTF-8 필드 잘라내기")
     func 사진과문자열() async throws {
         let fixture = try HostFixture()
