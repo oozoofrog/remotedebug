@@ -125,6 +125,52 @@ struct CrashTests {
         #expect(full.utf8.count < 4 << 20)
         #expect(await fixture.request("POST", "/v1/crashes", body: full).status == 202)
     }
+    @Test("확인 목록의 답: 피드백에만 받고 길이를 자른다")
+    func 확인답() async throws {
+        let fixture = try HostFixture()
+        let long = String(repeating: "가", count: 1000)
+        let body = try jsonText(["kind": "feedback", "text": "답이 있어요", "checks": [
+            ["id": "pay.sheet", "title": "결제 화면이 열린다", "answer": "보임", "note": long, "build": "59", "answeredAt": "2026-11-13T05:05:01.000Z"],
+            ["id": "launch"],
+        ]])
+        #expect(await fixture.request("POST", "/v1/crashes", body: body).status == 202)
+        guard case .deviceCrash(let event) = fixture.events.next() else { Issue.record("크래시 사건 없음"); return }
+        #expect(event.report.checks.map(\.id) == ["pay.sheet", "launch"])
+        #expect(event.report.checks[0].answer == "보임" && event.report.checks[0].build == "59")
+        #expect(event.report.checks[0].note.utf8.count <= 800 && event.report.checks[1].answer.isEmpty)
+        let invalid = try [
+            jsonText(["kind": "ips", "text": "x", "checks": [["id": "a"]]]),
+            jsonText(["kind": "feedback", "text": "x", "checks": [["title": "id 없음"]]]),
+            jsonText(["kind": "feedback", "text": "x", "checks": "nope"]),
+            jsonText(["kind": "feedback", "text": "x", "checks": (0...FeedbackChecklist.maxItems).map { ["id": "i\($0)"] }]),
+        ]
+        for body in invalid { #expect(await fixture.request("POST", "/v1/crashes", body: body).status == 400) }
+    }
+    @Test("확인 목록: 페어링한 기기만 받고, 없으면 빈 목록")
+    func 확인목록() async throws {
+        let unpaired = try HostFixture(paired: false)
+        #expect(await unpaired.request("/v1/feedback/checklist/com.example.app").status == 403)
+
+        let fixture = try HostFixture()
+        let empty = await fixture.request("/v1/feedback/checklist/com.example.app")
+        #expect(empty.status == 200)
+        let emptyBody = String(decoding: try responseData(empty), as: UTF8.self)
+        #expect(emptyBody == #"{"bundleId":"com.example.app","items":[]}"#)
+
+        let stored = #"{"bundleId":"com.example.app","items":[{"id":"launch","title":"앱이 켜진다","choices":["통과","실패"],"expect":[]}],"updatedAt":"2026-11-13T05:05:01Z"}"#
+        try Data(stored.utf8).write(to: fixture.directory.appendingPathComponent("checklist-com.example.app.json"))
+        let found = await fixture.request("/v1/feedback/checklist/com.example.app")
+        let foundBody = String(decoding: try responseData(found), as: UTF8.self)
+        #expect(found.status == 200 && foundBody == stored)
+        #expect(await fixture.request("/v1/feedback/checklist/other.app").status == 200)
+        #expect(await fixture.request("/v1/feedback/checklist/bad%20id").status == 400)
+        #expect(await fixture.request("POST", "/v1/feedback/checklist/com.example.app", body: "{}").status == 405)
+        // 저장된 것이 JSON 객체가 아니면 빈 목록으로 답한다.
+        try Data("broken".utf8).write(to: fixture.directory.appendingPathComponent("checklist-com.example.app.json"))
+        let broken = await fixture.request("/v1/feedback/checklist/com.example.app")
+        let brokenBody = String(decoding: try responseData(broken), as: UTF8.self)
+        #expect(brokenBody.contains(#""items":[]"#))
+    }
     @Test("사진 한도와 UTF-8 필드 잘라내기")
     func 사진과문자열() async throws {
         let fixture = try HostFixture()

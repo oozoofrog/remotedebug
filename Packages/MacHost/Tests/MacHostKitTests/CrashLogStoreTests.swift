@@ -136,6 +136,29 @@ import Testing
         #expect(try FileManager.default.contentsOfDirectory(atPath: dir.url.path) == ["index.json"])
     }
 
+    /// 확인 목록의 답은 원문 끝에 글로 붙어, 화면과 에이전트가 같은 글에서 읽는다.
+    @Test func checkAnswersAreAppendedToTheStoredText() throws {
+        let dir = try TempDir("crashes-checks")
+        let store = CrashLogStore(directory: dir.url)
+        var event = feedback(1, attachments: [])
+        event.report.checks = [.init(id: "pay.sheet", title: "결제 화면이 열린다", answer: "안 보임", note: "빈 화면", build: "59", answeredAt: "2026-11-13T05:05:01.000Z"),
+                               .init(id: "launch", title: "앱이 켜진다")]
+        store.receive(event)
+        let item = try #require(store.items.first)
+        #expect(item.id == event.report.id && item.checks == event.report.checks)
+        let text = try #require(CrashLogStore.reportText(directory: dir.url, id: item.id))
+        #expect(text.hasPrefix("feedback 1\n---\n확인 목록의 답 (1/2개 답함)"))
+        #expect(text.contains("- [안 보임] pay.sheet: 결제 화면이 열린다 (빌드 59, 2026-11-13T05:05:01.000Z)\n  메모: 빈 화면"))
+        #expect(text.contains("- [답 없음] launch: 앱이 켜진다"))
+        #expect(store.text(item) == text)
+        #expect(CrashLogStore.listText(directory: dir.url).contains("\n    확인 목록의 답: 1/2개 답함"))
+        #expect(CrashLogStore(directory: dir.url).items.first?.checks == event.report.checks)
+
+        let memory = CrashLogStore(directory: nil)
+        memory.receive(event)
+        #expect(memory.text(try #require(memory.items.first))?.contains("확인 목록의 답") == true)
+    }
+
     /// 옛 기록(첨부 없음, 사진 한 장)은 그대로 읽히고 목록 글의 `사진:`도 남는다. 폴더 밖을 가리키는 저장 이름은 쓰지 않는다.
     @Test func oldRecordsAndUnsafeStoredNames() throws {
         let dir = try TempDir("crashes-old")
