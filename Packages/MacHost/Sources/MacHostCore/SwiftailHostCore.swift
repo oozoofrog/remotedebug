@@ -39,11 +39,15 @@ public final class SwiftailHostCore: HostCore, Sendable {
         public var pairingPort: UInt16
         /// 제안 링크의 연결 도메인 주소(Info.plist `RDPairLinkBase`). nil이면 `remotedebug://pair`.
         public var pairingLinkBase: PairingLinkBase?
+        /// USB 케이블로 꽂은 iPhone에 설치하는 도구(protocol-addenda Q). nil이면 케이블 설치를 받지 않는다.
+        public var cableInstaller: CableInstaller?
 
         public init(directDirectory: URL? = nil, legacyStateDirectory: URL? = nil, pairingDirectory: URL? = nil,
-                    pairingPort: UInt16 = SwiftailHostCore.defaultPairingPort, pairingLinkBase: PairingLinkBase? = nil) {
+                    pairingPort: UInt16 = SwiftailHostCore.defaultPairingPort, pairingLinkBase: PairingLinkBase? = nil,
+                    cableInstaller: CableInstaller? = nil) {
             (self.directDirectory, self.legacyStateDirectory) = (directDirectory, legacyStateDirectory)
             (self.pairingDirectory, self.pairingPort, self.pairingLinkBase) = (pairingDirectory, pairingPort, pairingLinkBase)
+            self.cableInstaller = cableInstaller
         }
     }
 
@@ -128,7 +132,7 @@ public final class SwiftailHostCore: HostCore, Sendable {
     /// 앱의 저장 위치로. `pairingLinkBase`가 있으면 제안 링크와 QR을 그 https 주소로 낸다.
     public convenience init(paths: HostPaths, pairingLinkBase: PairingLinkBase? = nil) {
         self.init(layout: Layout(directDirectory: paths.directDir, legacyStateDirectory: paths.legacyStateDir,
-                                 pairingDirectory: paths.pairingDir, pairingLinkBase: pairingLinkBase))
+                                 pairingDirectory: paths.pairingDir, pairingLinkBase: pairingLinkBase, cableInstaller: CableInstaller()))
     }
 
     init(layout: Layout, factory: HostNodeFactory, pollIntervals: (starting: Duration, running: Duration) = (.milliseconds(250), .seconds(2)),
@@ -193,7 +197,8 @@ public final class SwiftailHostCore: HostCore, Sendable {
                     self?.broadcast(run: run, Self.coreEvent(detail))
                     // 설치 페이지 코드로 요청이 오면 앱용 QR은 닫는다: 페어링은 한 번에 하나다.
                     if case .pairRequest(let event) = detail.event, event.confirmationCode == nil { self?.closeOfferInBackground(run: run) }
-                }
+                },
+                cableInstaller: layout.cableInstaller.map(CableInstallBridge.init)
             ))
         } catch let error as APIErrorBody {
             throw error
@@ -1040,6 +1045,22 @@ final class CoreLogFile: Sendable {
             guard descriptor >= 0 else { return }
             _ = bytes.withUnsafeBytes { write(descriptor, $0.baseAddress, $0.count) }
             close(descriptor)
+        }
+    }
+}
+
+/// 로직의 케이블 설치 요청을 Mac 앱의 도구(`CableInstaller`)로 넘긴다(protocol-addenda Q).
+struct CableInstallBridge: HostCableInstalling {
+    let installer: CableInstaller
+
+    func device(onInterface name: String) -> String? {
+        installer.device(onInterface: name)
+    }
+
+    func install(ipaPath: String, device: String, completion: @escaping @Sendable (String?) -> Void) {
+        let installer = installer
+        Task.detached(priority: .userInitiated) {
+            completion(await installer.install(ipa: URL(fileURLWithPath: ipaPath), device: device))
         }
     }
 }
