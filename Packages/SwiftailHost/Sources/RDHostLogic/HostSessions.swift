@@ -15,6 +15,8 @@ extension HostLogic {
         var ipaStarted = false
         var covered: [Range<UInt64>] = []
         var inflight = 0
+        /// USB 케이블 설치가 실패한 이유(protocol-addenda Q).
+        var message: String?
         var terminal: Bool { state == .completed || state == .expired || state == .failed }
         var bytesServed: UInt64 { covered.reduce(0) { $0 + $1.countValue } }
         var fullyCovered: Bool { size == 0 || covered.count == 1 && covered[0].lowerBound == 0 && covered[0].upperBound >= size }
@@ -56,6 +58,59 @@ extension HostLogic {
         return object(["sessionId": session.id, "state": "created", "manifestUrl": manifestURL,
                        "installUrl": "itms-services://?action=download-manifest&url=" + escaped,
                        "expiresAt": hostTimestamp(session.expires)], status: 201)
+    }
+
+    // MARK: USB 케이블 설치 (protocol-addenda Q)
+
+    /// 케이블 설치를 받을 수 없는 요청이면 그 오류. 받지 않는 Mac은 경로가 없는 것처럼 답한다(iPhone은 VPN 설치로 넘어간다).
+    func cableInstallRefusal(_ request: HostRequest) -> APIErrorBody? {
+        guard let installer = options.cableInstaller else { return HostErrors.make("not_found") }
+        guard case .direct(_, let interface?) = request.origin, installer.device(onInterface: interface) != nil else {
+            return HostErrors.make("cable_required")
+        }
+        return nil
+    }
+
+    /// 요청이 들어온 케이블의 iPhone에 빌드를 설치하기 시작하고 세션을 돌려준다. 진행은 `GET /v1/sessions/{id}`.
+    /// 세션은 설치가 끝날 때까지 `downloading`이고, 끝나면 `completed`나 `failed`(이유는 `message`)다.
+    func startCableInstall(buildID: String, peer: HostPeer, request: HostRequest) throws -> HostResponse {
+        guard let installer = options.cableInstaller else { throw HostErrors.make("not_found") }
+        // 설치할 기기는 요청 본문이 아니라 연결이 들어온 인터페이스로 정한다: 토큰을 가진 쪽도 다른 iPhone에는 설치시킬 수 없다.
+        guard case .direct(_, let interface?) = request.origin, let device = installer.device(onInterface: interface) else {
+            throw HostErrors.make("cable_required")
+        }
+        guard let build = builds[buildID] else { throw HostErrors.make("build_not_found") }
+        let now = options.now()
+        let session = Session(id: HostIDs.newID("s_"), token: "", buildID: buildID, peer: peer, created: now,
+                              expires: now.addingTimeInterval(options.limits.sessionMaxTTL), size: UInt64(build.descriptor.ipa.size))
+        // 게시를 취소해도 설치가 읽던 파일이 사라지지 않게 사본 이름을 하나 더 건다.
+        let lease = snapshotDirectory + "/" + HostIDs.newID("cable-") + ".ipa"
+        do { try FileManager.default.linkItem(atPath: build.file.path, toPath: lease) }
+        catch { throw HostErrors.make("build_changed") }
+        session.state = .downloading
+        session.inflight = 1
+        sessions[session.id] = session
+        emitSession(session, userAgent: request.header("user-agent") ?? "")
+        let sessionID = session.id
+        let completion = CompletionOnce()
+        installer.install(ipaPath: lease, device: device) { [weak self] failure in
+            try? FileManager.default.removeItem(atPath: lease)
+            guard let self else { return }
+            self.locked {
+                guard completion.claim(), let current = self.sessions[sessionID] else { return }
+                current.inflight = max(0, current.inflight - 1)
+                guard !current.terminal else { return }
+                if let failure {
+                    current.message = failure
+                    current.state = .failed
+                } else {
+                    current.addSpan(0..<current.size)
+                    current.state = .completed
+                }
+                self.emitSession(current)
+            }
+        }
+        return json(CableInstallResponse(sessionId: session.id, state: session.state), status: 201)
     }
 
     func serveManifest(_ session: Session, build: Build, request: HostRequest) throws -> HostResponse {

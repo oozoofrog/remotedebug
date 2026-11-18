@@ -71,7 +71,7 @@ public enum HostErrors {
         case "unsupported_media_type": 415
         case "not_found", "build_not_found", "resource_not_found", "direct_off": 404
         case "method_not_allowed": 405
-        case "build_changed": 409
+        case "build_changed", "cable_required": 409
         case "session_expired": 410
         case "not_debug_build": 422
         case "too_many_attempts": 429
@@ -91,6 +91,7 @@ public enum HostErrors {
         "not_found": "알 수 없는 경로입니다.", "method_not_allowed": "이 경로에서 지원하지 않는 메서드입니다.",
         "unknown_handle": "알 수 없는 핸들입니다.", "path_outside_publish_dir": "IPA가 게시 폴더 안의 일반 파일이 아닙니다.",
         "direct_off": "이 Mac은 같은 네트워크 직접 연결을 받지 않습니다.",
+        "cable_required": "USB 케이블로 이 Mac에 꽂은 iPhone의 요청이 아닙니다.",
         "agent_disabled": "이 Mac은 iPhone의 에이전트 요청을 받지 않습니다. Mac 앱의 에이전트 화면에서 켭니다."
     ]
 }

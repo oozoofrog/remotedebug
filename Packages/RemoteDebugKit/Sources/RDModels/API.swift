@@ -188,17 +188,20 @@ public struct SessionStatus: Codable, Sendable, Hashable {
     public var bytesServed: Int64
     public var size: Int64
     public var expiresAt: Date
+    /// USB 케이블 설치(docs/protocol-addenda.md Q)가 실패한 이유. 그 밖에는 없다.
+    public var message: String?
 
-    public init(sessionId: String, buildId: String, state: SessionState, bytesServed: Int64, size: Int64, expiresAt: Date) {
+    public init(sessionId: String, buildId: String, state: SessionState, bytesServed: Int64, size: Int64, expiresAt: Date, message: String? = nil) {
         self.sessionId = sessionId
         self.buildId = buildId
         self.state = state
         self.bytesServed = bytesServed
         self.size = size
         self.expiresAt = expiresAt
+        self.message = message
     }
 
-    enum CodingKeys: String, CodingKey { case sessionId, buildId, state, bytesServed, size, expiresAt }
+    enum CodingKeys: String, CodingKey { case sessionId, buildId, state, bytesServed, size, expiresAt, message }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -208,6 +211,7 @@ public struct SessionStatus: Codable, Sendable, Hashable {
         bytesServed = try c.decode(Int64.self, forKey: .bytesServed)
         size = try c.decode(Int64.self, forKey: .size)
         expiresAt = try c.decodeRDDate(forKey: .expiresAt)
+        message = try c.decodeIfPresent(String.self, forKey: .message)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -218,6 +222,18 @@ public struct SessionStatus: Codable, Sendable, Hashable {
         try c.encode(bytesServed, forKey: .bytesServed)
         try c.encode(size, forKey: .size)
         try c.encodeRDDate(expiresAt, forKey: .expiresAt)
+        try c.encodeIfPresent(message, forKey: .message)
+    }
+}
+
+/// `POST /v1/builds/{id}/cable-install` 응답(201) (docs/protocol-addenda.md Q). 진행은 `GET /v1/sessions/{id}`로 본다.
+public struct CableInstallResponse: Codable, Sendable, Hashable {
+    public var sessionId: String
+    public var state: SessionState
+
+    public init(sessionId: String, state: SessionState) {
+        self.sessionId = sessionId
+        self.state = state
     }
 }
 

@@ -187,7 +187,11 @@ public final class HTTPListener: Sendable {
             origin = .tailnet(Self.peer(found.peer))
         case .acceptAllForTesting(let peer):
             origin = .tailnet(peer)
-        case .direct, .loopback:
+        case .direct:
+            guard case .direct(let ip, _)? = addressOrigin else { return }
+            // 연결이 들어온 이 Mac의 인터페이스(USB 케이블 설치가 어느 iPhone인지 가리는 데 쓴다).
+            origin = .direct(remoteIP: ip, interface: Self.localInterface(of: connection))
+        case .loopback:
             guard let addressOrigin else { return }
             origin = addressOrigin
         }
@@ -202,6 +206,14 @@ public final class HTTPListener: Sendable {
         let first = identity.name.split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? ""
         return HostPeer(stableID: identity.stableID, nodeName: first.isEmpty ? identity.computedName : first,
                         loginName: identity.loginName)
+    }
+
+    /// 연결이 들어온 인터페이스의 이름. 링크 로컬 IPv6 상대는 주소에 붙은 영역이 그것이다. 그 밖에는 연결의 경로에서 읽는다.
+    static func localInterface(of connection: NWConnection) -> String? {
+        if case .hostPort(let host, _) = connection.endpoint, case .ipv6(let address) = host, let name = address.interface?.name {
+            return name
+        }
+        return connection.currentPath?.availableInterfaces.first?.name
     }
 
     /// 연결의 원격 IP(문자열). IPv4 대응 IPv6는 IPv4로, 영역(`%en0`)은 뗀다.
