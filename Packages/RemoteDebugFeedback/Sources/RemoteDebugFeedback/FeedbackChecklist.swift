@@ -7,7 +7,9 @@ import Foundation
 
 /// 확인할 것 하나: 어디서, 무엇을 하고, 무엇이 보여야 하는지와 고를 답.
 public struct FeedbackCheckItem: Codable, Identifiable, Equatable, Sendable {
-    public static let defaultChoices = ["통과", "실패"]
+    /// 해 보지 못했다는 답. 실패와도, 아직 답하지 않은 것과도 다르다.
+    public static let untestedChoice = "확인 못함"
+    public static let defaultChoices = ["통과", "실패", untestedChoice]
 
     public var id: String
     public var title: String
@@ -191,6 +193,13 @@ final class FeedbackCheckStore: ObservableObject {
         update(item) { $0.choice = choice.flatMap { item.choices.contains($0) ? $0 : nil } }
     }
 
+    /// 고른 답과 메모를 모두 지운다.
+    func reset() {
+        guard !answers.isEmpty else { return }
+        answers = [:]
+        save()
+    }
+
     func setNote(_ note: String, for item: FeedbackCheckItem) {
         guard note != answer(for: item).note else { return }
         update(item) { $0.note = String(note.prefix(Self.noteLimit)) }
@@ -209,11 +218,17 @@ final class FeedbackCheckStore: ObservableObject {
     /// 답을 고르지 않은 항목 수. 메모만 적은 것은 답한 것이 아니다.
     var unansweredCount: Int { items.filter { answer(for: $0).choice == nil }.count }
 
+    /// 지금 답이 있는 항목의 id. 메모만 적은 것은 들어가지 않는다.
+    var answeredIDs: Set<String> { Set(items.filter { answer(for: $0).choice != nil }.map(\.id)) }
+
     /// 묶음 이름이 처음 나온 차례대로 모은 항목.
-    var stages: [(title: String, items: [FeedbackCheckItem])] {
+    var stages: [(title: String, items: [FeedbackCheckItem])] { stages(hiding: []) }
+
+    /// `hidden`에 든 항목을 뺀 묶음. "답하지 않은 것만 보기"에 쓴다. 항목이 남지 않은 묶음은 뺀다.
+    func stages(hiding hidden: Set<String>) -> [(title: String, items: [FeedbackCheckItem])] {
         var order: [String] = []
         var groups: [String: [FeedbackCheckItem]] = [:]
-        for item in items {
+        for item in items where !hidden.contains(item.id) {
             if groups[item.stage] == nil { order.append(item.stage) }
             groups[item.stage, default: []].append(item)
         }
@@ -230,11 +245,13 @@ final class FeedbackCheckStore: ObservableObject {
         }
     }
 
-    /// 메일에 붙는 암호화된 진단에 넣을 모양. 첫째 답을 통과로, 나머지 답을 실패로 적고 고른 답은 `choice`에 둔다.
+    /// 메일에 붙는 암호화된 진단에 넣을 모양. 첫째 답을 통과로, `확인 못함`을 해 보지 못함으로, 나머지 답을 실패로 적고 고른 답은 `choice`에 둔다.
     var mailChecks: [FeedbackCheck] {
         items.map { item in
             let answer = answer(for: item)
-            let state: FeedbackCheck.Answer = answer.choice.map { $0 == item.choices.first ? .passed : .failed } ?? .unchecked
+            let state: FeedbackCheck.Answer = answer.choice.map {
+                $0 == item.choices.first ? .passed : $0 == FeedbackCheckItem.untestedChoice ? .untested : .failed
+            } ?? .unchecked
             return FeedbackCheck(id: item.id, title: item.title, answer: state, note: answer.note, choice: answer.choice)
         }
     }

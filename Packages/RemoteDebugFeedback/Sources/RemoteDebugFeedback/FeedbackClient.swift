@@ -1,4 +1,8 @@
+#if DEBUG
 import Foundation
+
+// Mac으로 보내는 길은 개발 빌드에만 있다. 배포 빌드에는 이 파일의 어떤 것도 들어가지 않아,
+// 패키지가 네트워크 요청을 하지 않고 Mac의 주소나 경로가 실행 파일에 남지 않는다.
 
 /// Mac에 보내는 기록 하나. RemoteDebug 프로토콜(docs/protocol-addenda.md L.1)의 본문과 같다.
 public struct FeedbackReport: Codable, Equatable, Sendable {
@@ -13,8 +17,7 @@ public struct FeedbackReport: Codable, Equatable, Sendable {
     /// 사용자가 붙인 사진과 파일. 피드백에만 붙인다. 옛 Mac 앱은 이 필드를 읽지 않고 글만 받는다.
     public var attachments: [Attachment]?
 
-    #if DEBUG
-    /// 확인 목록에 사용자가 고른 답. 개발 빌드에서만 보낸다.
+    /// 확인 목록에 사용자가 고른 답.
     public var checks: [Check]?
 
     public struct Check: Codable, Equatable, Sendable {
@@ -26,7 +29,6 @@ public struct FeedbackReport: Codable, Equatable, Sendable {
         public var build: String
         public var answeredAt: String
     }
-    #endif
 
     public struct Attachment: Codable, Equatable, Sendable {
         public var name: String
@@ -128,8 +130,16 @@ public actor FeedbackClient {
     }
 
     /// 아직 보내지 못한 기록 파일(오래된 것이 앞).
-    public func pending() -> [URL] {
+    public func pending() -> [URL] { Self.queued(in: directory) }
+
+    nonisolated static func queued(in directory: URL) -> [URL] {
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
         return files.filter { $0.pathExtension == "json" }.sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
+
+    /// 쌓아 둔 기록을 모두 지운다. 사용자가 로그 기록 동의를 거둘 때 부른다.
+    nonisolated static func removeQueued(in directory: URL) {
+        for file in queued(in: directory) { try? FileManager.default.removeItem(at: file) }
+    }
 }
+#endif

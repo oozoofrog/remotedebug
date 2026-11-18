@@ -14,7 +14,7 @@ struct FeedbackTests {
     @Test func standardContentIncludesOnlySuppliedMetadata() {
         let content = FeedbackContent.standard(info)
         #expect(content.subject == "Sample feedback")
-        #expect(content.body == "\n\n\n---\nApp: Sample 1.2 (3)\nOS: Test OS\nDevice: Device")
+        #expect(content.body == "\n\n\n---\n\(FeedbackContent.defaultUsageNotice)\nApp: Sample 1.2 (3)\nOS: Test OS\nDevice: Device")
         #expect(FeedbackMail(recipient: "feedback@example.com", content: content).attachment == nil)
     }
 

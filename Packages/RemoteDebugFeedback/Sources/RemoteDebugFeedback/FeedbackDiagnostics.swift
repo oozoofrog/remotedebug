@@ -2,7 +2,8 @@ import CryptoKit
 import Foundation
 
 public struct FeedbackCheck: Codable, Identifiable, Equatable, Sendable {
-    public enum Answer: String, Codable, CaseIterable, Sendable { case unchecked, passed, failed }
+    /// `untested`: the person could not try the item (no chance, missing hardware). Different from failed and from not answered.
+    public enum Answer: String, Codable, CaseIterable, Sendable { case unchecked, passed, failed, untested }
     public let id: String
     public let title: String
     public var answer: Answer
