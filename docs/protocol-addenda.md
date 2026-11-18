@@ -490,6 +490,7 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 - `kind`: `ips`(iOS가 만든 크래시 파일, 사용자가 iPhone 앱으로 넘긴 것), `metrickit`(앱이 자기 크래시를 MetricKit에서 받은 JSON), `feedback`(사람이 앱에서 쓴 피드백, `text`가 내용). 다른 값은 `400 bad_request`.
 - `image`: 선택. 사진 한 장(JPEG나 PNG)의 base64. 옛 클라이언트가 쓰던 필드이고 계속 받는다. `kind`가 `feedback`일 때만 받고, 풀었을 때 1MB를 넘거나 base64가 아니면 `400 bad_request`.
 - `attachments`: 선택. 사용자가 피드백에 붙인 사진과 파일의 배열 `[{"name":"photo-1.jpg","type":"image/jpeg","base64":"…"}]`. `kind`가 `feedback`일 때만 받고 5개까지다. 하나는 풀었을 때 1MB(1,048,576바이트), 모두 합쳐 1536KB까지이고, 넘거나 비었거나 base64가 아니면 `400 bad_request`. 합계 1536KB는 base64로 2MB여서 `text` 한도와 함께 본문 한도 4MB에 들어간다. `name`은 경로 마디와 제어 문자, 앞의 점을 없애고 100바이트로 줄인다. `type`(MIME)은 100바이트에서 자르고 없으면 `application/octet-stream`이다. 이 필드를 모르는 옛 호스트는 무시하고 글만 받는다.
+- `checks`: 선택. 확인 목록(L.4)에 사용자가 고른 답의 배열 `[{"id":"pay.sheet","title":"…","answer":"보임","note":"…","build":"59","answeredAt":"2026-11-13T05:05:01.000Z"}]`. `kind`가 `feedback`일 때만 받고 50개까지다. `answer`가 빈 글자면 아직 답하지 않은 항목이다. `id`가 비면 `400 bad_request`, 나머지 글자는 길이를 잘라 받는다(`title` 600, `answer` 120, `note` 800, `build`와 `answeredAt` 40바이트). 개발 빌드만 보낸다. 이 필드를 모르는 옛 호스트는 무시한다.
 - `text`: 원문. 비어 있거나 1536KB를 넘으면 `400 bad_request`. 본문 전체는 4MB까지 읽는다.
 - `name`, `bundleId`, `appVersion`: 200바이트에서 자른다. `crashedAt`이 ISO-8601 시각이 아니면 받은 시각으로 바꾼다.
 - 응답: `202`와 `{"accepted":1}`.
@@ -501,6 +502,20 @@ Mac 화면이나 페어링한 iPhone에서 쓴 요청을 Mac의 코딩 에이전
 ```
 
 `report`는 L.1의 본문을 정리한 것이다.
+
+### L.4 `GET /v1/feedback/checklist/<bundleId>`
+
+에이전트가 개발 빌드의 사용자에게 남기는 확인 목록이다. 인증은 `POST /v1/crashes`와 같다(허용 목록의 기기, §3). `bundleId`는 영문, 숫자, 점, 붙임표이고 255바이트 이하이며, 아니면 `400 bad_request`.
+
+```
+{"bundleId":"com.example.app","updatedAt":"2026-11-13T05:05:01Z","items":[{"id":"pay.sheet","title":"결제 화면이 열린다","place":"설정 › 결제","steps":"결제를 누른다","expect":["금액이 보임"],"choices":["보임","안 보임","모르겠음"],"since":59,"stage":"결제"}]}
+```
+
+- 남긴 목록이 없으면 `200`과 `{"bundleId":"…","items":[]}`를 준다.
+- 항목: `id`(영문, 숫자, 점, 밑줄, 붙임표, 64자까지, 목록 안에서 하나뿐), `title`(200자), `place`(선택, 200자), `steps`(선택, 2000자), `expect`(10줄까지, 한 줄 300자), `choices`(서로 다른 답 2~6개, 한 개 40자. 비우면 `통과`, `실패`), `since`(선택, 이 항목이 바뀐 빌드 번호. 그보다 앞선 빌드에서 고른 답은 세지 않는다), `stage`(선택, 묶음 이름, 80자). 목록 하나에 50개까지다. 한도를 넘는 목록은 자르지 않고 저장할 때 거절한다.
+- Mac 앱은 목록을 호스트 저장 폴더의 `FeedbackChecklists/<bundleId>.json`에 앱마다 하나씩 둔다. 에이전트 명령 `checklist <번들 ID> [항목 JSON 파일|clear]`과 MCP 도구 `remotedebug_feedback_checklist`(`bundle_id`, `items`, `clear`)가 바꿔 넣고, 읽고, 지운다.
+- `RemoteDebugFeedback` 패키지는 Debug 빌드에서만 이 목록을 쓴다. 피드백 화면을 열 때 받아 가고, 받은 것은 앱 데이터 폴더의 `RemoteDebugFeedbackChecks/checklist.json`에 하나만 남겨 Mac에 닿지 않을 때 보인다. Mac의 목록이 비어 있으면 앱이 코드로 정한 목록(`RemoteDebugFeedback.checklist`)을 쓴다. 답은 `answers.json` 하나에, 지금 목록에 있는 항목 것만 남긴다(메모는 200자까지). 답은 L.1의 `checks`로 피드백과 함께 가고, 메일 경로에서는 암호화한 `.afdiag` 안의 `checklist`에 들어간다. Release 빌드에는 이 기능의 코드와 파일이 없다.
+- Mac 앱은 받은 답을 그 피드백의 원문 끝에 `확인 목록의 답`으로 적는다.
 
 ### L.3 앱 동작
 

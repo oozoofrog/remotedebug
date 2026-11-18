@@ -543,6 +543,34 @@
         }
       }
     },
+    "%@ Finder에서 보기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show %@ in Finder"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@をFinderで表示"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在访达中显示 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Finder 中顯示 %@"
+          }
+        }
+      }
+    },
     "%@ MiB" : {
       "localizations" : {
         "en" : {
@@ -1225,6 +1253,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "建置並發布 %@"
+          }
+        }
+      }
+    },
+    "%@ 빼기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@を外す"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除 %@"
           }
         }
       }
@@ -3751,6 +3807,34 @@
         }
       }
     },
+    "1MB가 넘는 파일은 붙일 수 없습니다: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Files larger than 1 MB cannot be attached: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1MBを超えるファイルは添付できません: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法附加超过 1MB 的文件：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法附加超過 1MB 的檔案：%@"
+          }
+        }
+      }
+    },
     "60초 안에 Mac에 닿지 못했습니다. 이 iPhone의 VPN이 켜져 있고 Mac과 같은 tailnet에 있는지 확인하세요. Tailnet Lock을 쓰면 이 iPhone의 서명이 필요합니다. 확인한 뒤 같은 QR 코드를 다시 읽으세요." : {
       "localizations" : {
         "en" : {
@@ -5375,30 +5459,30 @@
         }
       }
     },
-    "Mac에 닿지 않을 때 메일로도 받으려면 받을 주소를 적습니다(선택). 키를 만들면 Debug 빌드가 메일에 로그와 화면 사진을 암호화해 붙이고, 이 Mac의 크래시·피드백 화면에서만 열 수 있습니다." : {
+    "Mac에 닿지 않을 때 메일로도 받으려면 받을 주소를 적습니다(선택). 키를 만들면 사용자가 붙이기로 한 로그가 메일에 암호화돼 붙고, 이 Mac의 크래시·피드백 화면에서만 열 수 있습니다. 사용자가 고른 사진과 파일은 메일에 그대로 붙습니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "To also receive by email when the Mac isn't reachable, enter an address to receive at (optional). Once you create a key, Debug builds attach encrypted logs and screenshots to the email, and they can be opened only in this Mac's Crashes & Feedback screen."
+            "value" : "To also receive feedback by email when the Mac cannot be reached, enter an address (optional). With a key, logs the user chooses to attach are encrypted into the email and can be opened only on this Mac's Crashes and feedback screen. Photos and files the user picks are attached to the email as they are."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Macに到達できないときにメールでも受け取るには、受信用のアドレスを入力します (任意)。キーを作成すると、Debugビルドがログと画面の写真を暗号化してメールに添付し、このMacのクラッシュ・フィードバック画面でのみ開けます。"
+            "value" : "Macに届かないときにメールでも受け取るには、受信アドレスを入力します（任意）。キーを作成すると、ユーザーが添付すると決めたログが暗号化されてメールに添付され、このMacのクラッシュ・フィードバック画面でのみ開けます。ユーザーが選んだ写真とファイルはそのままメールに添付されます。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "如果希望在无法连接 Mac 时通过邮件接收，请填写接收地址（可选）。创建密钥后，Debug 构建会把日志和屏幕截图加密附在邮件中，只能在这台 Mac 的“崩溃与反馈”界面中打开。"
+            "value" : "若要在无法连接 Mac 时也通过邮件接收，请填写接收地址（可选）。创建密钥后，用户选择附加的日志会加密后附在邮件中，只能在这台 Mac 的崩溃和反馈界面打开。用户选取的照片和文件会原样附在邮件中。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "若要在無法連上 Mac 時也以郵件接收，請填寫接收位址 (選填)。建立金鑰後，Debug 建置會將記錄與畫面照片加密並附加在郵件中，只能在這部 Mac 的當機與回饋畫面中開啟。"
+            "value" : "若要在無法連上 Mac 時也透過郵件接收，請填寫接收位址（選填）。建立密鑰後，使用者選擇附加的記錄會加密後附在郵件中，只能在這台 Mac 的當機與回饋畫面打開。使用者選取的照片和檔案會原樣附在郵件中。"
           }
         }
       }
@@ -19099,34 +19183,6 @@
         }
       }
     },
-    "붙일 화면 사진" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Screenshot to attach"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "貼り付けるスクリーンショット"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "要附加的截图"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "要貼上的螢幕截圖"
-          }
-        }
-      }
-    },
     "비우면 Tailscale 기본 서버" : {
       "localizations" : {
         "en" : {
@@ -20029,30 +20085,58 @@
         }
       }
     },
-    "사진 빼기" : {
+    "사진 첨부" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Remove Screenshot"
+            "value" : "Attach Photos"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "写真を外す"
+            "value" : "写真を添付"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "移除截图"
+            "value" : "附加照片"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "移除截圖"
+            "value" : "附加照片"
+          }
+        }
+      }
+    },
+    "사진과 파일을 5개까지 붙일 수 있습니다. 파일 하나는 1MB, 모두 합쳐 1.5MB까지이고 사진은 크기를 줄여 붙입니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can attach up to 5 photos and files. Each file can be up to 1 MB and all of them together up to 1.5 MB. Photos are reduced in size before they are attached."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真とファイルを5個まで添付できます。ファイルは1個あたり1MBまで、合計1.5MBまでで、写真はサイズを小さくして添付します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最多可附加 5 个照片和文件。单个文件不超过 1MB，总计不超过 1.5MB，照片会缩小后再附加。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最多可附加 5 個照片和檔案。單一檔案上限為 1MB，總計上限為 1.5MB，照片會縮小後再附加。"
           }
         }
       }
@@ -20137,6 +20221,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法載入照片。"
+          }
+        }
+      }
+    },
+    "사진을 읽을 수 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The photo could not be read."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真を読み込めません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取照片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法讀取照片。"
           }
         }
       }
@@ -29845,6 +29957,118 @@
         }
       }
     },
+    "첨부" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attachments"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添付"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附件"
+          }
+        }
+      }
+    },
+    "첨부 %lld개" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attachments: %lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添付 %lld個"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 个附件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 個附件"
+          }
+        }
+      }
+    },
+    "첨부는 5개까지 붙일 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You can attach up to 5 items."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添付できるのは5個までです。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最多可附加 5 项。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最多可附加 5 個項目。"
+          }
+        }
+      }
+    },
+    "첨부는 모두 합쳐 1.5MB까지 붙일 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attachments can total up to 1.5 MB."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添付は合計1.5MBまでです。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附件总计不能超过 1.5MB。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附件總計不可超過 1.5MB。"
+          }
+        }
+      }
+    },
     "첫 빌드 게시" : {
       "localizations" : {
         "en" : {
@@ -31901,6 +32125,34 @@
         }
       }
     },
+    "파일 첨부" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Attach Files"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルを添付"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附加文件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "附加檔案"
+          }
+        }
+      }
+    },
     "파일은 500개까지 보낼 수 있습니다. 쓰지 않는 파일을 지운 뒤 다시 보내세요." : {
       "localizations" : {
         "en" : {
@@ -31953,6 +32205,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法傳送檔案。"
+          }
+        }
+      }
+    },
+    "파일을 읽을 수 없습니다: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The file could not be read: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルを読み込めません: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取文件：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法讀取檔案：%@"
           }
         }
       }
@@ -34343,30 +34623,30 @@
         }
       }
     },
-    "피드백에 붙은 화면 사진" : {
+    "피드백에 붙은 사진" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Screenshot attached to feedback"
+            "value" : "Photo attached to feedback"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "フィードバックに添付されたスクリーンショット"
+            "value" : "フィードバックに添付された写真"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "反馈附带的截图"
+            "value" : "反馈附带的照片"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "附在回饋中的螢幕截圖"
+            "value" : "回饋附帶的照片"
           }
         }
       }
@@ -34759,34 +35039,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法準備主機。"
-          }
-        }
-      }
-    },
-    "화면 사진 고르기" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose Screenshot"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スクリーンショットを選択"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选取截图"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇螢幕截圖"
           }
         }
       }
