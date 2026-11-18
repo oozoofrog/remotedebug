@@ -147,6 +147,17 @@ public struct AgentMCPServer: Sendable {
             ] as [String: Any], "required": ["bundle_id"]] as [String: Any],
         ],
         [
+            "name": "remotedebug_feedback_issue",
+            "description": "받은 피드백을 그 앱의 GitHub 저장소에 이슈로 올린다(RemoteDebug Mac 앱이 gh로 올린다). id만 주면 올리지 않고 올라갈 제목과 본문(issue.title, issue.body)을 돌려준다. 사용자가 올리라고 했을 때만 id와 confirm: true로 다시 불러 올린다. 같은 기록은 두 번 올라가지 않고, 이미 올렸으면 그 주소를 돌려준다. 인자 없이 부르면 이슈로 올린 기록 목록을 돌려준다. project_path를 주면 그 프로젝트의 이슈 저장소를 읽고, repo(owner/repo, 빈 글자면 지우기)나 auto로 바꾼다. 저장소가 없는 프로젝트의 피드백은 올리지 않는다. 이슈에는 사용자가 쓴 글, 앱 버전, OS, 기기 종류, 받은 시각, 확인 목록의 답, 첨부 수만 들어가고 메일 주소·쿼리가 든 주소·IP·전화번호처럼 보이는 것은 가려진다. 로그와 첨부는 올라가지 않으니 remotedebug_crash_logs로 읽고 이슈에 옮겨 적지 않는다. 메일에 붙어 온 진단 파일에서 넣은 기록은 사용자가 Mac 앱 화면에서 직접 올린다.",
+            "inputSchema": ["type": "object", "properties": [
+                "id": ["type": "string", "description": "이슈로 올릴 피드백의 기록 id(c_…). remotedebug_crash_logs의 목록에 있다"],
+                "confirm": ["type": "boolean", "description": "id와 함께 준다. true여야 실제로 올린다. 없거나 false면 올라갈 내용만 돌려준다"],
+                "project_path": ["type": "string", "description": "이슈 저장소를 읽거나 바꿀 프로젝트 폴더나 .xcodeproj, .xcworkspace의 절대 경로"],
+                "repo": ["type": "string", "description": "project_path와 함께 준다. 이슈를 올릴 GitHub 저장소(owner/repo). 빈 글자면 지워서 이 프로젝트의 피드백을 올리지 않는다. 사용자에게 물어서 정한다"],
+                "auto": ["type": "boolean", "description": "project_path와 함께 준다. 페어링한 기기가 Debug 빌드에서 보낸 피드백을 받는 대로 올릴지"],
+            ] as [String: Any], "required": [String]()] as [String: Any],
+        ],
+        [
             "name": "remotedebug_device_logs",
             "description": "페어링한 iPhone의 RemoteDebug 앱이 Mac에 보낸 진단 로그(앱 시작, VPN, 페어링, 빌드 목록, 설치·업데이트 진행). 기기마다 최근 줄을 돌려준다.",
             "inputSchema": ["type": "object", "properties": [
@@ -269,6 +280,34 @@ public struct AgentMCPServer: Sendable {
                 let data = await send("checklist", Self.oneLine(arguments["bundle_id"]), argument, "")
                 let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
                 return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
+            }
+            if name == "remotedebug_feedback_issue" {
+                func isOK(_ data: Data) -> Bool {
+                    ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
+                }
+                func reply(_ data: Data) -> Data? {
+                    result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !isOK(data)])
+                }
+                if let project = arguments["project_path"] as? String, !project.isEmpty {
+                    // 저장소를 먼저 바꾸고, auto가 함께 오면 이어서 바꾼다. 둘 다 없으면 읽기다.
+                    var data = Data()
+                    if let repo = arguments["repo"] as? String {
+                        let name = Self.oneLine(repo).trimmingCharacters(in: .whitespaces)
+                        data = await send("issue-target", project, name.isEmpty ? "clear" : name, "")
+                        guard isOK(data) else { return reply(data) }
+                    }
+                    if let auto = arguments["auto"] as? Bool {
+                        data = await send("issue-target", project, auto ? "auto-on" : "auto-off", "")
+                    } else if data.isEmpty {
+                        data = await send("issue-target", project, "", "")
+                    }
+                    return reply(data)
+                }
+                if let record = arguments["id"] as? String, !record.isEmpty {
+                    // confirm이 true일 때만 올린다. 그 밖에는 올라갈 내용만 받는다.
+                    return reply(await send("issue", Self.oneLine(record), arguments["confirm"] as? Bool == true ? "confirm" : "", ""))
+                }
+                return reply(await send("issues", "", "", ""))
             }
             if name == "remotedebug_feedback_setup" {
                 let data = await send("feedback", arguments["project_path"] as? String ?? "", Self.oneLine(arguments["email"]), "")
@@ -436,6 +475,7 @@ extension AgentScript {
         - `remotedebug_schemes`: `project_path`
         - `remotedebug_feedback_setup`: `project_path`, `email`(선택). 앱에 크래시·피드백 보내기를 붙일 때 넣을 코드와 할 일
         - `remotedebug_feedback_checklist`: `bundle_id`, `items`(선택), `clear`(선택). 사용자가 Debug 빌드의 피드백 화면에서 확인할 것과 고를 답을 남긴다. 답은 `remotedebug_crash_logs`의 피드백 원문 끝에 온다
+        - `remotedebug_feedback_issue`: `id`(기록 id), `confirm`(선택), `project_path`·`repo`·`auto`(선택). 받은 피드백을 그 앱의 GitHub 저장소에 이슈로 올린다. `id`만 주면 올라갈 내용만 보고, `confirm: true`여야 올린다. 인자 없이 부르면 올린 목록
         - `remotedebug_pairing_code`: RemoteDebug 앱이 아직 없는 iPhone용 설치 페이지 코드와 그 페이지 링크. 앱이 있는 iPhone은 사용자에게 Mac 앱의 'iPhone 페어링…' > 'RemoteDebug 앱이 있는 iPhone'의 QR로 페어링해 달라고 한다.
         - `remotedebug_pair_requests`, `remotedebug_pair_decide`: 허용을 기다리는 요청을 보고 거부할 수 있다. 허용은 할 수 없다: 사용자에게 RemoteDebug Mac 앱 화면에서 허용해 달라고 한다.
         - `remotedebug_device_logs`: iPhone 앱이 보낸 진단 로그. iPhone에서 설치·업데이트·연결이 안 될 때 먼저 본다.
@@ -455,6 +495,9 @@ extension AgentScript {
         \(rd) reports [feedback|crash] [앱 이름이나 번들 ID]
         \(rd) report <기록 id>
         \(rd) handled <기록 id> [undo]
+        \(rd) issue <기록 id> [confirm]
+        \(rd) issues
+        \(rd) issue-target <프로젝트 폴더> [owner/repo|clear|auto-on|auto-off]
         \(rd) status
         \(rd) push <파일> [프로젝트]
         \(rd) link <주소> [이름] [프로젝트]

@@ -236,7 +236,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 reportHandling: .init(
                     mark: { [weak model] id, handled in model?.crashLogs.setHandled(id, handled) },
                     purge: { [weak model] in model?.crashLogs.purgeHandled() }),
+                crashLogs: model.crashLogs,
                 importer: { [weak model] url in await model?.importBuild(url) })
+            // 새로 받은 피드백은 그 프로젝트에 이슈 저장소가 있고 자동 등록이 켜져 있으면 이슈로 올린다.
+            let issueProjects = projects
+            model.crashLogs.onReceived = { [weak issueProjects] item in
+                Task { await issueProjects?.receivedForIssue(item) }
+            }
             if AgentFeature.isEnabled {
                 let desk = AgentDesk(
                     root: paths.root,

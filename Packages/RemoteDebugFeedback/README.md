@@ -170,6 +170,32 @@ App Store Connect의 수출 규정 질문(`ITSAppUsesNonExemptEncryption`)에 �
 - 메일함에 남은 메일과 첨부, 풀어서 다른 곳에 둔 파일은 Mac 앱이 지우지 못한다. 같은 기준으로 직접 지운다.
 - 풀어 낸 로그는 개인 정보로 다룬다. 읽은 뒤 지우고, 저장소나 이슈에 올리지 않는다.
 
+## 받은 피드백을 이슈로 올리기
+
+RemoteDebug Mac 앱이 받은 피드백을 그 앱의 GitHub 저장소에 이슈로 올릴 수 있다. 저장소는 Mac 앱의 앱 화면에서 프로젝트의 더 보기 메뉴 > **이슈 저장소…**로 정한다(에이전트는 `rd issue-target <프로젝트 폴더> owner/repo`). 이 Mac에 GitHub CLI(`gh`)가 설치되어 로그인돼 있어야 한다.
+
+- 이슈에는 사용자가 쓴 글, 앱 버전과 빌드, OS, 기기 종류, 받은 시각, 확인 목록의 답, 첨부 수와 로그가 붙었는지만 올라간다. 로그와 첨부 파일, 기기 이름은 올라가지 않는다. 글에서 메일 주소, 쿼리가 든 주소, IP, 전화번호처럼 보이는 것, `.ts.net` 이름, 사용자 폴더 경로는 가린다. 공개 저장소면 이 내용을 누구나 본다.
+- Debug 빌드가 Mac으로 바로 보낸 피드백은 **자동 등록**이 켜져 있으면 받는 대로 올라간다. 메일로 온 진단 파일(`.afdiag`)에서 넣은 기록은 저절로 올라가지 않는다. **크래시·피드백** 화면의 **이슈로 등록…**이 제목과 본문을 보여 주고, 고친 뒤 **등록**을 눌러야 올라간다. 메일 본문의 글은 진단 파일에 없으므로 필요하면 그때 옮겨 적는다.
+- 에이전트는 `rd issue <기록 id>`로 올라갈 내용을 먼저 보고 `rd issue <기록 id> confirm`으로 올린다. 같은 기록은 한 번만 올라간다.
+- 메일 경로(배포 빌드)의 처리방침에는 받은 글의 요약을 개발자의 이슈 관리 도구에 옮길 수 있다는 점을 앱에 맞게 적는다.
+
+## 예제 앱으로 실기기 확인
+
+저장소의 `Examples/FeedbackSample/FeedbackSample.xcodeproj`(스킴 `FeedbackSample`, iOS 17 이상, 번들 ID `$(RD_BUNDLE_PREFIX).FeedbackSample`)는 이 패키지를 로컬 경로로 넣은 작은 앱이다. 피드백 화면을 여는 단추, 설정 화면의 동의 스위치, 코드로 정한 확인 목록(세 항목, 두 묶음), 로그 남기기 단추, 빌드 번호가 있다.
+
+1. `Config/Signing.local.xcconfig`에 개발 팀(`DEVELOPMENT_TEAM`)이 있어야 한다(RemoteDebug iPhone 앱과 같은 파일이다).
+2. RemoteDebug Mac 앱에 `Examples/FeedbackSample` 폴더를 연결하고 `rd feedback <그 폴더> [메일]`로 코드를 받는다. 그 코드의 `macHost`와 `publicKeyBase64` 값을 같은 `Config/Signing.local.xcconfig`에 넣는다. 이 값들은 저장소에 올리지 않는다.
+
+   ```
+   RD_FEEDBACK_MAC_HOST = rd-mac-1a2b3c4d.tail0001.ts.net
+   RD_FEEDBACK_PUBLIC_KEY = <공개키(base64)>
+   RD_FEEDBACK_EMAIL = dev@example.com
+   ```
+
+   `RD_FEEDBACK_EMAIL`은 없어도 된다(Mac에 닿지 않을 때와 Release 구성에서 메일로 받을 주소). xcconfig는 `//`부터 줄 끝을 주석으로 읽으므로 공개키에 `//`가 있으면 그 자리를 `/$()/`로 적는다.
+3. Mac 앱에서 스킴 `FeedbackSample`을 빌드해 게시하고 iPhone에 설치한다. 첫 화면의 "피드백을 보내는 곳"이 지금 빌드의 경로를 보여 준다.
+4. Mac 주소는 Debug 구성의 Info.plist(`RDFeedbackMacHost`)에만 들어간다. Release 구성으로 빌드한 앱에는 주소가 없고, `scripts/check-feedback-release.sh`로 확인할 수 있다.
+
 ## 배포 전 확인
 
 1. 배포판 실행 파일에 Debug 전용 코드와 Mac 주소가 없는지 확인한다. 저장소의 `scripts/check-feedback-release.sh`를 릴리스 절차에서 부른다.
@@ -187,4 +213,5 @@ App Store Connect의 수출 규정 질문(`ITSAppUsesNonExemptEncryption`)에 �
 
 - 실기기의 메일 작성 화면에서 암호화한 진단 파일과 사진이 함께 붙는지, 메일 계정이 없는 기기의 `mailto:` 흐름.
 - 동의 스위치와 확인 목록의 거르기·지우기 화면(단위 시험과 컴파일만 했다).
+- 받은 피드백을 실제 `gh`로 이슈에 올리는 것(가짜로 바꾼 단위 시험만 했다), 예제 앱의 서명한 빌드와 실기기 설치.
 - 앱 보관(archive) 결과물에서 개인정보 매니페스트가 Xcode의 개인정보 보고서에 잡히는지.

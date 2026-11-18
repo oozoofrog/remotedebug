@@ -1173,6 +1173,62 @@
         }
       }
     },
+    "%@ 기록의 원문 파일을 읽을 수 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't read the text file of record %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記録%@の本文ファイルを読み込めません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取记录 %@ 的原文文件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法讀取記錄 %@ 的原文檔案。"
+          }
+        }
+      }
+    },
+    "%@ 기록이 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "There is no record %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "記録%@はありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有记录 %@。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有記錄 %@。"
+          }
+        }
+      }
+    },
     "%@ 더 보기" : {
       "localizations" : {
         "en" : {
@@ -1393,6 +1449,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在為 Debug 裝置建置 %@ Scheme"
+          }
+        }
+      }
+    },
+    "%@ 앱을 게시한 연결한 프로젝트가 없어 어느 저장소에 올릴지 알 수 없습니다. 그 앱의 프로젝트를 연결해 한 번 게시한 뒤 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No connected project has published the app %@, so there's no way to tell which repository it belongs to. Connect that app's project, publish it once, then try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリ%@を公開した接続済みプロジェクトがないため、どのリポジトリに登録するか分かりません。そのアプリのプロジェクトを接続して一度公開してから、もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有已连接的项目发布过 App %@，无法确定要登记到哪个仓库。请连接该 App 的项目并发布一次后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有已連接的專案發佈過 App %@，無法確定要登記到哪個儲存庫。請連接該 App 的專案並發佈一次後再試一次。"
           }
         }
       }
@@ -1707,6 +1791,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已允許 %@ 的配對。"
+          }
+        }
+      }
+    },
+    "%@ 프로젝트에 이슈 저장소가 정해져 있지 않습니다. 앱 화면에서 그 프로젝트의 더 보기 메뉴 > \"이슈 저장소…\"로 정하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The project %@ has no issue repository. Set one on the Apps screen from the project's More menu > \"Issue Repository…\"."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロジェクト%@にはイシューのリポジトリが設定されていません。アプリ画面でそのプロジェクトのその他メニュー >「イシューのリポジトリ…」から設定してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "项目 %@ 尚未设定议题仓库。请在 App 界面中从该项目的更多菜单 >“议题仓库…”设定。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "專案 %@ 尚未設定議題儲存庫。請在 App 畫面中從該專案的更多選單 >「議題儲存庫…」設定。"
           }
         }
       }
@@ -2195,6 +2307,34 @@
         }
       }
     },
+    "%@: 이슈 저장소" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: Issue Repository"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@: イシューのリポジトリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@：议题仓库"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@：議題儲存庫"
+          }
+        }
+      }
+    },
     "%@: 읽는 동안 파일 내용이 바뀌었습니다" : {
       "localizations" : {
         "en" : {
@@ -2539,6 +2679,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@失敗。請查看記錄。"
+          }
+        }
+      }
+    },
+    "%@에 이슈로 등록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File as Issue in %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@にイシューとして登録"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 %@ 登记为议题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 %@ 登記為議題"
           }
         }
       }
@@ -4335,6 +4503,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在 Finder 中顯示"
+          }
+        }
+      }
+    },
+    "GitHub에 연결하지 못했습니다. 네트워크를 확인한 뒤 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't connect to GitHub. Check the network, then try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "GitHubに接続できませんでした。ネットワークを確認してから、もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法连接到 GitHub。请检查网络后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法連接 GitHub。請檢查網路後再試一次。"
           }
         }
       }
@@ -9969,6 +10165,118 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "compression_stream_init 失敗"
+          }
+        }
+      }
+    },
+    "gh 명령을 찾지 못했습니다. GitHub CLI를 설치하고(brew install gh) gh auth login으로 로그인하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The gh command wasn't found. Install the GitHub CLI (brew install gh) and sign in with gh auth login."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ghコマンドが見つかりません。GitHub CLIをインストールし(brew install gh)、gh auth loginでログインしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到 gh 命令。请安装 GitHub CLI（brew install gh）并用 gh auth login 登录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到 gh 指令。請安裝 GitHub CLI（brew install gh）並用 gh auth login 登入。"
+          }
+        }
+      }
+    },
+    "gh가 이슈 주소를 돌려주지 않았습니다. 저장소 %@의 이슈 목록에서 올라갔는지 확인하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gh didn't return the issue's address. Check the issue list of %@ to see whether it was filed."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ghがイシューのURLを返しませんでした。リポジトリ%@のイシュー一覧で登録されたか確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gh 没有返回议题地址。请在仓库 %@ 的议题列表中确认是否已登记。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gh 沒有傳回議題位址。請在儲存庫 %@ 的議題列表中確認是否已登記。"
+          }
+        }
+      }
+    },
+    "gh에 로그인되어 있지 않습니다. 터미널에서 gh auth login을 실행한 뒤 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gh isn't signed in. Run gh auth login in Terminal, then try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ghにログインしていません。ターミナルでgh auth loginを実行してから、もう一度お試しください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gh 尚未登录。请在终端运行 gh auth login 后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gh 尚未登入。請在終端機執行 gh auth login 後再試一次。"
+          }
+        }
+      }
+    },
+    "git origin의 %@ 쓰기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use %@ from git origin"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "git originの%@を使う"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 git origin 的 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 git origin 的 %@"
           }
         }
       }
@@ -18499,6 +18807,34 @@
         }
       }
     },
+    "받은 기록을 읽을 수 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Can't read the received records."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "受け取った記録を読み込めません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取收到的记录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法讀取收到的記錄。"
+          }
+        }
+      }
+    },
     "받은 크래시·피드백 없음" : {
       "localizations" : {
         "en" : {
@@ -19375,6 +19711,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已拷貝"
+          }
+        }
+      }
+    },
+    "본문" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Body"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本文"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正文"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "內文"
           }
         }
       }
@@ -22915,6 +23279,34 @@
         }
       }
     },
+    "아래 제목과 본문이 그대로 올라갑니다. 공개 저장소면 누구나 볼 수 있으니 이름, 연락처, 주소 같은 개인 정보가 남아 있으면 지우세요. 로그와 첨부 파일은 올리지 않습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The title and body below are uploaded as they are. Anyone can read them if the repository is public, so remove any personal details that remain, such as names, contact details or addresses. Logs and attachments are not uploaded."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下のタイトルと本文がそのまま登録されます。公開リポジトリなら誰でも見られるので、名前、連絡先、住所などの個人情報が残っていたら消してください。ログと添付ファイルは送信しません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下面的标题和正文会原样上传。如果是公开仓库，任何人都能看到，因此请删除残留的姓名、联系方式、地址等个人信息。不会上传日志和附件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下面的標題和內文會原樣上傳。如果是公開儲存庫，任何人都看得到，因此請刪除殘留的姓名、聯絡方式、地址等個人資訊。不會上傳記錄和附件。"
+          }
+        }
+      }
+    },
     "아직 게시한 빌드 없음" : {
       "localizations" : {
         "en" : {
@@ -25049,6 +25441,34 @@
         }
       }
     },
+    "연결한 프로젝트가 아닙니다: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not a connected project: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続したプロジェクトではありません: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是已连接的项目：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不是已連接的專案：%@"
+          }
+        }
+      }
+    },
     "열 수 있는 로그인 주소가 아직 없습니다." : {
       "localizations" : {
         "en" : {
@@ -26931,6 +27351,34 @@
         }
       }
     },
+    "이 기록은 지금 올리는 중입니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This record is being filed now."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この記録は現在登録中です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这条记录正在登记。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這筆記錄正在登記。"
+          }
+        }
+      }
+    },
     "이 링크는 웹 주소로 링크를 내도록 빌드한 Mac 앱이 만든 것이고, 이 iPhone 앱은 그 주소 없이 빌드되었습니다. 두 앱을 같은 RD_PAIR_LINK_HOST·RD_PAIR_LINK_PATH 값으로 빌드하거나, Mac 앱을 그 값 없이 다시 빌드하세요." : {
       "localizations" : {
         "en" : {
@@ -27519,6 +27967,90 @@
         }
       }
     },
+    "이 프로젝트의 앱에서 받은 피드백을 GitHub 이슈로 올릴 저장소입니다. 이슈에는 사용자가 쓴 글, 앱 버전, OS, 기기 종류, 확인 목록의 답만 올라가고 로그와 첨부 파일은 이 Mac에만 남습니다. 메일 주소, 쿼리가 든 주소, IP, 전화번호처럼 보이는 것은 가립니다. 공개 저장소의 이슈는 누구나 볼 수 있습니다. 이 Mac에 GitHub CLI(gh)가 설치되어 로그인돼 있어야 합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The repository where feedback from this project's apps is filed as GitHub issues. An issue carries only the user's message, the app version, the OS, the device model and the checklist answers; logs and attachments stay on this Mac. Anything that looks like an email address, a URL with a query, an IP address or a phone number is masked. Issues in a public repository are visible to everyone. The GitHub CLI (gh) must be installed and signed in on this Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このプロジェクトのアプリから受け取ったフィードバックをGitHubのイシューとして登録するリポジトリです。イシューにはユーザーが書いた文章、アプリのバージョン、OS、デバイスの種類、確認リストの回答だけが載り、ログと添付ファイルはこのMacにだけ残ります。メールアドレス、クエリを含むURL、IPアドレス、電話番号のように見えるものは伏せます。公開リポジトリのイシューは誰でも見られます。このMacにGitHub CLI(gh)がインストールされ、ログインしている必要があります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用于将此项目的 App 收到的反馈登记为 GitHub 议题的仓库。议题只包含用户写的文字、App 版本、操作系统、设备型号和检查清单的回答，日志和附件只保留在这台 Mac 上。看起来像电子邮件地址、带查询参数的网址、IP 地址或电话号码的内容会被遮盖。公开仓库的议题任何人都能看到。这台 Mac 需要安装并登录 GitHub CLI（gh）。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用來將此專案的 App 收到的回饋登記為 GitHub 議題的儲存庫。議題只包含使用者寫的文字、App 版本、作業系統、裝置型號和檢查清單的回答，記錄和附件只保留在這部 Mac 上。看起來像電子郵件地址、帶查詢參數的網址、IP 位址或電話號碼的內容會被遮蓋。公開儲存庫的議題任何人都看得到。這部 Mac 需要安裝並登入 GitHub CLI（gh）。"
+          }
+        }
+      }
+    },
+    "이 피드백에는 보낸 앱의 번들 ID가 없어 어느 저장소에 올릴지 알 수 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This feedback has no bundle ID for the app that sent it, so there's no way to tell which repository it belongs to."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このフィードバックには送信元アプリのバンドルIDがないため、どのリポジトリに登録するか分かりません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这条反馈没有发送它的 App 的包 ID，无法确定要登记到哪个仓库。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這則回饋沒有傳送它的 App 的套件識別碼，無法確定要登記到哪個儲存庫。"
+          }
+        }
+      }
+    },
+    "이 피드백의 글과 앱·기기 정보를 GitHub 이슈로 올린다. 올리기 전에 제목과 본문을 보여 주고, 로그와 첨부는 올리지 않는다" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Files this feedback's message and app and device details as a GitHub issue. The title and body are shown first; logs and attachments are not uploaded"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このフィードバックの文章とアプリ・デバイス情報をGitHubのイシューとして登録します。登録前にタイトルと本文を表示し、ログと添付は送信しません"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将这条反馈的文字以及 App 和设备信息登记为 GitHub 议题。登记前会显示标题和正文，不会上传日志和附件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "將這則回饋的文字以及 App 和裝置資訊登記為 GitHub 議題。登記前會顯示標題和內文，不會上傳記錄和附件"
+          }
+        }
+      }
+    },
     "이 형식은 여기서 미리 볼 수 없습니다. 위의 ‘열기’로 iOS 미리보기를 쓰거나 다른 앱으로 보내세요." : {
       "localizations" : {
         "en" : {
@@ -27767,6 +28299,314 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此配對請求已處理或已過期。"
+          }
+        }
+      }
+    },
+    "이슈 #%lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Issue #%lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシュー #%lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "议题 #%lld"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "議題 #%lld"
+          }
+        }
+      }
+    },
+    "이슈 등록 실패: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't file the issue: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューを登録できませんでした: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能登记议题：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法登記議題：%@"
+          }
+        }
+      }
+    },
+    "이슈 본문을 임시 파일에 쓰지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't write the issue body to a temporary file."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューの本文を一時ファイルに書き込めませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能将议题正文写入临时文件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法將議題內文寫入暫存檔。"
+          }
+        }
+      }
+    },
+    "이슈 열기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Issue"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューを開く"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开议题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打開議題"
+          }
+        }
+      }
+    },
+    "이슈 저장소…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Issue Repository…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューのリポジトリ…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "议题仓库…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "議題儲存庫…"
+          }
+        }
+      }
+    },
+    "이슈 제목이 비어 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The issue title is empty."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューのタイトルが空です。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "议题标题为空。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "議題標題是空的。"
+          }
+        }
+      }
+    },
+    "이슈는 올라갔지만(%@) 기록이 그 사이에 지워져 주소를 남기지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The issue was filed (%@), but the record was deleted in the meantime, so its address couldn't be saved."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューは登録されましたが(%@)、その間に記録が削除されたためURLを保存できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "议题已登记（%@），但记录在此期间被删除，未能保存地址。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "議題已登記（%@），但記錄在此期間被刪除，無法儲存位址。"
+          }
+        }
+      }
+    },
+    "이슈로 등록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File as Issue"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューとして登録"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登记为议题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登記為議題"
+          }
+        }
+      }
+    },
+    "이슈로 등록…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File as Issue…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューとして登録…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登记为议题…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "登記為議題…"
+          }
+        }
+      }
+    },
+    "이슈를 등록하지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't file the issue."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューを登録できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能登记议题。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法登記議題。"
+          }
+        }
+      }
+    },
+    "이슈를 등록하지 못했습니다: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't file the issue: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューを登録できませんでした: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未能登记议题：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法登記議題：%@"
           }
         }
       }
@@ -28309,6 +29149,34 @@
         }
       }
     },
+    "자동 등록" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "File Automatically"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動で登録"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动登记"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動登記"
+          }
+        }
+      }
+    },
     "작업을 취소했습니다." : {
       "localizations" : {
         "en" : {
@@ -28687,6 +29555,174 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "無法讀取已儲存的建置列表，因此未匯入。請修復列表檔案後再重新匯入。"
+          }
+        }
+      }
+    },
+    "저장소" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repository"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リポジトリ"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仓库"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存庫"
+          }
+        }
+      }
+    },
+    "저장소 %@는 이슈를 받지 않습니다. 저장소 설정에서 Issues를 켜세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The repository %@ doesn't accept issues. Turn on Issues in the repository settings."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リポジトリ%@はイシューを受け付けていません。リポジトリの設定でIssuesをオンにしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仓库 %@ 不接受议题。请在仓库设置中打开 Issues。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存庫 %@ 不接受議題。請在儲存庫設定中開啟 Issues。"
+          }
+        }
+      }
+    },
+    "저장소 %@를 찾지 못했습니다. 이름이 맞는지, gh로 로그인한 계정이 이 저장소를 볼 수 있는지 확인하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The repository %@ wasn't found. Check the name and that the account signed in to gh can see this repository."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リポジトリ%@が見つかりません。名前が正しいか、ghでログインしたアカウントがこのリポジトリを見られるか確認してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未找到仓库 %@。请确认名称是否正确，以及 gh 登录的账户能否查看此仓库。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "找不到儲存庫 %@。請確認名稱是否正確，以及 gh 登入的帳號能否檢視此儲存庫。"
+          }
+        }
+      }
+    },
+    "저장소 %@에 이슈를 쓸 권한이 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You don't have permission to create issues in %@."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リポジトリ%@にイシューを作成する権限がありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有在仓库 %@ 创建议题的权限。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "沒有在儲存庫 %@ 建立議題的權限。"
+          }
+        }
+      }
+    },
+    "저장소 지우기" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove Repository"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リポジトリを消去"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除仓库"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除儲存庫"
+          }
+        }
+      }
+    },
+    "저장소는 owner/repo 모양이어야 합니다(예: example/app). 받은 값: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The repository must look like owner/repo (for example, example/app). Received: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リポジトリはowner/repoの形式で指定します(例: example/app)。受け取った値: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "仓库必须是 owner/repo 的形式（例如 example/app）。收到的值：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存庫必須是 owner/repo 的形式（例如 example/app）。收到的值：%@"
           }
         }
       }
@@ -29085,6 +30121,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "移除"
+          }
+        }
+      }
+    },
+    "제목" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Title"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タイトル"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "標題"
           }
         }
       }
@@ -30849,6 +31913,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "為以傳輸線連接的 iPhone 建置並安裝 RemoteDebug App"
+          }
+        }
+      }
+    },
+    "켜면 페어링한 iPhone이 Debug 빌드에서 바로 보낸 피드백을 받는 대로 올립니다. 메일에 붙어 온 진단 파일에서 넣은 기록은 저절로 올리지 않고, 크래시·피드백 화면의 \"이슈로 등록…\"에서 내용을 확인한 뒤 올립니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When on, feedback sent directly from a Debug build on a paired iPhone is filed as soon as it arrives. Records imported from a diagnostics file attached to an email are never filed by themselves; file them from \"File as Issue…\" on the Crashes and feedback screen after checking the contents."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オンにすると、ペアリングしたiPhoneがDebugビルドから直接送ったフィードバックを受け取りしだい登録します。メールに添付された診断ファイルから取り込んだ記録は自動では登録せず、クラッシュ・フィードバック画面の「イシューとして登録…」で内容を確認してから登録します。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开后，已配对的 iPhone 从 Debug 构建直接发来的反馈会在收到后立即登记。从邮件附带的诊断文件导入的记录不会自动登记，需在“崩溃和反馈”界面的“登记为议题…”中确认内容后再登记。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟後，已配對的 iPhone 從 Debug 組建直接傳來的回饋會在收到後立即登記。從郵件附帶的診斷檔案匯入的記錄不會自動登記，需在「當機與回饋」畫面的「登記為議題…」中確認內容後再登記。"
           }
         }
       }
@@ -35039,6 +36131,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "傳送回饋"
+          }
+        }
+      }
+    },
+    "피드백만 이슈로 올립니다. 크래시 기록은 원문이 로그라서 올리지 않습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Only feedback is filed as an issue. Crash records aren't, because their text is a log."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イシューとして登録するのはフィードバックだけです。クラッシュ記録は本文がログなので登録しません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有反馈会登记为议题。崩溃记录的原文是日志，因此不会登记。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "只有回饋會登記為議題。當機記錄的原文是記錄，因此不會登記。"
           }
         }
       }

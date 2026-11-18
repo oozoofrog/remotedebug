@@ -26,6 +26,18 @@ public final class CrashLogStore {
         public var checks: [CrashReport.Check]?
         /// 이 문의를 처리했다고 표시한 시각. 그때부터 `handledRetentionDays`일 뒤에 기록과 첨부를 지운다. 표시하지 않았으면 `nil`.
         public var handledAt: Date?
+        /// 이 피드백을 올린 GitHub 이슈의 주소. 올리지 않았으면 `nil`. 있으면 다시 올리지 않는다.
+        public var issueURL: String?
+        /// 이슈로 올린 시각.
+        public var issueFiledAt: Date?
+
+        /// 이슈 주소 끝의 번호(`…/issues/12`의 12).
+        public var issueNumber: Int? {
+            issueURL?.split(separator: "/").last.flatMap { Int($0) }
+        }
+
+        /// 메일에 붙어 온 진단 파일을 Mac에서 열어 넣은 기록(페어링한 기기가 보낸 것이 아니다).
+        public var isImported: Bool { deviceId.isEmpty }
 
         /// 처리했다고 표시한 기록을 지울 시각. 표시하지 않았으면 `nil`.
         public var deletesAt: Date? {
@@ -56,6 +68,9 @@ public final class CrashLogStore {
 
     /// 최근 크래시가 앞.
     public private(set) var items: [Item] = []
+
+    /// 새 기록을 저장한 뒤 부른다(피드백을 이슈로 올리는 쪽이 듣는다). 이미 있는 기록을 다시 받으면 부르지 않는다.
+    @ObservationIgnored public var onReceived: (@MainActor (Item) -> Void)?
 
     @ObservationIgnored public let directory: URL?
     @ObservationIgnored private let now: @Sendable () -> Date
@@ -108,6 +123,19 @@ public final class CrashLogStore {
         items = items.filter { kept.contains($0.id) }.sorted { $0.crashedAt > $1.crashedAt }
         save()
         purgeHandled()
+        if let saved = items.first(where: { $0.id == item.id }) { onReceived?(saved) }
+    }
+
+    /// 이 기록을 올린 이슈의 주소를 적는다. 이미 적혀 있으면 그대로 두고 그 기록을 돌려준다. 그런 기록이 없으면 `nil`.
+    @discardableResult
+    public func setIssue(_ id: String, url: String) -> Item? {
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
+        if items[index].issueURL == nil {
+            items[index].issueURL = url
+            items[index].issueFiledAt = now()
+            save()
+        }
+        return items[index]
     }
 
     /// 문의를 처리했다고 표시하거나 표시를 지운다. 표시한 날부터 `handledRetentionDays`일 뒤에 지워진다.
@@ -234,12 +262,12 @@ public final class CrashLogStore {
                 attachmentURL(one, in: directory).map { "\n    첨부: \($0.path) (\(one.bytes)바이트)" }
             }.joined() + (item.checks.map { checks in
                 "\n    확인 목록의 답: \(checks.filter { !$0.answer.isEmpty }.count)/\(checks.count)개 답함(원문 끝에 있다)"
-            } ?? "") + (item.handledAt.map { handled in
+            } ?? "") + (item.issueURL.map { "\n    이슈: \($0)" } ?? "") + (item.handledAt.map { handled in
                 "\n    처리함: \(dayText(handled))" + (item.deletesAt.map { " (\(dayText($0)) 뒤에 첨부와 함께 지운다)" } ?? "")
             } ?? "")
             return "\(item.id)  \(item.crashedAt.formatted(stamp))  \(item.bundleId.isEmpty ? item.name : item.bundleId) \(item.appVersion)  [\(item.kind.label)]  \(item.deviceName)  \(directory.appendingPathComponent(item.file).path)\(item.imageFile.map { "  사진: " + directory.appendingPathComponent($0).path } ?? "")" + attached
         }
-        return (["# 크래시·피드백 \(items.count)개 (id, 시각, 앱과 빌드, 종류, 기기, 원문 파일. 아랫줄의 `첨부:`는 사용자가 붙인 사진·파일, `처리함:`은 처리했다고 표시한 날)"] + lines).joined(separator: "\n")
+        return (["# 크래시·피드백 \(items.count)개 (id, 시각, 앱과 빌드, 종류, 기기, 원문 파일. 아랫줄의 `첨부:`는 사용자가 붙인 사진·파일, `이슈:`는 이 피드백을 올린 GitHub 이슈, `처리함:`은 처리했다고 표시한 날)"] + lines).joined(separator: "\n")
     }
 
     /// 기록 하나의 원문. `maxBytes`를 넘으면 앞부분만 돌려주고 파일 경로를 알려 준다.

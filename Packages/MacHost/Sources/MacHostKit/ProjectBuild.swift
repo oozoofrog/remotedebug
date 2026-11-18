@@ -7,6 +7,15 @@ public struct ConnectedProject: Codable, Sendable, Hashable, Identifiable {
     /// 마지막으로 빌드한 스킴.
     public var scheme: String?
     public var addedAt: Date
+    /// 받은 피드백을 이슈로 올릴 GitHub 저장소(`owner/repo`). 없으면 이 프로젝트의 피드백은 이슈로 올리지 않는다.
+    public var issueRepo: String?
+    /// 페어링한 기기가 바로 보낸 피드백을 받는 대로 올릴지. 정하지 않았으면(`nil`) 올린다.
+    public var issueAuto: Bool?
+
+    /// 이슈 저장소. 비어 있으면 `nil`.
+    public var issueTarget: String? { issueRepo.flatMap { $0.isEmpty ? nil : $0 } }
+    /// 저장소가 정해져 있고 자동 등록이 켜져 있다.
+    public var filesIssuesAutomatically: Bool { issueTarget != nil && issueAuto != false }
 
     public var id: String { container }
     public var containerURL: URL { URL(fileURLWithPath: container) }

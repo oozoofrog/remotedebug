@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>RDFeedbackEmail</key>
+	<string>$(RD_FEEDBACK_EMAIL)</string>
+	<key>RDFeedbackMacHost</key>
+	<string>$(RD_SAMPLE_MAC_HOST)</string>
+	<key>RDFeedbackPublicKey</key>
+	<string>$(RD_FEEDBACK_PUBLIC_KEY)</string>
+</dict>
+</plist>
