@@ -227,6 +227,15 @@ public final class ProjectsModel {
     @ObservationIgnored private var settling: [String: (fingerprint: BuildFingerprint, count: Int)] = [:]
     @ObservationIgnored private var agentRequestsInFlight: Set<String> = []
     @ObservationIgnored private var monitor: Task<Void, Never>?
+    /// 피드백을 이슈로 올리는 길(ProjectIssues.swift).
+    @ObservationIgnored let issueFiler: any IssueFiling
+    /// 받은 크래시·피드백 기록. 없으면 이슈로 올릴 수 없다.
+    @ObservationIgnored let crashLogs: CrashLogStore?
+    /// 프로젝트 폴더의 git origin 주소를 읽는다.
+    @ObservationIgnored let originURL: @Sendable (URL) async -> String?
+    /// 이슈로 올리다 실패한 기록과 그 까닭(기록 id → 안내). 다시 올려 성공하면 지운다.
+    public internal(set) var issueErrors: [String: String] = [:]
+    @ObservationIgnored var issuesInFlight: Set<String> = []
 
     /// `root`는 호스트 저장 폴더(`HostPaths.root`)다.
     public init(
@@ -241,8 +250,14 @@ public final class ProjectsModel {
         publishedBuilds: @escaping PublishedBuilds = { [] },
         feedbackInfo: @escaping FeedbackInfo = { _ in ("", "") },
         reportHandling: ReportHandling = .unavailable,
+        crashLogs: CrashLogStore? = nil,
+        issueFiler: any IssueFiling = GHIssueFiler(),
+        originURL: @escaping @Sendable (URL) async -> String? = IssueTarget.originURL,
         importer: @escaping Importer
     ) {
+        self.crashLogs = crashLogs
+        self.issueFiler = issueFiler
+        self.originURL = originURL
         self.root = root
         self.file = JSONFile(url: root.appendingPathComponent("projects.json"))
         self.builder = builder
@@ -328,12 +343,27 @@ public final class ProjectsModel {
         return projects.first { stored.bundleIds?[$0.container]?.contains(bundleId) == true }
     }
 
+    /// 이 번들 ID의 앱을 게시한 적 있는 연결한 프로젝트. 받은 피드백이 어느 프로젝트 것인지 정한다.
+    public func project(publishing bundleId: String) -> ConnectedProject? {
+        projects.first { stored.bundleIds?[$0.container]?.contains(bundleId) == true }
+    }
+
+    /// 연결한 프로젝트의 값을 바꾸고 저장한다. 그런 프로젝트가 없으면 `nil`.
+    @discardableResult
+    func updateProject(_ id: String, _ change: (inout ConnectedProject) -> Void) -> ConnectedProject? {
+        load()
+        guard let index = projects.firstIndex(where: { $0.id == id }) else { return nil }
+        change(&projects[index])
+        save()
+        return projects[index]
+    }
+
     private func noteProducts(_ apps: [URL], of project: ConnectedProject) {
         guard !apps.isEmpty else { return }
         productFolders[project.id, default: []].formUnion(apps.map { $0.deletingLastPathComponent().standardizedFileURL.path })
     }
 
-    private func notePublished(_ bundleId: String, by project: ConnectedProject) {
+    func notePublished(_ bundleId: String, by project: ConnectedProject) {
         var map = stored.bundleIds ?? [:]
         guard map[project.container]?.contains(bundleId) != true else { return }
         map[project.container, default: []].append(bundleId)
@@ -622,6 +652,10 @@ public final class ProjectsModel {
         var checklist: FeedbackChecklist?
         /// `reports`의 목록이나 `report`의 원문(글).
         var text: String?
+        /// `issue`가 보여 주거나 올린 이슈.
+        var issue: AgentIssue?
+        /// `issue-target`이 읽거나 바꾼 이슈 저장소.
+        var issueTarget: AgentIssueTarget?
     }
 
     var crashLogsDir: URL { root.appendingPathComponent("CrashLogs", isDirectory: true) }
@@ -713,6 +747,8 @@ public final class ProjectsModel {
         var scheme: String?
         /// 이 프로젝트에서 게시한 앱마다 가장 최근에 게시한 빌드. 빌드 전에 버전을 올릴지 정할 때 본다.
         var published: [Published]?
+        /// 받은 피드백을 이슈로 올릴 GitHub 저장소. 정하지 않았으면 없다.
+        var issueRepo: String?
     }
 
     /// 프로젝트가 게시한 앱마다 가장 최근 빌드 하나.
@@ -726,7 +762,8 @@ public final class ProjectsModel {
     }
 
     private func agentProject(_ project: ConnectedProject) -> AgentProject {
-        AgentProject(container: project.container, name: project.name, scheme: project.scheme, published: latestPublished(of: project))
+        AgentProject(container: project.container, name: project.name, scheme: project.scheme, published: latestPublished(of: project),
+                     issueRepo: project.issueTarget)
     }
 
     var requestsDir: URL { agentDir.appendingPathComponent("requests", isDirectory: true) }
@@ -905,7 +942,12 @@ public final class ProjectsModel {
         case "checklist":
             // 둘째 줄이 번들 ID, 셋째 줄이 항목 JSON(파일 경로나 한 줄 JSON), `clear`, 또는 빈 줄(읽기)이다.
             return checklistResponse(bundleId: path, argument: scheme)
-        case "connect", "schemes", "build", "feedback":
+        case "issue":
+            // 둘째 줄이 기록 id, 셋째 줄이 `confirm`(올리기)이나 빈 줄(올라갈 내용만 보기)이다.
+            return await issueResponse(id: path, argument: scheme)
+        case "issues":
+            return issuesResponse()
+        case "connect", "schemes", "build", "feedback", "issue-target":
             guard !path.isEmpty else { return AgentResponse(ok: false, error: "프로젝트 경로가 필요합니다.") }
             lastError = nil
             guard let project = await connect(URL(fileURLWithPath: path)) else {
@@ -916,6 +958,10 @@ public final class ProjectsModel {
                 // 셋째 줄이 받을 메일 주소(선택)다.
                 return AgentResponse(ok: true, projects: [agentProject(project)],
                                      feedback: feedbackGuide(for: project, email: scheme.trimmingCharacters(in: .whitespaces)))
+            }
+            if command == "issue-target" {
+                // 셋째 줄이 `owner/repo`, `clear`, `auto-on`, `auto-off`, 또는 빈 줄(읽기)이다.
+                return await issueTargetResponse(project: project, argument: scheme)
             }
             let list = await loadSchemes(for: project)
             if command != "build" {
@@ -936,7 +982,7 @@ public final class ProjectsModel {
             return AgentResponse(ok: report.ok, error: report.ok ? nil : report.message, sharing: host.sharing,
                                  installPage: host.installPage, report: report)
         default:
-            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build, feedback, checklist, reports, report, handled 중 하나를 쓰세요.")
+            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build, feedback, checklist, reports, report, handled, issue, issues, issue-target 중 하나를 쓰세요.")
         }
     }
 
@@ -979,10 +1025,10 @@ enum AgentScript {
         """
         #!/bin/sh
         # RemoteDebug Mac 앱에 명령을 보낸다. 앱이 이 파일을 실행할 때마다 새로 쓴다.
-        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo]
+        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo] | issue <기록 id> [confirm] | issues | issue-target <경로> [owner/repo|clear|auto-on|auto-off]
         dir=\(quoted(agentDir))
         bundle=\(quoted(bundleID))
-        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo]" >&2; exit 2; }
+        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo] | issue <기록 id> [confirm] | issues | issue-target <경로> [owner/repo|clear|auto-on|auto-off]" >&2; exit 2; }
         cmd=$1
         path=${2:-}
         scheme=${3:-}
@@ -999,7 +1045,7 @@ enum AgentScript {
         esac
         # 경로를 받는 명령만 상대 경로를 절대 경로로 바꾼다(id·주소는 그대로).
         case "$cmd" in
-          push|connect|schemes|build|feedback) case "$path" in ""|/*) ;; *) path="$PWD/$path" ;; esac ;;
+          push|connect|schemes|build|feedback|issue-target) case "$path" in ""|/*) ;; *) path="$PWD/$path" ;; esac ;;
         esac
         alive() { [ -f "$dir/pid" ] && kill -0 "$(cat "$dir/pid")" 2>/dev/null; }
         if ! alive; then
@@ -1041,6 +1087,8 @@ enum AgentScript {
         \(rd) reports feedback            # 앱에서 받은 피드백 목록(reports crash는 크래시 기록, report <id>는 원문)
         \(rd) handled <기록 id>           # 문의를 처리했다고 표시한다(\(CrashLogStore.handledRetentionDays)일 뒤에 기록과 첨부를 지운다. 되돌리기는 끝에 undo)
         \(rd) checklist <번들 ID> [항목 JSON 파일|clear]  # 사용자가 Debug 빌드에서 확인할 것과 고를 답을 남긴다(인자 없이 부르면 지금 목록)
+        \(rd) issue <기록 id>             # 그 피드백을 이슈로 올리면 올라갈 제목과 본문(끝에 confirm을 붙여야 올린다. issues는 올린 목록)
+        \(rd) issue-target \(project) [owner/repo|clear|auto-on|auto-off]  # 피드백을 이슈로 올릴 GitHub 저장소(인자 없이 부르면 지금 값)
         ```
 
         - `build`는 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 실패하면 `error`와 `report.logTail`에 컴파일 오류가, `report.logPath`에 전체 로그 경로가 있다.
@@ -1062,6 +1110,8 @@ enum AgentScript {
         - 빌드를 게시한 뒤 사용자가 기기에서 봐야 할 것이 있으면 `checklist <번들 ID> <항목 JSON 파일>`(MCP `remotedebug_feedback_checklist`)로 이번에 바뀐 것만 확인 목록에 남긴다. 항목은 `id`, `title`, `place`(어디서), `steps`(할 일), `expect`(보여야 하는 것들), `choices`(고를 답 2~6개, 비우면 통과·실패·확인 못함), `since`(이 항목이 바뀐 빌드 번호. 앞선 빌드의 답은 세지 않는다), `stage`(묶음 이름)이고 50개까지다. 사용자에게 앱의 피드백 화면을 열어 "확인할 것"에 답하고 보내 달라고 한 뒤, `reports feedback`과 `report <id>`로 원문 끝의 "확인 목록의 답"을 읽는다. 확인이 끝난 항목은 목록에서 빼고, 다 끝나면 `checklist <번들 ID> clear`로 지운다. Debug 빌드에만 보이고 배포판에는 없다.
         - 확인 목록의 항목을 쓰는 규칙: \(AgentScript.checklistRules)
         - 받은 피드백을 다루는 규칙: \(AgentScript.feedbackHandlingRules)
+        - Mac이 피드백을 이슈로 올린다(프로젝트에 이슈 저장소가 정해져 있을 때. `issue-target <프로젝트> [owner/repo|clear|auto-on|auto-off]`, MCP `remotedebug_feedback_issue`의 `project_path`·`repo`·`auto`). 페어링한 기기가 Debug 빌드에서 보낸 피드백은 자동 등록이 켜져 있으면 받는 대로 올라가고, 목록의 `이슈:` 줄이 그 주소다(`issues`는 올린 것만). Mac이 올린 이슈에는 사용자가 쓴 글, 앱 버전, OS, 기기 종류, 확인 목록의 답만 있고 로그와 첨부는 없다. 로그와 첨부는 `report <기록 id>`와 목록의 `첨부:` 경로로 읽고 이슈에 옮겨 적지 않는다.
+        - 아직 올라가지 않은 피드백은 `issue <기록 id>`로 올라갈 제목과 본문을 먼저 보고, 사용자가 올리라고 했을 때만 `issue <기록 id> confirm`(MCP `id`와 `confirm: true`)으로 올린다. 같은 기록은 두 번 올라가지 않는다. 메일에 붙어 온 진단 파일에서 넣은 기록은 사용자가 Mac 화면에서 직접 올린다. 이슈 하나에 요청 하나라는 규칙은 그대로다: 올라간 이슈에 요청이 여럿이면 `gh`로 나누거나 제목을 요청에 맞게 고친다.
         - 문의를 처리했으면 `handled <기록 id>`(MCP `remotedebug_crash_logs`의 `id`와 `handled: true`)로 표시한다. 표시한 날부터 \(CrashLogStore.handledRetentionDays)일 뒤에 Mac이 그 기록과 첨부를 지운다(받은 파일을 문의 처리 뒤 \(CrashLogStore.handledRetentionDays)일 동안만 둔다는 약속이다). 잘못 표시했으면 `handled <기록 id> undo`(`handled: false`). 목록의 `처리함:` 줄이 표시한 날이다.
         - 배포판(App Store)에서는 패키지가 Mac으로 보내지 않고 메일만 쓴다. 사용자가 설정의 로그 기록 스위치(`RemoteDebugFeedbackConsentSection`)에서 동의하기 전에는 로그를 남기지 않으므로, 배포판 피드백에 로그가 없는 것은 고장이 아니다. 메일로 온 피드백은 본문의 `[rdfeedback:<번들 ID>:<빌드>]` 줄로 찾는다(제목은 언어에 따라 바뀐다).
         """

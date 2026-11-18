@@ -18,6 +18,7 @@ struct AppRow: View {
     @Environment(HostModel.self) private var host
     @State private var scheme = ""
     @State private var showsFeedbackSetup = false
+    @State private var showsIssueTarget = false
     @State private var feedbackAdded = true
     @State private var choosingFiles = false
 
@@ -121,6 +122,12 @@ struct AppRow: View {
         .sheet(isPresented: $showsFeedbackSetup, onDismiss: refreshFeedback) {
             if let controls {
                 FeedbackSetupSheet(project: controls, host: host.status?.fqdn ?? "")
+            }
+        }
+        .sheet(isPresented: $showsIssueTarget) {
+            if let controls, let projects {
+                // 저장한 값이 다시 열 때 보이도록 지금 목록의 항목을 넘긴다.
+                IssueTargetSheet(project: projects.projects.first { $0.id == controls.id } ?? controls, projects: projects)
             }
         }
         .fileImporter(isPresented: $choosingFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
@@ -250,6 +257,7 @@ struct AppRow: View {
                 Divider()
                 Button("파일 보내기…") { choosingFiles = true }
                 Button("크래시·피드백 보내기 추가…") { showsFeedbackSetup = true }
+                Button("이슈 저장소…") { showsIssueTarget = true }
                 Button("에이전트 연결…") { connectAgents(controls) }
                 Button("스킴 다시 읽기") { Task { await reloadSchemes() } }
                 Button("Finder에서 보기") { NSWorkspace.shared.activateFileViewerSelecting([controls.containerURL]) }

@@ -6,6 +6,9 @@ import SwiftUI
 /// iPhone이 보낸 크래시 기록과 피드백: 목록과 원문.
 struct CrashLogsView: View {
     @Environment(HostModel.self) private var model
+    @Environment(ProjectsModel.self) private var projects: ProjectsModel?
+    @State private var issuePreview: ProjectsModel.IssuePreview?
+    @State private var issueNotice: String?
     @State private var selection: String?
     @State private var search = ""
     @State private var importError: String?
@@ -32,7 +35,7 @@ struct CrashLogsView: View {
             } else {
                 HSplitView {
                     List(shown, selection: Binding(get: { selected?.id }, set: { selection = $0 })) { item in
-                        CrashRow(item: item).tag(item.id)
+                        CrashRow(item: item, issueError: projects?.issueErrors[item.id]).tag(item.id)
                     }
                     .frame(minWidth: 240, idealWidth: 280, maxWidth: 360)
                     if let selected {
@@ -61,6 +64,14 @@ struct CrashLogsView: View {
             Button("확인") { importError = nil }
         } message: {
             Text(importError ?? "")
+        }
+        .alert("이슈로 등록", isPresented: Binding(get: { issueNotice != nil }, set: { if !$0 { issueNotice = nil } })) {
+            Button("확인") { issueNotice = nil }
+        } message: {
+            Text(issueNotice ?? "")
+        }
+        .sheet(item: $issuePreview) { preview in
+            if let projects { IssuePreviewSheet(preview: preview, projects: projects) }
         }
         .toolbar {
             ToolbarItemGroup {
@@ -91,6 +102,18 @@ struct CrashLogsView: View {
                         Label("Finder에서 보기", systemImage: "folder")
                     }
                 }
+                Button {
+                    guard let selected, let projects else { return }
+                    // 올리기 전에 제목과 본문을 보여 준다. 올릴 수 없으면 까닭을 알린다.
+                    switch projects.issuePreview(for: selected.id) {
+                    case .success(let preview): issuePreview = preview
+                    case .failure(let failure): issueNotice = failure.message
+                    }
+                } label: {
+                    Label("이슈로 등록…", systemImage: "exclamationmark.bubble")
+                }
+                .disabled(selected?.kind != .feedback || selected?.issueURL != nil || projects == nil)
+                .help("이 피드백의 글과 앱·기기 정보를 GitHub 이슈로 올린다. 올리기 전에 제목과 본문을 보여 주고, 로그와 첨부는 올리지 않는다")
                 Button {
                     if let selected { store.setHandled(selected.id, selected.handledAt == nil) }
                 } label: {
@@ -126,6 +149,8 @@ extension CrashLogsView {
 
 private struct CrashRow: View {
     let item: CrashLogStore.Item
+    /// 이슈로 올리다 실패한 까닭. 없으면 `nil`.
+    var issueError: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -147,9 +172,24 @@ private struct CrashRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            if let address = item.issueURL, let url = URL(string: address) {
+                Link(destination: url) {
+                    if let number = item.issueNumber {
+                        Label("이슈 #\(number)", systemImage: "arrow.up.right.square")
+                    } else {
+                        Label("이슈 열기", systemImage: "arrow.up.right.square")
+                    }
+                }
+                .font(.caption)
+            } else if let issueError {
+                Label("이슈 등록 실패: \(issueError)", systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .lineLimit(3)
+            }
         }
         .padding(.vertical, 2)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
     }
 }
 
