@@ -5,7 +5,7 @@
 #   파일: `log stream --level info --predicate 'subsystem == "Swiftail"'`을 받은 것, 또는 기기 로그(jsonl).
 #   -p:   그 프로세스의 줄만(같은 Mac에서 돈 시험 실행의 줄을 뺄 때. 예: -p rd-swiftail-host).
 #
-# 고르는 줄: `연결이 끝남:`, `피어 N 경로:`(Swiftail 151942f부터)와 예전 꼴 `피어 경로:`.
+# 고르는 줄: `Connection ended:`, `Peer N path:`(Swiftail 274f57f부터 영어)와 예전 꼴 `연결이 끝남:`, `피어 N 경로:`, `피어 경로:`.
 # 가리는 것: 기기 로그의 기기·노드 이름, tailnet 이름, FQDN, tailnet 주소(100.64.0.0/10, fd7a:…), 그 밖의 IPv4·IPv6 주소, 키, 메일, 로그인 주소.
 set -eu
 
@@ -16,7 +16,7 @@ if [ "${1:-}" = "-p" ]; then
 fi
 [ $# -gt 0 ] || { echo "쓰는 법: $0 [-p 프로세스이름] 파일..." >&2; exit 2; }
 
-grep -hE "연결이 끝남:|피어( [0-9]+)? 경로:" "$@" \
+grep -hE "Connection ended:|Peer [0-9]+ path:|연결이 끝남:|피어( [0-9]+)? 경로:" "$@" \
   | { if [ -n "$process" ]; then grep -F " $process["; else cat; fi; } \
   | sed -E \
     -e 's/"(deviceId|deviceName|nodeName)":"[^"]*"/"\1":"…"/g' \

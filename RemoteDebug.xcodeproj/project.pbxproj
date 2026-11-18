@@ -1731,7 +1731,7 @@
 			repositoryURL = "https://github.com/oozoofrog/Swiftail";
 			requirement = {
 				kind = revision;
-				revision = 5dc81527e14629f1f1b44ec742ef1b1d76d2ebec;
+				revision = 57ad407e4a725428b1c5b24cefdaddf458801a64;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
