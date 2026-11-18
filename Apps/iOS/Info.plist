@@ -64,6 +64,8 @@
 	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>페어링 QR 코드를 읽는 데 카메라를 사용합니다.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Mac에서 받은 사진을 사진 보관함에 저장합니다.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>같은 Wi-Fi에 있는 페어링한 Mac을 찾아 VPN 없이 연결합니다.</string>
 	<key>NSSupportsLiveActivities</key>
