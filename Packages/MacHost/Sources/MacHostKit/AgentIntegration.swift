@@ -83,7 +83,7 @@ public struct AgentMCPServer: Sendable {
     }
 
     static var tools: [[String: Any]] { [
-        tool("remotedebug_status", "RemoteDebug Mac 앱의 상태: 공유 중인지, iPhone용 설치 페이지 주소, 연결한 프로젝트 목록.", path: false, scheme: false),
+        tool("remotedebug_status", "RemoteDebug Mac 앱의 상태: 공유 중인지, iPhone용 설치 페이지 주소, 연결한 프로젝트 목록. 프로젝트의 published는 그 프로젝트에서 가장 최근에 게시한 앱의 버전과 빌드 번호다(빌드 전에 번호를 올릴 때 본다).", path: false, scheme: false),
         tool("remotedebug_pairing_code", "RemoteDebug 앱이 아직 없는 iPhone용: Safari 설치 페이지에 넣을 8자 페어링 코드를 새로 연다(5분). 코드가 든 설치 페이지 링크(installPage)를 돌려준다. 사용자는 iPhone의 Tailscale 앱을 Mac과 같은 tailnet에 연결하고 그 링크를 Safari로 연 뒤, 페이지에서 RemoteDebug 앱을 설치한다. 앱이 이미 있는 iPhone은 이 코드를 쓰지 않는다: 사용자에게 Mac 앱의 'iPhone 페어링…'에서 'RemoteDebug 앱이 있는 iPhone'을 골라 QR로 페어링해 달라고 한다(그 QR은 에이전트에 주지 않는다). 허용은 Mac 화면에서 사용자가 누른다.", path: false, scheme: false),
         tool("remotedebug_pair_requests", "Mac의 허용을 기다리는 iPhone 페어링 요청 목록(요청 id, iPhone이 보낸 이름, tailnet 노드 이름, 로그인, 만료 시각). 요청은 2분 뒤 만료된다.", path: false, scheme: false),
         [
@@ -119,7 +119,7 @@ public struct AgentMCPServer: Sendable {
             ] as [String: Any], "required": [String]()] as [String: Any],
         ],
         tool("remotedebug_schemes", "Xcode 프로젝트를 RemoteDebug에 연결하고 스킴 목록을 돌려준다.", path: true, scheme: false),
-        tool("remotedebug_build", "Xcode 프로젝트를 Debug 기기용으로 빌드해 iPhone이 설치할 수 있게 게시한다. 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 설치는 사용자가 iPhone에서 누른다.", path: true, scheme: true),
+        tool("remotedebug_build", "Xcode 프로젝트를 Debug 기기용으로 빌드해 iPhone이 설치할 수 있게 게시한다. 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 설치는 사용자가 iPhone에서 누른다. 소스를 고쳤으면 빌드 전에 빌드 번호(CFBundleVersion, CURRENT_PROJECT_VERSION)를 올린다: iPhone은 설치된 앱을 버전과 빌드 번호로 알아보므로 번호가 그대로면 새 빌드가 설치됐는지 구분할 수 없다. 지금 게시된 번호는 remotedebug_status의 projects[].published에 있다. 응답의 report.notes는 Mac이 찾은 점검 사항이다(버전이 그대로인 새 실행 파일, 낮아진 빌드 번호, 곧 만료되는 프로필, 꺼진 공유, 바뀌지 않은 빌드). 고칠 수 있으면 고쳐 다시 게시하고 나머지는 사용자에게 옮긴다. 게시한 뒤에는 게시한 버전과 빌드 번호, 들어간 변경, 커밋하지 않은 변경으로 만든 빌드인지, iPhone에서 먼저 확인할 화면을 사용자에게 알린다.", path: true, scheme: true),
         [
             "name": "remotedebug_device_logs",
             "description": "페어링한 iPhone의 RemoteDebug 앱이 Mac에 보낸 진단 로그(앱 시작, VPN, 페어링, 빌드 목록, 설치·업데이트 진행). 기기마다 최근 줄을 돌려준다.",
@@ -408,6 +408,7 @@ extension AgentScript {
         - `build`는 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 스킴을 정하지 못하면 `schemes`가 함께 오니 하나를 골라 다시 부른다.
         - 실패하면 `error`와 `report.logTail`에 컴파일 오류가, `report.logPath`에 전체 로그 경로가 있다.
         - `report.published`가 게시된 빌드다. 비어 있고 `ok`가 true면 결과가 전과 같아 다시 게시하지 않은 것이다.
+        \(AgentScript.versionGuidance)
         - Mac은 게시까지만 한다. 설치는 페어링한 iPhone의 RemoteDebug 앱이나 설치 페이지(`installPage`)에서 사용자가 누른다.
         - `sharing`이 false면 iPhone이 빌드를 받을 수 없다. 사용자에게 RemoteDebug 앱에서 공유를 시작하라고 알린다.
         - 서명 오류(프로비저닝 프로필, 기기 미등록)는 여기서 고칠 수 없다. Xcode에서 한 번 기기용으로 빌드하라고 사용자에게 알린다.

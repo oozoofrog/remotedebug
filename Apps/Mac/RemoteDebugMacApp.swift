@@ -229,6 +229,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         guard let model else { return .failure(ShareFileFailure(String(localized: "RemoteDebug가 준비되지 않았습니다."))) }
                         return await model.shareLink(url, title: title, project: project)
                     }),
+                publishedBuilds: { [weak model] in (model?.builds ?? []).map(\.descriptor) },
                 importer: { [weak model] url in await model?.importBuild(url) })
             if AgentFeature.isEnabled {
                 let desk = AgentDesk(

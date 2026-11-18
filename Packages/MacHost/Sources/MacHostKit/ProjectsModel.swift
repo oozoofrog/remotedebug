@@ -37,6 +37,8 @@ public final class ProjectsModel {
         public var message: String?
         public var logTail: String?
         public var logPath: String?
+        /// 게시한 빌드에서 찾은 점검 사항(버전이 그대로인 새 실행 파일, 곧 만료되는 프로필 등). 없으면 nil.
+        public var notes: [String]?
     }
 
     public struct HostStatus: Sendable {
@@ -139,6 +141,8 @@ public final class ProjectsModel {
     }
 
     public typealias Importer = @MainActor (URL) async -> ImportOutcome?
+    /// 지금 게시돼 있는 빌드. 새 빌드의 버전을 앞선 빌드와 견준다.
+    public typealias PublishedBuilds = @MainActor () -> [BuildDescriptor]
 
     struct Stored: Codable, Sendable {
         var projects: [ConnectedProject] = []
@@ -178,6 +182,7 @@ public final class ProjectsModel {
     @ObservationIgnored private let builder: any ProjectBuilding
     @ObservationIgnored private let scanner: DerivedDataScanner
     @ObservationIgnored private let importer: Importer
+    @ObservationIgnored private let publishedBuilds: PublishedBuilds
     @ObservationIgnored private let hostStatus: @MainActor () -> HostStatus
     @ObservationIgnored private let openPairing: PairingOpener
     @ObservationIgnored private let pairingRequests: PairingRequests
@@ -202,6 +207,7 @@ public final class ProjectsModel {
         pairingRequests: PairingRequests = .unavailable,
         fileSharing: FileSharing = .unavailable,
         now: @escaping @Sendable () -> Date = { Date() },
+        publishedBuilds: @escaping PublishedBuilds = { [] },
         importer: @escaping Importer
     ) {
         self.root = root
@@ -214,6 +220,7 @@ public final class ProjectsModel {
         self.fileSharing = fileSharing
         self.now = now
         self.importer = importer
+        self.publishedBuilds = publishedBuilds
     }
 
     public var agentDir: URL { root.appendingPathComponent("agent", isDirectory: true) }
@@ -423,6 +430,8 @@ public final class ProjectsModel {
                 let d = build.descriptor
                 notePublished(d.bundleId, by: project)
                 report.published.append(Published(buildId: d.id, bundleId: d.bundleId, name: d.displayName, version: d.version, buildNumber: d.buildNumber))
+                let notes = PublishAdvice.notes(for: d, others: publishedBuilds(), now: now())
+                if !notes.isEmpty { report.notes = (report.notes ?? []) + notes }
             case .rejected(let rejected):
                 rejections.append("\(app.lastPathComponent): " + rejected.reasons.map(RejectionText.sentence(for:)).joined(separator: " "))
             case .needsConfirmation:
@@ -579,6 +588,22 @@ public final class ProjectsModel {
         var container: String
         var name: String
         var scheme: String?
+        /// 이 프로젝트에서 게시한 앱마다 가장 최근에 게시한 빌드. 빌드 전에 버전을 올릴지 정할 때 본다.
+        var published: [Published]?
+    }
+
+    /// 프로젝트가 게시한 앱마다 가장 최근 빌드 하나.
+    func latestPublished(of project: ConnectedProject) -> [Published]? {
+        let ids = stored.bundleIds?[project.container] ?? []
+        let builds = publishedBuilds()
+        let latest = ids.compactMap { id in builds.filter { $0.bundleId == id }.max { $0.publishedAt < $1.publishedAt } }
+        return latest.isEmpty ? nil : latest.map {
+            Published(buildId: $0.id, bundleId: $0.bundleId, name: $0.displayName, version: $0.version, buildNumber: $0.buildNumber)
+        }
+    }
+
+    private func agentProject(_ project: ConnectedProject) -> AgentProject {
+        AgentProject(container: project.container, name: project.name, scheme: project.scheme, published: latestPublished(of: project))
     }
 
     var requestsDir: URL { agentDir.appendingPathComponent("requests", isDirectory: true) }
@@ -673,7 +698,7 @@ public final class ProjectsModel {
         case "status", "projects":
             let host = hostStatus()
             return AgentResponse(ok: true, sharing: host.sharing, installPage: host.installPage, updatePage: host.updatePage,
-                                 projects: projects.map { AgentProject(container: $0.container, name: $0.name, scheme: $0.scheme) })
+                                 projects: projects.map(agentProject))
         case "pair":
             // 코드만 연다. 허용은 지금처럼 Mac 화면에서만 한다.
             switch await openPairing() {
@@ -750,13 +775,20 @@ public final class ProjectsModel {
             }
             let list = await loadSchemes(for: project)
             if command != "build" {
-                return AgentResponse(ok: true, projects: [AgentProject(container: project.container, name: project.name, scheme: project.scheme)], schemes: list)
+                return AgentResponse(ok: true, projects: [agentProject(project)], schemes: list)
             }
             guard let chosen = scheme.isEmpty ? preferredScheme(for: project) : scheme else {
                 return AgentResponse(ok: false, error: "스킴을 정해 주세요.", schemes: list)
             }
-            let report = await build(project, scheme: chosen)
+            var report = await build(project, scheme: chosen)
             let host = hostStatus()
+            // 사람이 놓치기 쉬운 것: 게시는 됐는데 iPhone이 받을 수 없는 상태, 고쳤는데 결과가 그대로인 빌드.
+            if report.ok, !host.sharing {
+                report.notes = (report.notes ?? []) + ["공유가 꺼져 있어 iPhone이 이 빌드를 받을 수 없습니다. RemoteDebug Mac 앱에서 공유를 시작해야 합니다."]
+            }
+            if report.ok, report.published.isEmpty {
+                report.notes = (report.notes ?? []) + ["빌드 결과가 앞선 게시와 같아 새로 게시하지 않았습니다. 소스를 고쳤는데도 그렇다면 고친 파일이 이 스킴의 대상에 들어 있는지, 저장됐는지 확인하세요."]
+            }
             return AgentResponse(ok: report.ok, error: report.ok ? nil : report.message, sharing: host.sharing,
                                  installPage: host.installPage, report: report)
         default:
@@ -861,6 +893,7 @@ enum AgentScript {
 
         - `build`는 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 실패하면 `error`와 `report.logTail`에 컴파일 오류가, `report.logPath`에 전체 로그 경로가 있다.
         - `report.published`가 게시된 빌드다. 비어 있고 `ok`가 true면 결과가 전과 같아 다시 게시하지 않은 것이다.
+        \(AgentScript.versionGuidance)
         - Mac은 게시까지만 한다. 설치는 페어링한 iPhone의 RemoteDebug 앱이나 설치 페이지(`installPage`)에서 사용자가 누른다.
         - `sharing`이 false면 iPhone이 빌드를 받을 수 없다. 사용자에게 RemoteDebug 앱에서 공유를 시작하라고 알린다.
         - 보낸 파일·링크는 프로젝트 구역으로 나뉜다. 프로젝트는 연결한 프로젝트의 이름이나 `.xcodeproj`·`.xcworkspace` 경로로 정한다. 연결한 프로젝트가 아니면 `error`에 쓸 수 있는 이름이 나온다. `files`의 항목에 `project`가 없으면 공통 구역이다.
@@ -868,6 +901,13 @@ enum AgentScript {
         - 서명 오류(프로비저닝 프로필, 기기 미등록)는 이 명령으로 고칠 수 없다. Xcode에서 한 번 기기용으로 빌드하라고 사용자에게 알린다.
         """
     }
+
+    /// 버전 올리기와 게시 뒤 점검. 전역 스킬과 프로젝트 안내가 함께 쓴다.
+    static let versionGuidance = """
+        - 소스를 고친 뒤 게시할 때는 빌드 전에 빌드 번호(CFBundleVersion, Xcode 설정 `CURRENT_PROJECT_VERSION`)를 올린다. iPhone은 설치된 앱을 버전과 빌드 번호로 알아보므로, 번호가 그대로면 새 빌드가 설치됐는지 구분할 수 없다. 지금 게시된 번호는 `status`(또는 `schemes`)의 `projects[].published`에 있다. 번호를 올리는 것이 사용자의 릴리스 규칙과 부딪칠 수 있으면 먼저 묻는다.
+        - `report.notes`는 Mac이 게시한 빌드에서 찾은 점검 사항이다(버전이 그대로인 새 실행 파일, 낮아진 빌드 번호, 곧 만료되는 프로필, 꺼진 공유, 바뀌지 않은 빌드). 고칠 수 있는 것은 고쳐서 다시 게시하고, 나머지는 빠짐없이 사용자에게 옮긴다.
+        - 게시한 뒤 사용자에게 알린다: 게시한 앱의 버전과 빌드 번호(iPhone에서 이 번호를 확인하게 한다), 이번 빌드에 들어간 변경, 커밋하지 않은 변경으로 만든 빌드인지, iPhone에서 먼저 확인할 화면. 확인할 화면에 딥 링크가 있으면 `link`로 보낸다.
+        """
 
     static func skill(script: String, container: String) -> String {
         """
