@@ -189,8 +189,8 @@ public final class HTTPListener: Sendable {
             origin = .tailnet(peer)
         case .direct:
             guard case .direct(let ip, _)? = addressOrigin else { return }
-            // 연결이 들어온 이 Mac의 인터페이스(USB 케이블 설치가 어느 iPhone인지 가리는 데 쓴다).
-            origin = .direct(remoteIP: ip, interface: Self.localInterface(of: connection))
+            // 연결이 들어온 이 Mac의 인터페이스(USB 케이블 설치가 어느 iPhone인지 가리는 데 쓴다). 확실히 알 때만 준다.
+            origin = .direct(remoteIP: ip, interface: Self.receivingInterface(of: connection.endpoint))
         case .loopback:
             guard let addressOrigin else { return }
             origin = addressOrigin
@@ -208,12 +208,15 @@ public final class HTTPListener: Sendable {
                         loginName: identity.loginName)
     }
 
-    /// 연결이 들어온 인터페이스의 이름. 링크 로컬 IPv6 상대는 주소에 붙은 영역이 그것이다. 그 밖에는 연결의 경로에서 읽는다.
-    static func localInterface(of connection: NWConnection) -> String? {
-        if case .hostPort(let host, _) = connection.endpoint, case .ipv6(let address) = host, let name = address.interface?.name {
-            return name
-        }
-        return connection.currentPath?.availableInterfaces.first?.name
+    /// 연결이 들어온 인터페이스의 이름. 상대가 IPv6 링크 로컬 주소일 때만 안다: 그 주소에 붙은 영역이 커널이 적은, 패킷을 받은 인터페이스다.
+    ///
+    /// 그 밖의 연결(IPv4 전부, 링크 로컬이 아닌 IPv6)은 nil이다. `currentPath.availableInterfaces`는 받은 인터페이스가 아니라 쓸 수 있는
+    /// 인터페이스의 목록이어서, 그 첫째를 쓰면 Wi-Fi나 다른 케이블로 온 요청을 엉뚱한 iPhone의 케이블 요청으로 볼 수 있다.
+    /// 모르면 케이블 설치는 `cable_required`로 거절된다(iPhone은 VPN 설치로 넘어간다).
+    static func receivingInterface(of endpoint: NWEndpoint) -> String? {
+        guard case .hostPort(let host, _) = endpoint, case .ipv6(let address) = host, address.isLinkLocal,
+              let name = address.interface?.name, !name.isEmpty else { return nil }
+        return name
     }
 
     /// 연결의 원격 IP(문자열). IPv4 대응 IPv6는 IPv4로, 영역(`%en0`)은 뗀다.

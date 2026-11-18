@@ -65,12 +65,28 @@ public struct USBDeviceRegistry: CableDeviceFinding {
     }
 }
 
-/// `ditto`로 풀고 `xcrun devicectl`로 설치한다.
+/// `ditto`로 풀고 `xcrun devicectl`로 설치한다. 둘 다 기한이 있어, 멈춘 도구는 끝내고 실패로 돌려준다.
 public struct CableInstallTools: CableInstallTooling {
-    public init() {}
+    /// IPA를 푸는 `ditto`의 기한(초).
+    public static let unpackTimeout: TimeInterval = 300
+    /// `devicectl device install app`의 기한(초). 큰 앱은 옮기는 데 오래 걸려 넉넉하게 둔다.
+    /// 둘을 더해도 호스트 로직이 세션을 끝내는 기한(`HostLogic.Limits.cableInstallTimeout`, 1800초)보다 짧다.
+    public static let installTimeout: TimeInterval = 1200
+
+    public typealias Run = @Sendable (_ executable: String, _ arguments: [String], _ timeout: TimeInterval) async -> (code: Int32, output: String)
+    private let run: Run
+
+    public init() {
+        self.init(run: { await PhoneAppTools.run($0, $1, log: nil, timeout: $2) })
+    }
+
+    /// 시험은 도구 대신 가짜를 넣는다.
+    init(run: @escaping Run) {
+        self.run = run
+    }
 
     public func unpack(ipa: URL, into directory: URL) async -> URL? {
-        let result = await PhoneAppTools.run("/usr/bin/ditto", ["-x", "-k", ipa.path, directory.path], log: nil)
+        let result = await run("/usr/bin/ditto", ["-x", "-k", ipa.path, directory.path], Self.unpackTimeout)
         guard result.code == 0 else { return nil }
         let payload = directory.appendingPathComponent("Payload")
         let apps = (try? FileManager.default.contentsOfDirectory(at: payload, includingPropertiesForKeys: nil))?
@@ -79,8 +95,12 @@ public struct CableInstallTools: CableInstallTooling {
     }
 
     public func install(app: URL, device: String) async -> String? {
-        let result = await PhoneAppTools.run("/usr/bin/xcrun", ["devicectl", "device", "install", "app", "--device", device, app.path], log: nil)
-        return result.code == 0 ? nil : PhoneAppInstallError.explain(result.output, step: String(localized: "iPhone에 설치")).message
+        let result = await run("/usr/bin/xcrun", ["devicectl", "device", "install", "app", "--device", device, app.path], Self.installTimeout)
+        if result.code == PhoneAppTools.timedOutCode {
+            return String(localized: "설치가 \(Int(Self.installTimeout / 60))분 안에 끝나지 않아 멈췄습니다. iPhone의 잠금을 풀고 케이블을 확인한 뒤 다시 설치하세요.")
+        }
+        // 이 글은 iPhone으로 간다. 도구가 낸 줄을 그대로 쓰는 경우에는 이 Mac의 경로와 기기 식별자를 가린다.
+        return result.code == 0 ? nil : PhoneAppInstallError.explain(result.output, step: String(localized: "iPhone에 설치"), redacting: true).message
     }
 }
 
@@ -121,9 +141,18 @@ public struct CableInstaller: Sendable {
         return Self.udid(fromUSBSerial: serial)
     }
 
-    /// IPA를 풀어 설치한다. 실패면 사용자에게 보일 이유, 성공이면 nil. 푼 폴더는 끝나면 지운다.
+    /// 푼 폴더 이름의 앞부분.
+    static let workPrefix = "rd-cable-"
+
+    /// 앞선 실행이 남긴 푼 폴더(`rd-cable-*`)를 지운다. 앱을 켤 때 부른다(설치 도중에 앱이 꺼지면 남는다).
+    public static func removeLeftovers(in root: URL = FileManager.default.temporaryDirectory) {
+        let entries = (try? FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)) ?? []
+        for entry in entries where entry.lastPathComponent.hasPrefix(workPrefix) { try? FileManager.default.removeItem(at: entry) }
+    }
+
+    /// IPA를 풀어 설치한다. 실패면 사용자에게 보일 이유, 성공이면 nil. 푼 폴더는 끝나면(실패와 기한 넘김 포함) 지운다.
     public func install(ipa: URL, device: String) async -> String? {
-        let work = workRoot.appendingPathComponent("rd-cable-\(UUID().uuidString)", isDirectory: true)
+        let work = workRoot.appendingPathComponent(Self.workPrefix + UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: work) }
         do {
             try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)

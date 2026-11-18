@@ -169,6 +169,27 @@ struct DirectTests {
         #expect(try savedDevices(h.paths).isEmpty)
     }
 
+    // MARK: 케이블로 묶인 iPhone(addenda R)
+
+    @Test func cableBindingIsSavedAndGoesAwayWhenTheDeviceIsRemoved() async throws {
+        let h = try makeHarness("cable-binding", devices: [sampleDevice(1), sampleDevice(2)])
+        await h.model.start()
+        var bound = sampleDevice(1)
+        bound.cableUDID = "00008120-000000000000001E"
+        h.model.handle(.deviceUpdated(bound))
+        #expect(h.model.devices.first?.cableUDID == "00008120-000000000000001E" && h.model.devices.last?.cableUDID == nil)
+        #expect(try savedDevices(h.paths).first?.cableUDID == "00008120-000000000000001E")
+
+        // 주인이 기기를 허용 목록에서 빼면 묶음도 사라진다. 같은 id로 다시 허용한 항목에는 남아 있지 않다.
+        await h.model.removeDevice("d_1")
+        #expect(try savedDevices(h.paths).allSatisfy { $0.cableUDID == nil })
+        #expect(h.core.setDevicesCalls.last?.allSatisfy { $0.cableUDID == nil } == true)
+        // 저장한 모양: 묶이지 않은 기기에는 키가 없다.
+        let plain = try JSONSerialization.jsonObject(with: RDJSON.encoder().encode(sampleDevice(2))) as? [String: Any]
+        #expect(plain?["cableUDID"] == nil)
+        #expect(try RDJSON.decoder().decode(DeviceEntry.self, from: RDJSON.encoder().encode(bound)).cableUDID == bound.cableUDID)
+    }
+
     // MARK: 알림 기기 토큰(addenda P)
 
     @Test func pushRegistrationIsSavedAndSurvivesAReload() async throws {

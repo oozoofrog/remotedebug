@@ -131,6 +131,8 @@ public final class SwiftailHostCore: HostCore, Sendable {
 
     /// 앱의 저장 위치로. `pairingLinkBase`가 있으면 제안 링크와 QR을 그 https 주소로 낸다.
     public convenience init(paths: HostPaths, pairingLinkBase: PairingLinkBase? = nil) {
+        // 앞선 실행에서 케이블 설치 도중에 꺼졌으면 푼 빌드가 임시 폴더에 남아 있다.
+        CableInstaller.removeLeftovers()
         self.init(layout: Layout(directDirectory: paths.directDir, legacyStateDirectory: paths.legacyStateDir,
                                  pairingDirectory: paths.pairingDir, pairingLinkBase: pairingLinkBase, cableInstaller: CableInstaller()))
     }

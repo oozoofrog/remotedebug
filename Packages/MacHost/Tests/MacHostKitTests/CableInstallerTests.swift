@@ -88,6 +88,56 @@ struct CableInstallerTests {
         try? FileManager.default.removeItem(at: workRoot)
     }
 
+    @Test func leftoverWorkFoldersAreRemovedAtStart() throws {
+        let fm = FileManager.default
+        let root = workRoot
+        defer { try? fm.removeItem(at: root) }
+        for name in ["rd-cable-AAAA/Payload/Sample.app", "rd-cable-BBBB", "other-folder"] {
+            try fm.createDirectory(at: root.appendingPathComponent(name), withIntermediateDirectories: true)
+        }
+        try Data("x".utf8).write(to: root.appendingPathComponent("keep.txt"))
+        CableInstaller.removeLeftovers(in: root)
+        #expect(Set(try fm.contentsOfDirectory(atPath: root.path)) == ["other-folder", "keep.txt"])
+        CableInstaller.removeLeftovers(in: root.appendingPathComponent("nosuch"))
+    }
+
+    @Test func toolsRunWithATimeoutAndReportItAsAFailure() async {
+        let seen = Mutex<[(tool: String, timeout: TimeInterval)]>([])
+        let slow = CableInstallTools { executable, arguments, timeout in
+            seen.withLock { $0.append((arguments.first == "devicectl" ? "devicectl" : URL(fileURLWithPath: executable).lastPathComponent, timeout)) }
+            return (PhoneAppTools.timedOutCode, "")
+        }
+        // 멈춘 ditto: 풀지 못한 것으로 끝난다.
+        #expect(await slow.unpack(ipa: URL(fileURLWithPath: "/x.ipa"), into: workRoot) == nil)
+        // 멈춘 devicectl: 기한을 알리는 글로 끝난다.
+        let message = await slow.install(app: URL(fileURLWithPath: "/w/Payload/Sample.app"), device: "00008120-000000000000001E")
+        #expect(message?.contains("\(Int(CableInstallTools.installTimeout / 60))분 안에 끝나지 않아") == true)
+        let calls = seen.withLock { $0 }
+        #expect(calls.map(\.tool) == ["ditto", "devicectl"])
+        #expect(calls.map(\.timeout) == [CableInstallTools.unpackTimeout, CableInstallTools.installTimeout])
+        #expect(CableInstallTools.unpackTimeout + CableInstallTools.installTimeout < 1800, "로직이 세션을 끝내는 기한보다 짧다")
+    }
+
+    /// 도구가 낸 줄을 그대로 싣는 실패 이유는 iPhone으로 간다. 이 Mac의 경로와 기기 식별자를 가린다.
+    @Test func unknownToolErrorsAreRedactedBeforeTheyLeaveTheMac() async {
+        let output = """
+        09:00:01 Acquired tunnel connection to device.
+        error: Failed to install /private/var/folders/ab/T/rd-cable-0000/Payload/Sample.app on device 00008120-000000000000001E (my-mac.local) [ABCDEF01-2345-6789-ABCD-EF0123456789]
+        """
+        let tools = CableInstallTools { _, _, _ in (1, output) }
+        let message = await tools.install(app: URL(fileURLWithPath: "/w/Payload/Sample.app"), device: "00008120-000000000000001E") ?? ""
+        #expect(message.contains("iPhone에 설치에 실패했습니다") && message.contains("Failed to install"))
+        for secret in ["/private/var", "rd-cable-", "Sample.app", "00008120-000000000000001E", "my-mac.local", "ABCDEF01-2345"] {
+            #expect(!message.contains(secret), "\(secret)")
+        }
+        // 아는 원인은 정해 둔 안내 그대로다.
+        let locked = CableInstallTools { _, _, _ in (1, "error: The device is locked.") }
+        #expect(await locked.install(app: URL(fileURLWithPath: "/w/a.app"), device: "d") == "iPhone이 잠겨 있습니다. 잠금을 풀고 다시 설치하세요.")
+        // 이 Mac 안에서만 보이는 글(iPhone 앱 설치 화면)은 그대로 둔다.
+        #expect(PhoneAppInstallError.explain(output, step: "iPhone에 설치").message.contains("/private/var/folders"))
+        #expect(await CableInstallTools { _, _, _ in (0, "") }.install(app: URL(fileURLWithPath: "/w/a.app"), device: "d") == nil)
+    }
+
     @Test func failuresComeBackAsText() async {
         let broken = CableInstaller(finder: FakeFinder(serials: [:]), tools: FakeTools(unpackFails: true), workRoot: workRoot)
         #expect(await broken.install(ipa: URL(fileURLWithPath: "/x.ipa"), device: "d") == "빌드 파일(IPA)을 풀지 못했습니다. 다시 게시한 뒤 설치하세요.")

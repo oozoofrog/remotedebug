@@ -29,6 +29,9 @@ public struct DeviceEntry: Codable, Sendable, Hashable, Identifiable {
     public var directTokenHash: String?
     /// docs/protocol-addenda.md P: 알림 기기 토큰. 등록하지 않았으면 없다.
     public var push: PushRegistration?
+    /// docs/protocol-addenda.md R: 이 기기가 처음 USB 케이블 설치를 요청했을 때 그 케이블에 꽂혀 있던 iPhone의 UDID.
+    /// 그 뒤로 이 기기의 토큰으로는 그 iPhone에만 설치시킬 수 있다. 허용 목록에서 빼면 항목과 함께 사라진다. 없으면 아직 묶이지 않았다.
+    public var cableUDID: String?
 
     /// 같은 네트워크 직접 연결에 등록한 기기인가.
     public var isDirectEnrolled: Bool { directTokenHash?.isEmpty == false }
@@ -37,7 +40,8 @@ public struct DeviceEntry: Codable, Sendable, Hashable, Identifiable {
     public var isPushRegistered: Bool { push?.token.isEmpty == false }
 
     public init(id: String, name: String, nodeStableId: String, nodeName: String, loginName: String, pairedAt: Date, directTokenHash: String? = nil,
-                push: PushRegistration? = nil) {
+                push: PushRegistration? = nil, cableUDID: String? = nil) {
+        self.cableUDID = cableUDID
         self.id = id
         self.name = name
         self.nodeStableId = nodeStableId
@@ -49,7 +53,7 @@ public struct DeviceEntry: Codable, Sendable, Hashable, Identifiable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, nodeStableId, nodeName, loginName, pairedAt, directTokenHash, push
+        case id, name, nodeStableId, nodeName, loginName, pairedAt, directTokenHash, push, cableUDID
     }
 
     public init(from decoder: any Decoder) throws {
@@ -63,6 +67,7 @@ public struct DeviceEntry: Codable, Sendable, Hashable, Identifiable {
         directTokenHash = try c.decodeIfPresent(String.self, forKey: .directTokenHash)
         // 모양이 틀린 `push`는 없는 것으로 읽는다(항목 전체를 버리지 않는다).
         push = (try? c.decodeIfPresent(PushRegistration.self, forKey: .push)) ?? nil
+        cableUDID = (try? c.decodeIfPresent(String.self, forKey: .cableUDID)) ?? nil
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -75,6 +80,7 @@ public struct DeviceEntry: Codable, Sendable, Hashable, Identifiable {
         try c.encodeRDDate(pairedAt, forKey: .pairedAt)
         if let directTokenHash, !directTokenHash.isEmpty { try c.encode(directTokenHash, forKey: .directTokenHash) }
         if let push { try c.encode(push, forKey: .push) }
+        if let cableUDID, !cableUDID.isEmpty { try c.encode(cableUDID, forKey: .cableUDID) }
     }
 }
 

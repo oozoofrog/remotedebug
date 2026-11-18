@@ -22427,6 +22427,34 @@
         }
       }
     },
+    "설치가 %lld분 안에 끝나지 않아 멈췄습니다. iPhone의 잠금을 풀고 케이블을 확인한 뒤 다시 설치하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The install didn't finish within %lld minutes and was stopped. Unlock the iPhone, check the cable, and install again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストールが%lld分以内に終わらなかったため停止しました。iPhoneのロックを解除し、ケーブルを確認してからもう一度インストールしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装未在 %lld 分钟内完成，已停止。请解锁 iPhone 并检查连接线，然后重新安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安裝未在 %lld 分鐘內完成，已停止。請解鎖 iPhone 並檢查連接線，然後重新安裝。"
+          }
+        }
+      }
+    },
     "설치된 버전" : {
       "localizations" : {
         "en" : {

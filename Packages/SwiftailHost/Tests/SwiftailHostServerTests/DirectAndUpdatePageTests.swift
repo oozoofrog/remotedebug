@@ -80,6 +80,24 @@ struct DirectListenerTests {
         }
     }
 
+    /// 받은 인터페이스는 상대가 IPv6 링크 로컬 주소일 때만(그 주소의 영역으로) 안다. IPv4와 그 밖의 IPv6는 모른다고 답한다:
+    /// 모르는데 아무 인터페이스나 대면 다른 iPhone의 케이블 요청으로 잘못 본다(protocol-addenda R.2).
+    @Test func receivingInterfaceIsKnownOnlyForScopedLinkLocalIPv6() throws {
+        func endpoint(_ host: NWEndpoint.Host) -> NWEndpoint { .hostPort(host: host, port: 49152) }
+        let scoped = try #require(IPv6Address("fe80::1c2d:3e4f:5a6b:7c8d%lo0"))
+        #expect(scoped.interface?.name == "lo0")
+        #expect(HTTPListener.receivingInterface(of: endpoint(.ipv6(scoped))) == "lo0")
+        #expect(HTTPListener.remoteIP(endpoint(.ipv6(scoped))) == "fe80::1c2d:3e4f:5a6b:7c8d")
+        // 영역이 없는 링크 로컬, 링크 로컬이 아닌 IPv6(영역이 붙어 있어도), IPv4 전부.
+        #expect(HTTPListener.receivingInterface(of: endpoint(.ipv6(try #require(IPv6Address("fe80::1"))))) == nil)
+        #expect(HTTPListener.receivingInterface(of: endpoint(.ipv6(try #require(IPv6Address("fd00::5%lo0"))))) == nil)
+        #expect(HTTPListener.receivingInterface(of: endpoint(.ipv6(try #require(IPv6Address("::ffff:169.254.3.3"))))) == nil)
+        for address in ["169.254.3.3", "192.168.1.20", "10.0.0.1"] {
+            #expect(HTTPListener.receivingInterface(of: endpoint(.ipv4(try #require(IPv4Address(address))))) == nil, "\(address)")
+        }
+        #expect(HTTPListener.receivingInterface(of: endpoint(.name("example.local", nil))) == nil)
+    }
+
     /// 실제 TLS 1.3 핸드셰이크를 루프백에서 하고, 고정 값(SPKI)으로 서버를 확인한 뒤 요청이 `.direct`로 로직에 간다.
     @Test func tlsListenerServesWithPinnedKey() async throws {
         let directory = try makeTestDirectory()

@@ -1122,14 +1122,17 @@ public final class HostModel {
         return true
     }
 
-    /// 기기가 직접 연결(addenda O)이나 알림(addenda P)에 등록했다. 이미 허용한 기기의 직접 연결 토큰 해시와
-    /// 알림 기기 토큰만 바꿔 저장한다(둘 중 하나라도 바뀌었을 때). 그사이 목록에서 지운 기기는 다시 넣지 않는다.
+    /// 기기가 직접 연결(addenda O)이나 알림(addenda P)에 등록했거나, 처음 케이블 설치를 해서 그 iPhone에 묶였다(addenda R).
+    /// 이미 허용한 기기의 직접 연결 토큰 해시, 알림 기기 토큰, 케이블로 묶인 iPhone만 바꿔 저장한다(하나라도 바뀌었을 때).
+    /// 그사이 목록에서 지운 기기는 다시 넣지 않는다. 기기를 목록에서 빼면 이 값들도 항목과 함께 사라진다.
     private func storeDeviceUpdate(_ device: DeviceEntry) {
         guard coreControlURL == deviceControlURL,
               let i = devices.firstIndex(where: { $0.id == device.id && $0.nodeStableId == device.nodeStableId }),
-              devices[i].directTokenHash != device.directTokenHash || devices[i].push != device.push else { return }
+              devices[i].directTokenHash != device.directTokenHash || devices[i].push != device.push
+                || devices[i].cableUDID != device.cableUDID else { return }
         devices[i].directTokenHash = device.directTokenHash
         devices[i].push = device.push
+        devices[i].cableUDID = device.cableUDID
         saveDevices()
         removeSuperseded(by: devices[i])
     }
