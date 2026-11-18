@@ -20,7 +20,8 @@ public enum HostOrigin: Sendable, Hashable {
     /// tailnet 443. 상대는 Swiftail이 확인한 노드다.
     case tailnet(HostPeer)
     /// 같은 네트워크 직접 연결 리스너(protocol-addenda O). 상대의 IP만 안다. 누구인지는 로직이 토큰으로 가린다.
-    /// `interface`는 연결이 들어온 이 Mac의 네트워크 인터페이스 이름(`en0`, `anri0`). 모르면 nil.
+    /// `interface`는 연결이 들어온 이 Mac의 네트워크 인터페이스 이름(`en0`, `anri0`). 전송은 확실히 아는 때에만 준다
+    /// (상대가 IPv6 링크 로컬 주소일 때 그 주소의 영역). 모르면 nil이고, 그때 케이블 설치는 받지 않는다.
     /// USB 케이블 설치(protocol-addenda R)가 어느 iPhone의 케이블인지 가리는 데만 쓴다.
     case direct(remoteIP: String, interface: String? = nil)
 }
@@ -30,6 +31,7 @@ public protocol HostCableInstalling: Sendable {
     /// 이 인터페이스가 USB로 꽂은 iPhone의 것이면 그 기기의 식별자(UDID). 아니면 nil.
     func device(onInterface name: String) -> String?
     /// IPA를 그 기기에 설치한다. 끝나면 `completion`을 한 번 부른다. 실패면 사용자에게 보일 이유, 성공이면 nil.
+    /// 구현은 도구가 멈춰도 `HostLogic.Limits.cableInstallTimeout` 안에 끝내야 한다. 그때까지 부르지 않으면 로직이 세션을 실패로 끝낸다.
     func install(ipaPath: String, device: String, completion: @escaping @Sendable (String?) -> Void)
 }
 

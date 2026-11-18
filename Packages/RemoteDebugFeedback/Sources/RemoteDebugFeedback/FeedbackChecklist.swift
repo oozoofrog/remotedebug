@@ -103,7 +103,10 @@ final class FeedbackCheckStore: ObservableObject {
     /// 메모 글자 수 한도.
     nonisolated static let noteLimit = 200
     /// Mac에서 받는 목록의 크기 한도(바이트). 넘으면 받지 않는다.
-    nonisolated static let maxResponseBytes = 512 << 10
+    /// Mac이 저장할 때 지키는 한도(`macStoredBytes`)의 두 배라, Mac이 받아 준 목록은 언제나 여기에 들어간다.
+    nonisolated static let maxResponseBytes = 2 * macStoredBytes
+    /// Mac 앱이 목록 하나를 저장할 때의 크기 한도(바이트). RemoteDebug의 `FeedbackChecklist.maxEncodedBytes`와 같은 값이다.
+    nonisolated static let macStoredBytes = 256 << 10
 
     @Published private(set) var items: [FeedbackCheckItem] = []
     @Published private(set) var answers: [String: Answer] = [:]
@@ -116,6 +119,14 @@ final class FeedbackCheckStore: ObservableObject {
     nonisolated static func defaultDirectory() -> URL? {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
             .appendingPathComponent("RemoteDebugFeedbackChecks", isDirectory: true)
+    }
+
+    /// 이 폴더에 둔 답(`answers.json`)과 받아 둔 목록(`checklist.json`)을 지우고, 비었으면 폴더도 지운다.
+    /// 사용자가 로그 기록 동의를 거둘 때 부른다. 열려 있는 화면의 답은 화면을 닫을 때까지 메모리에 남을 수 있다.
+    nonisolated static func removeStored(in directory: URL) {
+        let fm = FileManager.default
+        for name in ["answers.json", "checklist.json"] { try? fm.removeItem(at: directory.appendingPathComponent(name)) }
+        if (try? fm.contentsOfDirectory(atPath: directory.path))?.isEmpty == true { try? fm.removeItem(at: directory) }
     }
 
     /// `directory`가 `nil`이면 메모리에만 둔다(시험).

@@ -3,6 +3,18 @@ import RDModels
 
 /// 공개 저장소에 올라갈 수 있는 글에서 사람이나 기기를 가리킬 수 있는 값을 가린다.
 /// 이슈에 넣는 글(사용자가 쓴 글, 확인 목록의 제목·답·메모)은 모두 여기를 지난다.
+///
+/// 규칙(위에서 아래 차례로 적용한다. 앞 규칙이 가린 자리는 뒤 규칙이 다시 쪼개지 않는다):
+/// 1. `file:` 주소와 사용자 폴더·시스템 폴더 경로는 그 줄의 끝까지 가린다(경로에 빈칸이 있을 수 있다).
+/// 2. 주소(`스킴://…`)는 모두 가린다. 남기는 것은 `https://github.com/<owner>/<repo>`와 그 아래의
+///    `/issues`, `/issues/<번호>`, `/pull/<번호>`뿐이다(쿼리, 조각, 포트, 로그인 정보가 붙으면 가린다).
+/// 3. 토큰: `Bearer …`, JWT(`eyJ….….…`), `ghp_`·`gho_`·`ghs_`·`ghu_`·`ghr_`·`github_pat_`, `sk-…`, `xox?-…`, `AKIA…`.
+/// 4. `@`의 앞뒤에 글자가 붙은 것은 메일 주소로 보고 가린다(한글 주소, 최상위 도메인이 없는 주소 포함).
+/// 5. 기기 UDID, MAC 주소, IPv6(IPv4 대응 주소와 `%영역` 포함), IPv4.
+/// 6. 호스트 이름: `….ts.net`, `rd-mac-…`·`rd-phone-…`, `tail` 뒤에 16진수 4자 이상, `….local`.
+/// 7. 전화번호처럼 보이는 숫자열(숫자 9개 이상), 그다음 `호스트:포트`.
+/// 8. 16진수·base64 글자가 32자 이상 이어진 것은 토큰으로 보고 가린다.
+/// 9. 남은 `@이름`은 GitHub이 알림을 보내지 않게 `@` 뒤에 폭 없는 빈칸을 넣는다.
 public enum FeedbackScrubber {
     public static let mailMask = "[메일]"
     public static let urlMask = "[주소]"
@@ -10,43 +22,72 @@ public enum FeedbackScrubber {
     public static let pathMask = "[경로]"
     public static let addressMask = "[IP]"
     public static let numberMask = "[번호]"
+    public static let tokenMask = "[토큰]"
+    public static let deviceMask = "[기기]"
+
+    /// 그대로 남기는 주소의 모양(규칙 2).
+    static let allowedURL = #"^https://github\.com/[A-Za-z0-9](?:[A-Za-z0-9\-]{0,38})/[A-Za-z0-9._\-]{1,100}(?:/issues(?:/\d+)?|/pull/\d+)?/?$"#
 
     public static func scrub(_ text: String) -> String {
-        var text = text
-        // 쿼리나 로그인 정보가 든 주소는 통째로 가린다(토큰, 세션 값이 여기에 실린다).
-        text = replace(#"[a-z][a-z0-9+.\-]*://[^\s<>"'\])]+"#, in: text, with: urlMask) { found in
-            guard let scheme = found.range(of: "://") else { return false }
-            let authority = found[scheme.upperBound...].prefix { $0 != "/" && $0 != "?" && $0 != "#" }
-            return found.contains("?") || authority.contains("@")
+        // 남길 주소를 잠깐 바꿔 두는 표시로 쓰는 글자(사용자 영역)는 입력에서 먼저 뺀다.
+        var text = String(String.UnicodeScalarView(text.unicodeScalars.filter { !(0xE000...0xF8FF).contains($0.value) }))
+        var kept: [String] = []
+
+        // 1. 경로. 빈칸이 든 경로를 반만 가리지 않게 줄 끝까지 가린다.
+        text = replace(#"file:[^\n]*"#, in: text, with: pathMask)
+        text = replace(#"(?<![A-Za-z0-9._\-/\]])(?:~|/Users|/home|/Volumes|/private|/var|/tmp|/Library|/Applications)/[^\n]*"#, in: text, with: pathMask)
+        // 2. 주소. 끝의 마침표·쉼표는 주소에 넣지 않는다.
+        text = replace(#"[a-z][a-z0-9+.\-]*://[^\s<>"'\])]*[^\s<>"'\]).,;:!?]"#, in: text) { found in
+            guard found.range(of: allowedURL, options: .regularExpression) != nil else { return urlMask }
+            kept.append(found)
+            return "\u{E000}\(kept.count - 1)\u{E001}"
         }
-        text = replace(#"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}"#, in: text, with: mailMask)
-        // tailnet 이름과 RemoteDebug 노드 이름.
-        text = replace(#"[a-z0-9\-]+(?:\.[a-z0-9\-]+)*\.ts\.net"#, in: text, with: hostMask)
-        text = replace(#"\brd-(?:mac|phone)-[a-z0-9]+\b"#, in: text, with: hostMask)
-        // 사용자 폴더가 드러나는 경로.
-        text = replace(#"(?:~|/Users|/home|/Volumes|/private/var|/var/mobile)/[^\s"'<>)]+"#, in: text, with: pathMask)
-        // IPv6: 모양이 비슷한 것(시각 12:30:45 등)은 실제 주소일 때만 가린다.
-        text = replace(#"(?<![0-9a-z:.])(?:[0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}(?![0-9a-z:])"#, in: text, with: addressMask) { found in
+        // 3. 토큰.
+        text = replace(#"\bBearer\s+[A-Za-z0-9._~+/=\-]{8,}"#, in: text, with: tokenMask)
+        text = replace(#"\beyJ[A-Za-z0-9_\-]{5,}\.[A-Za-z0-9_\-]{5,}\.[A-Za-z0-9_\-]*"#, in: text, with: tokenMask)
+        text = replace(#"\b(?:gh[pousr]_[A-Za-z0-9]{10,}|github_pat_[A-Za-z0-9_]{10,}|sk-[A-Za-z0-9_\-]{16,}|xox[a-z]-[A-Za-z0-9\-]{8,}|AKIA[0-9A-Z]{16})"#, in: text, with: tokenMask)
+        // 4. 메일: `@`의 앞뒤에 빈칸이 아닌 글자가 붙어 있으면 통째로.
+        text = replace(#"[^\s<>()\[\]"]+@[^\s<>()\[\]"]*[^\s<>()\[\]".,;:!?]"#, in: text, with: mailMask)
+        // 5. 기기와 네트워크 주소.
+        text = replace(#"(?<![0-9a-z])(?:[0-9a-f]{8}-[0-9a-f]{16}|[0-9a-f]{40})(?![0-9a-z])"#, in: text, with: deviceMask)
+        text = replace(#"(?<![0-9a-z:\-])(?:[0-9a-f]{2}[:\-]){5}[0-9a-f]{2}(?![0-9a-z:\-])"#, in: text, with: deviceMask)
+        // IPv6: 모양이 비슷한 것(시각 12:30:45 등)은 실제 주소일 때만 가린다. `%영역`과 IPv4 대응 주소의 뒷부분까지 함께 가린다.
+        text = replace(#"(?<![0-9a-z:.])(?:[0-9a-f]{0,4}:){2,7}(?:(?:\d{1,3}\.){3}\d{1,3}|[0-9a-f]{0,4})(?:%[A-Za-z0-9_\-]+)?(?![0-9a-z:])"#, in: text) { found in
             var buffer = in6_addr()
-            return inet_pton(AF_INET6, found, &buffer) == 1
+            let address = found.split(separator: "%", maxSplits: 1).first.map(String.init) ?? found
+            return inet_pton(AF_INET6, address, &buffer) == 1 ? addressMask : nil
         }
         text = replace(#"(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?!\.?\d)"#, in: text, with: addressMask)
-        // 전화번호처럼 보이는 숫자열(숫자 9개 이상, 사이에 빈칸·붙임표·점·괄호).
-        text = replace(#"(?<![A-Za-z0-9_:.,/\-])(?:\+|\()?\d(?:[ ().\-]{0,2}\d){8,}(?![0-9:])"#, in: text, with: numberMask)
-        // GitHub이 `@이름`으로 사람에게 알림을 보내지 않게 한다.
+        // 6. 호스트 이름.
+        text = replace(#"[a-z0-9\-]+(?:\.[a-z0-9\-]+)*\.ts\.net"#, in: text, with: hostMask)
+        text = replace(#"\brd-(?:mac|phone)-[A-Za-z0-9._\-]*[A-Za-z0-9_]"#, in: text, with: hostMask)
+        text = replace(#"\btail[0-9a-f]{4,}\b"#, in: text, with: hostMask)
+        text = replace(#"[^\s<>()\[\]"'/:@=,]+\.local(?![A-Za-z0-9\-])"#, in: text, with: hostMask)
+        // 7. 전화번호처럼 보이는 숫자열(숫자 9개 이상, 사이에 빈칸·붙임표·점·괄호). `tel:`이나 문장 부호 바로 뒤에 와도 가린다.
+        text = replace(#"(?<![A-Za-z0-9_])(?:\+|\()?\d(?:[ ().\-]{0,2}\d){8,}(?![0-9:])"#, in: text, with: numberMask)
+        // `호스트:포트`는 전화번호 뒤에 본다(`이름:010-…`의 앞부분을 포트로 잘못 가리지 않게).
+        text = replace(#"(?<![A-Za-z0-9.\-])(?=[A-Za-z0-9.\-]*[A-Za-z])[A-Za-z0-9](?:[A-Za-z0-9.\-]*[A-Za-z0-9])?:\d{2,5}(?![\d:])"#, in: text, with: hostMask)
+        // 8. 길게 이어진 16진수·base64 글자.
+        text = replace(#"[A-Za-z0-9+/_\-]{32,}={0,2}"#, in: text, with: tokenMask)
+        // 9. GitHub이 `@이름`으로 사람에게 알림을 보내지 않게 한다.
         text = replace(#"@(?=[A-Za-z0-9_])"#, in: text, with: "@\u{200B}")
+        for (index, url) in kept.enumerated() { text = text.replacingOccurrences(of: "\u{E000}\(index)\u{E001}", with: url) }
         return text
     }
 
-    private static func replace(_ pattern: String, in text: String, with mask: String,
-                                where matches: (String) -> Bool = { _ in true }) -> String {
-        // 패턴은 위의 상수뿐이고 시험이 모두 지난다.
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return mask }
+    private static func replace(_ pattern: String, in text: String, with mask: String) -> String {
+        replace(pattern, in: text) { _ in mask }
+    }
+
+    /// 찾은 자리마다 `mask`가 돌려준 글로 바꾼다. `nil`이면 그대로 둔다.
+    private static func replace(_ pattern: String, in text: String, mask: (String) -> String?) -> String {
+        // 패턴은 위의 상수뿐이고 시험이 모두 지난다. 읽지 못하면 아무것도 내보내지 않는다.
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return "" }
         let source = text as NSString
         var out = "", last = 0
         for match in regex.matches(in: text, range: NSRange(location: 0, length: source.length)) {
-            guard matches(source.substring(with: match.range)) else { continue }
-            out += source.substring(with: NSRange(location: last, length: match.range.location - last)) + mask
+            guard let masked = mask(source.substring(with: match.range)) else { continue }
+            out += source.substring(with: NSRange(location: last, length: match.range.location - last)) + masked
             last = match.range.location + match.range.length
         }
         return out + source.substring(from: last)
@@ -114,12 +155,19 @@ public enum FeedbackIssue {
         var device = ""
         var hasLogs = false
         var checks: [Answer] = []
+        /// 원문에서 사용자가 쓴 글과 그 아래(환경, 로그)를 나눌 수 없었다. 이때 `message`는 비어 있고 원문은 어디에도 넣지 않는다.
+        var unsplit = false
     }
 
     struct Answer: Equatable {
         var title: String
         var answer: String
         var note: String
+    }
+
+    /// 이 기록에서 사용자가 쓴 글을 가려낼 수 있는가. 못 하면 저절로 올리지 않고, 사람이 미리보기에서 글을 직접 적는다.
+    public static func hasSeparableMessage(item: CrashLogStore.Item, text: String) -> Bool {
+        item.isImported || !directFacts(item: item, text: text).unsplit
     }
 
     public static func draft(item: CrashLogStore.Item, text: String) -> FeedbackIssueDraft {
@@ -130,7 +178,8 @@ public enum FeedbackIssue {
         let title = firstLine.isEmpty ? (version.isEmpty ? emptyTitle : "\(emptyTitle) · \(version)") : clip(firstLine, titleLimit)
 
         let attachments = (item.attachments?.count ?? 0) + (item.imageFile == nil ? 0 : 1)
-        var lines = [message.isEmpty ? emptyMessage : message, "", "## 환경"]
+        // 글을 가려내지 못한 기록은 첫 줄을 비워 둔다(사람이 적는다). 원문은 로그가 섞여 있을 수 있어 넣지 않는다.
+        var lines = [facts.unsplit ? "" : (message.isEmpty ? emptyMessage : message), "", "## 환경"]
         if !version.isEmpty { lines.append("- 앱 버전: \(version)") }
         let system = plain(facts.system), device = plain(facts.device)
         if !system.isEmpty { lines.append("- OS: \(system)") }
@@ -152,12 +201,28 @@ public enum FeedbackIssue {
     }
 
     /// Debug 빌드가 Mac으로 바로 보낸 기록: `글`, 빈 줄, `---`, `앱:`·`기기:`·`보낸 시각:`·`첨부:` 줄, 그 아래 로그.
+    ///
+    /// 사용자가 쓴 글은 보낸 쪽이 따로 적어 보낸 값(`item.message`)에서 읽는다. 그 값이 없는 옛 기록은 원문의 첫 `---` 줄 앞을
+    /// 글로 본다. 그 줄도 없으면 어디까지가 글인지 알 수 없으므로 `unsplit`으로 두고 원문을 글로 쓰지 않는다(로그가 섞여 있을 수 있다).
     static func directFacts(item: CrashLogStore.Item, text: String) -> Facts {
         var facts = Facts()
-        let parts = text.range(of: "\n\n---\n").map { (String(text[..<$0.lowerBound]), String(text[$0.upperBound...])) } ?? (text, "")
-        facts.message = parts.0.trimmingCharacters(in: .whitespacesAndNewlines) == "(글 없이 보냄)" ? "" : parts.0
+        let split = text.range(of: "\n\n---\n").map { (String(text[..<$0.lowerBound]), String(text[$0.upperBound...])) }
+        let hasText = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let below: String
+        if let message = item.message {
+            facts.message = message
+            below = split?.1 ?? ""
+            facts.hasLogs = split == nil && hasText
+        } else if let split {
+            facts.message = split.0.trimmingCharacters(in: .whitespacesAndNewlines) == "(글 없이 보냄)" ? "" : split.0
+            below = split.1
+        } else {
+            facts.unsplit = true
+            below = ""
+            facts.hasLogs = hasText
+        }
         // 끝에 붙인 확인 목록의 답은 기록의 `checks`로 읽는다.
-        let info = parts.1.range(of: "\n---\n확인 목록의 답").map { String(parts.1[..<$0.lowerBound]) } ?? parts.1
+        let info = below.range(of: "\n---\n확인 목록의 답").map { String(below[..<$0.lowerBound]) } ?? below
         let known = ["앱: ", "기기: ", "보낸 시각: ", "첨부: "]
         for line in info.split(whereSeparator: \.isNewline) {
             if line.hasPrefix("기기: "), facts.device.isEmpty, !facts.hasLogs {
@@ -233,8 +298,11 @@ public struct GHIssueFiler: IssueFiling {
     var run: Run
     var tempDirectory: URL
 
+    /// `gh` 한 번이 끝나기를 기다리는 시간(초). 넘으면 멈추고 실패로 돌려준다.
+    public static let timeout: TimeInterval = 60
+
     public init() {
-        self.init(tool: Self.findTool, run: { await PhoneAppTools.run($0, $1, log: nil) },
+        self.init(tool: Self.findTool, run: { await PhoneAppTools.run($0, $1, log: nil, timeout: Self.timeout) },
                   tempDirectory: FileManager.default.temporaryDirectory)
     }
 
@@ -268,8 +336,12 @@ public struct GHIssueFiler: IssueFiling {
         let arguments = ["issue", "create", "--repo", repo, "--title", title, "--body-file", file.path]
         var result = await run(gh, arguments + ["--label", FeedbackIssue.label])
         // 라벨이 저장소에 없으면 라벨 없이 한 번 더 올린다.
-        if result.code != 0, result.output.localizedCaseInsensitiveContains("label") {
+        if result.code != 0, result.code != PhoneAppTools.timedOutCode, result.output.localizedCaseInsensitiveContains("label") {
             result = await run(gh, arguments)
+        }
+        guard result.code != PhoneAppTools.timedOutCode else {
+            // 멈추기 전에 올라갔을 수도 있다. 다시 올리기 전에 확인하게 한다.
+            return .failure(IssueFailure(String(localized: "gh가 \(Int(Self.timeout))초 안에 끝나지 않아 멈췄습니다. 저장소 \(repo)의 이슈 목록에 올라갔는지 확인한 뒤 다시 시도하세요.")))
         }
         guard result.code == 0 else { return .failure(IssueFailure(Self.explain(result.output, repo: repo))) }
         guard let url = Self.issueURL(in: result.output) else {

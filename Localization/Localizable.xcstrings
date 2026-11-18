@@ -10197,6 +10197,40 @@
         }
       }
     },
+    "gh가 %lld초 안에 끝나지 않아 멈췄습니다. 저장소 %@의 이슈 목록에 올라갔는지 확인한 뒤 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gh didn't finish within %1$lld seconds and was stopped. Check the issue list of %2$@ to see whether it was filed, then try again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ghが%1$lld秒以内に終わらなかったため停止しました。リポジトリ%2$@のイシュー一覧で登録されたか確認してから、もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "gh가 %1$lld초 안에 끝나지 않아 멈췄습니다. 저장소 %2$@의 이슈 목록에 올라갔는지 확인한 뒤 다시 시도하세요."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gh 未在 %1$lld 秒内结束，已停止。请在仓库 %2$@ 的议题列表中确认是否已登记，然后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "gh 未在 %1$lld 秒內結束，已停止。請在儲存庫 %2$@ 的議題列表中確認是否已登記，然後再試一次。"
+          }
+        }
+      }
+    },
     "gh가 이슈 주소를 돌려주지 않았습니다. 저장소 %@의 이슈 목록에서 올라갔는지 확인하세요." : {
       "localizations" : {
         "en" : {
@@ -18555,6 +18589,34 @@
         }
       }
     },
+    "미리 볼 수 없는 사진입니다(JPEG나 PNG가 아니거나 읽을 수 없습니다)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This picture can't be previewed (it isn't a JPEG or PNG, or it can't be read)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この写真はプレビューできません(JPEGでもPNGでもないか、読み込めません)。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法预览这张照片（不是 JPEG 或 PNG，或者无法读取）。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法預覽這張照片（不是 JPEG 或 PNG，或者無法讀取）。"
+          }
+        }
+      }
+    },
     "미리보기" : {
       "localizations" : {
         "en" : {
@@ -22389,6 +22451,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已複製安裝頁面位址。"
+          }
+        }
+      }
+    },
+    "설치가 %lld분 안에 끝나지 않아 멈췄습니다. iPhone의 잠금을 풀고 케이블을 확인한 뒤 다시 설치하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The install didn't finish within %lld minutes and was stopped. Unlock the iPhone, check the cable, and install again."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "インストールが%lld分以内に終わらなかったため停止しました。iPhoneのロックを解除し、ケーブルを確認してからもう一度インストールしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安装未在 %lld 分钟内完成，已停止。请解锁 iPhone 并检查连接线，然后重新安装。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "安裝未在 %lld 分鐘內完成，已停止。請解鎖 iPhone 並檢查連接線，然後重新安裝。"
           }
         }
       }
@@ -27379,6 +27469,62 @@
         }
       }
     },
+    "이 기록의 원문에서 사용자가 쓴 글과 로그를 나눌 수 없어 저절로 올리지 않습니다. \"이슈로 등록…\"에서 글을 직접 적어 올리세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The user's message and the logs can't be told apart in this record, so it isn't filed by itself. Type the message in \"File as Issue…\" and file it there."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この記録の原文ではユーザーが書いた文章とログを分けられないため、自動では登録しません。「イシューとして登録…」で文章を入力して登録してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这条记录的原文无法区分用户写的文字和日志，因此不会自动登记。请在“登记为议题…”中直接输入文字后登记。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這筆記錄的原文無法區分使用者寫的文字和記錄，因此不會自動登記。請在「登記為議題…」中直接輸入文字後登記。"
+          }
+        }
+      }
+    },
+    "이 기록의 원문에서는 사용자가 쓴 글과 로그를 나눌 수 없어 본문의 글 자리를 비워 두었습니다. 올릴 글을 본문 맨 위에 직접 적으세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The user's message and the logs can't be told apart in this record, so the message at the top of the body was left empty. Type the message to file at the top of the body."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この記録の原文ではユーザーが書いた文章とログを分けられないため、本文の文章の部分を空けてあります。登録する文章を本文の先頭に入力してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这条记录的原文无法区分用户写的文字和日志，因此正文中的文字部分已留空。请在正文开头直接输入要登记的文字。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這筆記錄的原文無法區分使用者寫的文字和記錄，因此內文中的文字部分已留空。請在內文開頭直接輸入要登記的文字。"
+          }
+        }
+      }
+    },
     "이 링크는 웹 주소로 링크를 내도록 빌드한 Mac 앱이 만든 것이고, 이 iPhone 앱은 그 주소 없이 빌드되었습니다. 두 앱을 같은 RD_PAIR_LINK_HOST·RD_PAIR_LINK_PATH 값으로 빌드하거나, Mac 앱을 그 값 없이 다시 빌드하세요." : {
       "localizations" : {
         "en" : {
@@ -27967,30 +28113,30 @@
         }
       }
     },
-    "이 프로젝트의 앱에서 받은 피드백을 GitHub 이슈로 올릴 저장소입니다. 이슈에는 사용자가 쓴 글, 앱 버전, OS, 기기 종류, 확인 목록의 답만 올라가고 로그와 첨부 파일은 이 Mac에만 남습니다. 메일 주소, 쿼리가 든 주소, IP, 전화번호처럼 보이는 것은 가립니다. 공개 저장소의 이슈는 누구나 볼 수 있습니다. 이 Mac에 GitHub CLI(gh)가 설치되어 로그인돼 있어야 합니다." : {
+    "이 프로젝트의 앱에서 받은 피드백을 GitHub 이슈로 올릴 저장소입니다. 이슈에는 사용자가 쓴 글, 앱 버전, OS, 기기 종류, 확인 목록의 답만 올라가고 로그와 첨부 파일은 이 Mac에만 남습니다. 메일 주소, 웹 주소, 토큰, IP, 호스트 이름, 경로, 전화번호처럼 보이는 것은 가립니다. 공개 저장소의 이슈는 누구나 볼 수 있습니다. 이 Mac에 GitHub CLI(gh)가 설치되어 로그인돼 있어야 합니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "The repository where feedback from this project's apps is filed as GitHub issues. An issue carries only the user's message, the app version, the OS, the device model and the checklist answers; logs and attachments stay on this Mac. Anything that looks like an email address, a URL with a query, an IP address or a phone number is masked. Issues in a public repository are visible to everyone. The GitHub CLI (gh) must be installed and signed in on this Mac."
+            "value" : "The repository where feedback from this project's apps is filed as GitHub issues. An issue carries only the user's message, the app version, the OS, the device model and the checklist answers; logs and attachments stay on this Mac. Anything that looks like an email address, a URL, a token, an IP address, a host name, a file path or a phone number is masked. Issues in a public repository are visible to everyone. The GitHub CLI (gh) must be installed and signed in on this Mac."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このプロジェクトのアプリから受け取ったフィードバックをGitHubのイシューとして登録するリポジトリです。イシューにはユーザーが書いた文章、アプリのバージョン、OS、デバイスの種類、確認リストの回答だけが載り、ログと添付ファイルはこのMacにだけ残ります。メールアドレス、クエリを含むURL、IPアドレス、電話番号のように見えるものは伏せます。公開リポジトリのイシューは誰でも見られます。このMacにGitHub CLI(gh)がインストールされ、ログインしている必要があります。"
+            "value" : "このプロジェクトのアプリから受け取ったフィードバックをGitHubのイシューとして登録するリポジトリです。イシューにはユーザーが書いた文章、アプリのバージョン、OS、デバイスの種類、確認リストの回答だけが載り、ログと添付ファイルはこのMacにだけ残ります。メールアドレス、URL、トークン、IPアドレス、ホスト名、パス、電話番号のように見えるものは伏せます。公開リポジトリのイシューは誰でも見られます。このMacにGitHub CLI(gh)がインストールされ、ログインしている必要があります。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用于将此项目的 App 收到的反馈登记为 GitHub 议题的仓库。议题只包含用户写的文字、App 版本、操作系统、设备型号和检查清单的回答，日志和附件只保留在这台 Mac 上。看起来像电子邮件地址、带查询参数的网址、IP 地址或电话号码的内容会被遮盖。公开仓库的议题任何人都能看到。这台 Mac 需要安装并登录 GitHub CLI（gh）。"
+            "value" : "用于将此项目的 App 收到的反馈登记为 GitHub 议题的仓库。议题只包含用户写的文字、App 版本、操作系统、设备型号和检查清单的回答，日志和附件只保留在这台 Mac 上。看起来像电子邮件地址、网址、令牌、IP 地址、主机名、路径或电话号码的内容会被遮盖。公开仓库的议题任何人都能看到。这台 Mac 需要安装并登录 GitHub CLI（gh）。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "用來將此專案的 App 收到的回饋登記為 GitHub 議題的儲存庫。議題只包含使用者寫的文字、App 版本、作業系統、裝置型號和檢查清單的回答，記錄和附件只保留在這部 Mac 上。看起來像電子郵件地址、帶查詢參數的網址、IP 位址或電話號碼的內容會被遮蓋。公開儲存庫的議題任何人都看得到。這部 Mac 需要安裝並登入 GitHub CLI（gh）。"
+            "value" : "用來將此專案的 App 收到的回饋登記為 GitHub 議題的儲存庫。議題只包含使用者寫的文字、App 版本、作業系統、裝置型號和檢查清單的回答，記錄和附件只保留在這部 Mac 上。看起來像電子郵件地址、網址、權杖、IP 位址、主機名稱、路徑或電話號碼的內容會被遮蓋。公開儲存庫的議題任何人都看得到。這部 Mac 需要安裝並登入 GitHub CLI（gh）。"
           }
         }
       }
@@ -29173,6 +29319,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自動登記"
+          }
+        }
+      }
+    },
+    "자동 등록은 프로젝트마다 한 시간에 %lld개까지라 이 기록은 올리지 않았습니다. \"이슈로 등록…\"으로 직접 올릴 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic filing is limited to %lld per project per hour, so this record wasn't filed. You can file it yourself with \"File as Issue…\"."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動登録はプロジェクトごとに1時間あたり%lld件までのため、この記録は登録しませんでした。「イシューとして登録…」で直接登録できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动登记每个项目每小时最多 %lld 条，因此这条记录没有登记。可以用“登记为议题…”自行登记。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動登記每個專案每小時最多 %lld 筆，因此這筆記錄沒有登記。可以用「登記為議題…」自行登記。"
           }
         }
       }
@@ -31917,30 +32091,30 @@
         }
       }
     },
-    "켜면 페어링한 iPhone이 Debug 빌드에서 바로 보낸 피드백을 받는 대로 올립니다. 메일에 붙어 온 진단 파일에서 넣은 기록은 저절로 올리지 않고, 크래시·피드백 화면의 \"이슈로 등록…\"에서 내용을 확인한 뒤 올립니다." : {
+    "켜면 페어링한 iPhone이 Debug 빌드에서 바로 보낸 피드백을 받는 대로 올립니다(프로젝트마다 한 시간에 %lld개까지). 꺼 두면 크래시·피드백 화면의 \"이슈로 등록…\"에서 내용을 확인한 뒤 올립니다. 메일에 붙어 온 진단 파일에서 넣은 기록은 켜 두어도 저절로 올리지 않습니다." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "When on, feedback sent directly from a Debug build on a paired iPhone is filed as soon as it arrives. Records imported from a diagnostics file attached to an email are never filed by themselves; file them from \"File as Issue…\" on the Crashes and feedback screen after checking the contents."
+            "value" : "When on, feedback sent directly from a Debug build on a paired iPhone is filed as soon as it arrives (up to %lld per project per hour). When off, you file each one from \"File as Issue…\" on the Crashes and feedback screen after checking the contents. Records imported from a diagnostics file attached to an email are never filed by themselves, even when this is on."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オンにすると、ペアリングしたiPhoneがDebugビルドから直接送ったフィードバックを受け取りしだい登録します。メールに添付された診断ファイルから取り込んだ記録は自動では登録せず、クラッシュ・フィードバック画面の「イシューとして登録…」で内容を確認してから登録します。"
+            "value" : "オンにすると、ペアリングしたiPhoneがDebugビルドから直接送ったフィードバックを受け取りしだい登録します(プロジェクトごとに1時間あたり%lld件まで)。オフのときは、クラッシュ・フィードバック画面の「イシューとして登録…」で内容を確認してから登録します。メールに添付された診断ファイルから取り込んだ記録は、オンにしていても自動では登録しません。"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开后，已配对的 iPhone 从 Debug 构建直接发来的反馈会在收到后立即登记。从邮件附带的诊断文件导入的记录不会自动登记，需在“崩溃和反馈”界面的“登记为议题…”中确认内容后再登记。"
+            "value" : "打开后，已配对的 iPhone 从 Debug 构建直接发来的反馈会在收到后立即登记（每个项目每小时最多 %lld 条）。关闭时，需在“崩溃和反馈”界面的“登记为议题…”中确认内容后再登记。从邮件附带的诊断文件导入的记录即使打开也不会自动登记。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開啟後，已配對的 iPhone 從 Debug 組建直接傳來的回饋會在收到後立即登記。從郵件附帶的診斷檔案匯入的記錄不會自動登記，需在「當機與回饋」畫面的「登記為議題…」中確認內容後再登記。"
+            "value" : "開啟後，已配對的 iPhone 從 Debug 組建直接傳來的回饋會在收到後立即登記（每個專案每小時最多 %lld 筆）。關閉時，需在「當機與回饋」畫面的「登記為議題…」中確認內容後再登記。從郵件附帶的診斷檔案匯入的記錄即使開啟也不會自動登記。"
           }
         }
       }

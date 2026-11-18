@@ -62,24 +62,52 @@ extension HostLogic {
 
     // MARK: USB 케이블 설치 (protocol-addenda R)
 
+    /// 링크 로컬 주소인가(fe80::/10, 169.254/16). 케이블의 주소는 이것뿐이다.
+    static func isLinkLocal(_ address: String) -> Bool {
+        var v4 = in_addr()
+        if inet_pton(AF_INET, address, &v4) == 1 {
+            let bytes = withUnsafeBytes(of: v4) { Array($0) }
+            return bytes[0] == 169 && bytes[1] == 254
+        }
+        var v6 = in6_addr()
+        guard inet_pton(AF_INET6, address, &v6) == 1 else { return false }
+        let bytes = withUnsafeBytes(of: v6) { Array($0) }
+        return bytes[0] == 0xFE && bytes[1] & 0xC0 == 0x80
+    }
+
+    /// 이 요청이 지나온 케이블에 꽂힌 iPhone(UDID). 케이블로 온 요청이 아니면 nil.
+    ///
+    /// 셋이 모두 맞아야 한다: 직접 연결 리스너로 왔고, 보낸 쪽 주소가 링크 로컬이고(다른 대역의 주소는 케이블 건너편일 수 없다),
+    /// 전송이 받은 인터페이스를 확실히 알며 그 인터페이스가 USB로 꽂은 iPhone의 것이다.
+    func cableDevice(_ request: HostRequest, installer: any HostCableInstalling) -> String? {
+        guard case .direct(let remoteIP, let interface?) = request.origin, Self.isLinkLocal(remoteIP) else { return nil }
+        return installer.device(onInterface: interface)
+    }
+
     /// 케이블 설치를 받을 수 없는 요청이면 그 오류. 받지 않는 Mac은 경로가 없는 것처럼 답한다(iPhone은 VPN 설치로 넘어간다).
     func cableInstallRefusal(_ request: HostRequest) -> APIErrorBody? {
         guard let installer = options.cableInstaller else { return HostErrors.make("not_found") }
-        guard case .direct(_, let interface?) = request.origin, installer.device(onInterface: interface) != nil else {
-            return HostErrors.make("cable_required")
-        }
+        guard cableDevice(request, installer: installer) != nil else { return HostErrors.make("cable_required") }
         return nil
     }
+
+    /// 케이블 설치가 기한을 넘겼을 때 세션에 싣는 이유.
+    static let cableInstallTimedOut = "USB 케이블 설치가 제한 시간 안에 끝나지 않아 멈췄습니다. iPhone의 잠금을 풀고 케이블을 확인한 뒤 다시 설치하세요."
 
     /// 요청이 들어온 케이블의 iPhone에 빌드를 설치하기 시작하고 세션을 돌려준다. 진행은 `GET /v1/sessions/{id}`.
     /// 세션은 설치가 끝날 때까지 `downloading`이고, 끝나면 `completed`나 `failed`(이유는 `message`)다.
     func startCableInstall(buildID: String, peer: HostPeer, request: HostRequest) throws -> HostResponse {
         guard let installer = options.cableInstaller else { throw HostErrors.make("not_found") }
         // 설치할 기기는 요청 본문이 아니라 연결이 들어온 인터페이스로 정한다: 토큰을 가진 쪽도 다른 iPhone에는 설치시킬 수 없다.
-        guard case .direct(_, let interface?) = request.origin, let device = installer.device(onInterface: interface) else {
-            throw HostErrors.make("cable_required")
+        guard let target = cableDevice(request, installer: installer) else { throw HostErrors.make("cable_required") }
+        guard var device = devices[peer.stableID] else { throw HostErrors.make("not_paired") }
+        // 이 기기의 토큰은 처음 케이블 설치를 한 iPhone에만 쓸 수 있다(토큰을 다른 iPhone으로 옮겨 그 iPhone에 설치시키지 못한다).
+        if let bound = device.cableUDID, !bound.isEmpty, bound.caseInsensitiveCompare(target) != .orderedSame {
+            throw HostErrors.make("cable_device_mismatch")
         }
         guard let build = builds[buildID] else { throw HostErrors.make("build_not_found") }
+        // 한 iPhone에는 한 번에 하나만 설치한다.
+        guard !cableInstalls.contains(target) else { throw HostErrors.make("cable_busy") }
         let now = options.now()
         let session = Session(id: HostIDs.newID("s_"), token: "", buildID: buildID, peer: peer, created: now,
                               expires: now.addingTimeInterval(options.limits.sessionMaxTTL), size: UInt64(build.descriptor.ipa.size))
@@ -87,17 +115,26 @@ extension HostLogic {
         let lease = snapshotDirectory + "/" + HostIDs.newID("cable-") + ".ipa"
         do { try FileManager.default.linkItem(atPath: build.file.path, toPath: lease) }
         catch { throw HostErrors.make("build_changed") }
+        if device.cableUDID?.isEmpty != false {
+            device.cableUDID = target
+            devices[peer.stableID] = device
+            emit(.deviceUpdated(device))
+        }
+        cableInstalls.insert(target)
         session.state = .downloading
         session.inflight = 1
         sessions[session.id] = session
         emitSession(session, userAgent: request.header("user-agent") ?? "")
         let sessionID = session.id
         let completion = CompletionOnce()
-        installer.install(ipaPath: lease, device: device) { [weak self] failure in
+        // 설치가 끝났거나 기한을 넘겼을 때 한 번만 돈다: 사본을 지우고, 그 iPhone의 자리를 비우고, 세션을 끝낸다.
+        let finish: @Sendable (String?) -> Void = { [weak self] failure in
+            guard completion.claim() else { return }
             try? FileManager.default.removeItem(atPath: lease)
             guard let self else { return }
             self.locked {
-                guard completion.claim(), let current = self.sessions[sessionID] else { return }
+                self.cableInstalls.remove(target)
+                guard let current = self.sessions[sessionID] else { return }
                 current.inflight = max(0, current.inflight - 1)
                 guard !current.terminal else { return }
                 if let failure {
@@ -109,6 +146,11 @@ extension HostLogic {
                 }
                 self.emitSession(current)
             }
+        }
+        installer.install(ipaPath: lease, device: target, completion: finish)
+        // 도구가 끝났다고 알리지 않아도 기한이 지나면 실패로 끝낸다(멈춘 설치가 그 iPhone의 자리를 붙들지 않게).
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + options.limits.cableInstallTimeout) {
+            finish(Self.cableInstallTimedOut)
         }
         return json(CableInstallResponse(sessionId: session.id, state: session.state), status: 201)
     }

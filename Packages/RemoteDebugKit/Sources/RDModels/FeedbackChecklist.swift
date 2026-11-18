@@ -43,6 +43,10 @@ public struct FeedbackChecklist: Codable, Sendable, Hashable {
     /// 글자 수 한도.
     public static let maxIDLength = 64, maxTitleLength = 200, maxPlaceLength = 200, maxStepsLength = 2000
     public static let maxExpectLength = 300, maxChoiceLength = 40, maxStageLength = 80
+    /// 목록 하나를 저장한 JSON의 크기 한도(바이트). 항목마다의 글자 수 한도를 다 채우면 이보다 훨씬 커질 수 있어 따로 둔다.
+    /// 호스트의 `GET /v1/feedback/checklist/…`가 주는 크기와 `RemoteDebugFeedback` 패키지가 받는 크기(512KiB)가 모두 이 값 이상이라,
+    /// 저장된 목록은 언제나 앱에 닿는다.
+    public static let maxEncodedBytes = 256 << 10
 
     /// 받아들일 수 없는 목록. `message`가 고칠 곳을 알려 준다.
     public struct Invalid: Error, Equatable, Sendable {
@@ -120,7 +124,13 @@ public struct FeedbackChecklist: Codable, Sendable, Hashable {
                               expect: try list("expect", maxCount: maxExpect, maxLength: maxExpectLength),
                               choices: choices, since: since, stage: try text("stage", max: maxStageLength)))
         }
-        return FeedbackChecklist(bundleId: bundleId, updatedAt: now, items: items)
+        let checklist = FeedbackChecklist(bundleId: bundleId, updatedAt: now, items: items)
+        // 받아 놓고 앱이 버리는 일이 없게, 저장할 크기를 여기서 잰다.
+        guard let size = (try? RDJSON.encoder().encode(checklist))?.count else { throw Invalid(message: "목록을 JSON으로 만들지 못했습니다.") }
+        guard size <= maxEncodedBytes else {
+            throw Invalid(message: "목록이 너무 큽니다: 저장하면 \(size)바이트인데 한도는 \(maxEncodedBytes)바이트(\(maxEncodedBytes >> 10)KB)입니다. 항목 수를 줄이거나 steps와 expect를 짧게 쓰세요.")
+        }
+        return checklist
     }
 }
 

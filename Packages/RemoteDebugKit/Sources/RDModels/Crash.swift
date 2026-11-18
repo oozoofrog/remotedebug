@@ -43,6 +43,12 @@ public struct CrashReport: Codable, Sendable, Hashable {
     public var attachments: [Attachment]
     /// 확인 목록에 사용자가 고른 답(개발 빌드의 피드백에만 온다).
     public var checks: [Check] = []
+    /// 사용자가 쓴 글만 따로 적은 값(피드백). `text`에도 같은 글이 맨 앞에 있지만, 받는 쪽이 글과 그 아래의 로그를
+    /// 가르는 데 이 값을 쓴다. 글 없이 보냈으면 빈 글자, 옛 클라이언트가 보낸 기록이면 `nil`이다.
+    public var message: String?
+
+    /// `message`의 크기 한도(바이트). 코어가 넘는 부분을 자른다.
+    public static let maxMessageBytes = 64 << 10
 
     /// 피드백에 붙인 사진이나 파일 하나. JSON에서는 `{name, type, base64}`다.
     public struct Attachment: Codable, Sendable, Hashable {
@@ -134,7 +140,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         self.text = text
     }
 
-    enum CodingKeys: String, CodingKey { case kind, name, bundleId, appVersion, crashedAt, text, image, attachments, checks }
+    enum CodingKeys: String, CodingKey { case kind, name, bundleId, appVersion, crashedAt, text, image, attachments, checks, message }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -147,6 +153,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         image = try c.decodeIfPresent(String.self, forKey: .image).flatMap { Data(base64Encoded: $0) }
         attachments = try c.decodeIfPresent([Attachment].self, forKey: .attachments) ?? []
         checks = try c.decodeIfPresent([Check].self, forKey: .checks) ?? []
+        message = try c.decodeIfPresent(String.self, forKey: .message)
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -160,11 +167,26 @@ public struct CrashReport: Codable, Sendable, Hashable {
         try c.encodeIfPresent(image?.base64EncodedString(), forKey: .image)
         if !attachments.isEmpty { try c.encode(attachments, forKey: .attachments) }
         if !checks.isEmpty { try c.encode(checks, forKey: .checks) }
+        try c.encodeIfPresent(message, forKey: .message)
     }
 
     /// 내용으로 정한 id. 같은 기록을 두 번 받아도 하나로 남는다.
+    ///
+    /// 글(`text`)과 붙인 사진·파일의 내용으로 정한다: 글이 같아도 첨부가 다르면 다른 기록이다. 첨부가 없는 기록의 id는
+    /// 글만으로 정하던 예전 값과 같다. 어느 기기가 보냈는지는 받는 Mac이 따로 가린다(`CrashLogStore.recordID`).
     public var id: String {
-        "c_" + SHA256.hash(data: Data(text.utf8)).prefix(6).map { String(format: "%02x", $0) }.joined()
+        var hash = SHA256()
+        hash.update(data: Data(text.utf8))
+        // 글 뒤에 구분 바이트를 두고, 옛 사진(1)과 첨부(2)를 가려 각각의 해시를 잇는다.
+        if let image {
+            hash.update(data: Data([0, 1]))
+            hash.update(data: Data(SHA256.hash(data: image)))
+        }
+        for attachment in attachments {
+            hash.update(data: Data([0, 2]))
+            hash.update(data: Data(SHA256.hash(data: attachment.data)))
+        }
+        return "c_" + hash.finalize().prefix(6).map { String(format: "%02x", $0) }.joined()
     }
 
     /// 코어가 받는 본문 크기 한도(바이트).
@@ -178,7 +200,22 @@ public struct CrashReport: Codable, Sendable, Hashable {
         if !attachments.isEmpty { text += "첨부: " + attachments.map(\.name).joined(separator: ", ") + "\n" }
         if !details.isEmpty { text += details + "\n" }
         let name = "feedback-" + stamp.replacingOccurrences(of: ":", with: "") + ".txt"
-        return CrashReport(kind: .feedback, name: name, bundleId: bundleId, appVersion: appVersion, crashedAt: date, text: text, image: image, attachments: attachments)
+        var report = CrashReport(kind: .feedback, name: name, bundleId: bundleId, appVersion: appVersion, crashedAt: date, text: text, image: image, attachments: attachments)
+        report.message = clipped(message.trimmingCharacters(in: .whitespacesAndNewlines), bytes: maxMessageBytes)
+        return report
+    }
+
+    /// UTF-8로 `bytes`바이트를 넘지 않게 글자 경계에서 자른다.
+    static func clipped(_ text: String, bytes: Int) -> String {
+        guard text.utf8.count > bytes else { return text }
+        var kept = String.UnicodeScalarView(), count = 0
+        for scalar in text.unicodeScalars {
+            let width = UTF8.width(scalar)
+            guard count + width <= bytes else { break }
+            count += width
+            kept.append(scalar)
+        }
+        return String(kept)
     }
 
     /// .ips 파일 내용에서 기록을 만든다. 첫 줄의 JSON 머리말에서 앱과 시각을 읽고, 없으면 `fallbackDate`와 파일 이름을 쓴다.

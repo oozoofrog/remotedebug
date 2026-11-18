@@ -238,7 +238,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     purge: { [weak model] in model?.crashLogs.purgeHandled() }),
                 crashLogs: model.crashLogs,
                 importer: { [weak model] url in await model?.importBuild(url) })
-            // 새로 받은 피드백은 그 프로젝트에 이슈 저장소가 있고 자동 등록이 켜져 있으면 이슈로 올린다.
+            // 새로 받은 피드백은 그 프로젝트에 이슈 저장소가 있고 주인이 자동 등록을 켰으면 이슈로 올린다(한도와 줄 서기는 `receivedForIssue`).
             let issueProjects = projects
             model.crashLogs.onReceived = { [weak issueProjects] item in
                 Task { await issueProjects?.receivedForIssue(item) }

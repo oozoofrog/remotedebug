@@ -20,6 +20,10 @@ public struct FeedbackReport: Codable, Equatable, Sendable {
     /// 확인 목록에 사용자가 고른 답.
     public var checks: [Check]?
 
+    /// 사용자가 쓴 글만 따로 적은 값(글 없이 보내면 빈 글자). `text`의 맨 앞에도 같은 글이 있지만, Mac은 이 값으로
+    /// 글과 그 아래의 로그를 가른다. 옛 Mac 앱은 이 필드를 읽지 않는다.
+    public var message: String?
+
     public struct Check: Codable, Equatable, Sendable {
         public var id: String
         public var title: String
@@ -48,6 +52,8 @@ public actor FeedbackClient {
     public static let queueByteLimit = 16 << 20
     /// 코어가 받는 `text` 크기 한도(바이트).
     public static let maxTextBytes = 1536 << 10
+    /// 따로 적어 보내는 글(`message`)의 크기 한도(바이트). 코어도 여기서 자른다.
+    public static let maxMessageBytes = 64 << 10
     /// 코어가 받는 본문 크기 한도(바이트). 넘는 기록은 보내지도 쌓지도 않는다.
     public static let maxBodyBytes = 4 << 20
 

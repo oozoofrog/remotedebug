@@ -31,8 +31,14 @@ public final class HostLogic: HostRequestHandling, @unchecked Sendable {
         public var sessionTTL: TimeInterval
         public var sessionMaxTTL: TimeInterval
         public var manifestMaxFetches: Int
+        /// USB 케이블 설치 하나가 끝나기를 기다리는 시간(초). 넘으면 세션을 실패로 끝내고 사본을 지운다.
+        /// 큰 앱은 풀고 옮기는 데 오래 걸리므로 넉넉하게 둔다. Mac 앱의 도구 기한(`CableInstaller`)은 이보다 짧다.
+        public var cableInstallTimeout: TimeInterval
+        public static let defaultCableInstallTimeout: TimeInterval = 1800
         public init(pairRequestTTL: TimeInterval = 120, pairMaxFailures: Int = 5,
-                    sessionTTL: TimeInterval = 180, sessionMaxTTL: TimeInterval = 600, manifestMaxFetches: Int = 5) {
+                    sessionTTL: TimeInterval = 180, sessionMaxTTL: TimeInterval = 600, manifestMaxFetches: Int = 5,
+                    cableInstallTimeout: TimeInterval = Limits.defaultCableInstallTimeout) {
+            self.cableInstallTimeout = cableInstallTimeout <= 0 ? Limits.defaultCableInstallTimeout : cableInstallTimeout
             self.pairRequestTTL = pairRequestTTL == 0 ? 120 : pairRequestTTL
             self.pairMaxFailures = pairMaxFailures == 0 ? 5 : pairMaxFailures
             self.sessionTTL = sessionTTL == 0 ? 180 : sessionTTL
@@ -100,6 +106,8 @@ public final class HostLogic: HostRequestHandling, @unchecked Sendable {
     var fileTransfers: [String: FileTransfer] = [:]
     var denials: [String: Denial] = [:]
     var directFailures: [String: DirectFailure] = [:]
+    /// 케이블 설치가 돌고 있는 iPhone(UDID). 한 기기에는 한 번에 하나만 설치한다.
+    var cableInstalls: Set<String> = []
     var agentBoard = Data(#"{"enabled":false,"projects":[],"agents":[],"requests":[]}"#.utf8)
     var agentEnabled = false
 

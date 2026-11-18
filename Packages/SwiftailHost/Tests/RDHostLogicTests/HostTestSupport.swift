@@ -46,9 +46,10 @@ final class HostFixture: @unchecked Sendable {
         if paired { try host.setDevices([device()]) }
     }
     deinit { host.close(); try? FileManager.default.removeItem(at: directory) }
-    func device(id: String = "d_1", stableID: String = "n_phone", hash: String? = nil, push: PushRegistration? = nil) -> DeviceEntry {
+    func device(id: String = "d_1", stableID: String = "n_phone", hash: String? = nil, push: PushRegistration? = nil,
+                cableUDID: String? = nil) -> DeviceEntry {
         DeviceEntry(id: id, name: "시험 iPhone", nodeStableId: stableID, nodeName: Self.peer.nodeName,
-                    loginName: "", pairedAt: clock.now(), directTokenHash: hash, push: push)
+                    loginName: "", pairedAt: clock.now(), directTokenHash: hash, push: push, cableUDID: cableUDID)
     }
     func request(_ method: String, _ target: String, body: String? = nil,
                  headers: [(String, String)] = [], origin: HostOrigin = .tailnet(HostFixture.peer), chunkSize: Int = .max) async -> HostResponse {

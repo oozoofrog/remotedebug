@@ -71,7 +71,7 @@ public enum HostErrors {
         case "unsupported_media_type": 415
         case "not_found", "build_not_found", "resource_not_found", "direct_off": 404
         case "method_not_allowed": 405
-        case "build_changed", "cable_required": 409
+        case "build_changed", "cable_required", "cable_device_mismatch", "cable_busy": 409
         case "session_expired": 410
         case "not_debug_build": 422
         case "too_many_attempts": 429
@@ -92,6 +92,8 @@ public enum HostErrors {
         "unknown_handle": "알 수 없는 핸들입니다.", "path_outside_publish_dir": "IPA가 게시 폴더 안의 일반 파일이 아닙니다.",
         "direct_off": "이 Mac은 같은 네트워크 직접 연결을 받지 않습니다.",
         "cable_required": "USB 케이블로 이 Mac에 꽂은 iPhone의 요청이 아닙니다.",
+        "cable_device_mismatch": "이 기기의 USB 케이블 설치는 처음 설치한 iPhone에 묶여 있는데, 지금 케이블에는 다른 iPhone이 꽂혀 있습니다. iPhone을 바꿨다면 Mac 앱의 기기 목록에서 이 기기를 빼고 다시 페어링하세요.",
+        "cable_busy": "이 iPhone에는 USB 케이블 설치가 이미 진행 중입니다. 끝난 뒤에 다시 설치하세요.",
         "agent_disabled": "이 Mac은 iPhone의 에이전트 요청을 받지 않습니다. Mac 앱의 에이전트 화면에서 켭니다."
     ]
 }

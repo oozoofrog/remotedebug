@@ -14,6 +14,36 @@ import Testing
         #expect(object["attachments"] == nil && object["image"] as? String == "aGVsbG8=")
     }
 
+    @Test func idCoversAttachmentsAndStaysTheSameWithoutThem() throws {
+        let date = Date(timeIntervalSince1970: 1_794_478_500)
+        func report(_ files: [String], image: String? = nil) -> CrashReport {
+            CrashReport(kind: .feedback, name: "f.txt", bundleId: "com.example.app", appVersion: "1.0", crashedAt: date, text: "같은 글",
+                        image: image.map { Data($0.utf8) }, attachments: files.map { .init(name: "a.txt", data: Data($0.utf8)) })
+        }
+        // 첨부가 없으면 글의 SHA-256 앞 6바이트(예전 값) 그대로다.
+        #expect(report([]).id == "c_c550da31bb69")
+        let ids = [report([]), report(["하나"]), report(["둘"]), report(["하나", "둘"]), report([], image: "하나")].map(\.id)
+        #expect(Set(ids).count == ids.count, "글이 같아도 첨부가 다르면 다른 기록이다")
+        #expect(report(["하나"]).id == report(["하나"]).id)
+        // 이름과 종류는 id에 넣지 않는다(코어가 이름을 고쳐도 같은 기록이다).
+        var renamed = report(["하나"])
+        renamed.attachments[0].name = "b.txt"
+        #expect(renamed.id == report(["하나"]).id)
+    }
+
+    @Test func messageIsCarriedSeparatelyAndOmittedWhenAbsent() throws {
+        let report = CrashReport.feedback(message: "  느려요\n둘째 줄 ", bundleId: "com.example.app", appVersion: "1.0", details: "최근 로그",
+                                          date: Date(timeIntervalSince1970: 1_794_478_500))
+        #expect(report.message == "느려요\n둘째 줄" && report.text.hasPrefix("느려요\n둘째 줄\n\n---\n"))
+        let data = try RDJSON.encoder().encode(report)
+        #expect((try JSONSerialization.jsonObject(with: data) as? [String: Any])?["message"] as? String == "느려요\n둘째 줄")
+        #expect(try RDJSON.decoder().decode(CrashReport.self, from: data) == report)
+        let old = #"{"kind":"feedback","crashedAt":"2026-11-13T05:05:01.000Z","text":"x"}"#
+        let decoded = try RDJSON.decoder().decode(CrashReport.self, from: Data(old.utf8))
+        #expect(decoded.message == nil)
+        #expect((try JSONSerialization.jsonObject(with: RDJSON.encoder().encode(decoded)) as? [String: Any])?["message"] == nil)
+    }
+
     @Test func attachmentsRoundTripAsNameTypeBase64() throws {
         let report = CrashReport.feedback(message: "느려요", bundleId: "com.example.app", appVersion: "1.0",
                                           attachments: [.init(name: "photo-1.jpg", type: "image/jpeg", data: Data("jpeg".utf8)),
