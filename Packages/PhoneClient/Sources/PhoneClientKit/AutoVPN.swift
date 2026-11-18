@@ -113,6 +113,15 @@ public enum VPNStatusText {
     public static let direct = String(localized: "직접 연결(같은 Wi-Fi, VPN 없이)")
     public static let directDetail = String(localized: "같은 Wi-Fi의 Mac과 직접 주고받습니다. 앱을 설치할 때만 VPN을 자동으로 켭니다.")
     public static let directWithVPNDetail = String(localized: "빌드 목록·파일·로그는 같은 Wi-Fi로 Mac과 직접 주고받습니다.")
+    /// VPN은 꺼져 있고 USB 케이블로 Mac과 직접 주고받는다(docs/protocol-addenda.md Q).
+    public static let cable = String(localized: "USB 연결(케이블, VPN 없이)")
+    public static let cableDetail = String(localized: "USB 케이블로 Mac과 직접 주고받습니다. 앱 설치도 케이블로 합니다.")
+    public static let cableWithVPNDetail = String(localized: "빌드 목록·파일·로그·앱 설치는 USB 케이블로 Mac과 직접 주고받습니다.")
+
+    /// VPN이 꺼져 있을 때 직접 경로의 상태 문구.
+    public static func direct(_ link: DirectLinkKind) -> String { link == .cable ? cable : direct }
+    public static func directDetail(_ link: DirectLinkKind) -> String { link == .cable ? cableDetail : directDetail }
+    public static func directWithVPNDetail(_ link: DirectLinkKind) -> String { link == .cable ? cableWithVPNDetail : directWithVPNDetail }
 
     /// 연결됐을 때의 문구. 이 앱의 터널이 아니면(다른 앱의 VPN) 경로를 알 수 없으므로 경로를 말하지 않는다.
     public static func connected(holder: VPNHolder, path: PeerPath?) -> String {

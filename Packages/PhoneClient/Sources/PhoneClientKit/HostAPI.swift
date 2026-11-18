@@ -49,13 +49,15 @@ public struct HostAPI: Sendable {
 
     /// 같은 네트워크 직접 연결인가.
     public var isDirect: Bool { authorization != nil }
+    /// 직접 연결이 지나는 길. tailnet 경로에서는 `nil`.
+    public let directLink: DirectLinkKind?
 
     /// 직접 연결용: `https://<사설 IP>:<포트>`로 보내고 요청마다 기기 토큰을 싣는다.
     /// `transport`는 인증서의 공개 키를 고정한 전송이어야 한다(`DirectTransportMaking`).
     /// 주소가 사설·링크 로컬 IP가 아니면 `nil`(토큰을 다른 곳으로 보내지 않는다).
     init?(direct endpoint: DirectEndpoint, authorization: String, transport: any HTTPTransport, client: ClientInfo, timeouts: Timeouts = .standard) {
-        let authority = endpoint.host.contains(":") ? "[\(endpoint.host)]" : endpoint.host
-        guard (1...65535).contains(endpoint.port), PeerPath.isPrivateEndpoint("\(authority):\(endpoint.port)"),
+        guard (1...65535).contains(endpoint.port), let authority = Self.directAuthority(endpoint.host),
+              PeerPath.isPrivateEndpoint("\(authority):\(endpoint.port)"),
               let base = URL(string: "https://\(authority):\(endpoint.port)") else { return nil }
         self.host = endpoint.host
         self.baseURL = base
@@ -63,6 +65,23 @@ public struct HostAPI: Sendable {
         self.client = client
         self.timeouts = timeouts
         self.authorization = authorization
+        self.directLink = endpoint.link
+    }
+
+    /// 직접 연결 주소의 URL authority. IPv6는 대괄호로 싸고, 링크 로컬 주소의 인터페이스(`%anpi0`)는 `%25`로 쓴다(RFC 6874).
+    /// 인터페이스는 링크 로컬 IPv6(fe80::/10)에만 붙을 수 있고 영문자와 숫자뿐이어야 한다. 아니면 `nil`.
+    static func directAuthority(_ host: String) -> String? {
+        let parts = host.split(separator: "%", omittingEmptySubsequences: false)
+        guard let address = parts.first, !address.isEmpty, parts.count <= 2 else { return nil }
+        let allowed = address.unicodeScalars.allSatisfy { ("0"..."9").contains($0) || ("a"..."f").contains($0) || ("A"..."F").contains($0) || $0 == ":" || $0 == "." }
+        guard allowed else { return nil }
+        guard parts.count == 2 else { return address.contains(":") ? "[\(address)]" : String(address) }
+        let zone = parts[1]
+        let zoneOK = !zone.isEmpty && zone.count <= 15 && zone.unicodeScalars.allSatisfy {
+            ("0"..."9").contains($0) || ("a"..."z").contains($0) || ("A"..."Z").contains($0)
+        }
+        guard zoneOK, address.lowercased().hasPrefix("fe80:") else { return nil }
+        return "[\(address)%25\(zone)]"
     }
 
     /// 호스트가 정책을 통과하지 못하면 `nil`.
@@ -82,6 +101,7 @@ public struct HostAPI: Sendable {
         self.client = client
         self.timeouts = timeouts
         self.authorization = nil
+        self.directLink = nil
     }
 
     /// 직접 연결에 등록한다(docs/protocol-addenda.md O). tailnet 경로에서만 부른다. 다시 부르면 토큰이 바뀐다.

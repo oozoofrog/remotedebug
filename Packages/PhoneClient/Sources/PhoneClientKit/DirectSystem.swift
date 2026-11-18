@@ -298,13 +298,14 @@ public struct KeychainDirectCredentialStore: DirectCredentialStoring {
 
 // MARK: 네트워크 경로
 
-/// Wi-Fi(또는 유선)에 붙어 있는지 지켜본다. 경로가 바뀌면 `onChange`를 부른다.
+/// Wi-Fi(또는 유선)에 붙어 있는지, 케이블이 꽂혀 있는지 지켜본다. 바뀌면 `onChange`를 부른다.
 public final class LocalNetworkMonitor: LocalNetworkChecking, @unchecked Sendable {
     private let wifi = NWPathMonitor(requiredInterfaceType: .wifi)
     private let wired = NWPathMonitor(requiredInterfaceType: .wiredEthernet)
     private let lock = NSLock()
     private var wifiUp = false
     private var wiredUp = false
+    private var cable = false
     private var started = false
     private var handler: (@Sendable () -> Void)?
 
@@ -316,6 +317,7 @@ public final class LocalNetworkMonitor: LocalNetworkChecking, @unchecked Sendabl
     }
 
     public var isOnLocalNetwork: Bool { lock.withLock { !started || wifiUp || wiredUp } }
+    public var isCablePlugged: Bool { lock.withLock { cable } }
 
     /// 지켜보기 시작한다. 첫 결과가 오기 전에는 붙어 있다고 본다(찾아보고 없으면 VPN 경로로 간다).
     public func start(onChange: @escaping @Sendable () -> Void) {
@@ -325,6 +327,17 @@ public final class LocalNetworkMonitor: LocalNetworkChecking, @unchecked Sendabl
         wired.pathUpdateHandler = { [weak self] path in self?.update(wifi: nil, wired: path.status == .satisfied) }
         wifi.start(queue: queue)
         wired.start(queue: queue)
+    }
+
+    /// 케이블을 꽂거나 뽑았다(앱이 충전 상태로 알아낸다). 바뀌면 `onChange`를 부른다:
+    /// 꽂으면 케이블 경로를 찾고, 뽑으면 쓰던 케이블 경로를 버린다.
+    public func setCablePlugged(_ plugged: Bool) {
+        let handler = lock.withLock { () -> (@Sendable () -> Void)? in
+            guard cable != plugged else { return nil }
+            cable = plugged
+            return self.handler
+        }
+        handler?()
     }
 
     private func update(wifi: Bool?, wired: Bool?) {
@@ -343,6 +356,8 @@ public final class LocalNetworkMonitor: LocalNetworkChecking, @unchecked Sendabl
 // MARK: Bonjour
 
 /// `_remotedebug._tcp`에서 저장해 둔 식별자의 광고만 찾는다. 로컬 네트워크 권한이 없으면 조용히 `nil`.
+///
+/// 광고가 USB 케이블의 인터페이스에도 보이면 그쪽으로 먼저 연결해 본다(Wi-Fi가 꺼져 있어도 된다).
 public struct BonjourDirectBrowser: DirectBrowsing {
     public static let serviceType = "_remotedebug._tcp"
 
@@ -360,13 +375,34 @@ public struct BonjourDirectBrowser: DirectBrowsing {
     }
 }
 
+extension DirectInterface {
+    init(_ interface: NWInterface) {
+        let kind: DirectInterfaceKind = switch interface.type {
+        case .wifi: .wifi
+        case .wiredEthernet: .wired
+        case .cellular: .cellular
+        case .loopback: .loopback
+        default: .other
+        }
+        self.init(name: interface.name, kind: kind)
+    }
+}
+
 private final class BonjourSearch: @unchecked Sendable {
+    /// 광고를 처음 본 뒤 다른 인터페이스의 결과(케이블)가 더 오기를 기다리는 시간.
+    private static let settle = 0.2
+    /// 케이블 인터페이스 하나에 연결해 보는 시간.
+    private static let cableAttempt = 0.7
+
     private let directId: String
     private let queue = DispatchQueue(label: "RemoteDebug.direct.browse")
     private var browser: NWBrowser?
     private var connection: NWConnection?
     private var continuation: CheckedContinuation<DirectEndpoint?, Never>?
     private var done = false
+    /// 광고의 최신 결과(서비스 이름과 보이는 인터페이스).
+    private var match: NWBrowser.Result?
+    private var resolving = false
 
     init(directId: String) { self.directId = directId }
 
@@ -385,10 +421,13 @@ private final class BonjourSearch: @unchecked Sendable {
                 }
             }
             browser.browseResultsChangedHandler = { [weak self] results, _ in
-                guard let self, self.connection == nil else { return }
+                guard let self, !self.done, !self.resolving else { return }
                 for result in results {
                     if case .service(let name, _, _, _) = result.endpoint, name == self.directId {
-                        self.resolve(result.endpoint)
+                        let first = self.match == nil
+                        self.match = result
+                        // 인터페이스마다 결과가 따로 온다. 잠깐 모은 뒤 케이블부터 연결해 본다.
+                        if first { self.queue.asyncAfter(deadline: .now() + Self.settle) { [weak self] in self?.resolveMatch() } }
                         return
                     }
                 }
@@ -399,31 +438,79 @@ private final class BonjourSearch: @unchecked Sendable {
         }
     }
 
-    /// 서비스 이름을 IPv4 주소와 포트로 바꾼다(TCP 연결만 열었다 닫는다. 아무것도 보내지 않는다).
-    private func resolve(_ endpoint: NWEndpoint) {
+    private func resolveMatch() {
+        guard !done, !resolving, let match, case .service(let name, let type, let domain, _) = match.endpoint else { return }
+        resolving = true
+        let wanted = Set(DirectResolution.cableCandidates(match.interfaces.map(DirectInterface.init)).map(\.name))
+        let cables = match.interfaces.filter { wanted.contains($0.name) }.sorted { $0.name < $1.name }
+        attempt(cables: cables[...], name: name, type: type, domain: domain, fallback: match.endpoint)
+    }
+
+    /// 케이블 인터페이스를 차례로 시도하고, 다 안 되면 인터페이스를 고르지 않고 IPv4로 연결한다(같은 네트워크).
+    private func attempt(cables: ArraySlice<NWInterface>, name: String, type: String, domain: String, fallback: NWEndpoint) {
+        guard !done else { return }
+        guard let interface = cables.first else {
+            resolve(fallback, interface: nil) { [weak self] in self?.complete(nil) }
+            return
+        }
+        let endpoint = NWEndpoint.service(name: name, type: type, domain: domain, interface: interface)
+        let token = resolve(endpoint, interface: interface) { [weak self] in
+            self?.attempt(cables: cables.dropFirst(), name: name, type: type, domain: domain, fallback: fallback)
+        }
+        queue.asyncAfter(deadline: .now() + Self.cableAttempt) { [weak self] in
+            // 그사이 끝나지 않았으면 이 시도를 버리고 다음으로 간다(취소가 실패로 이어진다).
+            guard let self, !self.done, self.connection === token else { return }
+            token.cancel()
+        }
+    }
+
+    /// 서비스 이름을 주소와 포트로 바꾼다(TCP 연결만 열었다 닫는다. 아무것도 보내지 않는다).
+    /// `interface`를 주면 그 인터페이스로만 연결한다(케이블). 아니면 IPv4로만 연결한다.
+    @discardableResult
+    private func resolve(_ endpoint: NWEndpoint, interface: NWInterface?, onFailure: @escaping @Sendable () -> Void) -> NWConnection {
         let parameters = NWParameters.tcp
-        (parameters.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options)?.version = .v4
         parameters.prohibitedInterfaceTypes = [.cellular]
+        if let interface {
+            parameters.requiredInterface = interface
+        } else {
+            (parameters.defaultProtocolStack.internetProtocol as? NWProtocolIP.Options)?.version = .v4
+        }
         let connection = NWConnection(to: endpoint, using: parameters)
         self.connection = connection
-        connection.stateUpdateHandler = { [weak self] state in
-            guard let self else { return }
+        connection.stateUpdateHandler = { [weak self, weak connection] state in
+            guard let self, let connection, self.connection === connection else { return }
             switch state {
             case .ready:
-                if case .hostPort(let host, let port)? = connection.currentPath?.remoteEndpoint, case .ipv4(let address) = host {
-                    // "192.168.0.10%en0"처럼 인터페이스가 붙으면 뗀다.
-                    let text = "\(address)".split(separator: "%").first.map(String.init) ?? ""
-                    self.complete(text.isEmpty ? nil : DirectEndpoint(host: text, port: Int(port.rawValue)))
+                let used = interface ?? connection.currentPath?.availableInterfaces.first
+                if let found = Self.endpoint(of: connection, interface: used) {
+                    self.complete(found)
                 } else {
-                    self.complete(nil)
+                    self.connection = nil
+                    connection.cancel()
+                    onFailure()
                 }
             case .failed, .cancelled:
-                self.complete(nil)
+                self.connection = nil
+                connection.cancel()
+                onFailure()
             default:
                 break
             }
         }
         connection.start(queue: queue)
+        return connection
+    }
+
+    private static func endpoint(of connection: NWConnection, interface: NWInterface?) -> DirectEndpoint? {
+        guard case .hostPort(let host, let port)? = connection.currentPath?.remoteEndpoint else { return nil }
+        let address: String
+        switch host {
+        // "192.168.0.10%en0"처럼 인터페이스가 붙으면 뗀다. 케이블의 IPv6 주소에는 규칙이 다시 붙인다.
+        case .ipv4(let value): address = "\(value)".split(separator: "%").first.map(String.init) ?? ""
+        case .ipv6(let value): address = "\(value)".split(separator: "%").first.map(String.init) ?? ""
+        default: return nil
+        }
+        return DirectResolution.endpoint(address: address, port: Int(port.rawValue), interface: interface.map(DirectInterface.init))
     }
 
     func finish(_ value: DirectEndpoint?) {
@@ -434,9 +521,10 @@ private final class BonjourSearch: @unchecked Sendable {
         guard !done else { return }
         done = true
         browser?.cancel()
-        connection?.cancel()
-        browser = nil
+        let open = connection
         connection = nil
+        open?.cancel()
+        browser = nil
         continuation?.resume(returning: value)
         continuation = nil
     }

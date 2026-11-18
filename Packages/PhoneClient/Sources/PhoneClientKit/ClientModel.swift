@@ -248,8 +248,10 @@ public final class ClientModel {
     /// 지금 VPN은 앱이 자동으로 켠 것이다. 쓸 일이 없어지면 `Timing.autoOffDelay` 뒤에 끈다.
     /// 사용자가 켜거나 끈 VPN, 다른 앱의 VPN에는 `false`다.
     public private(set) var vpnAutoStarted = false
-    /// 같은 네트워크의 Mac에 VPN 없이 직접 연결해 쓰고 있다(docs/protocol-addenda.md O).
-    public private(set) var isDirectConnected = false
+    /// Mac에 VPN 없이 직접 연결해 쓰고 있으면 그 길(같은 네트워크, USB 케이블). docs/protocol-addenda.md O, Q.
+    public private(set) var directLink: DirectLinkKind?
+    /// 같은 네트워크나 USB 케이블로 Mac에 VPN 없이 직접 연결해 쓰고 있다.
+    public var isDirectConnected: Bool { directLink != nil }
     /// 진단 로그. 화면과 앱(시작·VPN)도 여기에 남긴다.
     public let logBook: DeviceLogBook
     public let crashBook: CrashBook
@@ -1226,7 +1228,7 @@ public final class ClientModel {
         resetHostScopedState()
         store.clear()
         direct?.forget()
-        isDirectConnected = false
+        directLink = nil
         host = nil
         phase = .unpaired
         needsTunnel = false
@@ -1258,20 +1260,20 @@ public final class ClientModel {
 
     // MARK: 경로 선택 (docs/protocol-addenda.md O)
 
-    /// 네트워크 경로가 바뀌었다(Wi-Fi ↔ 셀룰러, 다른 Wi-Fi). 다음 요청에서 직접 경로를 다시 찾는다.
+    /// 네트워크 경로가 바뀌었다(Wi-Fi ↔ 셀룰러, 다른 Wi-Fi, USB 케이블을 꽂거나 뽑음). 다음 요청에서 직접 경로를 다시 찾는다.
     public func noteNetworkChange() {
         guard let direct else { return }
         direct.invalidate()
-        isDirectConnected = false
+        directLink = nil
     }
 
     /// 직접 경로가 있거나 VPN이 연결돼 있다(꺼져 있으면 자동으로 켠다).
     private func reachable(_ current: PairedHost) async -> Bool {
-        if await direct?.api(for: current, client: client, timeouts: timing.requestTimeouts) != nil {
-            isDirectConnected = true
+        if let api = await direct?.api(for: current, client: client, timeouts: timing.requestTimeouts) {
+            directLink = api.directLink ?? .network
             return true
         }
-        isDirectConnected = false
+        directLink = nil
         return await connectedForTransfer()
     }
 
@@ -1288,8 +1290,9 @@ public final class ClientModel {
         if let direct {
             for attempt in 0..<2 {
                 guard let api = await direct.api(for: current, client: client, timeouts: timing.requestTimeouts) else { break }
-                if !isDirectConnected { log(.info, "direct", "같은 네트워크의 Mac에 직접 연결") }
-                isDirectConnected = true
+                let link = api.directLink ?? .network
+                if directLink != link { log(.info, "direct", link == .cable ? "USB 케이블로 Mac에 직접 연결" : "같은 네트워크의 Mac에 직접 연결") }
+                directLink = link
                 route(true)
                 do {
                     return try await work(api)
@@ -1302,7 +1305,7 @@ public final class ClientModel {
                     break
                 }
             }
-            isDirectConnected = false
+            directLink = nil
         }
         route(false)
         guard await ensure(), let api = makeAPI(current.fqdn) else { throw VPNNotConnected() }

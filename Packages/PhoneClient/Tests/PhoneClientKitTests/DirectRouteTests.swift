@@ -82,9 +82,14 @@ final class FakeBrowser: DirectBrowsing {
 
 final class FakeNetwork: LocalNetworkChecking {
     private let value = Mutex(true)
+    private let cable = Mutex(false)
     var isOnLocalNetwork: Bool {
         get { value.withLock { $0 } }
         set { value.withLock { $0 = newValue } }
+    }
+    var isCablePlugged: Bool {
+        get { cable.withLock { $0 } }
+        set { cable.withLock { $0 = newValue } }
     }
 }
 

@@ -5,14 +5,25 @@ import RDModels
 // 시스템에 닿는 부분(Keychain, Bonjour, 네트워크 경로, 공개 키를 고정한 TLS)은 프로토콜 뒤에 두고
 // 실제 구현은 DirectSystem.swift에 있다.
 
+/// 직접 연결이 지나는 길.
+public enum DirectLinkKind: String, Codable, Hashable, Sendable {
+    /// 같은 네트워크(Wi-Fi 등).
+    case network
+    /// Mac에 꽂은 USB 케이블. iPhone과 Mac 사이에 생기는 네트워크 인터페이스의 링크 로컬 주소로 간다.
+    case cable
+}
+
 /// 직접 연결 리스너의 주소. `host`는 IP 주소다(이름이 아니다).
+/// 케이블의 IPv6 링크 로컬 주소에는 인터페이스가 붙는다(`fe80::1%anpi0`).
 public struct DirectEndpoint: Hashable, Sendable {
     public var host: String
     public var port: Int
+    public var link: DirectLinkKind
 
-    public init(host: String, port: Int) {
+    public init(host: String, port: Int, link: DirectLinkKind = .network) {
         self.host = host
         self.port = port
+        self.link = link
     }
 }
 
@@ -29,8 +40,11 @@ public struct DirectCredential: Codable, Equatable, Sendable {
     public var port: Int
     /// 마지막으로 연결된 Mac의 IP 주소.
     public var lastAddress: String?
+    /// 마지막 주소가 지나는 길. 없으면 같은 네트워크다(이 값을 모르는 이전 버전이 저장한 것).
+    public var lastLink: DirectLinkKind?
 
-    public init(hostId: String, directId: String, deviceId: String, token: String, spki: String, port: Int, lastAddress: String? = nil) {
+    public init(hostId: String, directId: String, deviceId: String, token: String, spki: String, port: Int, lastAddress: String? = nil,
+                lastLink: DirectLinkKind? = nil) {
         self.hostId = hostId
         self.directId = directId
         self.deviceId = deviceId
@@ -38,6 +52,7 @@ public struct DirectCredential: Codable, Equatable, Sendable {
         self.spki = spki
         self.port = port
         self.lastAddress = lastAddress
+        self.lastLink = lastLink
     }
 
     /// `Authorization` 헤더 값.
@@ -57,9 +72,15 @@ public protocol DirectBrowsing: Sendable {
     func find(directId: String, timeout: Duration) async -> DirectEndpoint?
 }
 
-/// Wi-Fi(또는 유선)에 붙어 있는지. 셀룰러뿐이면 직접 연결을 찾지 않는다.
+/// Wi-Fi(또는 유선)에 붙어 있는지, 케이블이 꽂혀 있는지. 셀룰러뿐이고 케이블도 없으면 직접 연결을 찾지 않는다.
 public protocol LocalNetworkChecking: Sendable {
     var isOnLocalNetwork: Bool { get }
+    /// 케이블이 꽂혀 있다(충전 중). Mac에 꽂은 것인지는 찾아봐야 안다.
+    var isCablePlugged: Bool { get }
+}
+
+extension LocalNetworkChecking {
+    public var isCablePlugged: Bool { false }
 }
 
 /// 인증서의 공개 키가 `pin`일 때만 연결하는 전송을 만든다. 이름과 시스템 신뢰는 보지 않는다.
@@ -68,7 +89,7 @@ public protocol DirectTransportMaking: Sendable {
     func transport(pin: String) -> any HTTPTransport
 }
 
-/// Mac까지 가는 경로를 고른다: 같은 네트워크면 직접, 아니면 `nil`(부른 쪽이 VPN 경로를 쓴다).
+/// Mac까지 가는 경로를 고른다: USB 케이블이나 같은 네트워크면 직접, 아니면 `nil`(부른 쪽이 VPN 경로를 쓴다).
 @MainActor
 public final class DirectRoute {
     public struct Timing: Sendable {
@@ -76,14 +97,18 @@ public final class DirectRoute {
         public var probeTimeout: TimeInterval
         /// Bonjour로 찾는 제한 시간.
         public var browseTimeout: Duration
+        /// Wi-Fi 없이 케이블만 꽂혀 있을 때 Bonjour로 찾는 제한 시간(충전기일 수도 있어 짧게 둔다).
+        public var cableBrowseTimeout: Duration
         /// 직접 연결을 찾지 못한 뒤 다시 찾기까지의 시간.
         public var retryAfter: TimeInterval
         /// Mac이 직접 연결을 모르거나 꺼 두었을 때 다시 등록해 보기까지의 시간.
         public var enrollRetryAfter: TimeInterval
 
-        public init(probeTimeout: TimeInterval = 1, browseTimeout: Duration = .seconds(2), retryAfter: TimeInterval = 60, enrollRetryAfter: TimeInterval = 600) {
+        public init(probeTimeout: TimeInterval = 1, browseTimeout: Duration = .seconds(2), cableBrowseTimeout: Duration = .seconds(1),
+                    retryAfter: TimeInterval = 60, enrollRetryAfter: TimeInterval = 600) {
             self.probeTimeout = probeTimeout
             self.browseTimeout = browseTimeout
+            self.cableBrowseTimeout = cableBrowseTimeout
             self.retryAfter = retryAfter
             self.enrollRetryAfter = enrollRetryAfter
         }
@@ -141,14 +166,23 @@ public final class DirectRoute {
         return false
     }
 
+    /// 지금 쓰는 직접 경로가 지나는 길. 직접 경로를 쓰지 않으면 `nil`.
+    public var link: DirectLinkKind? {
+        if case .direct(let endpoint) = state { return endpoint.link }
+        return nil
+    }
+
     /// 이 Mac에 등록해 두었는가.
     public func isEnrolled(for host: PairedHost) -> Bool {
         credential?.hostId == host.hostId && rejectedToken == nil
     }
 
-    /// 직접 경로를 써 볼 만한가: 등록했고, Wi-Fi에 있고, 방금 실패해 쉬는 중이 아니다. 네트워크를 건드리지 않는다.
+    /// Wi-Fi(유선)에 있거나 케이블이 꽂혀 있다.
+    private var hasLocalLink: Bool { network.isOnLocalNetwork || network.isCablePlugged }
+
+    /// 직접 경로를 써 볼 만한가: 등록했고, Wi-Fi에 있거나 케이블이 꽂혀 있고, 방금 실패해 쉬는 중이 아니다. 네트워크를 건드리지 않는다.
     public func mayReach(_ host: PairedHost) -> Bool {
-        guard isEnrolled(for: host), network.isOnLocalNetwork else { return false }
+        guard isEnrolled(for: host), hasLocalLink else { return false }
         if case .unavailable(let since) = state { return clock.now.timeIntervalSince(since) >= timing.retryAfter }
         return true
     }
@@ -157,7 +191,7 @@ public final class DirectRoute {
     /// 처음이거나 다시 찾을 때가 됐으면 마지막 주소 확인(1초)과 Bonjour 찾기(2초)를 함께 한다.
     public func api(for host: PairedHost, client: ClientInfo, timeouts: HostAPI.Timeouts) async -> HostAPI? {
         guard mayReach(host), let credential else {
-            if !network.isOnLocalNetwork, isDirect { state = .unknown }
+            if !hasLocalLink, isDirect { state = .unknown }
             return nil
         }
         var endpoint: DirectEndpoint?
@@ -257,19 +291,31 @@ public final class DirectRoute {
     }
 
     private func remember(_ endpoint: DirectEndpoint) {
-        guard var current = credential, current.lastAddress != endpoint.host || current.port != endpoint.port else { return }
+        guard var current = credential,
+              current.lastAddress != endpoint.host || current.port != endpoint.port || (current.lastLink ?? .network) != endpoint.link
+        else { return }
         current.lastAddress = endpoint.host
+        current.lastLink = endpoint.link
         current.port = endpoint.port
         credential = current
         store.save(current)
     }
 
     /// 마지막 주소와 Bonjour를 함께 시도해 `/v1/info`가 페어링한 Mac의 것인 주소를 돌려준다.
+    /// 케이블이 꽂혀 있는데 마지막 주소가 케이블 것이 아니면 Bonjour 결과를 먼저 본다(케이블 경로가 있으면 그쪽을 쓴다).
     private func discover(_ credential: DirectCredential, host: PairedHost, client: ClientInfo) async -> DirectEndpoint? {
         let browser = browser
-        let browseTimeout = timing.browseTimeout
+        let cablePlugged = network.isCablePlugged
+        let browseTimeout = cablePlugged && !network.isOnLocalNetwork ? timing.cableBrowseTimeout : timing.browseTimeout
         async let browsed = browser.find(directId: credential.directId, timeout: browseTimeout)
-        let last = credential.lastAddress.map { DirectEndpoint(host: $0, port: credential.port) }
+        let last = credential.lastAddress.map { DirectEndpoint(host: $0, port: credential.port, link: credential.lastLink ?? .network) }
+        if cablePlugged, last?.link != .cable, let found = await browsed, found.link == .cable {
+            switch await probe(found, credential: credential, host: host, client: client) {
+            case .ok: return found
+            case .rejected: return nil
+            case .unreachable: break
+            }
+        }
         if let last {
             switch await probe(last, credential: credential, host: host, client: client) {
             case .ok: return last  // 범위를 벗어나며 Bonjour 찾기는 취소된다.
@@ -296,6 +342,72 @@ public final class DirectRoute {
         } catch {
             return .unreachable
         }
+    }
+}
+
+/// 네트워크 인터페이스의 종류(`NWInterface.InterfaceType`을 옮긴 것).
+public enum DirectInterfaceKind: Sendable {
+    case wifi, wired, other, cellular, loopback
+}
+
+/// Bonjour로 찾은 광고가 보이는 인터페이스 하나.
+public struct DirectInterface: Hashable, Sendable {
+    public var name: String
+    public var kind: DirectInterfaceKind
+
+    public init(name: String, kind: DirectInterfaceKind) {
+        self.name = name
+        self.kind = kind
+    }
+
+    /// Mac에 꽂은 USB 케이블이 만드는 인터페이스일 수 있는가.
+    /// 케이블은 유선(`en*`)과 그 밖(`anpi*`) 두 인터페이스로 보인다. 터널·AirDrop·핫스팟 인터페이스는 뺀다.
+    public var mayBeCable: Bool {
+        switch kind {
+        case .wired: return true
+        case .other: return !["utun", "ipsec", "awdl", "llw", "ap", "pdp_ip", "lo", "bridge"].contains { name.hasPrefix($0) }
+        case .wifi, .cellular, .loopback: return false
+        }
+    }
+}
+
+/// Bonjour로 찾은 서비스에 연결해 본 결과를 직접 연결 주소로 바꾸는 규칙.
+public enum DirectResolution {
+    /// 케이블 인터페이스를 먼저 시도한다(이름 순). 케이블이 아닌 것은 여기에 없다: 인터페이스를 고르지 않고 IPv4로 연결한다.
+    public static func cableCandidates(_ interfaces: [DirectInterface]) -> [DirectInterface] {
+        interfaces.filter(\.mayBeCable).sorted { $0.name < $1.name }
+    }
+
+    /// 링크 로컬 주소(169.254/16, fe80::/10)인가. 인터페이스(`%en2`)가 붙어 있어도 된다.
+    public static func isLinkLocal(_ address: String) -> Bool {
+        let bare = address.split(separator: "%").first.map(String.init) ?? ""
+        if bare.contains(":") {
+            guard let head = bare.lowercased().split(separator: ":", omittingEmptySubsequences: false).first,
+                  let value = UInt16(head, radix: 16) else { return false }
+            return value & 0xFFC0 == 0xFE80
+        }
+        let parts = bare.split(separator: ".", omittingEmptySubsequences: false)
+        return parts.count == 4 && parts[0] == "169" && parts[1] == "254"
+    }
+
+    /// 연결된 상대 주소와 그 연결이 지난 인터페이스로 직접 연결 주소를 만든다.
+    ///
+    /// - 케이블: 인터페이스가 케이블일 수 있고 주소가 링크 로컬이다. IPv6면 인터페이스 이름을 붙인다(없으면 그 주소로 갈 수 없다).
+    /// - 같은 네트워크: IPv4 주소만 쓴다(이전과 같다).
+    /// - 셀룰러·루프백으로 닿은 주소는 쓰지 않는다.
+    public static func endpoint(address: String, port: Int, interface: DirectInterface?) -> DirectEndpoint? {
+        let bare = address.split(separator: "%").first.map(String.init) ?? ""
+        guard !bare.isEmpty, (1...65535).contains(port) else { return nil }
+        if let interface, interface.kind == .cellular || interface.kind == .loopback { return nil }
+        let isV6 = bare.contains(":")
+        if let interface, interface.mayBeCable, isLinkLocal(bare) {
+            guard isV6 else { return DirectEndpoint(host: bare, port: port, link: .cable) }
+            let nameOK = !interface.name.isEmpty && interface.name.unicodeScalars.allSatisfy {
+                ("0"..."9").contains($0) || ("a"..."z").contains($0) || ("A"..."Z").contains($0)
+            }
+            return nameOK ? DirectEndpoint(host: "\(bare)%\(interface.name)", port: port, link: .cable) : nil
+        }
+        return isV6 ? nil : DirectEndpoint(host: bare, port: port, link: .network)
     }
 }
 

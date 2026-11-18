@@ -288,7 +288,7 @@ struct VPNScreen: View {
             return VPNStatusText.autoStarting
         }
         switch tunnel.state {
-        case .off: return services.model.isDirectConnected ? VPNStatusText.direct : String(localized: "꺼짐")
+        case .off: return services.model.directLink.map(VPNStatusText.direct) ?? String(localized: "꺼짐")
         case .connecting: return String(localized: "연결하는 중")
         case .disconnecting: return String(localized: "끄는 중")
         case .connected: return VPNStatusText.connected(holder: tunnel.vpnHolder, path: tunnel.peerPath)
@@ -306,9 +306,9 @@ struct VPNScreen: View {
         if services.model.vpnAutoStarted, tunnel.state == .connected {
             return String(localized: "Mac에 연결하려고 자동으로 켰습니다. 쓰지 않으면 30초 뒤에 끕니다.")
         }
-        if services.model.isDirectConnected {
-            if tunnel.state == .off { return VPNStatusText.directDetail }
-            if tunnel.state == .connected { return VPNStatusText.directWithVPNDetail }
+        if let link = services.model.directLink {
+            if tunnel.state == .off { return VPNStatusText.directDetail(link) }
+            if tunnel.state == .connected { return VPNStatusText.directWithVPNDetail(link) }
         }
         return nil
     }
