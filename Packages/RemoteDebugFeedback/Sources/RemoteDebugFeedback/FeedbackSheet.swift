@@ -4,51 +4,53 @@ import PhotosUI
 import SwiftUI
 import UIKit
 
-/// 피드백 화면에 쓰는 문구. 앱의 언어에 맞게 바꿔 넣는다.
+/// 피드백 화면에 쓰는 문구. 기본값은 기기 언어를 따른다(한국어·영어·일본어·중국어 간체·번체, 그 밖에는 영어).
+/// 앱의 문구로 바꾸려면 값을 넣는다. 넣은 값은 언어와 상관없이 그대로 보인다.
 public struct RemoteDebugFeedbackLabels: Sendable {
-    public var title = "피드백 보내기"
-    public var prompt = "무엇이 문제인가요?"
-    public var attachments = "첨부"
-    public var attachPhoto = "사진 첨부"
-    public var attachFile = "파일 첨부"
-    public var removeAttachment = "빼기"
-    public var attachmentLimits = "사진과 파일을 \(FeedbackFiles.maxCount)개까지 붙일 수 있습니다. 파일 하나는 1MB, 모두 합쳐 1.5MB까지이고 사진은 크기를 줄여 붙입니다."
-    public var tooManyAttachments = "첨부는 \(FeedbackFiles.maxCount)개까지 붙일 수 있습니다."
-    public var attachmentTooLarge = "1MB가 넘는 파일은 붙일 수 없습니다."
-    public var attachmentsTooLarge = "첨부는 모두 합쳐 1.5MB까지 붙일 수 있습니다."
-    public var attachmentUnreadable = "파일을 읽을 수 없습니다."
-    public var includeLogs = "최근 로그 붙이기"
-    public var send = "보내기"
-    public var close = "닫기"
-    public var disclosure = "앱 버전과 기기 종류가 함께 개발자에게 갑니다."
-    public var notConfigured = "이 빌드는 피드백을 보낼 곳이 설정되지 않았습니다."
-    public var collectingLogs = "로그를 모으는 중…"
-    public var preparingMail = "메일을 준비하는 중…"
-    public var sent = "보냈습니다."
+    public var title = FeedbackStrings.text(.sheetTitle)
+    public var prompt = FeedbackStrings.text(.sheetPrompt)
+    public var attachments = FeedbackStrings.text(.sheetAttachments)
+    public var attachPhoto = FeedbackStrings.text(.sheetAttachPhoto)
+    public var attachFile = FeedbackStrings.text(.sheetAttachFile)
+    public var removeAttachment = FeedbackStrings.text(.sheetRemoveAttachment)
+    public var attachmentLimits = FeedbackStrings.text(.sheetAttachmentLimits, FeedbackFiles.maxCount, FeedbackStrings.megabytes(FeedbackFiles.maxBytes), FeedbackStrings.megabytes(FeedbackFiles.maxTotalBytes))
+    public var tooManyAttachments = FeedbackStrings.text(.sheetTooManyAttachments, FeedbackFiles.maxCount)
+    public var attachmentTooLarge = FeedbackStrings.text(.sheetAttachmentTooLarge, FeedbackStrings.megabytes(FeedbackFiles.maxBytes))
+    public var attachmentsTooLarge = FeedbackStrings.text(.sheetAttachmentsTooLarge, FeedbackStrings.megabytes(FeedbackFiles.maxTotalBytes))
+    public var attachmentUnreadable = FeedbackStrings.text(.sheetAttachmentUnreadable)
+    public var includeLogs = FeedbackStrings.text(.sheetIncludeLogs)
+    public var send = FeedbackStrings.text(.sheetSend)
+    public var close = FeedbackStrings.text(.sheetClose)
+    public var disclosure = FeedbackStrings.text(.sheetDisclosure)
+    public var notConfigured = FeedbackStrings.text(.sheetNotConfigured)
+    public var collectingLogs = FeedbackStrings.text(.sheetCollectingLogs)
+    public var preparingMail = FeedbackStrings.text(.sheetPreparingMail)
+    public var sent = FeedbackStrings.text(.sheetSent)
     public var mail = FeedbackLabels()
     /// 설정 화면에 두는 로그 기록 동의 스위치의 문구(`RemoteDebugFeedbackConsentSection(labels: labels.consent)`).
     public var consent = RemoteDebugFeedbackConsentLabels()
     #if DEBUG
     // Mac으로 보내는 길과 확인 목록은 개발 빌드에만 있어, 그 문구도 배포 빌드에 들어가지 않는다.
-    public var sendingToMac = "개발자의 Mac으로 보내는 중…"
-    public var saving = "저장하는 중…"
-    public var unreachable = "지금은 개발자의 Mac에 닿지 않습니다."
-    public var sendByMail = "메일로 보내기"
-    public var sendLater = "저장하고 나중에 보내기"
-    public var saved = "저장해 두었습니다. RemoteDebug 앱의 VPN을 켜고 이 앱을 다시 열면 보냅니다."
-    public var unansweredOnly = "답하지 않은 것만 보기"
-    public var resetChecks = "답 모두 지우기"
-    public var resetChecksConfirm = "이 기기에서 고른 답과 메모를 모두 지울까요?"
-    public var checklist = "확인할 것"
-    public var checklistFooter = "개발 빌드에만 보입니다. 고른 답은 피드백과 함께 갑니다."
-    public var unansweredChecks = "아직 답하지 않은 것"
-    public var checkAnswer = "답"
-    public var noAnswer = "답 없음"
-    public var checkNote = "메모(개인 정보는 적지 않습니다)"
-    public var checkPlace = "어디서"
-    public var checkSteps = "할 일"
-    public var checkExpect = "보여야 하는 것"
-    public var staleAnswer = "바뀌기 전 빌드에서 고른 답"
+    // 그래서 이 문구의 번역은 묶음의 카탈로그가 아니라 `#if DEBUG` 안의 코드(`FeedbackDebugStrings`)에 있다.
+    public var sendingToMac = FeedbackDebugStrings.text(.sendingToMac)
+    public var saving = FeedbackDebugStrings.text(.saving)
+    public var unreachable = FeedbackDebugStrings.text(.unreachable)
+    public var sendByMail = FeedbackDebugStrings.text(.sendByMail)
+    public var sendLater = FeedbackDebugStrings.text(.sendLater)
+    public var saved = FeedbackDebugStrings.text(.saved)
+    public var unansweredOnly = FeedbackDebugStrings.text(.unansweredOnly)
+    public var resetChecks = FeedbackDebugStrings.text(.resetChecks)
+    public var resetChecksConfirm = FeedbackDebugStrings.text(.resetChecksConfirm)
+    public var checklist = FeedbackDebugStrings.text(.checklist)
+    public var checklistFooter = FeedbackDebugStrings.text(.checklistFooter)
+    public var unansweredChecks = FeedbackDebugStrings.text(.unansweredChecks)
+    public var checkAnswer = FeedbackDebugStrings.text(.checkAnswer)
+    public var noAnswer = FeedbackDebugStrings.text(.noAnswer)
+    public var checkNote = FeedbackDebugStrings.text(.checkNote)
+    public var checkPlace = FeedbackDebugStrings.text(.checkPlace)
+    public var checkSteps = FeedbackDebugStrings.text(.checkSteps)
+    public var checkExpect = FeedbackDebugStrings.text(.checkExpect)
+    public var staleAnswer = FeedbackDebugStrings.text(.staleAnswer)
     #endif
 
     public init() {}
@@ -303,7 +305,9 @@ public struct RemoteDebugFeedbackSheet: View {
                 Image(systemName: "minus.circle.fill")
             }
             .buttonStyle(.borderless)
-            .accessibilityLabel("\(file.name) \(labels.removeAttachment)")
+            // 이름과 동작을 한 글로 잇지 않는다. 말의 차례가 언어마다 달라서다.
+            .accessibilityLabel(labels.removeAttachment)
+            .accessibilityValue(file.name)
         }
     }
 
@@ -329,6 +333,7 @@ public struct RemoteDebugFeedbackSheet: View {
     #if DEBUG
     private func report() async -> FeedbackReport {
         let lines = await logLines()
+        // Mac으로 가는 기록의 글이라 기기 언어로 바꾸지 않는다(`RemoteDebugFeedback.report`의 설명).
         let details = lines.isEmpty ? "" : "\n최근 로그\n" + lines.joined(separator: "\n")
         var report = RemoteDebugFeedback.report(message: trimmed, details: details, attachments: files.items, date: Date())
         if !checks.items.isEmpty { report.checks = checks.reportChecks }
@@ -419,14 +424,15 @@ private struct FeedbackCheckRow: View {
             if !item.steps.isEmpty { detail(labels.checkSteps, item.steps) }
             if !item.expect.isEmpty { detail(labels.checkExpect, item.expect.map { "• " + $0 }.joined(separator: "\n")) }
             if let stale = store.staleAnswer(for: item), let choice = stale.choice {
-                Text("\(labels.staleAnswer): \(choice) (\(stale.build))")
+                Text(FeedbackDebugStrings.text(.staleAnswerLine, labels.staleAnswer, shown(choice), stale.build))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
             Picker(labels.checkAnswer, selection: Binding(get: { answer.choice ?? "" },
                                                          set: { store.choose($0.isEmpty ? nil : $0, for: item) })) {
                 Text(labels.noAnswer).tag("")
-                ForEach(item.choices, id: \.self) { Text($0).tag($0) }
+                // 고르는 값(tag)은 저장하고 보내는 글 그대로이고, 보이는 이름만 기기 언어를 따른다.
+                ForEach(item.choices, id: \.self) { Text(shown($0)).tag($0) }
             }
             TextField(labels.checkNote, text: $note, axis: .vertical)
                 .lineLimit(1...4)
@@ -438,7 +444,7 @@ private struct FeedbackCheckRow: View {
                     .accessibilityHidden(true)
                 Text(item.title)
                 Spacer()
-                Text(answer.choice ?? labels.noAnswer)
+                Text(answer.choice.map(shown) ?? labels.noAnswer)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -446,6 +452,8 @@ private struct FeedbackCheckRow: View {
         }
         .onAppear { note = answer.note }
     }
+
+    private func shown(_ choice: String) -> String { FeedbackCheckItem.displayName(for: choice, labels: labels.mail) }
 
     private func detail(_ title: String, _ text: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {

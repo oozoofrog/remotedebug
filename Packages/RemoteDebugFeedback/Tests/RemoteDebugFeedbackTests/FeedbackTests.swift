@@ -12,9 +12,10 @@ struct FeedbackTests {
     private let info = FeedbackAppInfo(name: "Sample", version: "1.2", build: "3", system: "Test OS", device: "Device")
 
     @Test func standardContentIncludesOnlySuppliedMetadata() {
-        let content = FeedbackContent.standard(info)
+        // 제목과 안내 줄은 기기 언어를 따르므로 언어를 정해 놓고 본다.
+        let content = FeedbackStrings.$forcedLanguage.withValue("en") { FeedbackContent.standard(info) }
         #expect(content.subject == "Sample feedback")
-        #expect(content.body == "\n\n\n---\n\(FeedbackContent.defaultUsageNotice)\nApp: Sample 1.2 (3)\nOS: Test OS\nDevice: Device")
+        #expect(content.body == "\n\n\n---\nThe information below is used only to look into this problem and may be deleted.\nApp: Sample 1.2 (3)\nOS: Test OS\nDevice: Device")
         #expect(FeedbackMail(recipient: "feedback@example.com", content: content).attachment == nil)
     }
 
@@ -99,7 +100,7 @@ struct FeedbackTests {
         let mail = FeedbackMail(recipient: "feedback@example.com", content: .standard(info), attachment: attachment)
         #expect(mail.body.hasSuffix(mail.attachmentNotice))
         #expect(!mail.body.contains("Opens settings"))
-        #expect(!mail.mailtoURL!.absoluteString.contains("Encrypted"))
+        #expect(mail.mailtoURL!.absoluteString.removingPercentEncoding?.contains(mail.attachmentNotice) == false)
         #expect(attachment.fileName.hasSuffix(".afdiag"))
     }
 

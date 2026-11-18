@@ -9,6 +9,8 @@ import OSLog
 final class FeedbackLog: @unchecked Sendable {
     static let shared = FeedbackLog()
     static let limit = 500
+    /// 시스템 로그를 모으는 구간(초). 동의 설명에 분으로 적힌다.
+    static let systemWindow: TimeInterval = 900
     static let lineLimit = 2000
 
     private let lock = NSLock()
@@ -70,7 +72,7 @@ final class FeedbackLog: @unchecked Sendable {
     }
 
     /// 앱이 남긴 줄과 최근 `window`초 동안 이 프로세스가 시스템 로그에 남긴 줄(시스템 라이브러리의 줄 제외)을 시각 순으로. 최근 `limit`줄까지.
-    func collect(window: TimeInterval = 900, limit: Int = 300) -> [String] {
+    func collect(window: TimeInterval = FeedbackLog.systemWindow, limit: Int = 300) -> [String] {
         guard isAllowed() else { return [] }
         var all = recorded
         #if canImport(OSLog)
