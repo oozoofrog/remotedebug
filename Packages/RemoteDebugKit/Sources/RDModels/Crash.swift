@@ -41,6 +41,8 @@ public struct CrashReport: Codable, Sendable, Hashable {
     public var image: Data?
     /// 사용자가 피드백에 붙인 사진과 파일.
     public var attachments: [Attachment]
+    /// 확인 목록에 사용자가 고른 답(개발 빌드의 피드백에만 온다).
+    public var checks: [Check] = []
 
     /// 피드백에 붙인 사진이나 파일 하나. JSON에서는 `{name, type, base64}`다.
     public struct Attachment: Codable, Sendable, Hashable {
@@ -132,7 +134,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         self.text = text
     }
 
-    enum CodingKeys: String, CodingKey { case kind, name, bundleId, appVersion, crashedAt, text, image, attachments }
+    enum CodingKeys: String, CodingKey { case kind, name, bundleId, appVersion, crashedAt, text, image, attachments, checks }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -144,6 +146,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         text = try c.decode(String.self, forKey: .text)
         image = try c.decodeIfPresent(String.self, forKey: .image).flatMap { Data(base64Encoded: $0) }
         attachments = try c.decodeIfPresent([Attachment].self, forKey: .attachments) ?? []
+        checks = try c.decodeIfPresent([Check].self, forKey: .checks) ?? []
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -156,6 +159,7 @@ public struct CrashReport: Codable, Sendable, Hashable {
         try c.encode(text, forKey: .text)
         try c.encodeIfPresent(image?.base64EncodedString(), forKey: .image)
         if !attachments.isEmpty { try c.encode(attachments, forKey: .attachments) }
+        if !checks.isEmpty { try c.encode(checks, forKey: .checks) }
     }
 
     /// 내용으로 정한 id. 같은 기록을 두 번 받아도 하나로 남는다.

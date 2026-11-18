@@ -31,6 +31,9 @@ public enum RemoteDebugFeedback {
         var configuration = Configuration()
         var client: FeedbackClient?
         var collector: AnyObject?
+        #if DEBUG
+        var checklist: [FeedbackCheckItem] = []
+        #endif
     }
 
     private static let lock = NSLock()
@@ -91,7 +94,12 @@ public enum RemoteDebugFeedback {
         guard let client, !trimmed.isEmpty else { return false }
         var files = FeedbackFiles()
         for file in attachments { try? files.add(file) }
-        return await client.submit(report(message: trimmed, details: details, image: image, attachments: files.items, date: Date()))
+        var report = report(message: trimmed, details: details, image: image, attachments: files.items, date: Date())
+        #if DEBUG
+        let checks = await MainActor.run { FeedbackCheckStore().reportChecks }
+        if !checks.isEmpty { report.checks = checks }
+        #endif
+        return await client.submit(report)
     }
 
     static func report(message: String, details: String, image: Data? = nil, attachments: [FeedbackFile] = [],

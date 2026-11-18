@@ -32,6 +32,18 @@ public struct RemoteDebugFeedbackLabels: Sendable {
     public var sendLater = "저장하고 나중에 보내기"
     public var saved = "저장해 두었습니다. RemoteDebug 앱의 VPN을 켜고 이 앱을 다시 열면 보냅니다."
     public var mail = FeedbackLabels()
+    #if DEBUG
+    public var checklist = "확인할 것"
+    public var checklistFooter = "개발 빌드에만 보입니다. 고른 답은 피드백과 함께 갑니다."
+    public var unansweredChecks = "아직 답하지 않은 것"
+    public var checkAnswer = "답"
+    public var noAnswer = "답 없음"
+    public var checkNote = "메모(개인 정보는 적지 않습니다)"
+    public var checkPlace = "어디서"
+    public var checkSteps = "할 일"
+    public var checkExpect = "보여야 하는 것"
+    public var staleAnswer = "바뀌기 전 빌드에서 고른 답"
+    #endif
 
     public init() {}
 
@@ -58,6 +70,9 @@ public struct RemoteDebugFeedbackSheet: View {
     @State private var attachNotice: String?
     @State private var pickedPhotos: [PhotosPickerItem] = []
     @State private var picksFile = false
+    #if DEBUG
+    @StateObject private var checks = FeedbackCheckStore()
+    #endif
     // 배포판에서는 사용자가 켤 때만 로그를 붙인다.
     #if DEBUG
     @State private var includesLogs = true
@@ -94,6 +109,9 @@ public struct RemoteDebugFeedbackSheet: View {
     public var body: some View {
         NavigationStack {
             Form {
+                #if DEBUG
+                checklistSections
+                #endif
                 Section {
                     TextEditor(text: $message)
                         .frame(minHeight: 140)
@@ -101,58 +119,7 @@ public struct RemoteDebugFeedbackSheet: View {
                 } header: {
                     Text(labels.prompt)
                 }
-                Section {
-                    ForEach(files.items) { file in
-                        HStack(spacing: 10) {
-                            if file.isImage, let preview = UIImage(data: file.data) {
-                                Image(uiImage: preview)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 36, height: 36)
-                                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                                    .accessibilityHidden(true)
-                            } else {
-                                Image(systemName: "doc")
-                                    .frame(width: 36, height: 36)
-                                    .foregroundStyle(.secondary)
-                                    .accessibilityHidden(true)
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(file.name).lineLimit(1).truncationMode(.middle)
-                                Text(Int64(file.data.count).formatted(.byteCount(style: .file)))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Button(role: .destructive) {
-                                files.remove(file.id)
-                                attachNotice = nil
-                            } label: {
-                                Image(systemName: "minus.circle.fill")
-                            }
-                            .buttonStyle(.borderless)
-                            .accessibilityLabel("\(file.name) \(labels.removeAttachment)")
-                        }
-                    }
-                    PhotosPicker(selection: $pickedPhotos, maxSelectionCount: max(1, FeedbackFiles.maxCount - files.items.count),
-                                 matching: .images) {
-                        Label(labels.attachPhoto, systemImage: "photo")
-                    }
-                    .disabled(files.isFull)
-                    Button {
-                        picksFile = true
-                    } label: {
-                        Label(labels.attachFile, systemImage: "paperclip")
-                    }
-                    .disabled(files.isFull)
-                } header: {
-                    Text(labels.attachments)
-                } footer: {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(labels.attachmentLimits)
-                        if let attachNotice { Text(attachNotice).foregroundStyle(.red) }
-                    }
-                }
+                attachmentSection
                 Section {
                     Toggle(labels.includeLogs, isOn: $includesLogs)
                 } footer: {
@@ -188,6 +155,14 @@ public struct RemoteDebugFeedbackSheet: View {
                 FeedbackMailComposer(mail: mail, onFinish: self.mail.finish).ignoresSafeArea()
             }
             .onChange(of: includesLogs) { _, _ in collectedLogs = nil }
+            #if DEBUG
+            .task {
+                // Mac에 남겨 둔 목록이 있으면 그것으로 바꾼다. 닿지 않으면 마지막으로 받은 것이나 코드로 정한 것을 쓴다.
+                guard let client = RemoteDebugFeedback.client,
+                      let data = await client.fetchChecklist(bundleID: RemoteDebugFeedback.bundleID) else { return }
+                checks.apply(remote: data)
+            }
+            #endif
             .onChange(of: pickedPhotos) { _, items in
                 guard !items.isEmpty else { return }
                 pickedPhotos = []
@@ -198,16 +173,96 @@ public struct RemoteDebugFeedbackSheet: View {
                             attachNotice = labels.attachmentUnreadable
                             continue
                         }
-                        attach { try $0.addImage(data) }
+                        attach { (files: inout FeedbackFiles) throws(FeedbackFiles.Refusal) in try files.addImage(data) }
                     }
                 }
             }
             .fileImporter(isPresented: $picksFile, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
                 attachNotice = nil
                 for url in (try? result.get()) ?? [] {
-                    attach { try $0.addFile(at: url) }
+                    attach { (files: inout FeedbackFiles) throws(FeedbackFiles.Refusal) in try files.addFile(at: url) }
                 }
             }
+        }
+    }
+
+    #if DEBUG
+    @ViewBuilder private var checklistSections: some View {
+        if !checks.items.isEmpty {
+            Section {
+                LabeledContent(labels.unansweredChecks, value: "\(checks.unansweredCount)/\(checks.items.count)")
+            } header: {
+                Text(labels.checklist)
+            } footer: {
+                Text(labels.checklistFooter)
+            }
+            ForEach(checks.stages, id: \.title) { stage in
+                Section {
+                    ForEach(stage.items) { item in
+                        FeedbackCheckRow(item: item, store: checks, labels: labels)
+                    }
+                } header: {
+                    if !stage.title.isEmpty { Text(stage.title) }
+                }
+            }
+        }
+    }
+    #endif
+
+    private var attachmentSection: some View {
+        Section {
+            ForEach(files.items) { file in fileRow(file) }
+            PhotosPicker(selection: $pickedPhotos, maxSelectionCount: max(1, FeedbackFiles.maxCount - files.items.count),
+                         matching: .images) {
+                Label(labels.attachPhoto, systemImage: "photo")
+            }
+            .disabled(files.isFull)
+            Button {
+                picksFile = true
+            } label: {
+                Label(labels.attachFile, systemImage: "paperclip")
+            }
+            .disabled(files.isFull)
+        } header: {
+            Text(labels.attachments)
+        } footer: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(labels.attachmentLimits)
+                if let attachNotice { Text(attachNotice).foregroundStyle(.red) }
+            }
+        }
+    }
+
+    private func fileRow(_ file: FeedbackFile) -> some View {
+        HStack(spacing: 10) {
+            if file.isImage, let preview = UIImage(data: file.data) {
+                Image(uiImage: preview)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .accessibilityHidden(true)
+            } else {
+                Image(systemName: "doc")
+                    .frame(width: 36, height: 36)
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(file.name).lineLimit(1).truncationMode(.middle)
+                Text(Int64(file.data.count).formatted(.byteCount(style: .file)))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Button(role: .destructive) {
+                files.remove(file.id)
+                attachNotice = nil
+            } label: {
+                Image(systemName: "minus.circle.fill")
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("\(file.name) \(labels.removeAttachment)")
         }
     }
 
@@ -233,7 +288,11 @@ public struct RemoteDebugFeedbackSheet: View {
     private func report() async -> FeedbackReport {
         let lines = await logLines()
         let details = lines.isEmpty ? "" : "\n최근 로그\n" + lines.joined(separator: "\n")
-        return RemoteDebugFeedback.report(message: trimmed, details: details, attachments: files.items, date: Date())
+        var report = RemoteDebugFeedback.report(message: trimmed, details: details, attachments: files.items, date: Date())
+        #if DEBUG
+        if !checks.items.isEmpty { report.checks = checks.reportChecks }
+        #endif
+        return report
     }
 
     private func send() async {
@@ -272,7 +331,13 @@ public struct RemoteDebugFeedbackSheet: View {
         draft.message = trimmed
         // 사용자가 고른 사진과 파일은 메일에 그대로 붙인다. 로그만 암호화한 진단 파일에 넣는다.
         mail.files = files.items
-        if let key = configuration.publicKeyBase64, !key.isEmpty, includesLogs {
+        var hasDiagnostics = includesLogs
+        #if DEBUG
+        // 확인 목록의 답은 메일에서는 암호화한 진단 파일에 넣는다.
+        mail.checklist = checks.mailChecks
+        hasDiagnostics = hasDiagnostics || !checks.items.isEmpty
+        #endif
+        if let key = configuration.publicKeyBase64, !key.isEmpty, hasDiagnostics {
             let lines = await logLines()
             mail.diagnostics = FeedbackDiagnostics(publicKeyBase64: key, disclosure: labels.disclosure) {
                 try JSONSerialization.data(withJSONObject: ["logs": lines])
@@ -287,6 +352,59 @@ public struct RemoteDebugFeedbackSheet: View {
         if let url { openURL(url) { mail.openedMailLink(accepted: $0) } }
     }
 }
+
+#if DEBUG
+/// 확인할 것 한 줄: 펼치면 어디서·할 일·보여야 하는 것이 보이고, 답을 고르고 메모를 적는다.
+private struct FeedbackCheckRow: View {
+    let item: FeedbackCheckItem
+    @ObservedObject var store: FeedbackCheckStore
+    let labels: RemoteDebugFeedbackLabels
+    @State private var note = ""
+
+    var body: some View {
+        let answer = store.answer(for: item)
+        DisclosureGroup {
+            if !item.place.isEmpty { detail(labels.checkPlace, item.place) }
+            if !item.steps.isEmpty { detail(labels.checkSteps, item.steps) }
+            if !item.expect.isEmpty { detail(labels.checkExpect, item.expect.map { "• " + $0 }.joined(separator: "\n")) }
+            if let stale = store.staleAnswer(for: item), let choice = stale.choice {
+                Text("\(labels.staleAnswer): \(choice) (\(stale.build))")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            Picker(labels.checkAnswer, selection: Binding(get: { answer.choice ?? "" },
+                                                         set: { store.choose($0.isEmpty ? nil : $0, for: item) })) {
+                Text(labels.noAnswer).tag("")
+                ForEach(item.choices, id: \.self) { Text($0).tag($0) }
+            }
+            TextField(labels.checkNote, text: $note, axis: .vertical)
+                .lineLimit(1...4)
+                .onChange(of: note) { _, text in store.setNote(text, for: item) }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: answer.choice == nil ? "circle" : "checkmark.circle.fill")
+                    .foregroundStyle(answer.choice == nil ? Color.secondary : Color.accentColor)
+                    .accessibilityHidden(true)
+                Text(item.title)
+                Spacer()
+                Text(answer.choice ?? labels.noAnswer)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityElement(children: .combine)
+        }
+        .onAppear { note = answer.note }
+    }
+
+    private func detail(_ title: String, _ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(text).font(.callout)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+#endif
 
 /// 메일 본문에 넣을 글을 세션의 `content` 클로저에 넘기는 상자.
 @MainActor

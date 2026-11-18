@@ -37,6 +37,14 @@ extension HostLogic {
             guard let device = agentDevice else { return deny("not_paired", peer: peer, path: path) }
             emit(.agentCancel(.init(requestId: route.parameter, deviceName: device.name)), deviceID: device.id)
             return object(["ok": true], status: 202)
+        case "checklist":
+            // 앱(번들 ID)의 확인 목록. 없으면 빈 목록을 준다. 다른 `/v1/*`처럼 페어링한 기기만 받는다.
+            guard FeedbackChecklist.isValidBundleID(route.parameter) else { throw HostErrors.make("bad_request", "bundleId가 올바르지 않습니다.") }
+            let stored = options.feedbackChecklist(route.parameter).flatMap { data in
+                data.count <= 1 << 20 && (try? JSONSerialization.jsonObject(with: data)) is [String: Any] ? data : nil
+            }
+            return HostResponse(status: 200, headers: [("Content-Type", "application/json"), ("Cache-Control", "no-store")],
+                                body: .bytes(stored.map(Array.init) ?? Array(("{\"bundleId\":\"" + route.parameter + "\",\"items\":[]}").utf8)))
         case "logs": return try receiveLogs(input, peer: peer, path: path)
         case "crashes": return try receiveCrash(input, peer: peer, path: path)
         case "push": return try registerPush(input, deleting: request.method == "DELETE", peer: peer, path: path)
@@ -171,10 +179,26 @@ extension HostLogic {
         guard attachments.reduce(0, { $0 + $1.data.count }) <= CrashReport.maxAttachmentTotalBytes else {
             throw HostErrors.make("bad_request", "첨부는 모두 합쳐 1536KB 이하여야 합니다.")
         }
-        let report = try CrashReport(kind: kind, name: hostTruncate(input.string("name"), bytes: 200),
+        // 확인 목록의 답. 개발 빌드의 피드백에만 온다.
+        let rawChecks = try input.array("checks")
+        guard rawChecks.isEmpty || (kind == .feedback && rawChecks.count <= FeedbackChecklist.maxItems) else {
+            throw HostErrors.make("bad_request", "checks는 feedback에만 붙일 수 있고 \(FeedbackChecklist.maxItems)개 이하여야 합니다.")
+        }
+        let checks = try rawChecks.map { value -> CrashReport.Check in
+            let entry = try HostJSON(value: value)
+            let id = try hostTruncate(entry.string("id"), bytes: 64)
+            guard !id.isEmpty else { throw HostErrors.make("bad_request", "checks의 id가 비어 있습니다.") }
+            return try CrashReport.Check(id: id, title: hostTruncate(entry.string("title"), bytes: 600),
+                                         answer: hostTruncate(entry.string("answer"), bytes: 120),
+                                         note: hostTruncate(entry.string("note"), bytes: 800),
+                                         build: hostTruncate(entry.string("build"), bytes: 40),
+                                         answeredAt: hostTruncate(entry.string("answeredAt"), bytes: 40))
+        }
+        var report = try CrashReport(kind: kind, name: hostTruncate(input.string("name"), bytes: 200),
                                      bundleId: hostTruncate(input.string("bundleId"), bytes: 200),
                                      appVersion: hostTruncate(input.string("appVersion"), bytes: 200),
                                      crashedAt: min(RDTimestamp.parse(input.string("crashedAt")) ?? receivedAt, receivedAt), text: text, image: image, attachments: attachments)
+        report.checks = checks
         guard let device = devices[peer.stableID] else { return deny("not_paired", peer: peer, path: path) }
         emit(.deviceCrash(.init(deviceId: device.id, deviceName: device.name, nodeName: device.nodeName, report: report)), receivedAt: receivedAt)
         return object(["accepted": 1], status: 202)

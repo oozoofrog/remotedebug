@@ -51,12 +51,16 @@ public final class HostLogic: HostRequestHandling, @unchecked Sendable {
         public var events: @Sendable (CoreEvent) -> Void
         public var updatePageURL: @Sendable () -> String
         public var eventDetails: (@Sendable (EmittedEvent) -> Void)?
+        /// 번들 ID의 확인 목록 JSON(docs/protocol-addenda.md L.4). 없으면 `nil`.
+        public var feedbackChecklist: @Sendable (String) -> Data? = { _ in nil }
         public init(publishDirectory: String, info: @escaping @Sendable () -> Info,
                     baseURL: @escaping @Sendable () -> String, now: @escaping @Sendable () -> Date = { Date() },
                     limits: Limits = Limits(), direct: @escaping @Sendable () -> DirectInfo? = { nil },
                     events: @escaping @Sendable (CoreEvent) -> Void,
                     updatePageURL: @escaping @Sendable () -> String = { "" },
-                    eventDetails: (@Sendable (EmittedEvent) -> Void)? = nil) {
+                    eventDetails: (@Sendable (EmittedEvent) -> Void)? = nil,
+                    feedbackChecklist: @escaping @Sendable (String) -> Data? = { _ in nil }) {
+            self.feedbackChecklist = feedbackChecklist
             self.publishDirectory = publishDirectory
             self.info = info
             self.baseURL = baseURL

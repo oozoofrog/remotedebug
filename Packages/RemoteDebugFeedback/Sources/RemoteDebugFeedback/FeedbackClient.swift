@@ -13,6 +13,21 @@ public struct FeedbackReport: Codable, Equatable, Sendable {
     /// 사용자가 붙인 사진과 파일. 피드백에만 붙인다. 옛 Mac 앱은 이 필드를 읽지 않고 글만 받는다.
     public var attachments: [Attachment]?
 
+    #if DEBUG
+    /// 확인 목록에 사용자가 고른 답. 개발 빌드에서만 보낸다.
+    public var checks: [Check]?
+
+    public struct Check: Codable, Equatable, Sendable {
+        public var id: String
+        public var title: String
+        /// 고른 답. 아직 고르지 않았으면 빈 글자.
+        public var answer: String
+        public var note: String
+        public var build: String
+        public var answeredAt: String
+    }
+    #endif
+
     public struct Attachment: Codable, Equatable, Sendable {
         public var name: String
         /// MIME 종류.

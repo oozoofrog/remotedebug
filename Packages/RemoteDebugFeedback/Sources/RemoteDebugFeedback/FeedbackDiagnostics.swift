@@ -7,8 +7,11 @@ public struct FeedbackCheck: Codable, Identifiable, Equatable, Sendable {
     public let title: String
     public var answer: Answer
     public var note: String
+    /// The answer the user picked when the item offers its own choices.
+    public var choice: String?
 
-    public init(id: String, title: String, answer: Answer = .unchecked, note: String = "") {
+    public init(id: String, title: String, answer: Answer = .unchecked, note: String = "", choice: String? = nil) {
+        self.choice = choice
         self.id = id
         self.title = title
         self.answer = answer

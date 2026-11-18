@@ -22,6 +22,8 @@ public final class CrashLogStore {
         public var imageFile: String?
         /// 사용자가 피드백에 붙인 사진과 파일. 없으면 `nil`.
         public var attachments: [Attached]?
+        /// 확인 목록에 사용자가 고른 답(개발 빌드의 피드백). 원문 파일 끝에도 글로 적는다. 없으면 `nil`.
+        public var checks: [CrashReport.Check]?
 
         /// 목록에 보일 이름: 번들 ID의 마지막 마디, 없으면 파일 이름.
         public var title: String {
@@ -73,9 +75,12 @@ public final class CrashLogStore {
                         file: "\(report.id).\(report.kind.fileExtension)",
                         imageFile: report.image == nil || directory == nil ? nil : "\(report.id).\(report.image?.first == 0x89 ? "png" : "jpg")")
         item.attachments = attached.isEmpty ? nil : attached
+        item.checks = report.checks.isEmpty ? nil : report.checks
+        // 확인 목록의 답은 원문 끝에 붙여, 화면과 에이전트가 같은 글에서 읽는다.
+        let stored = report.checks.isEmpty ? report.text : report.text + "\n---\n" + CrashReport.checksText(report.checks) + "\n"
         if let url = fileURL(item) {
             try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? Data(report.text.utf8).write(to: url, options: .atomic)
+            try? Data(stored.utf8).write(to: url, options: .atomic)
             if let image = report.image, let imageURL = imageURL(item) { try? image.write(to: imageURL, options: .atomic) }
             for (stored, attachment) in zip(attached, report.attachments) {
                 // 실행 권한 없이 쓴다. 앱은 이 파일을 열거나 실행하지 않고 Finder에서 보여 주기만 한다.
@@ -84,7 +89,7 @@ public final class CrashLogStore {
                 try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
             }
         } else {
-            memory[item.id] = report.text
+            memory[item.id] = stored
         }
         items.append(item)
         // 남길 것은 이 Mac이 받은 시각으로 고른다(보낸 쪽이 적은 `crashedAt`이 아니라).
@@ -180,7 +185,9 @@ public final class CrashLogStore {
         let lines = items.map { item in
             let attached = (item.attachments ?? []).compactMap { one in
                 attachmentURL(one, in: directory).map { "\n    첨부: \($0.path) (\(one.bytes)바이트)" }
-            }.joined()
+            }.joined() + (item.checks.map { checks in
+                "\n    확인 목록의 답: \(checks.filter { !$0.answer.isEmpty }.count)/\(checks.count)개 답함(원문 끝에 있다)"
+            } ?? "")
             return "\(item.id)  \(item.crashedAt.formatted(stamp))  \(item.bundleId.isEmpty ? item.name : item.bundleId) \(item.appVersion)  [\(item.kind.label)]  \(item.deviceName)  \(directory.appendingPathComponent(item.file).path)\(item.imageFile.map { "  사진: " + directory.appendingPathComponent($0).path } ?? "")" + attached
         }
         return (["# 크래시·피드백 \(items.count)개 (id, 시각, 앱, 종류, 기기, 원문 파일. 아랫줄의 `첨부:`는 사용자가 붙인 사진·파일)"] + lines).joined(separator: "\n")

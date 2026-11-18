@@ -129,6 +129,24 @@ public struct AgentMCPServer: Sendable {
             ] as [String: Any], "required": ["project_path"]] as [String: Any],
         ],
         [
+            "name": "remotedebug_feedback_checklist",
+            "description": "RemoteDebugFeedback을 붙인 앱의 Debug 빌드에서 사용자가 확인할 것과 고를 답을 남긴다. 빌드를 게시한 뒤 이번에 바뀐 것을 items로 넣으면, 사용자가 앱의 피드백 화면에서 항목마다 답을 고르고 메모를 적어 피드백과 함께 보낸다. 답은 remotedebug_crash_logs에서 그 피드백 원문 끝의 \"확인 목록의 답\"으로 읽는다. items를 주면 목록을 바꿔 넣고, clear가 true면 지우고, 둘 다 없으면 지금 목록을 돌려준다. 배포판에는 보이지 않는다.",
+            "inputSchema": ["type": "object", "properties": [
+                "bundle_id": ["type": "string", "description": "앱의 번들 ID(예: com.example.app)"],
+                "clear": ["type": "boolean", "description": "true면 목록을 지운다"],
+                "items": ["type": "array", "description": "확인할 것 1~50개. 목록 전체를 이것으로 바꾼다", "items": ["type": "object", "properties": [
+                    "id": ["type": "string", "description": "항목 id(영문, 숫자, 점, 밑줄, 붙임표, 64자까지). 같은 id의 답은 이어진다"],
+                    "title": ["type": "string", "description": "무엇을 확인하는지 한 줄(200자까지)"],
+                    "place": ["type": "string", "description": "어디서: 기기와 화면(선택)"],
+                    "steps": ["type": "string", "description": "할 일. 여러 줄 가능(선택, 2000자까지)"],
+                    "expect": ["type": "array", "items": ["type": "string"], "description": "보여야 하는 것들(선택, 10개까지)"],
+                    "choices": ["type": "array", "items": ["type": "string"], "description": "고를 답 2~6개(각 40자까지). 비우면 통과, 실패"],
+                    "since": ["type": "integer", "description": "이 항목이 바뀐 빌드 번호(선택). 그보다 앞선 빌드에서 고른 답은 세지 않아 다시 묻는다"],
+                    "stage": ["type": "string", "description": "묶음 이름(선택). 같은 이름끼리 모아 보인다"],
+                ] as [String: Any], "required": ["id", "title"]] as [String: Any]] as [String: Any],
+            ] as [String: Any], "required": ["bundle_id"]] as [String: Any],
+        ],
+        [
             "name": "remotedebug_device_logs",
             "description": "페어링한 iPhone의 RemoteDebug 앱이 Mac에 보낸 진단 로그(앱 시작, VPN, 페어링, 빌드 목록, 설치·업데이트 진행). 기기마다 최근 줄을 돌려준다.",
             "inputSchema": ["type": "object", "properties": [
@@ -229,6 +247,19 @@ public struct AgentMCPServer: Sendable {
                     return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "url이 필요합니다."]])
                 }
                 let data = await send("link", url, Self.oneLine(arguments["title"]), Self.oneLine(arguments["project"]))
+                let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
+                return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
+            }
+            if name == "remotedebug_feedback_checklist" {
+                // 셋째 줄: 항목은 한 줄 JSON으로, 지우기는 clear로, 읽기는 빈 줄로 넘긴다.
+                var argument = arguments["clear"] as? Bool == true ? "clear" : ""
+                if argument.isEmpty, let items = arguments["items"] as? [Any] {
+                    guard let json = try? JSONSerialization.data(withJSONObject: items) else {
+                        return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "items를 읽을 수 없습니다."]])
+                    }
+                    argument = Self.oneLine(String(decoding: json, as: UTF8.self))
+                }
+                let data = await send("checklist", Self.oneLine(arguments["bundle_id"]), argument, "")
                 let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
                 return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
             }
@@ -397,6 +428,7 @@ extension AgentScript {
         - `remotedebug_build`: `project_path`(프로젝트 폴더의 절대 경로), `scheme`(선택)
         - `remotedebug_schemes`: `project_path`
         - `remotedebug_feedback_setup`: `project_path`, `email`(선택). 앱에 크래시·피드백 보내기를 붙일 때 넣을 코드와 할 일
+        - `remotedebug_feedback_checklist`: `bundle_id`, `items`(선택), `clear`(선택). 사용자가 Debug 빌드의 피드백 화면에서 확인할 것과 고를 답을 남긴다. 답은 `remotedebug_crash_logs`의 피드백 원문 끝에 온다
         - `remotedebug_pairing_code`: RemoteDebug 앱이 아직 없는 iPhone용 설치 페이지 코드와 그 페이지 링크. 앱이 있는 iPhone은 사용자에게 Mac 앱의 'iPhone 페어링…' > 'RemoteDebug 앱이 있는 iPhone'의 QR로 페어링해 달라고 한다.
         - `remotedebug_pair_requests`, `remotedebug_pair_decide`: 허용을 기다리는 요청을 보고 거부할 수 있다. 허용은 할 수 없다: 사용자에게 RemoteDebug Mac 앱 화면에서 허용해 달라고 한다.
         - `remotedebug_device_logs`: iPhone 앱이 보낸 진단 로그. iPhone에서 설치·업데이트·연결이 안 될 때 먼저 본다.
@@ -412,6 +444,7 @@ extension AgentScript {
         \(rd) build <프로젝트 폴더> [스킴]
         \(rd) schemes <프로젝트 폴더>
         \(rd) feedback <프로젝트 폴더> [메일]
+        \(rd) checklist <번들 ID> [항목 JSON 파일|clear]
         \(rd) reports [feedback|crash] [앱 이름이나 번들 ID]
         \(rd) report <기록 id>
         \(rd) status
