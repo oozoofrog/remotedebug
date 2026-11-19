@@ -95,6 +95,7 @@ public struct RemoteDebugFeedbackSheet: View {
     /// 지금 하고 있는 일. `nil`이면 쉬는 중이다.
     @State private var progress: String?
     @State private var collectedLogs: [String]?
+    @State private var collectedPeers: [FeedbackPeerCapture]?
     @State private var notice: String?
     @State private var asksRoute = false
     private let labels: RemoteDebugFeedbackLabels
@@ -192,7 +193,10 @@ public struct RemoteDebugFeedbackSheet: View {
             .sheet(item: $mail.composing) { mail in
                 FeedbackMailComposer(mail: mail, onFinish: self.mail.finish).ignoresSafeArea()
             }
-            .onChange(of: includesLogs) { _, _ in collectedLogs = nil }
+            .onChange(of: includesLogs) { _, _ in
+                collectedLogs = nil
+                collectedPeers = nil
+            }
             #if DEBUG
             .task {
                 // Mac에 남겨 둔 목록이 있으면 그것으로 바꾼다. 닿지 않으면 마지막으로 받은 것이나 코드로 정한 것을 쓴다.
@@ -330,11 +334,23 @@ public struct RemoteDebugFeedbackSheet: View {
         return lines
     }
 
+    /// 함께 붙일 다른 기기(Apple Watch 등)의 로그 묶음. 로그를 붙일 때만 모은다.
+    private func peerLogs() async -> [FeedbackPeerCapture] {
+        guard attachesLogs else { return [] }
+        if let collectedPeers { return collectedPeers }
+        progress = labels.collectingLogs
+        let peers = await RemoteDebugFeedback.gatherPeers()
+        collectedPeers = peers
+        return peers
+    }
+
     #if DEBUG
     private func report() async -> FeedbackReport {
         let lines = await logLines()
         // Mac으로 가는 기록의 글이라 기기 언어로 바꾸지 않는다(`RemoteDebugFeedback.report`의 설명).
-        let details = lines.isEmpty ? "" : "\n최근 로그\n" + lines.joined(separator: "\n")
+        var details = lines.isEmpty ? "" : "\n최근 로그\n" + lines.joined(separator: "\n")
+        let now = Date()
+        for peer in await peerLogs() { details += "\n\n" + peer.text(now: now) }
         var report = RemoteDebugFeedback.report(message: trimmed, details: details, attachments: files.items, date: Date())
         if !checks.items.isEmpty { report.checks = checks.reportChecks }
         return report
@@ -391,12 +407,15 @@ public struct RemoteDebugFeedbackSheet: View {
         #endif
         if let key = configuration.publicKeyBase64, !key.isEmpty, hasDiagnostics {
             let lines = await logLines()
+            let peers = await peerLogs().map(\.json)
             // 어느 빌드에서 온 것인지 진단 파일만 받아도 알 수 있게 앱·기기 정보를 함께 넣는다. 개인을 가리키는 값은 없다.
             let info = mail.appInfo
             let app = ["bundleId": info.bundleID, "name": info.name, "version": info.version, "build": info.build,
                        "os": info.system, "device": info.device]
             mail.diagnostics = FeedbackDiagnostics(publicKeyBase64: key, disclosure: labels.disclosure) {
-                try JSONSerialization.data(withJSONObject: ["logs": lines, "app": app])
+                // `peers`: 다른 기기에서 받은 로그 묶음. 없으면 넣지 않는다.
+                try JSONSerialization.data(withJSONObject: peers.isEmpty ? ["logs": lines, "app": app]
+                                                                         : ["logs": lines, "app": app, "peers": peers])
             }
             mail.attachesDiagnostics = true
         } else {

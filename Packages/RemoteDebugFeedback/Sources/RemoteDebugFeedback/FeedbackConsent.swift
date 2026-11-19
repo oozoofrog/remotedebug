@@ -71,6 +71,7 @@ public extension RemoteDebugFeedback {
     /// 로그 기록 동의를 남기거나 거둔다. 사용자가 설명을 읽고 동의한 뒤에만 `true`로 부른다
     /// (`RemoteDebugFeedbackConsentToggle`이 그 화면이다).
     /// `false`로 부르면 이 패키지가 기기에 남긴 것을 모두 지운다: 메모리의 로그, 임시 폴더의 진단 파일,
+    /// 다른 기기에서 받아 둔 로그 묶음,
     /// Debug 빌드에서 Mac에 보내지 못해 쌓아 둔 기록과 확인 목록에 고른 답·메모.
     static func setRecordingConsent(_ granted: Bool) {
         setRecordingConsent(granted, temporaryRoot: FileManager.default.temporaryDirectory, checksDirectory: storedChecksDirectory)
@@ -101,6 +102,8 @@ extension RemoteDebugFeedback {
     static func deleteRecorded(temporaryRoot: URL, checksDirectory: URL? = nil) {
         FeedbackLog.shared.clear()
         FeedbackSession.removeLeftovers(in: temporaryRoot)
+        // 다른 기기(Apple Watch 등)에서 받아 둔 로그 묶음.
+        if let storage = withState({ $0.storage }) { FeedbackPeerStore.remove(in: storage) }
         #if DEBUG
         if let directory = withState({ $0.storage }) { FeedbackClient.removeQueued(in: directory) }
         // 확인 목록에 고른 답과 메모(사용자가 적은 글)와 Mac에서 받아 둔 목록.

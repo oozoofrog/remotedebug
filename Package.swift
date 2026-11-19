@@ -7,7 +7,7 @@ let package = Package(
     name: "RemoteDebugFeedback",
     // 카탈로그에 없는 언어의 기기에서는 영어 문구가 보인다.
     defaultLocalization: "en",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS(.v17), .macOS(.v14), .watchOS(.v10)],
     products: [
         .library(name: "RemoteDebugFeedback", targets: ["RemoteDebugFeedback"]),
     ],

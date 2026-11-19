@@ -42,6 +42,8 @@ public enum RemoteDebugFeedback {
         /// 동의 표시 파일과 보내지 못한 기록을 두는 폴더. 시험에서 바꿔 넣는다.
         var storage = RemoteDebugFeedback.storageDirectory
         var consent = FeedbackConsent(directory: RemoteDebugFeedback.storageDirectory)
+        /// 피드백을 보낼 때 다른 기기에 로그 묶음을 요청하는 방법(`setPeerRequest`).
+        var peerRequest: PeerRequest?
         #if DEBUG
         var client: FeedbackClient?
         var collector: AnyObject?

@@ -1,6 +1,6 @@
 # RemoteDebugFeedback
 
-앱 안에서 피드백을 받는 Swift 패키지다. Debug 빌드는 개발자의 Mac(RemoteDebug Mac 앱)으로 바로 보내고, 배포 빌드는 사용자의 메일 앱으로 보낸다. iOS 17 이상에서 쓴다.
+앱 안에서 피드백을 받는 Swift 패키지다. Debug 빌드는 개발자의 Mac(RemoteDebug Mac 앱)으로 바로 보내고, 배포 빌드는 사용자의 메일 앱으로 보낸다. iOS 17 이상에서 쓴다. Apple Watch 앱의 로그를 함께 보내려면 watchOS 10 이상의 Watch 앱에도 넣는다.
 
 이 문서는 앱에 패키지를 넣는 개발자와 에이전트가 차례대로 따라 하도록 썼다. 법률 조언이 아니다. 개인정보 처리방침과 App Store 답변은 앱마다 직접 확인해 정한다.
 
@@ -63,12 +63,12 @@
 - 동의는 꺼진 채로 시작한다. `RemoteDebugFeedbackConsentToggle`(스위치만)이나 `RemoteDebugFeedbackConsentSection`(스위치와 아래 설명)을 켜면 무엇을 남기는지 설명이 뜨고, **동의하고 켜기**를 눌러야 켜진다.
 - 동의가 없으면 `RemoteDebugFeedback.log`는 아무것도 남기지 않고, 시스템 로그도 모으지 않으며, 피드백 화면에 **최근 로그 붙이기** 스위치가 보이지 않는다.
 - 동의한 뒤에도 로그를 붙일지는 보낼 때마다 따로 고른다. 배포 빌드에서는 꺼진 채로 시작한다.
-- 스위치를 끄면 패키지가 기기에 남긴 것을 바로 지운다: 메모리의 로그, 임시 폴더의 진단 파일, (Debug 빌드) Mac에 보내지 못해 쌓아 둔 기록.
+- 스위치를 끄면 패키지가 기기에 남긴 것을 바로 지운다: 메모리의 로그, 임시 폴더의 진단 파일, 다른 기기에서 받아 둔 로그 묶음, (Debug 빌드) Mac에 보내지 못해 쌓아 둔 기록.
 - 동의 여부는 앱 데이터 폴더의 `RemoteDebugFeedback/recording-consent`라는 빈 파일이 있느냐로 남긴다. `UserDefaults`를 쓰지 않는다.
 - 코드에서 다룰 때: `RemoteDebugFeedback.hasRecordingConsent`, `isRecordingAllowed`, `requiresRecordingConsent`, `setRecordingConsent(_:)`, `deleteRecorded()`. `setRecordingConsent(true)`는 사용자가 설명을 읽고 동의한 뒤에만 부른다.
 - Debug 빌드는 동의 없이 남긴다. 동의 화면을 Debug 빌드에서 확인하려면 `Configuration(requiresConsentInDebug: true)`로 시작한다.
 - 문구는 `RemoteDebugFeedbackLabels().consent`(`RemoteDebugFeedbackConsentLabels`)에서 바꾼다. 기본 설명은 기기 언어로 보이고 이 패키지가 하는 일만 말한다. 앱이 `log`에 무엇을 넣는지에 맞게 `explanation`을 고쳐 쓴다(고쳐 쓴 글은 앱이 번역한다).
-- 다른 기기(Watch 등)의 기록은 패키지가 다루지 않는다. 스위치의 `onChange`에서 그 기기에 동의를 전하고, 끌 때 그쪽 기록도 지운다.
+- 동의는 기기마다 따로다. iPhone에서 동의해도 Apple Watch의 패키지는 모른다. 스위치의 `onChange`에서 앱이 Watch에 동의를 전해 그쪽에서 `setRecordingConsent`를 부르고, 끌 때도 전해서 그쪽 기록을 지운다("다른 기기의 로그 함께 보내기").
 
 ## 무엇을 남기고 보내는가
 
@@ -162,6 +162,32 @@ Debug 빌드 전용 문구(Mac으로 보내는 길, 확인 목록)도 다섯 언
 
 항목을 쓰는 규칙과 받은 피드백을 다루는 규칙은 Mac 앱이 에이전트에게 주는 안내(스킬과 도구 설명)에 있다.
 
+## 다른 기기의 로그 함께 보내기
+
+Apple Watch 앱이 있는 앱은 Watch가 남긴 로그를 iPhone의 피드백에 함께 붙일 수 있다. 패키지는 watchOS 10 이상에서도 빌드된다(Watch에서는 로그와 동의, 묶음 만들기만 쓴다. 피드백 화면은 iPhone에만 있다). 기기 사이로 옮기는 일은 앱이 WatchConnectivity로 한다.
+
+```swift
+// Watch: iPhone이 요청하면, 또는 운동이 끝났을 때 묶음을 만들어 보낸다.
+if let data = await RemoteDebugFeedback.capturePeerReport(source: "watch") {
+    session.sendMessageData(data, replyHandler: nil)        // 답으로 돌려주거나 transferUserInfo로 보낸다
+}
+
+// iPhone: 받은 묶음을 넘긴다. 기기 이름마다 가장 최근에 수집한 하나만 남는다.
+RemoteDebugFeedback.storePeerReport(data)
+
+// iPhone: 보낼 때 Watch에 지금 요청하는 방법을 앱 시작 때 정해 둔다.
+RemoteDebugFeedback.setPeerRequest {
+    await watchLink.requestReport().map { [$0] } ?? []      // 닿지 않으면 빈 배열
+}
+```
+
+- 사용자가 **최근 로그 붙이기**를 켜고 보내면 패키지가 `setPeerRequest`로 정한 요청을 부르고 3초까지 기다린다. 그 안에 온 묶음은 "보내면서 요청해 받음"으로 붙는다. 답이 없으면 앞서 받아 둔 묶음이 "요청에 답이 없어 N분 전에 받아 둔 기록"이라는 글과 함께 붙는다. 늦게 온 답은 받아 두어 다음에 쓴다.
+- 묶음마다 기기 종류, OS, 앱 버전, 수집한 시각(그 기기의 시계), iPhone이 받은 시각, 담긴 첫 줄과 마지막 줄의 시각, 줄 수, 한도에 걸려 앞부분이 빠졌는지가 함께 간다. 받는 사람은 이것으로 묶음이 문제의 시각을 담고 있는지 본다.
+- Mac으로 바로 보낼 때는 글의 `최근 로그` 아래에 `기기 기록: watch (…)` 단락으로 붙고, 메일로 보낼 때는 암호화한 진단 파일의 `peers`에 들어간다.
+- 한도: 묶음 하나 256 KiB(넘으면 오래된 줄부터 빠진다), 받아 두는 기기 3개. 받아 둔 묶음은 앱 데이터 폴더의 `RemoteDebugFeedback/peers/`에 기기 이름마다 파일 하나로 있고, 새 묶음이 오면 덮어쓴다.
+- 동의가 없는 기기는 묶음을 만들지 않고(`capturePeerReport`가 `nil`), 동의가 없는 iPhone은 받은 묶음을 두지 않는다. iPhone에서 동의를 끄면 받아 둔 묶음이 지워진다. Watch에 남은 로그를 지우는 것은 앱이 Watch에 알려 그쪽에서 `setRecordingConsent(false)`를 불러야 한다. 닿지 않으면 다음에 닿을 때 전한다.
+- 운동처럼 끝난 뒤에 Watch가 닿지 않는 일이 잦으면, 끝날 때 Watch가 먼저 묶음을 보내 두게 한다. 그러면 요청에 답이 없어도 그 운동이 담긴 묶음이 붙는다.
+
 ## 앱이 맡아야 하는 것
 
 패키지가 대신할 수 없는 일이다.
@@ -169,7 +195,7 @@ Debug 빌드 전용 문구(Mac으로 보내는 길, 확인 목록)도 다섯 언
 - **무엇을 로그에 넣을지.** 패키지는 `log`에 넘긴 글을 그대로 남긴다. 건강 수치, 위치와 좌표, 사용자가 입력한 글, 이름, 계정, 토큰은 넣지 않는다. 상태 이름, 개수, 걸린 시간처럼 사람을 가리키지 않는 값만 넣는다. `os.Logger`로 남기는 줄도 보낼 때 함께 모이므로 같은 기준으로 쓴다.
 - **앱마다 다른 키.** 공개키는 Mac 앱이 프로젝트마다 따로 만들고, 개인키는 그 Mac의 키체인에만 둔다. 여러 앱이 키 하나를 함께 쓰지 않는다. 개인키를 저장소에 올리지 않는다.
 - **받는 메일 주소와 문구.** 주소는 앱이 정한다. 화면 문구는 기본값이 기기 언어를 따르고, 앱이 바꿔 넣을 수 있다("문구와 언어"). 동의 설명은 앱이 로그에 남기는 것에 맞게 앱이 고쳐 쓴다.
-- **다른 기기.** Watch 같은 짝 기기의 기록, 동의 전달, 삭제는 앱이 한다.
+- **다른 기기.** Watch 같은 짝 기기와 주고받는 일(전송, 동의 전달, 끌 때 지우라고 알리기)은 앱이 한다. 패키지는 묶음을 만들고 받아 두고 합친다("다른 기기의 로그 함께 보내기").
 - **개인정보 처리방침과 App Store 답변.** 아래 점검 목록을 따른다.
 - **배포판 확인.** 아래 "배포 전 확인"을 릴리스 절차에 넣는다.
 
@@ -255,6 +281,7 @@ RemoteDebug Mac 앱이 받은 피드백을 그 앱의 GitHub 저장소에 이슈
 
 ## 확인하지 않은 것
 
+- 다른 기기의 로그 함께 보내기: 실제 Apple Watch와 WatchConnectivity로는 확인하지 않았다. 단위 시험과 watchOS·iOS 빌드(Debug와 배포 구성)만 했다.
 - 실기기의 메일 작성 화면에서 암호화한 진단 파일과 사진이 함께 붙는지, 메일 계정이 없는 기기의 `mailto:` 흐름.
 - 동의 스위치와 확인 목록의 거르기·지우기 화면(단위 시험과 컴파일만 했다).
 - 언어마다 실기기 화면에 문구가 어떻게 보이는지(줄바꿈, 잘림). 문구가 다섯 언어의 묶음에 있고 자리표시가 채워지는 것은 단위 시험으로 봤다. 일본어와 중국어 문구는 그 언어를 쓰는 사람이 읽어 보지 않았다.

@@ -15,6 +15,8 @@ final class FeedbackLog: @unchecked Sendable {
 
     private let lock = NSLock()
     private var lines: [String] = []
+    /// 줄 수 한도에 걸려 앞쪽 줄을 버린 적이 있는가.
+    private var dropped = false
     private let isAllowed: @Sendable () -> Bool
 
     init(isAllowed: @escaping @Sendable () -> Bool = { RemoteDebugFeedback.isRecordingAllowed }) {
@@ -31,7 +33,10 @@ final class FeedbackLog: @unchecked Sendable {
         guard isAllowed() else { return }
         // 한 줄이 길어도 기록 전체가 커지지 않게 자른다.
         lines.append(line.count > Self.lineLimit ? String(line.prefix(Self.lineLimit)) + "…" : line)
-        if lines.count > Self.limit { lines.removeFirst(lines.count - Self.limit) }
+        if lines.count > Self.limit {
+            lines.removeFirst(lines.count - Self.limit)
+            dropped = true
+        }
     }
 
     var recorded: [String] {
@@ -44,6 +49,7 @@ final class FeedbackLog: @unchecked Sendable {
     func clear() {
         lock.lock()
         lines.removeAll()
+        dropped = false
         lock.unlock()
     }
 
@@ -73,8 +79,16 @@ final class FeedbackLog: @unchecked Sendable {
 
     /// 앱이 남긴 줄과 최근 `window`초 동안 이 프로세스가 시스템 로그에 남긴 줄(시스템 라이브러리의 줄 제외)을 시각 순으로. 최근 `limit`줄까지.
     func collect(window: TimeInterval = FeedbackLog.systemWindow, limit: Int = 300) -> [String] {
-        guard isAllowed() else { return [] }
-        var all = recorded
+        Array(collectAll(window: window).lines.suffix(limit))
+    }
+
+    /// `collect`와 같은 줄을 자르지 않고 준다. `truncated`: 줄 수 한도에 걸려 앞쪽 줄이 이미 빠졌는가.
+    func collectAll(window: TimeInterval = FeedbackLog.systemWindow) -> (lines: [String], truncated: Bool) {
+        guard isAllowed() else { return ([], false) }
+        lock.lock()
+        var all = lines
+        let truncated = dropped
+        lock.unlock()
         #if canImport(OSLog)
         if let store = try? OSLogStore(scope: .currentProcessIdentifier),
            let entries = try? store.getEntries(at: store.position(date: Date().addingTimeInterval(-window))) {
@@ -85,6 +99,6 @@ final class FeedbackLog: @unchecked Sendable {
             }
         }
         #endif
-        return Array(all.sorted().suffix(limit))
+        return (all.sorted(), truncated)
     }
 }
