@@ -2,6 +2,7 @@ import PhoneClientKit
 import RDModels
 import SwiftUI
 import UIKit
+import UserNotifications
 
 @main
 struct RemoteDebugPhoneApp: App {
@@ -298,7 +299,7 @@ struct RootView: View {
         .onChange(of: model.builds.map(\.bundleId), initial: true) { _, _ in
             reloadInstalledApps()
         }
-        .onChange(of: scenePhase) { _, phase in
+        .onChange(of: scenePhase, initial: true) { _, phase in
             handleScenePhase(phase)
         }
     }
@@ -439,6 +440,7 @@ struct RootView: View {
     private func handleScenePhase(_ phase: ScenePhase) {
         switch phase {
         case .active:
+            UNUserNotificationCenter.current().removeAllDeliveredNotifications()
             model.log(.debug, "app", "앱 활성")
             model.resumePolling()
             // 파일 앱에서 지우거나 바꾼 받은 파일을 다시 읽는다.
