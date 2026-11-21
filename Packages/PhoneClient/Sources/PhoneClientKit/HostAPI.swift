@@ -109,6 +109,15 @@ public struct HostAPI: Sendable {
         try await call("POST", ["v1", "direct", "enroll"], bodyData: nil, timeout: timeouts.request, expect: DirectEnrollment.self)
     }
 
+    /// 이 요청이 지나는 tailnet 노드(다른 앱이 켠 VPN의 노드)를 이 기기 항목에 묶는다(docs/protocol-addenda.md S).
+    /// tailnet 경로에서만 부른다. `authorization`은 직접 연결 등록에서 받은 기기 토큰의 `Authorization` 값이다.
+    /// 토큰은 시스템이 신뢰하는 페어링한 Mac의 tailnet 이름(`*.ts.net`)으로만 나간다.
+    public func linkNode(authorization: String) async throws -> NodeLinkResponse {
+        guard !isDirect else { throw HostAPIError(status: 0, code: "bad_request", message: "node link over direct link") }
+        return try await call("POST", ["v1", "devices", "self", "nodes"], bodyData: nil, timeout: timeouts.request,
+                              expect: NodeLinkResponse.self, authorization: authorization)
+    }
+
     /// APNs 기기 토큰을 이 기기 항목에 등록한다(docs/protocol-addenda.md P). 직접 경로와 tailnet 경로 모두 쓴다.
     /// 이 경로를 모르는 이전 Mac은 `404 not_found`를 준다.
     public func registerPushToken(token: String, bundleId: String) async throws {
@@ -288,7 +297,9 @@ public struct HostAPI: Sendable {
         return try await call(method, path, bodyData: data, timeout: timeouts.request, expect: expect)
     }
 
-    private func call<T: Decodable>(_ method: String, _ path: [String], bodyData: Data?, timeout: TimeInterval, expect: T.Type) async throws -> T {
+    /// `authorization`은 이 요청 하나에만 싣는 `Authorization` 값이다(노드 묶기). 직접 연결의 값이 있으면 그것을 쓴다.
+    private func call<T: Decodable>(_ method: String, _ path: [String], bodyData: Data?, timeout: TimeInterval, expect: T.Type,
+                                    authorization requestAuthorization: String? = nil) async throws -> T {
         var url = baseURL
         for component in path { url.append(path: component, directoryHint: .notDirectory) }
         var request = URLRequest(url: url)
@@ -296,7 +307,7 @@ public struct HostAPI: Sendable {
         request.timeoutInterval = timeout
         request.setValue(client.headerValue, forHTTPHeaderField: "X-RD-Client")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        if let authorization { request.setValue(authorization, forHTTPHeaderField: "Authorization") }
+        if let value = authorization ?? requestAuthorization { request.setValue(value, forHTTPHeaderField: "Authorization") }
         if let bodyData {
             request.httpBody = bodyData
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

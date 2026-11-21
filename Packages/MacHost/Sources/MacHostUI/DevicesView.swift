@@ -168,6 +168,13 @@ struct DeviceRow: View {
                         .font(.callout)
                         .foregroundStyle(.secondary)
                 }
+                ForEach(device.linkedNodes, id: \.nodeStableId) { node in
+                    Label("다른 앱의 VPN으로도 접속: \(node.nodeName)", systemImage: "link")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .help("이 iPhone의 다른 앱(공식 Tailscale 앱 등)이 켠 VPN의 tailnet 노드입니다. 기기를 제거하면 함께 빠집니다.")
+                }
                 Label(Self.pushLabel(device), systemImage: device.isPushRegistered ? "bell" : "bell.slash")
                     .font(.callout)
                     .foregroundStyle(.secondary)

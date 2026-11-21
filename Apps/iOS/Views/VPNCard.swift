@@ -87,6 +87,11 @@ struct VPNCard: View {
             authKeyButton
             Button("VPN 끄기", role: .destructive) { run(actions.disconnectTunnel) }
         case .connected:
+            if state.vpnPair.owner == .other {
+                // 다른 앱(공식 Tailscale 앱 등)의 VPN이다. iOS는 VPN을 하나만 켜므로 넘겨받으면 그 VPN은 꺼진다.
+                // Mac이 그 앱의 노드를 아직 이 기기로 알지 못할 때(addenda S) 이 앱의 노드로 연결하는 길이다.
+                handover("이 앱으로 VPN 가져오기", actions.takeOverVPN)
+            }
             Button("VPN 끄기", role: .destructive) { run(actions.disconnectTunnel) }
         case .failed:
             if state.tunnelActive {

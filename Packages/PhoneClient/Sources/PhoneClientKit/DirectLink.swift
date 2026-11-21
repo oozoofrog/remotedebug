@@ -225,6 +225,14 @@ public final class DirectRoute {
         state = final ? .unavailable(since: clock.now) : .unknown
     }
 
+    /// 노드 묶기(docs/protocol-addenda.md S)에 실을 기기 토큰의 `Authorization` 값. 이 Mac에 등록하지 않았으면 `nil`.
+    /// 짝 앱이 그사이 다시 등록했을 수 있으므로 보관소를 다시 읽는다.
+    public func linkAuthorization(for host: PairedHost) -> String? {
+        adoptStored()
+        guard let credential, credential.hostId == host.hostId else { return nil }
+        return credential.authorization
+    }
+
     /// 직접 경로가 토큰을 거절했다(403) 또는 시도가 막혔다(429). tailnet 경로로 다시 등록할 때까지 쓰지 않는다.
     public func rejected() {
         rejectedToken = credential?.token

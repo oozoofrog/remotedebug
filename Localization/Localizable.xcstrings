@@ -30,6 +30,7 @@
       }
     },
     " 기기 읽기 권한이 없어 이 Mac이 같은 tailnet인지는 확인하지 못했습니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1851,6 +1852,40 @@
         }
       }
     },
+    "%@(%@) 기기에 tailnet 노드를 묶었습니다: %@. 이 노드로 온 요청을 이 기기의 요청으로 처리합니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Linked a tailnet node to %1$@ (%2$@): %3$@. Requests from this node are handled as requests from this device."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@(%2$@)にtailnetノードを関連付けました: %3$@。このノードからのリクエストをこのデバイスのリクエストとして処理します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@(%2$@) 기기에 tailnet 노드를 묶었습니다: %3$@. 이 노드로 온 요청을 이 기기의 요청으로 처리합니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已将 tailnet 节点关联到 %1$@（%2$@）：%3$@。来自此节点的请求将作为此设备的请求处理。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已將 tailnet 節點連結到 %1$@（%2$@）：%3$@。來自此節點的請求將視為此裝置的請求處理。"
+          }
+        }
+      }
+    },
     "%@(%@): 이 Mac의 빌드 목록과 설치에 접근할 수 없게 되고, 진행 중인 설치는 끊깁니다. 다시 쓰려면 새로 페어링해야 합니다." : {
       "localizations" : {
         "en" : {
@@ -1887,12 +1922,6 @@
     },
     "%@, %@" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@, %2$@"
-          }
-        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1903,6 +1932,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@、%2$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
           }
         },
         "zh-Hans" : {
@@ -1977,12 +2012,6 @@
     },
     "%@: %@, %@" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@: %2$@, %3$@"
-          }
-        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -1993,6 +2022,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%1$@: %2$@、%3$@"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@: %2$@, %3$@"
           }
         },
         "zh-Hans" : {
@@ -5348,6 +5383,7 @@
       }
     },
     "Mac 주소" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -6300,6 +6336,7 @@
       }
     },
     "Mac의 tailnet 주소를 아직 받지 못해 QR과 링크를 만들 수 없습니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -7113,12 +7150,6 @@
     },
     "RD 업데이트 %@ (%@) 설치됨" : {
       "localizations" : {
-        "ko" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "RD 업데이트 %1$@ (%2$@) 설치됨"
-          }
-        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
@@ -7129,6 +7160,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "RDアップデート %1$@ (%2$@) をインストール済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "RD 업데이트 %1$@ (%2$@) 설치됨"
           }
         },
         "zh-Hans" : {
@@ -7566,6 +7603,7 @@
       }
     },
     "RemoteDebug 앱으로 페어링" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -10932,6 +10970,7 @@
       }
     },
     "iPhone 카메라로 QR을 찍거나 Safari에서 링크를 여세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11576,6 +11615,7 @@
       }
     },
     "iPhone의 RemoteDebug에서 QR을 찍거나 코드를 입력하세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -11632,6 +11672,7 @@
       }
     },
     "iPhone의 Tailscale 앱이 이 Mac과 같은 tailnet에 로그인되어 있고 VPN이 켜져 있어야 열립니다. 링크에는 위와 같은 코드가 들어 있습니다. 요청이 오면 이 Mac에서 허용하거나 거부하세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -16069,6 +16110,34 @@
         }
       }
     },
+    "노드 묶음" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Node linked"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ノード関連付け"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已关联节点"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已連結節點"
+          }
+        }
+      }
+    },
     "노드 설정이 올바르지 않습니다." : {
       "localizations" : {
         "en" : {
@@ -16345,6 +16414,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "傳送到其他 App"
+          }
+        }
+      }
+    },
+    "다른 앱의 VPN(공식 Tailscale 앱 등)으로는 이 Mac에 연결하지 못했습니다. 위쪽의 Mac 이름을 누른 뒤 ‘이 앱으로 VPN 가져오기’를 누르세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couldn't connect to this Mac through another app's VPN (such as the Tailscale app). Tap the Mac name at the top, then tap “Take VPN Over in This App”."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "他のアプリのVPN(Tailscale公式アプリなど)ではこのMacに接続できませんでした。上部のMac名をタップしてから「VPNをこのアプリに切り替える」をタップしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法通过其他 App 的 VPN（如官方 Tailscale App）连接到这台 Mac。请轻点上方的 Mac 名称，然后轻点“将 VPN 接管到此 App”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法透過其他 App 的 VPN（例如官方 Tailscale App）連線到這台 Mac。請點一下上方的 Mac 名稱，然後點一下「將 VPN 接管到此 App」。"
+          }
+        }
+      }
+    },
+    "다른 앱의 VPN으로도 접속: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Also connects through another app's VPN: %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "他のアプリのVPNからも接続: %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "也可通过其他 App 的 VPN 连接：%@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "也可透過其他 App 的 VPN 連線：%@"
+          }
+        }
+      }
+    },
+    "다른 앱의 VPN이 Mac과 다른 Tailscale 계정으로 로그인되어 있습니다. 같은 계정으로 로그인하거나, 위쪽의 Mac 이름을 누른 뒤 ‘이 앱으로 VPN 가져오기’를 누르세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Another app's VPN is signed in to a different Tailscale account than the Mac. Sign in to the same account, or tap the Mac name at the top and then tap “Take VPN Over in This App”."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "他のアプリのVPNがMacとは別のTailscaleアカウントでログインしています。同じアカウントでログインするか、上部のMac名をタップしてから「VPNをこのアプリに切り替える」をタップしてください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他 App 的 VPN 登录的 Tailscale 账户与 Mac 不同。请登录同一账户，或轻点上方的 Mac 名称，然后轻点“将 VPN 接管到此 App”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "其他 App 的 VPN 登入的 Tailscale 帳號與 Mac 不同。請登入同一帳號，或點一下上方的 Mac 名稱，然後點一下「將 VPN 接管到此 App」。"
           }
         }
       }
@@ -17806,6 +17959,7 @@
       }
     },
     "링크 복사됨" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -18282,6 +18436,7 @@
       }
     },
     "명령 복사" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -24636,6 +24791,7 @@
       }
     },
     "앱이 없을 때: Safari로 설치" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -26008,6 +26164,7 @@
       }
     },
     "요청이 끝났지만 기기가 추가되지 않았습니다. 새 코드로 다시 시도하세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -26092,6 +26249,7 @@
       }
     },
     "요청이 만료됐습니다. 새 코드를 만들어 iPhone에서 다시 요청하세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -26820,6 +26978,7 @@
       }
     },
     "이 Mac이 로그인한 tailnet의 관리 콘솔에서 OAuth 클라이언트를 만드세요. 권한은 Auth Keys 쓰기(auth_keys) 하나면 됩니다. 태그는 위와 같은 태그를 고르고, 목록에 없으면 정책 파일의 tagOwners에 먼저 추가하세요. 기기 읽기 권한을 함께 주면 이 Mac이 같은 tailnet인지 확인합니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -26904,6 +27063,7 @@
       }
     },
     "이 OAuth 클라이언트의 tailnet에 이 Mac(%@)이 없습니다. Mac이 로그인한 tailnet에서 만든 클라이언트를 넣으세요. 저장하지 않았습니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -26932,6 +27092,7 @@
       }
     },
     "이 QR에는 15분 동안 한 번만 쓸 수 있는 Tailscale 키가 들어 있어, iPhone은 로그인 없이 연결됩니다. 다른 사람에게 보여 주지 마세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -27241,6 +27402,62 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此 iPhone 的 VPN 未連線到 tailnet，因此未連線到 Mac。請開啟 VPN 後再試一次。"
+          }
+        }
+      }
+    },
+    "이 iPhone의 다른 앱(공식 Tailscale 앱 등)이 켠 VPN의 tailnet 노드입니다. 기기를 제거하면 함께 빠집니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The tailnet node of a VPN turned on by another app on this iPhone (such as the Tailscale app). It's removed together with the device."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このiPhoneの他のアプリ(Tailscale公式アプリなど)がオンにしたVPNのtailnetノードです。デバイスを削除すると一緒に削除されます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是此 iPhone 上其他 App（如官方 Tailscale App）打开的 VPN 的 tailnet 节点。移除设备时会一并移除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這是此 iPhone 上其他 App（例如官方 Tailscale App）開啟的 VPN 的 tailnet 節點。移除裝置時會一併移除。"
+          }
+        }
+      }
+    },
+    "이 tailnet 노드는 페어링한 iPhone과 다른 Tailscale 계정으로 로그인되어 있어 묶지 않았습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This tailnet node wasn't linked because it's signed in to a different Tailscale account than the paired iPhone."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このtailnetノードはペアリングしたiPhoneとは別のTailscaleアカウントでログインしているため、関連付けませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 tailnet 节点登录的 Tailscale 账户与已配对的 iPhone 不同，因此未关联。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 tailnet 節點登入的 Tailscale 帳號與已配對的 iPhone 不同，因此未連結。"
           }
         }
       }
@@ -28988,6 +29205,7 @@
       }
     },
     "이후 페어링 QR에는 Tailscale 키가 들어가지 않아 iPhone에서 Tailscale 로그인이 필요합니다. 관리 콘솔의 클라이언트는 그대로 남습니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -30042,6 +30260,7 @@
       }
     },
     "저장했습니다. 이제 페어링 QR에 1회용 Tailscale 키(%@)가 들어가 iPhone은 로그인 없이 연결됩니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -30468,6 +30687,7 @@
       }
     },
     "제어 서버가 바뀌어 %@를 추가하지 않았습니다. 지금 서버에서 새 코드로 다시 페어링하세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -30524,6 +30744,7 @@
       }
     },
     "제어 서버가 바뀌어 %@을 추가하지 않았습니다. 지금 서버에서 새 코드로 다시 페어링하세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -32288,6 +32509,7 @@
       }
     },
     "코드가 쓰였습니다. 요청한 기기가 맞는지 확인하고 응답하세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -32316,6 +32538,7 @@
       }
     },
     "코드는 한 번만 쓸 수 있고, 이 Mac에서 허용해야 페어링이 끝납니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -34232,6 +34455,7 @@
       }
     },
     "페어링 QR을 iPhone 앱으로 찍은 뒤, 이 Mac에 온 요청을 허용합니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -34316,6 +34540,7 @@
       }
     },
     "페어링 QR을 열 때마다 15분 동안 한 번만 쓸 수 있는 키를 만들어 QR에 넣습니다. QR을 다른 사람에게 보여 주지 마세요." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -34708,6 +34933,7 @@
       }
     },
     "페어링 코드" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -34904,6 +35130,7 @@
       }
     },
     "페어링 코드를 만듭니다" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -36926,6 +37153,7 @@
       }
     },
     "확인하고 저장" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

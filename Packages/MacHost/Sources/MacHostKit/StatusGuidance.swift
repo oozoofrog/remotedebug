@@ -130,6 +130,8 @@ public struct ActivityItem: Sendable, Hashable, Identifiable {
         case deviceAdded(DeviceEntry)
         /// 같은 iPhone을 다시 페어링해서 예전 항목을 뺐다.
         case deviceReplaced(DeviceEntry)
+        /// 기기 항목에 다른 tailnet 노드(같은 iPhone의 다른 앱 VPN)를 묶었다(addenda S).
+        case nodeLinked(DeviceEntry)
     }
 
     public var id: UUID

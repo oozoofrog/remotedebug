@@ -22,6 +22,9 @@ public struct HostAPIError: Error, Equatable, Sendable {
     public static let timedOutCode = "timed_out"
     /// 받은 파일의 크기나 SHA-256이 목록과 다르다.
     public static let fileMismatchCode = "file_mismatch"
+    /// 다른 앱의 VPN으로 보낸 요청을 Mac이 거절했고, 그 노드를 이 기기에 묶지 못했다(docs/protocol-addenda.md S).
+    /// `message`에는 묶지 못한 이유(호스트 오류 코드 등)가 들어 있다.
+    public static let otherVPNUnlinkedCode = "other_vpn_unlinked"
 
     static func connectionFailed(_ detail: String) -> HostAPIError {
         HostAPIError(status: 0, code: connectionFailedCode, message: detail)
@@ -47,6 +50,10 @@ public struct HostAPIError: Error, Equatable, Sendable {
         switch code {
         case "not_paired":
             String(localized: "이 iPhone은 Mac에서 승인되지 않았습니다. 다시 페어링하세요.")
+        case Self.otherVPNUnlinkedCode:
+            String(localized: "다른 앱의 VPN(공식 Tailscale 앱 등)으로는 이 Mac에 연결하지 못했습니다. 위쪽의 Mac 이름을 누른 뒤 ‘이 앱으로 VPN 가져오기’를 누르세요.")
+        case "node_login_mismatch":
+            String(localized: "다른 앱의 VPN이 Mac과 다른 Tailscale 계정으로 로그인되어 있습니다. 같은 계정으로 로그인하거나, 위쪽의 Mac 이름을 누른 뒤 ‘이 앱으로 VPN 가져오기’를 누르세요.")
         case "pair_code_invalid":
             String(localized: "페어링 코드가 맞지 않거나 만료되었습니다. Mac에 표시된 코드를 확인하고 다시 입력하세요.")
         case "too_many_attempts":

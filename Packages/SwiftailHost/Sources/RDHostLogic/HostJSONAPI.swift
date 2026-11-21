@@ -95,11 +95,20 @@ extension HostLogic {
                 push = try PushRegistration(token: registration.string("token"), bundleId: registration.string("bundleId"), environment: registration.string("environment"))
             }
             let hash = try object.string("directTokenHash"), cable = try object.string("cableUDID")
+            var linked: [LinkedNode] = []
+            if let value = object.value("linkedNodes"), !(value is NSNull) {
+                guard let list = value as? [Any] else { throw HostErrors.make("bad_request", "linkedNodes는 배열이어야 합니다.") }
+                linked = try list.map { item in
+                    let node = try HostJSON(value: item)
+                    return try LinkedNode(nodeStableId: node.string("nodeStableId"), nodeName: node.string("nodeName"), loginName: node.string("loginName"),
+                                          linkedAt: RDTimestamp.parse(node.string("linkedAt")) ?? Date(timeIntervalSince1970: 0))
+                }.filter { !$0.nodeStableId.isEmpty }
+            }
             wireDates[try object.string("nodeStableId")] = try object.string("pairedAt")
             return try DeviceEntry(id: object.string("id"), name: object.string("name"), nodeStableId: object.string("nodeStableId"),
                 nodeName: object.string("nodeName"), loginName: object.string("loginName"),
                 pairedAt: RDTimestamp.parse(object.string("pairedAt")) ?? Date(timeIntervalSince1970: 0), directTokenHash: hash.isEmpty ? nil : hash, push: push,
-                cableUDID: cable.isEmpty ? nil : cable)
+                cableUDID: cable.isEmpty ? nil : cable, linkedNodes: linked)
         }
         try locked {
             try setDevices(entries)

@@ -18,7 +18,7 @@ extension HostLogic {
             self.devicePairedAt = devicePairedAt
         }
         enum CodingKeys: String, CodingKey { case type, device, receivedAt, nodeName; case deviceID = "deviceId" }
-        enum DeviceKeys: String, CodingKey { case id, name, nodeStableId, nodeName, loginName, pairedAt, directTokenHash, push, cableUDID }
+        enum DeviceKeys: String, CodingKey { case id, name, nodeStableId, nodeName, loginName, pairedAt, directTokenHash, push, cableUDID, linkedNodes }
         public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             let type = try container.decode(String.self, forKey: .type)
@@ -30,7 +30,8 @@ extension HostLogic {
                     nodeStableId: object.decode(String.self, forKey: .nodeStableId), nodeName: object.decode(String.self, forKey: .nodeName),
                     loginName: object.decode(String.self, forKey: .loginName), pairedAt: date,
                     directTokenHash: object.decodeIfPresent(String.self, forKey: .directTokenHash), push: object.decodeIfPresent(PushRegistration.self, forKey: .push),
-                    cableUDID: object.decodeIfPresent(String.self, forKey: .cableUDID))
+                    cableUDID: object.decodeIfPresent(String.self, forKey: .cableUDID),
+                    linkedNodes: object.decodeIfPresent([LinkedNode].self, forKey: .linkedNodes) ?? [])
                 event = type == "device-added" ? .deviceAdded(device) : .deviceUpdated(device)
                 devicePairedAt = rawDate == hostTimestamp(date) ? nil : rawDate
             } else {

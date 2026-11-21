@@ -96,6 +96,9 @@ public final class HostLogic: HostRequestHandling, @unchecked Sendable {
     let lock = NSRecursiveLock()
     var closed = false
     var devices: [String: DeviceEntry] = [:]
+    /// docs/protocol-addenda.md S: 묶인 노드의 StableID → 그 노드를 묶은 기기 항목의 `nodeStableId`.
+    /// `devices`를 바꾼 뒤에는 `rebuildNodeLinks()`로 다시 만든다.
+    var nodeLinks: [String: String] = [:]
     var deviceWireDates: [String: String] = [:]
     var pairCode: PairCode?
     var pairRequests: [String: PairRequest] = [:]
@@ -106,6 +109,8 @@ public final class HostLogic: HostRequestHandling, @unchecked Sendable {
     var fileTransfers: [String: FileTransfer] = [:]
     var denials: [String: Denial] = [:]
     var directFailures: [String: DirectFailure] = [:]
+    /// 노드 묶기(S절)에서 토큰이 틀린 횟수. 키는 요청한 노드의 StableID다.
+    var linkFailures: [String: DirectFailure] = [:]
     /// 케이블 설치가 돌고 있는 iPhone(UDID). 한 기기에는 한 번에 하나만 설치한다.
     var cableInstalls: Set<String> = []
     var agentBoard = Data(#"{"enabled":false,"projects":[],"agents":[],"requests":[]}"#.utf8)
@@ -158,6 +163,7 @@ public final class HostLogic: HostRequestHandling, @unchecked Sendable {
         }
         locked {
             devices = next
+            rebuildNodeLinks()
             deviceWireDates.removeAll()
             for session in sessions.values where next[session.peer.stableID] == nil { failSession(session) }
         }
@@ -189,6 +195,9 @@ public final class HostLogic: HostRequestHandling, @unchecked Sendable {
                 deviceWireDates.removeValue(forKey: entry.nodeStableId)
                 device = entry
                 emit(.deviceAdded(entry))
+                // 따로 페어링한 노드는 다른 기기에 묶어 두지 않는다(S절). 다시 페어링한 항목에는 묶인 노드가 없다.
+                unlinkNode(entry.nodeStableId, keeping: nil)
+                rebuildNodeLinks()
             }
             emit(.pairDecided(.init(requestId: request.id, state: request.state)))
             return device
@@ -229,6 +238,7 @@ public final class HostLogic: HostRequestHandling, @unchecked Sendable {
             }
             denials = denials.filter { $0.value.suppressed != 0 || now.timeIntervalSince($0.value.last) < 5 }
             directFailures = directFailures.filter { now.timeIntervalSince($0.value.first) < 60 }
+            linkFailures = linkFailures.filter { now.timeIntervalSince($0.value.first) < 60 }
         }
     }
 

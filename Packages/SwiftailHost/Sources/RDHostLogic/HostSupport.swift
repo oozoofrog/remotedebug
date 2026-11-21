@@ -67,7 +67,7 @@ public enum HostErrors {
     public static func status(_ error: APIErrorBody) -> Int {
         switch error.error.code {
         case "bad_request": 400
-        case "not_paired", "pair_code_invalid", "token_invalid", "agent_disabled", "origin_not_allowed": 403
+        case "not_paired", "pair_code_invalid", "token_invalid", "agent_disabled", "origin_not_allowed", "node_login_mismatch": 403
         case "unsupported_media_type": 415
         case "not_found", "build_not_found", "resource_not_found", "direct_off": 404
         case "method_not_allowed": 405
@@ -83,6 +83,7 @@ public enum HostErrors {
     }
     static let messages = [
         "not_paired": "허용 목록에 없는 기기입니다.",
+        "node_login_mismatch": "이 tailnet 노드의 로그인 계정이 페어링한 기기의 계정과 다릅니다.",
         "pair_code_invalid": "페어링 코드가 없거나 맞지 않거나 만료되었습니다.",
         "token_invalid": "세션 토큰이 맞지 않습니다.", "build_not_found": "빌드가 없습니다.",
         "resource_not_found": "파일이 없습니다.", "build_changed": "게시 후 빌드 파일이 바뀌었습니다.",

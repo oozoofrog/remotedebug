@@ -237,6 +237,8 @@ Swift 앱이 허용 목록을 저장한다. 시작할 때 `HostCore.setDevices`�
 
 선택 필드 `push`(기기의 APNs 토큰 등록: `token`, `bundleId`, `environment`)와 등록·삭제 경로 `PUT`·`DELETE /v1/devices/self/push-token`은 [protocol-addenda.md](protocol-addenda.md)의 P절에 있다. 등록하지 않은 기기에는 키가 없다. 두 리스너가 모두 받는다.
 
+선택 필드 `linkedNodes`(같은 iPhone의 다른 앱 VPN 노드를 이 기기에 묶은 목록)와 묶기 경로 `POST /v1/devices/self/nodes`는 [protocol-addenda.md](protocol-addenda.md)의 S절에 있다. 묶은 노드에서 온 요청은 이 항목의 노드에서 온 요청으로 처리한다. 묶은 노드가 없으면 키가 없다.
+
 ## 6. 클라이언트 동작 (iPhone)
 
 터널 확장은 IP 패킷을 tailnet으로 중계하는 패킷 터널이다. 앱의 `URLSession`은 호스트의 REST API를 호출하고, 설치는 `installUrl`을 `UIApplication.open`으로 열어 iOS 설치기에 맡긴다. 터널·DNS·MTU 규칙은 [tunnel.md](tunnel.md)가 정한다. 터널 확장에는 호스트별 허용 목록이나 프록시가 없다.

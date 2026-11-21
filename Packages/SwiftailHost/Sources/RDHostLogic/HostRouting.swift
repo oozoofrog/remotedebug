@@ -7,6 +7,8 @@ extension HostLogic {
         let parameter: String
         let methods: [String]
         var isPairing: Bool { name == "pair" || name == "pairStatus" }
+        /// 허용 목록에 없는 노드도 부를 수 있는 경로: 페어링과 노드 묶기(addenda S. 처리기가 토큰을 본다).
+        var acceptsUnknownNode: Bool { isPairing || name == "linkNode" }
         var bodyLimit: Int {
             switch name {
             case "pair": 16 << 10
@@ -37,6 +39,7 @@ extension HostLogic {
         case ["v1", "devices", "self", "push-token"]: name = "push"; methods = ["PUT", "DELETE"]
         case ["v1", "pair", "request"] where !direct: name = "pair"; methods = ["POST"]
         case ["v1", "direct", "enroll"] where !direct: name = "enroll"; methods = ["POST"]
+        case ["v1", "devices", "self", "nodes"] where !direct: name = "linkNode"; methods = ["POST"]
         default:
             if path.count == 3 && path[0] == "v1" && path[1] == "resources" { name = "resource"; parameter = path[2] }
             // 진행 확인은 두 리스너 모두 받는다. 직접 연결에서는 케이블 설치(addenda R)의 세션을 본다.
@@ -101,8 +104,15 @@ extension HostLogic {
                 return HostResponse(status: 301, headers: [("Location", location), ("Content-Type", "text/html; charset=utf-8")],
                                     body: .bytes(Array(("<a href=\"" + escaped + "\">Moved Permanently</a>.\n\n").utf8)))
             }
-            guard let peer, !peer.stableID.isEmpty else { return deny("not_paired", peer: nil, path: rawPath) }
-            if !route.isPairing && devices[peer.stableID] == nil { return deny("not_paired", peer: peer, path: rawPath) }
+            guard let identity = peer, !identity.stableID.isEmpty else { return deny("not_paired", peer: nil, path: rawPath) }
+            if !route.acceptsUnknownNode && devices[identity.stableID] == nil {
+                // addenda S: 기기 항목에 묶은 노드면 그 기기의 신원으로 처리한다. 직접 연결은 이미 토큰의 기기 신원이다.
+                guard case .tailnet = request.origin, let device = linkedDevice(identity.stableID) else {
+                    return deny("not_paired", peer: identity, path: rawPath)
+                }
+                peer = device.hostPeer
+            }
+            guard let peer else { return deny("not_paired", peer: nil, path: rawPath) }
             if route.name == "agentRequest" || route.name == "agentCancel" {
                 guard agentEnabled else { return failure(HostErrors.make("agent_disabled")) }
                 agentDevice = devices[peer.stableID]
@@ -205,19 +215,7 @@ extension HostLogic {
         let now = options.now()
         if let failure = directFailures[ip], now.timeIntervalSince(failure.first) >= 60 { directFailures.removeValue(forKey: ip) }
         if let failure = directFailures[ip], failure.count >= 10 { return .failure(.init(value: self.failure(HostErrors.make("too_many_attempts")))) }
-        let header = request.header("authorization") ?? ""
-        if header.hasPrefix("RD-Device ") {
-            let credentials = header.dropFirst(10).trimmingCharacters(in: .whitespacesAndNewlines)
-            if let dot = credentials.firstIndex(of: ".") {
-                let id = String(credentials[..<dot]), token = String(credentials[credentials.index(after: dot)...])
-                let hash = HostIDs.directTokenHash(token)
-                if !id.isEmpty, !hash.isEmpty,
-                   let device = devices.values.first(where: { $0.id == id }),
-                   let expected = device.directTokenHash, !expected.isEmpty, HostIDs.constantEqual(hash, expected) {
-                    return .success(HostPeer(stableID: device.nodeStableId, nodeName: device.nodeName, loginName: device.loginName))
-                }
-            }
-        }
+        if let device = deviceForToken(request) { return .success(device.hostPeer) }
         if var failure = directFailures[ip] { failure.count += 1; directFailures[ip] = failure }
         else {
             if directFailures.count >= 1024 {

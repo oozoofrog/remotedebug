@@ -1025,7 +1025,7 @@ public final class ClientModel {
         guard generation == hostGeneration else { return }
         let session: SessionResponse
         do {
-            session = try await api.createSession(buildID: id)
+            session = try await linkingOtherVPNNode(api) { try await $0.createSession(buildID: id) }
         } catch {
             guard generation == hostGeneration else { return }
             if Task.isCancelled || error is CancellationError {
@@ -1395,10 +1395,39 @@ public final class ClientModel {
         }
         route(false)
         guard await ensure(), let api = makeAPI(current.fqdn) else { throw VPNNotConnected() }
-        let result = try await work(api)
+        let result = try await linkingOtherVPNNode(api, work)
         // VPN 경로가 살아 있을 때 직접 연결 등록을 해 둔다(같은 Wi-Fi에 오면 VPN 없이 쓴다).
         if let direct, host?.hostId == current.hostId { await direct.enrollIfNeeded(using: api, host: current) }
         return result
+    }
+
+    /// tailnet 경로의 `work`를 보낸다. 다른 앱의 VPN(공식 Tailscale 앱 등)으로 보낸 요청을 Mac이 `not_paired`로 거절하면
+    /// 그 VPN의 노드를 기기 토큰으로 이 기기 항목에 묶고(docs/protocol-addenda.md S) 한 번 다시 보낸다.
+    private func linkingOtherVPNNode<T>(_ api: HostAPI, _ work: (HostAPI) async throws -> T) async throws -> T {
+        do {
+            return try await work(api)
+        } catch let error as HostAPIError where error.code == "not_paired" && !api.isDirect && tunnelController.vpnHolder == .other {
+            guard let current = host else { throw error }
+            try await linkOtherVPNNode(using: api, host: current)
+            return try await work(api)
+        }
+    }
+
+    /// 다른 앱의 VPN 노드를 이 기기 항목에 묶는다. 묶지 못하면 이유를 담은 오류를 던진다.
+    /// 로그에는 결과와 오류 코드만 남기고 토큰은 남기지 않는다.
+    private func linkOtherVPNNode(using api: HostAPI, host current: PairedHost) async throws {
+        guard let authorization = direct?.linkAuthorization(for: current) else {
+            log(.info, "link", "다른 앱의 VPN 노드를 Mac이 모름. 묶을 기기 토큰이 없음")
+            throw HostAPIError(status: 403, code: HostAPIError.otherVPNUnlinkedCode, message: "no_device_token")
+        }
+        do {
+            let linked = try await api.linkNode(authorization: authorization)
+            log(.info, "link", "다른 앱의 VPN 노드를 이 기기에 묶음: \(linked.nodeName)")
+        } catch let error as HostAPIError where !error.isConnectionFailure && error.code != HostAPIError.protocolMismatchCode {
+            log(.info, "link", "다른 앱의 VPN 노드를 묶지 못함(\(error.status) \(error.code))")
+            if error.code == "node_login_mismatch" { throw error }
+            throw HostAPIError(status: error.status, code: HostAPIError.otherVPNUnlinkedCode, message: error.code)
+        }
     }
 
     // MARK: VPN

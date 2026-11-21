@@ -85,6 +85,7 @@ struct ActivityView: View {
         case .pairDecided: String(localized: "페어링 결정")
         case .deviceAdded: String(localized: "기기 추가")
         case .deviceReplaced: String(localized: "기기 정리")
+        case .nodeLinked: String(localized: "노드 묶음")
         }
     }
 
@@ -100,6 +101,7 @@ struct ActivityView: View {
         case .pairDecided: "person.crop.circle.badge.checkmark"
         case .deviceAdded: "iphone"
         case .deviceReplaced: "iphone.slash"
+        case .nodeLinked: "link"
         }
     }
 
@@ -112,7 +114,7 @@ struct ActivityView: View {
             case .failed, .expired: .red
             default: .secondary
             }
-        case .pairDecided, .deviceAdded, .deviceReplaced: .secondary
+        case .pairDecided, .deviceAdded, .deviceReplaced, .nodeLinked: .secondary
         }
     }
 }

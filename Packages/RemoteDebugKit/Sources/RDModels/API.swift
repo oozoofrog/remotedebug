@@ -49,6 +49,20 @@ public struct DirectEnrollment: Codable, Sendable, Hashable {
     }
 }
 
+/// `POST /v1/devices/self/nodes`(docs/protocol-addenda.md S). tailnet 리스너에서만 받는다.
+/// 요청을 보낸 tailnet 노드를 기기 토큰의 기기 항목에 묶은 결과.
+public struct NodeLinkResponse: Codable, Sendable, Hashable {
+    /// 노드를 묶은 기기 항목의 `id`.
+    public var deviceId: String
+    /// 묶은 노드의 이름(Mac이 본 값).
+    public var nodeName: String
+
+    public init(deviceId: String, nodeName: String) {
+        self.deviceId = deviceId
+        self.nodeName = nodeName
+    }
+}
+
 /// `GET /v1/builds`. `builds` 키는 반드시 있어야 한다(`null`은 빈 목록). 오류 본문(`{"error":…}`)은 디코딩에 실패하므로
 /// 호출자는 `APIErrorBody`로 다시 읽는다.
 public struct BuildsResponse: Codable, Sendable, Hashable {

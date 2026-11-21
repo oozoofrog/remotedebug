@@ -16,6 +16,7 @@ public enum HostErrorText {
     public static func coreCode(_ code: String) -> String {
         switch code {
         case "not_paired": String(localized: "페어링되지 않은 기기입니다. 이 기기를 쓰려면 페어링하세요.")
+        case "node_login_mismatch": String(localized: "이 tailnet 노드는 페어링한 iPhone과 다른 Tailscale 계정으로 로그인되어 있어 묶지 않았습니다.")
         case "pair_code_invalid": String(localized: "페어링 코드가 틀렸거나 만료됐습니다. 새 코드로 다시 시도하세요.")
         case "too_many_attempts": String(localized: "페어링 코드를 너무 많이 틀려 코드가 폐기됐습니다. 새 코드를 여세요.")
         case "token_invalid": String(localized: "설치 주소가 맞지 않습니다. iPhone에서 설치를 다시 시작하세요.")

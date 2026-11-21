@@ -722,6 +722,7 @@ Mac과 iPhone이 같은 네트워크(같은 Wi-Fi)에 있으면 VPN 없이 직�
 | `/`, `/assets/*`(웹 페이지) | `404 not_found` |
 | `/v1/pair/*`(페어링) | `404 not_found` |
 | `POST /v1/direct/enroll`(등록) | `404 not_found` |
+| `POST /v1/devices/self/nodes`(노드 묶기, S절) | `404 not_found` |
 | `POST /v1/builds/{id}/sessions`, `/i/*`(설치) | `404 not_found` |
 | `POST /v1/builds/{id}/cable-install`, `GET /v1/sessions/{id}` | 받는다(R절. 케이블 설치를 받지 않는 호스트는 앞의 것에 `404 not_found`) |
 
@@ -831,7 +832,7 @@ tailnet으로만 가는 것과 그 이유:
 - 같은 네트워크의 모르는 기기: 모든 요청이 `403`이다. 직접 연결 포트에는 페어링, 등록, 설치, 웹 페이지가 없다.
 - 식별자를 흉내 낸 Bonjour 광고: 공개 키가 달라 TLS에서 끊기고 토큰은 나가지 않는다.
 - 토큰은 공개 키를 고정한 TLS 1.3 안에서만 나간다. Mac에는 해시만 있고, iPhone에서는 Keychain에만 있다.
-- 토큰을 가진 쪽이 할 수 있는 일은 O.2의 경로뿐이다. 설치 세션을 만들거나 IPA를 받을 수 없다.
+- 직접 연결 리스너에서 토큰을 가진 쪽이 할 수 있는 일은 O.2의 경로뿐이다. 설치 세션을 만들거나 IPA를 받을 수 없다. 단, 토큰과 함께 기기 항목과 같은 Tailscale 계정의 tailnet 노드를 가진 쪽은 S절로 그 노드를 기기에 묶어 설치까지 쓸 수 있다(S.4).
 - 리스너의 개인 키 파일을 읽을 수 있는 Mac의 프로세스는 같은 네트워크에서 그 Mac인 척할 수 있다. 상태 폴더의 다른 비밀(tailnet 노드 키)과 같은 수준으로 지킨다.
 
 실기기에서 확인하지 못한 것:
@@ -1004,3 +1005,85 @@ POST /v1/builds/{id}/cable-install        (본문 없음)
 - `URLSession`이 iOS에서 `https://[fe80::…%25anpi0]:포트`로 연결하는지(macOS에서는 된다), `NSAllowsLocalNetworking`이 이 주소에 적용되는지.
 - 설치 중인 앱이 자기 자신(RemoteDebug 앱)일 때의 동작, iPhone이 잠겨 있을 때 `devicectl`이 내는 오류 문구.
 - Mac에 iPhone을 두 대 꽂았을 때 인터페이스와 기기가 맞게 이어지는지.
+
+## S. 다른 앱의 VPN 노드 묶기
+
+iPhone에서 RemoteDebug 앱의 VPN 대신 다른 앱의 VPN(공식 Tailscale 앱 등)이 켜져 있으면, iPhone 앱의 요청은 그 앱의 tailnet 노드에서 Mac으로 간다. Mac은 요청한 노드의 StableID로 기기를 찾는다(protocol §5). 그래서 그 노드를 모르고 `403 not_paired`를 준다. iOS는 VPN을 하나만 켜므로 두 VPN을 함께 쓸 수 없다. 이 절은 같은 Tailscale 계정의 그 노드를 이미 페어링한 기기 항목에 묶는다. 묶은 뒤에는 다른 앱의 VPN으로도 빌드 목록, 파일, 로그, 크래시, 알림 등록, 설치를 쓴다.
+
+실기기에서 확인하지 않았다(S.5). 호스트 쪽 시험은 `NodeLinkTests`(`RDHostLogicTests`)에, iPhone 쪽 시험은 `OtherVPNLinkTests`(`PhoneClientKitTests`)에 있다.
+
+### S.1 묶기 경로
+
+tailnet 리스너에서만 받는다. 직접 연결 리스너는 `404 not_found`를 준다(O.2).
+
+```
+POST /v1/devices/self/nodes        (본문 없음)
+Authorization: RD-Device <deviceId>.<token>
+```
+
+```json
+{
+  "deviceId": "d_9c2e41b7",
+  "nodeName": "iphone-1"
+}
+```
+
+라우터는 이 경로에서 요청한 노드를 허용 목록과 대조하지 않는다. 처리기가 다음을 차례로 본다.
+
+1. 같은 노드가 1분 안에 토큰을 10번 틀렸으면, 그 1분이 끝날 때까지 `429 too_many_attempts`를 준다. 틀린 횟수는 요청한 노드의 StableID마다 센다.
+2. `Authorization`의 토큰을 O.3과 같은 방법으로 확인한다. 없거나 틀리면 `403 not_paired`를 주고 `denied` 이벤트를 낸다.
+3. 요청한 노드가 이미 허용 목록에 있으면(그 기기 자신이거나 따로 페어링한 기기) 아무것도 바꾸지 않는다. `200`과 그 항목의 `deviceId`를 준다.
+4. 요청한 노드의 로그인 이름이 비어 있거나 토큰의 기기 항목의 `loginName`과 다르면 `403 node_login_mismatch`를 주고 `denied` 이벤트를 낸다.
+5. 노드를 기기 항목의 `linkedNodes`(S.2)에 넣고 `device-updated` 이벤트를 낸다. 이미 있으면 이름과 시각을 바꾼다. 같은 값으로 이미 묶여 있으면 이벤트를 내지 않는다. 그 노드가 다른 항목에 묶여 있었으면 그 항목에서 빼고 그 항목의 `device-updated`도 낸다.
+
+- 기기 하나에 노드를 4개(`HostLogic.maxLinkedNodes`)까지 둔다. 넘으면 가장 오래전에 묶은 것부터 뺀다.
+- 응답에는 `Cache-Control: no-store`가 붙는다. 응답과 이벤트에 토큰은 없다.
+
+### S.2 허용 목록 항목의 `linkedNodes`
+
+선택 필드다. 묶은 노드가 없으면 키가 없다.
+
+```json
+{
+  "linkedNodes": [
+    {
+      "nodeStableId": "nOTHER1CNTRL",
+      "nodeName": "iphone-1",
+      "loginName": "user@example.com",
+      "linkedAt": "2026-11-21T03:00:00Z"
+    }
+  ]
+}
+```
+
+- 묶은 노드에서 tailnet 리스너로 온 요청은 라우터가 그 기기 항목의 신원(노드 StableID, 노드 이름, 로그인 이름)으로 바꾼 뒤 처리한다. 직접 연결(O.3)과 같은 방식이다. 그래서 세션, 로그, 크래시, 알림 등록은 그 기기의 것이 된다. iOS 설치기는 매니페스트와 IPA를 머리말 없이 가져가지만 같은 노드에서 오므로 받는다.
+- 허용 목록에 따로 있는 노드는 묶인 노드로 보지 않는다. 묶인 노드를 따로 페어링해 허용하면, 호스트가 그 노드를 묶인 목록에서 뺀다.
+- 페어링 경로(`/v1/pair/*`)와 묶기 경로는 요청한 노드의 신원을 그대로 쓴다.
+- Mac 앱은 `device-updated`를 받으면 `linkedNodes`도 `devices.json`에 저장한다(O.4의 해시와 같다). 새로 묶은 노드마다 활동에 "노드 묶음" 줄을 남긴다. 기기 화면에는 "다른 앱의 VPN으로도 접속: <노드 이름>"을 보인다.
+- 기기를 제거하면 묶인 노드도 함께 빠진다. 다시 페어링해 생긴 항목에는 묶인 노드가 없다.
+
+### S.3 iPhone 앱 동작
+
+- 조건: tailnet 경로의 요청(빌드 목록, 파일, 로그, 크래시, 알림 등록, 설치 세션 만들기)이 `403 not_paired`로 끝났고, 지금 VPN을 켠 쪽이 다른 앱(`VPNHolder.other`)이다.
+  결과: iPhone 앱이 묶기 요청을 보낸다. 토큰은 O.4에서 받은 값을 쓰고, 짝 앱과 함께 쓰는 보관소를 다시 읽는다. 묶으면 원래 요청을 한 번 다시 보낸다.
+- 조건: 이 앱이나 짝 앱의 VPN이 켜져 있다.
+  결과: 묶지 않는다. `not_paired`는 이전처럼 "이 iPhone은 Mac에서 승인되지 않았습니다. 다시 페어링하세요."다.
+- 조건: 토큰이 없다(이 Mac에 직접 연결 등록을 한 적이 없다). 또는 Mac이 묶기를 거절했거나 이 경로를 모른다.
+  결과: "다른 앱의 VPN(공식 Tailscale 앱 등)으로는 이 Mac에 연결하지 못했습니다. 위쪽의 Mac 이름을 누른 뒤 ‘이 앱으로 VPN 가져오기’를 누르세요."를 보인다. 계정이 다르면(`node_login_mismatch`) 같은 계정으로 로그인하라는 문구를 보인다.
+- 연결 상세의 VPN 칸: 다른 앱의 VPN이 켜져 있으면 **이 앱으로 VPN 가져오기**를 보인다. 누르면 이 앱의 VPN을 켜고, iOS가 다른 앱의 VPN을 끈다.
+- 토큰은 묶기 요청에만 싣는다. 받는 곳은 페어링한 Mac의 tailnet 이름(`*.ts.net`)이고, 시스템이 신뢰하는 인증서로 확인한다. 진단 로그에는 결과와 오류 코드만 남긴다.
+
+### S.4 보안 속성과 결정
+
+- 달라진 점: 이전에는 기기 토큰으로 O.2의 경로만 쓸 수 있었다. 이제 토큰과 같은 Tailscale 계정의 tailnet 노드를 함께 가진 쪽은 그 노드를 기기에 묶어 설치까지 쓸 수 있다.
+- 묶으려면 세 가지가 모두 필요하다: Mac과 같은 tailnet 안의 노드(Tailscale ACL과 Tailnet Lock이 적용된다), 기기 토큰, 기기 항목과 같은 로그인 이름. 다른 계정의 노드와 태그 노드(로그인 이름이 다르다)는 토큰이 있어도 묶을 수 없다.
+- 같은 까닭으로, RemoteDebug 앱 노드가 태그 노드인 기기(키를 실은 QR로 로그인했다. D15의 7단계)에는 공식 앱의 노드를 묶을 수 없다. 그 기기는 이 앱의 VPN으로 쓴다.
+- 토큰은 iPhone의 Keychain에만 있고 Mac에는 해시만 있다(O.3). 토큰이 나가는 곳이 하나 늘었다: 시스템이 신뢰하는 TLS로 연결한, 페어링한 Mac의 tailnet 이름.
+- Mac의 주인은 기기 화면에서 묶인 노드를 본다. 기기를 제거하면 묶인 노드도 함께 빠진다. 노드 하나만 빼는 화면은 없다.
+- 결정: Mac 화면의 허용 없이 묶는다(2026-11-21, 사용자 결정). 근거: 밖에서 셀룰러로 다른 앱의 VPN을 켠 채 바로 쓸 수 있어야 한다. Mac 화면의 허용을 요구하면 처음 한 번은 Mac 앞에 있어야 한다. 결과: 토큰이 새면 같은 계정의 다른 노드가 이 기기로 설치까지 할 수 있다. 같은 계정의 노드는 이미 그 사람의 기기이므로 이 위험을 받아들인다.
+
+### S.5 확인하지 못한 것
+
+- 공식 Tailscale 앱의 VPN이 켜진 iPhone에서 RemoteDebug 앱이 묶기를 거쳐 빌드 목록을 받고 설치하는지(D16).
+- 공식 앱 노드의 로그인 이름이 Swiftail 쪽에서 RemoteDebug 앱 노드와 같은 값으로 오는지.
+- iOS 설치기가 매니페스트와 IPA를 공식 앱의 VPN으로 가져가는지. D14는 Safari 경로로 같은 일을 확인한다.

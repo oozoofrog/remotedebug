@@ -1122,19 +1122,31 @@ public final class HostModel {
         return true
     }
 
-    /// 기기가 직접 연결(addenda O)이나 알림(addenda P)에 등록했거나, 처음 케이블 설치를 해서 그 iPhone에 묶였다(addenda R).
-    /// 이미 허용한 기기의 직접 연결 토큰 해시, 알림 기기 토큰, 케이블로 묶인 iPhone만 바꿔 저장한다(하나라도 바뀌었을 때).
-    /// 그사이 목록에서 지운 기기는 다시 넣지 않는다. 기기를 목록에서 빼면 이 값들도 항목과 함께 사라진다.
+    /// 기기가 직접 연결(addenda O)이나 알림(addenda P)에 등록했거나, 처음 케이블 설치를 해서 그 iPhone에 묶였거나(addenda R),
+    /// 다른 tailnet 노드를 묶었다(addenda S). 이미 허용한 기기의 직접 연결 토큰 해시, 알림 기기 토큰, 케이블로 묶인 iPhone,
+    /// 묶인 노드만 바꿔 저장한다(하나라도 바뀌었을 때). 그사이 목록에서 지운 기기는 다시 넣지 않는다.
+    /// 기기를 목록에서 빼면 이 값들도 항목과 함께 사라진다.
     private func storeDeviceUpdate(_ device: DeviceEntry) {
         guard coreControlURL == deviceControlURL,
               let i = devices.firstIndex(where: { $0.id == device.id && $0.nodeStableId == device.nodeStableId }),
               devices[i].directTokenHash != device.directTokenHash || devices[i].push != device.push
-                || devices[i].cableUDID != device.cableUDID else { return }
+                || devices[i].cableUDID != device.cableUDID || devices[i].linkedNodes != device.linkedNodes else { return }
+        let added = Self.newlyLinkedNodes(old: devices[i].linkedNodes, new: device.linkedNodes)
         devices[i].directTokenHash = device.directTokenHash
         devices[i].push = device.push
         devices[i].cableUDID = device.cableUDID
+        devices[i].linkedNodes = device.linkedNodes
         saveDevices()
+        for node in added {
+            appendActivity(.nodeLinked(devices[i]),
+                           String(localized: "\(device.name)(\(device.nodeName)) 기기에 tailnet 노드를 묶었습니다: \(node.nodeName). 이 노드로 온 요청을 이 기기의 요청으로 처리합니다."))
+        }
         removeSuperseded(by: devices[i])
+    }
+
+    /// `new`에만 있는 노드(새로 묶었거나 이름이 바뀐 노드).
+    nonisolated static func newlyLinkedNodes(old: [LinkedNode], new: [LinkedNode]) -> [LinkedNode] {
+        new.filter { node in !old.contains { $0.nodeStableId == node.nodeStableId && $0.nodeName == node.nodeName } }
     }
 
     /// 방금 알림을 등록한 기기와 같은 전화기의 예전 항목을 허용 목록에서 뺀다(코어에도 적용한다).

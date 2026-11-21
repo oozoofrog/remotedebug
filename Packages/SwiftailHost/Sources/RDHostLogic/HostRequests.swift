@@ -59,6 +59,7 @@ extension HostLogic {
             var response = json(DirectEnrollment(directId: info.id, port: info.port, tlsSPKI: info.spki, deviceId: device.id, token: token))
             response.headers.append(("Cache-Control", "no-store"))
             return response
+        case "linkNode": return try linkNode(request, peer: peer, path: path)
         case "pair": return try requestPair(input, peer: peer, path: path)
         case "pairStatus":
             guard let pairing = pairRequests[route.parameter], pairing.peer.stableID == peer.stableID else {
