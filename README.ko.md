@@ -165,7 +165,7 @@ RemoteDebugFeedbackConsentSection()                    // 설정 화면에 두�
 | 같은 네트워크 직접 연결: iPhone 쪽 경로 선택을 가짜 전송으로 | 확인함(시험 통과) | `swift test --package-path Packages/PhoneClient` |
 | 실제 Mac과 iPhone 사이의 같은 네트워크 직접 연결 | 확인하지 않음 | [O.9](docs/protocol-addenda.md#o9-보안-속성과-확인하지-못한-것) |
 | 다른 앱의 VPN(공식 Tailscale 앱) 노드를 페어링한 iPhone에 묶기: 호스트 로직과 iPhone 쪽 재시도를 가짜 전송으로 | 확인함(시험 통과) | `swift test --package-path Packages/SwiftailHost`(`NodeLinkTests`), `swift test --package-path Packages/PhoneClient`(`OtherVPNLinkTests`) |
-| 실제 iPhone에서 공식 Tailscale 앱의 VPN으로 RemoteDebug 앱 쓰기 | 확인하지 않음 | [S.5](docs/protocol-addenda.md#s5-확인하지-못한-것), [D16](docs/device-test.md#d16-공식-tailscale-앱의-vpn으로-쓰는-remotedebug-앱) |
+| 실제 iPhone에서 공식 Tailscale 앱의 VPN으로 RemoteDebug 앱 쓰기: 노드 묶기, 빌드 목록, 설치 전송(iPhone 한 대, 2026-11-21, 빌드 68) | 확인함 | [D16](docs/device-test.md#d16-공식-tailscale-앱의-vpn으로-쓰는-remotedebug-앱), 남은 것은 [S.5](docs/protocol-addenda.md#s5-확인하지-못한-것) |
 | 새 빌드·파일 알림(APNs): 토큰 등록·삭제 경로 | 확인함(시험 통과) | `swift test --package-path Packages/SwiftailHost`(`PushTests`) |
 | 실제 iPhone에 알림이 도착하고 눌러서 탭이 바뀌는지, 알림의 **설치**·**링크 열기** 버튼 | 확인함(iOS 27.2) | [P.9](docs/protocol-addenda.md#p9-확인하지-못한-것) |
 | 디버그 빌드 검사와 IPA 묶기: 단위 시험, 픽스처, 작성 환경의 실제 Debug 빌드 | 확인함 | `swift test --package-path Packages/RemoteDebugKit`, `scripts/check-ipa-roundtrip.sh`, `scripts/check-real-builds.sh` |

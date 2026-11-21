@@ -1010,7 +1010,7 @@ POST /v1/builds/{id}/cable-install        (본문 없음)
 
 iPhone에서 RemoteDebug 앱의 VPN 대신 다른 앱의 VPN(공식 Tailscale 앱 등)이 켜져 있으면, iPhone 앱의 요청은 그 앱의 tailnet 노드에서 Mac으로 간다. Mac은 요청한 노드의 StableID로 기기를 찾는다(protocol §5). 그래서 그 노드를 모르고 `403 not_paired`를 준다. iOS는 VPN을 하나만 켜므로 두 VPN을 함께 쓸 수 없다. 이 절은 같은 Tailscale 계정의 그 노드를 이미 페어링한 기기 항목에 묶는다. 묶은 뒤에는 다른 앱의 VPN으로도 빌드 목록, 파일, 로그, 크래시, 알림 등록, 설치를 쓴다.
 
-실기기에서 확인하지 않았다(S.5). 호스트 쪽 시험은 `NodeLinkTests`(`RDHostLogicTests`)에, iPhone 쪽 시험은 `OtherVPNLinkTests`(`PhoneClientKitTests`)에 있다.
+2026-11-21 실기기(Mac·iPhone 0.2.0 (68))에서 묶기, 빌드 목록, 설치 전송을 확인했다(D16). 확인하지 못한 것은 S.5에 있다. 호스트 쪽 시험은 `NodeLinkTests`(`RDHostLogicTests`)에, iPhone 쪽 시험은 `OtherVPNLinkTests`(`PhoneClientKitTests`)에 있다.
 
 ### S.1 묶기 경로
 
@@ -1084,6 +1084,5 @@ Authorization: RD-Device <deviceId>.<token>
 
 ### S.5 확인하지 못한 것
 
-- 공식 Tailscale 앱의 VPN이 켜진 iPhone에서 RemoteDebug 앱이 묶기를 거쳐 빌드 목록을 받고 설치하는지(D16).
-- 공식 앱 노드의 로그인 이름이 Swiftail 쪽에서 RemoteDebug 앱 노드와 같은 값으로 오는지.
-- iOS 설치기가 매니페스트와 IPA를 공식 앱의 VPN으로 가져가는지. D14는 Safari 경로로 같은 일을 확인한다.
+- 기기를 제거한 뒤, 계정이 다른 노드에서, 기기 토큰이 없는 iPhone에서 보이는 안내 문구(D16의 6단계와 S.3의 실패 조건).
+- RemoteDebug 앱 노드가 태그 노드인 기기에서 묶기를 거절하는지.
