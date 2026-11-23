@@ -76,6 +76,10 @@ extension HostLogic {
             throw HostErrors.make("bad_request", "icon은 64KiB 이하의 PNG여야 합니다.")
         }
         if descriptor.icon?.isEmpty == true { descriptor.icon = nil }
+        descriptor.releaseNotes = BuildDescriptor.cleanReleaseNotes(descriptor.releaseNotes)
+        if let notes = descriptor.releaseNotes, notes.utf8.count > BuildDescriptor.maxReleaseNotesBytes {
+            throw HostErrors.make("bad_request", "releaseNotes는 4KiB 이하여야 합니다.")
+        }
         let source = try resolveFile(request.ipaPath)
         let temporary: String
         do { temporary = try snapshot(source) }

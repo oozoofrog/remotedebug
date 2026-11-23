@@ -35,6 +35,11 @@ extension HostLogic {
                 icon = Data(bytes)
             } else { throw HostErrors.make("bad_request", "빌드 JSON을 읽지 못했습니다.") }
         } else { icon = nil }
+        var releaseNotes: String?
+        if let value = input.value("releaseNotes"), !(value is NSNull) {
+            guard let text = value as? String else { throw HostErrors.make("bad_request", "빌드 JSON을 읽지 못했습니다.") }
+            releaseNotes = BuildDescriptor.cleanReleaseNotes(text)
+        }
         let now = options.now()
         var publishedAt = try input.string("publishedAt")
         if publishedAt.isEmpty { publishedAt = hostTimestamp(now) }
@@ -44,7 +49,8 @@ extension HostLogic {
             signing: .init(teamId: signing.string("teamId"), profileName: signing.string("profileName"),
                            profileExpires: RDTimestamp.parse(profileExpires) ?? Date(timeIntervalSince1970: 0),
                            provisionedDeviceCount: Int(count), getTaskAllow: taskAllow),
-            ipa: .init(size: size, sha256: ipa.string("sha256")), publishedAt: RDTimestamp.parse(publishedAt) ?? now, icon: icon)
+            ipa: .init(size: size, sha256: ipa.string("sha256")), publishedAt: RDTimestamp.parse(publishedAt) ?? now, icon: icon,
+            releaseNotes: releaseNotes)
         let path = try input.string("ipaPath")
         let id = HostIDs.buildID(bundleID: build.bundleId, sha256: build.ipa.sha256.lowercased())
         wire["id"] = id
@@ -53,6 +59,7 @@ extension HostLogic {
         wire["ipa"] = ["size": size, "sha256": build.ipa.sha256.lowercased()] as [String: Any]
         wire["publishedAt"] = publishedAt
         if let icon, !icon.isEmpty { wire["icon"] = icon.base64EncodedString() }
+        if let releaseNotes { wire["releaseNotes"] = releaseNotes }
         let encoded = try JSONSerialization.data(withJSONObject: wire)
         return try publishBuild(.init(build: build, ipaPath: path), wire: encoded, timestamp: publishedAt)
     }

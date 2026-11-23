@@ -70,7 +70,7 @@ import Testing
                 shared.files = [sample]
                 return .success(sample)
             }, remove: { id in shared.files.removeAll { $0.id == id } })
-        ) { _ in nil }
+        ) { _, _ in nil }
 
         let pushed = await model.handleAgentRequest("push\n/tmp/a.png\n\n")
         #expect(pushed.ok)

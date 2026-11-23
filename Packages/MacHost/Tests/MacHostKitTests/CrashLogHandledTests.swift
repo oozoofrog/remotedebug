@@ -129,7 +129,7 @@ import Testing
         let id = try #require(store.items.first?.id)
         let model = ProjectsModel(root: tmp.path("state"), builder: AdviceBuilder(app: tmp.path("p/App.app")),
                                   scanner: DerivedDataScanner(root: tmp.path("DerivedData")),
-                                  reportHandling: .init(mark: { id, handled in store.setHandled(id, handled) }, purge: { store.purgeHandled() })) { _ in nil }
+                                  reportHandling: .init(mark: { id, handled in store.setHandled(id, handled) }, purge: { store.purgeHandled() })) { _, _ in nil }
 
         let marked = await model.handleAgentRequest("handled\n\(id)\n\n")
         #expect(marked.ok && marked.text?.contains(startDay) == true && marked.text?.contains(deletionDay) == true)
@@ -150,7 +150,7 @@ import Testing
 
         // 연결하지 않은 모델은 표시할 수 없다고 답한다.
         let bare = ProjectsModel(root: tmp.path("bare"), builder: AdviceBuilder(app: tmp.path("p/App.app")),
-                                 scanner: DerivedDataScanner(root: tmp.path("DerivedData"))) { _ in nil }
+                                 scanner: DerivedDataScanner(root: tmp.path("DerivedData"))) { _, _ in nil }
         #expect(await !bare.handleAgentRequest("handled\n\(id)\n\n").ok)
     }
 

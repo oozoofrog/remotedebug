@@ -57,6 +57,18 @@ struct PushPlannerTests {
         #expect(list.first?.bodyLocArgs == [])
     }
 
+    @Test func buildNotificationCarriesTheFirstLineOfReleaseNotes() {
+        var build = pushBuild("b_2", build: "2", at: 10)
+        build.releaseNotes = "로그인 고침\n- 목록 정렬"
+        #expect(PushPlanner.buildNotification(build).body == "Sample 1.0 (2)\n로그인 고침")
+        build.releaseNotes = String(repeating: "가", count: 200)
+        #expect(PushPlanner.buildNotification(build).body == "Sample 1.0 (2)\n" + String(repeating: "가", count: 119) + "…")
+        // 이름을 숨기면 내역도 넣지 않는다.
+        var batch = PushBatch()
+        batch.add(.init(builds: [build]))
+        #expect(PushPlanner.notifications(for: batch, hideNames: true).map(\.body) == ["새 빌드가 있습니다"])
+    }
+
     @Test func consecutiveBuildsOfOneAppKeepTheLatest() {
         var batch = PushBatch()
         batch.add(.init(builds: [pushBuild("b_2", build: "2", at: 10)]))

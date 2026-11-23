@@ -87,8 +87,16 @@ public enum PushPlanner {
         return list
     }
 
+    /// 알림 본문에 싣는 업데이트 내역 첫 줄의 최대 글자 수(넘으면 줄이고 …를 붙인다).
+    static let notesLineLimit = 120
+
     public static func buildNotification(_ build: BuildDescriptor) -> APNsNotification {
-        APNsNotification(title: String(localized: "새 빌드"), body: "\(build.displayName) \(build.version) (\(build.buildNumber))", kind: .build,
+        var body = "\(build.displayName) \(build.version) (\(build.buildNumber))"
+        // 업데이트 내역의 첫 줄을 둘째 줄에 싣는다(docs/protocol-addenda.md P.5, T.4).
+        if let line = build.releaseNotes?.split(separator: "\n").first.map({ $0.trimmingCharacters(in: .whitespaces) }), !line.isEmpty {
+            body += "\n" + (line.count > notesLineLimit ? line.prefix(notesLineLimit - 1) + "…" : line)
+        }
+        return APNsNotification(title: String(localized: "새 빌드"), body: body, kind: .build,
                          id: build.id, category: .build, titleLocKey: Key.newBuildTitle)
     }
 

@@ -76,6 +76,15 @@ struct AppRow: View {
                         }
                     }
                     latestLine
+                    if let notes = build?.descriptor.releaseNotes {
+                        // iPhone의 빌드 줄에 보이는 업데이트 내역. 여기서는 두 줄만 보이고 전체는 도움말에 있다.
+                        Text(verbatim: notes)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .help(notes)
+                            .accessibilityLabel("업데이트 내역: \(notes)")
+                    }
                 }
                 Spacer(minLength: 8)
                 if let controls, !isMissing {

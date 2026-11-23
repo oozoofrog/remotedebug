@@ -31,7 +31,11 @@ enum PreviewFixtures {
         )
     }
 
-    static let buildA = build("b_aaaa0001", name: "미리보기 앱 A", version: "1.4.0", number: "52", size: 48_300_000)
+    static let buildA: BuildDescriptor = {
+        var noted = build("b_aaaa0001", name: "미리보기 앱 A", version: "1.4.0", number: "52", size: 48_300_000)
+        noted.releaseNotes = "로그인 화면의 키보드 가림 고침\n- 목록 정렬 기준 추가\n- 설정 > 알림에서 확인"
+        return noted
+    }()
     static let buildB = build("b_bbbb0002", name: "미리보기 앱 B", version: "0.9.1", number: "7", size: 12_800_000)
 
     static let actions = PhoneActions(

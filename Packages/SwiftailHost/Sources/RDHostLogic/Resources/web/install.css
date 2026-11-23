@@ -165,6 +165,8 @@ form .primary { width: 100%; margin-top: 16px; }
 .build .detail { margin: 2px 0 0; color: var(--muted); }
 .build .bundle { margin: 0; color: var(--muted); font-size: 0.85rem; }
 .build .warn { font-size: 0.9rem; margin: 6px 0 0; }
+.build .notes-title { margin: 8px 0 0; font-size: 0.85rem; font-weight: 600; }
+.build .notes { margin: 2px 0 0; font-size: 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
 .install .actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .install .actions button { margin-top: 4px; }
 .install p { margin: 6px 0; }

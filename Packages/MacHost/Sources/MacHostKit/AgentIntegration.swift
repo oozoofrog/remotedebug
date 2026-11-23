@@ -1,4 +1,5 @@
 import Foundation
+import RDModels
 
 /// 실행 중인 RemoteDebug 앱에 명령을 보내는 쪽(요청·응답 파일). `agent/rd` 스크립트와 같은 규칙이다.
 public struct AgentChannel: Sendable {
@@ -56,7 +57,7 @@ public struct AgentChannel: Sendable {
 /// 표준 입출력으로 동작하는 MCP 서버. 한 줄에 JSON-RPC 메시지 하나를 받는다.
 /// 앱 실행 파일을 `--mcp` 인자로 띄우면 이 서버가 돌고, 명령은 실행 중인 앱에 넘긴다.
 public struct AgentMCPServer: Sendable {
-    /// `project`는 보낸 파일의 구역(push·link·files). 다른 명령은 빈 글자다.
+    /// `project`는 보낸 파일의 구역(push·link·files)이고, build에서는 업데이트 내역(여러 줄)이다. 다른 명령은 빈 글자다.
     public typealias Send = @Sendable (_ command: String, _ path: String, _ scheme: String, _ project: String) async -> Data
     public static let argument = "--mcp"
     public static let serverName = "remotedebug"
@@ -119,7 +120,7 @@ public struct AgentMCPServer: Sendable {
             ] as [String: Any], "required": [String]()] as [String: Any],
         ],
         tool("remotedebug_schemes", "Xcode 프로젝트를 RemoteDebug에 연결하고 스킴 목록을 돌려준다.", path: true, scheme: false),
-        tool("remotedebug_build", "Xcode 프로젝트를 Debug 기기용으로 빌드해 iPhone이 설치할 수 있게 게시한다. 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 설치는 사용자가 iPhone에서 누른다. 소스를 고쳤으면 빌드 전에 빌드 번호(CFBundleVersion, CURRENT_PROJECT_VERSION)를 올린다: iPhone은 설치된 앱을 버전과 빌드 번호로 알아보므로 번호가 그대로면 새 빌드가 설치됐는지 구분할 수 없다. 지금 게시된 번호는 remotedebug_status의 projects[].published에 있다. 응답의 report.notes는 Mac이 찾은 점검 사항이다(버전이 그대로인 새 실행 파일, 낮아진 빌드 번호, 곧 만료되는 프로필, 꺼진 공유, 바뀌지 않은 빌드). 고칠 수 있으면 고쳐 다시 게시하고 나머지는 사용자에게 옮긴다. 게시한 뒤에는 게시한 버전과 빌드 번호, 들어간 변경, 커밋하지 않은 변경으로 만든 빌드인지, iPhone에서 먼저 확인할 화면을 사용자에게 알린다.", path: true, scheme: true),
+        tool("remotedebug_build", "Xcode 프로젝트를 Debug 기기용으로 빌드해 iPhone이 설치할 수 있게 게시한다. 빌드가 끝날 때까지 기다린다(몇 분 걸릴 수 있다). 설치는 사용자가 iPhone에서 누른다. 소스를 고쳤으면 빌드 전에 빌드 번호(CFBundleVersion, CURRENT_PROJECT_VERSION)를 올린다: iPhone은 설치된 앱을 버전과 빌드 번호로 알아보므로 번호가 그대로면 새 빌드가 설치됐는지 구분할 수 없다. 지금 게시된 번호는 remotedebug_status의 projects[].published에 있다. 응답의 report.notes는 Mac이 찾은 점검 사항이다(버전이 그대로인 새 실행 파일, 낮아진 빌드 번호, 곧 만료되는 프로필, 꺼진 공유, 바뀌지 않은 빌드). 고칠 수 있으면 고쳐 다시 게시하고 나머지는 사용자에게 옮긴다. release_notes에 이번 빌드에서 바뀐 것을 적으면 iPhone의 빌드 줄과 설치 페이지에 그대로 보인다: 설치할 사람이 읽는 글이므로 무엇이 바뀌었고 어디서 확인하는지를 짧은 줄로 쓴다. 게시한 뒤에는 게시한 버전과 빌드 번호, 들어간 변경, 커밋하지 않은 변경으로 만든 빌드인지, iPhone에서 먼저 확인할 화면을 사용자에게 알린다.", path: true, scheme: true, releaseNotes: true),
         [
             "name": "remotedebug_feedback_setup",
             "description": "앱에 크래시·피드백 보내기(Swift 패키지 RemoteDebugFeedback)를 붙일 때 부른다. 프로젝트를 연결하고, 이 Mac의 주소와 그 프로젝트의 공개키가 든 코드(feedback.snippet), 패키지 주소와 제품 이름, 이미 들어 있는지(feedback.added), 할 일(feedback.steps)을 돌려준다. 사용자에게 Mac 앱에서 코드를 복사해 달라고 하지 않아도 된다. 받은 피드백은 remotedebug_crash_logs로 읽는다.",
@@ -180,13 +181,16 @@ public struct AgentMCPServer: Sendable {
         "description": "넣을 프로젝트 구역(선택). remotedebug_status의 projects에 있는 프로젝트 이름이나 그 .xcodeproj·.xcworkspace 절대 경로. 비우면 공통 구역. 연결한 프로젝트가 아니면 오류에 쓸 수 있는 이름이 나온다",
     ] }
 
-    static func tool(_ name: String, _ description: String, path: Bool, scheme: Bool) -> [String: Any] {
+    static func tool(_ name: String, _ description: String, path: Bool, scheme: Bool, releaseNotes: Bool = false) -> [String: Any] {
         var properties: [String: Any] = [:]
         if path {
             properties["project_path"] = ["type": "string", "description": "프로젝트 폴더나 .xcodeproj, .xcworkspace의 절대 경로"]
         }
         if scheme {
             properties["scheme"] = ["type": "string", "description": "빌드할 스킴. 비우면 마지막에 쓴 스킴이나 하나뿐인 스킴을 쓴다"]
+        }
+        if releaseNotes {
+            properties["release_notes"] = ["type": "string", "description": "이 빌드의 업데이트 내역(선택). 여러 줄 일반 글, UTF-8로 \(BuildDescriptor.maxReleaseNotesBytes)바이트까지. 새로 게시된 빌드에만 붙는다"]
         }
         return ["name": name, "description": description,
                 "inputSchema": ["type": "object", "properties": properties, "required": path ? ["project_path"] : []] as [String: Any]]
@@ -309,7 +313,8 @@ public struct AgentMCPServer: Sendable {
                 return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "Unknown tool: \(name)"]])
             }
             let data = await send(command, arguments["project_path"] as? String ?? "", arguments["scheme"] as? String ?? "",
-                                  command == "files" ? Self.oneLine(arguments["project"]) : "")
+                                  command == "files" ? Self.oneLine(arguments["project"])
+                                      : command == "build" ? arguments["release_notes"] as? String ?? "" : "")
             let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
             return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
         default:
@@ -461,7 +466,7 @@ extension AgentScript {
 
         MCP 서버 `remotedebug`가 연결돼 있으면 그 도구를 쓴다.
 
-        - `remotedebug_build`: `project_path`(프로젝트 폴더의 절대 경로), `scheme`(선택)
+        - `remotedebug_build`: `project_path`(프로젝트 폴더의 절대 경로), `scheme`(선택), `release_notes`(선택, 이번 빌드에서 바뀐 것. iPhone의 빌드 줄과 설치 페이지에 보인다)
         - `remotedebug_schemes`: `project_path`
         - `remotedebug_feedback_setup`: `project_path`, `email`(선택). 앱에 크래시·피드백 보내기를 붙일 때 넣을 코드와 할 일
         - `remotedebug_feedback_checklist`: `bundle_id`, `items`(선택), `clear`(선택). 사용자가 Debug 빌드의 피드백 화면에서 확인할 것과 고를 답을 남긴다. 답은 `remotedebug_crash_logs`의 피드백 원문 끝에 온다
@@ -478,7 +483,7 @@ extension AgentScript {
         도구가 보이지 않으면 같은 일을 하는 명령을 쓴다. JSON 한 줄을 출력하고 성공하면 종료 코드 0이다.
 
         ```sh
-        \(rd) build <프로젝트 폴더> [스킴]
+        \(rd) build <프로젝트 폴더> [스킴] [업데이트 내역|내역 파일]
         \(rd) schemes <프로젝트 폴더>
         \(rd) feedback <프로젝트 폴더> [메일]
         \(rd) checklist <번들 ID> [항목 JSON 파일|clear]

@@ -54,7 +54,7 @@ private struct World {
         derived = tmp.path("DerivedData")
         let imported = self.imported
         model = ProjectsModel(root: tmp.path("state"), builder: builder, scanner: DerivedDataScanner(root: derived),
-                              hostStatus: { .init(sharing: true, installPage: "https://mac.example/") }) { url in
+                              hostStatus: { .init(sharing: true, installPage: "https://mac.example/") }) { url, _ in
             imported.withLock { $0.append(url.lastPathComponent) }
             return .accepted(LibraryBuild(descriptor: sampleDescriptor(bundleId: "com.example.\(url.deletingPathExtension().lastPathComponent)"), sourcePath: url.path))
         }
@@ -135,7 +135,7 @@ struct ProjectsModelTests {
         #expect(w.imported.withLock { $0.count } == 1)
 
         // 다시 열어도 목록과 마지막 스킴이 남는다.
-        let reopened = ProjectsModel(root: w.tmp.path("state"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived)) { _ in nil }
+        let reopened = ProjectsModel(root: w.tmp.path("state"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived)) { _, _ in nil }
         reopened.load()
         #expect(reopened.projects.map(\.scheme) == ["App"])
     }
@@ -200,7 +200,7 @@ struct ProjectsModelTests {
         #expect(w.model.owner(sourcePath: "/elsewhere/Other.app", bundleId: "com.example.Other") == nil)
 
         // 다시 열면 검사 전에도 번들 ID로 찾는다.
-        let reopened = ProjectsModel(root: w.tmp.path("state"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived)) { _ in nil }
+        let reopened = ProjectsModel(root: w.tmp.path("state"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived)) { _, _ in nil }
         reopened.load()
         #expect(reopened.owner(sourcePath: "/elsewhere/App.app", bundleId: "com.example.App")?.id == connected.id)
 
@@ -303,7 +303,7 @@ struct ProjectsModelTests {
 
         let expires = Date(timeIntervalSince1970: 1_800_000_000)
         let pairing = ProjectsModel(root: w.tmp.path("state-pair"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived),
-                                    openPairing: { .success(.init(code: "K7M2-9QXD", installPage: "https://h/#code=K7M29QXD", expiresAt: expires)) }) { _ in nil }
+                                    openPairing: { .success(.init(code: "K7M2-9QXD", installPage: "https://h/#code=K7M29QXD", expiresAt: expires)) }) { _, _ in nil }
         let paired = await pairing.handleAgentRequest("pair\n\n\n")
         #expect(paired.ok && paired.pairing?.installPage == "https://h/#code=K7M29QXD" && paired.pairing?.code == "K7M2-9QXD")
 
@@ -311,7 +311,7 @@ struct ProjectsModelTests {
         let waiting = ProjectsModel.PairRequestInfo(requestId: "pr_1", deviceName: "iPhone", nodeName: "rd-phone-1", loginName: "me@", expiresAt: expires)
         let answering = ProjectsModel(root: w.tmp.path("state-answer"), builder: w.builder, scanner: DerivedDataScanner(root: w.derived),
                                       pairingRequests: .init(list: { decided.withLock { $0.isEmpty } ? [waiting] : [] },
-                                                             deny: { id in decided.withLock { $0.append(id) }; return nil })) { _ in nil }
+                                                             deny: { id in decided.withLock { $0.append(id) }; return nil })) { _, _ in nil }
         #expect(await answering.handleAgentRequest("requests\n\n\n").requests == [waiting])
         // 허용 명령은 오류로 끝나고 요청은 그대로 남는다.
         let approve = await answering.handleAgentRequest("approve\npr_1\n\n")
@@ -356,7 +356,7 @@ struct ResourceAreaCommandTests {
                 share: { url, project in .success(sent.add(url.lastPathComponent, project: project)) },
                 remove: { id in sent.files.removeAll { $0.id == id } },
                 shareLink: { url, title, project in .success(sent.add(title ?? "링크", link: url.absoluteString, project: project)) })
-        ) { _ in nil }
+        ) { _, _ in nil }
     }
 
     private func project(_ tmp: TempDir, _ name: String, in folder: String? = nil) throws -> URL {
@@ -459,6 +459,10 @@ struct ResourceAreaCommandTests {
         #expect(try await run(["files", "Tool"]) == "files\n\n\nTool\n")
         #expect(try await run(["files"]) == "files\n\n\n\n")
         #expect(try await run(["build", "/p", "App"]) == "build\n/p\nApp\n\n")
+        #expect(try await run(["build", "/p", "App", "로그인 고침\n- 목록 정렬"]) == "build\n/p\nApp\n로그인 고침\n- 목록 정렬\n")
+        let notesFile = tmp.path("notes.txt")
+        try Data("파일에 적은 내역\n".utf8).write(to: notesFile)
+        #expect(try await run(["build", "/p", "App", notesFile.path]) == "build\n/p\nApp\n파일에 적은 내역\n")
     }
 }
 
@@ -491,6 +495,13 @@ struct AgentIntegrationTests {
         let failed = try object(await server.handle(Data(#"{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"remotedebug_status"}}"#.utf8)))
         #expect((failed["result"] as? [String: Any])?["isError"] as? Bool == true)
         #expect(calls.withLock { $0 } == ["build|/p|App", "status||"])
+
+        // 업데이트 내역은 넷째 값으로 줄바꿈까지 그대로 넘긴다.
+        calls.withLock { $0.removeAll() }
+        _ = await server.handle(Data(#"{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"remotedebug_build","arguments":{"project_path":"/p","scheme":"App","release_notes":"로그인 고침\n- 목록 정렬"}}}"#.utf8))
+        #expect(calls.withLock { $0 } == ["build|/p|App|로그인 고침\n- 목록 정렬"])
+        let buildTool = try #require(tools.first { $0["name"] as? String == "remotedebug_build" })
+        #expect((((buildTool["inputSchema"] as? [String: Any])?["properties"] as? [String: Any])?["release_notes"] as? [String: Any])?["type"] as? String == "string")
 
         // 구역(project)은 넷째 값으로 넘긴다. 줄바꿈은 빈칸으로 바꾼다.
         calls.withLock { $0.removeAll() }

@@ -19,8 +19,10 @@ struct BuildLibraryTests {
         await lib.activate()
         let app = try makeImportableApp(in: tmp.path("src"), name: "Good", bundleId: "com.example.good")
 
-        let outcome = try await lib.importBuild(at: app)
+        let outcome = try await lib.importBuild(at: app, releaseNotes: " 로그인 고침\r\n- 목록 정렬\n")
         guard case .accepted(let build) = outcome else { Issue.record("수락돼야 함: \(outcome)"); return }
+        // 업데이트 내역은 다듬어 게시하고 인덱스에도 남는다.
+        #expect(core.published.first?.build.releaseNotes == "로그인 고침\n- 목록 정렬")
 
         let paths = await lib.paths
         let ipa = paths.ipaURL(forBuildID: build.id)
@@ -34,6 +36,7 @@ struct BuildLibraryTests {
         // 인덱스 저장
         let saved = try JSONFile<BuildLibrary.Index>(url: paths.buildsFile).load()
         #expect(saved?.builds.map(\.id) == [build.id])
+        #expect(saved?.builds.first?.descriptor.releaseNotes == "로그인 고침\n- 목록 정렬")
         // 작업 폴더에 임시 파일이 남지 않는다
         #expect(try FileManager.default.contentsOfDirectory(atPath: paths.workDir.path).isEmpty)
     }

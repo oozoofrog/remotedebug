@@ -69,9 +69,9 @@ struct WebTests {
         let fixture = try HostFixture(paired: false)
         let originalHashes = [
             "index.html": "d4e20274d8b44854382057467bb5a733e4e946daa327688038495984bfbbaaf5",
-            "install.css": "3b98a74fffdb3fe728b3bc3e6d1e952b88a1e4007d29b14ec6e24675cb352b42",
-            "install.js": "d4a26ba1ed81d308f39b6cf3ac739fcc19a43e447c87113fcbc9acd8aa1f3ee5",
-            "logic.js": "025459861e088fef4c948cacc8ce553f02c1c9b0a87b02a7f41e983202c83b00"
+            "install.css": "5fa75070b81030a3cf8afc2c384c1be07074f3d0d8363c7a58d4bf6c431afa66",
+            "install.js": "31ef813539687440b2248c649f7f70ba4b3a59ac32e8a2591866b7399a34c4a7",
+            "logic.js": "18ed1a6b0b54d9d0cf10441265d2f8d9f759d6908c52f3a8d2b307911f5c3f8f"
         ]
         let source = HostLogic.resourceRoot.appendingPathComponent("web")
         for (path, file, type) in routes {

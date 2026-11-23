@@ -22,6 +22,9 @@ struct SessionTests {
         bad.build.icon = Data("invalid".utf8)
         expectError("bad_request") { try fixture.host.publish(bad) }
         bad = original
+        bad.build.releaseNotes = String(repeating: "a", count: BuildDescriptor.maxReleaseNotesBytes + 1)
+        expectError("bad_request") { try fixture.host.publish(bad) }
+        bad = original
         bad.build.ipa.sha256 = String(repeating: "0", count: 64)
         expectError("hash_mismatch") { try fixture.host.publish(bad) }
         bad = original
@@ -34,6 +37,11 @@ struct SessionTests {
         #expect(try fixture.host.publish(updated) == id)
         let list: BuildsResponse = try decode(await fixture.request("/v1/builds"))
         #expect(list.builds.count == 1 && list.builds[0].displayName == "New name")
+        #expect(list.builds[0].releaseNotes == nil)
+        updated.build.releaseNotes = "  로그인 고침\r\n- 목록 정렬\n"
+        #expect(try fixture.host.publish(updated) == id)
+        let noted: BuildsResponse = try decode(await fixture.request("/v1/builds"))
+        #expect(noted.builds[0].releaseNotes == "로그인 고침\n- 목록 정렬")
         try Data("changed source".utf8).write(to: URL(fileURLWithPath: original.ipaPath))
         let session = try await fixture.createSession(id)
         let target = try #require(URLComponents(url: session.manifestUrl, resolvingAgainstBaseURL: false)?.path)

@@ -360,8 +360,9 @@ public actor BuildLibrary {
     // MARK: 가져오기
 
     /// `.app` 폴더나 `.ipa` 파일을 가져온다. 정책 위반은 `.rejected`로 돌려준다(던지지 않는다).
-    public func importBuild(at url: URL, mode: ImportMode = .automatic) async throws -> ImportOutcome {
-        try await serially { try await performImport(url, mode: mode) }
+    /// `releaseNotes`는 수락된 빌드의 설명에 붙여 게시한다(docs/protocol-addenda.md T).
+    public func importBuild(at url: URL, mode: ImportMode = .automatic, releaseNotes: String? = nil) async throws -> ImportOutcome {
+        try await serially { try await performImport(url, mode: mode, releaseNotes: releaseNotes) }
     }
 
     private enum Prepared {
@@ -370,7 +371,7 @@ public actor BuildLibrary {
         case needsConfirmation(BuildIdentity)
     }
 
-    private func performImport(_ source: URL, mode: ImportMode) async throws -> ImportOutcome {
+    private func performImport(_ source: URL, mode: ImportMode, releaseNotes: String?) async throws -> ImportOutcome {
         guard isLoaded else { throw BuildLibraryError.notLoaded }
         try paths.prepare()
         let kind = source.pathExtension.lowercased()
@@ -401,6 +402,7 @@ public actor BuildLibrary {
         descriptor.publishedAt = now()
         // 아이콘은 `.app` 원본에서만 읽는다. 없으면 iPhone이 색 타일을 보여 준다.
         descriptor.icon = kind == "app" ? AppIconFile.publishedPNG(appPath: source.path) : nil
+        descriptor.releaseNotes = BuildDescriptor.cleanReleaseNotes(releaseNotes)
 
         // 게시 직전: 옮길 파일이 검사한 그 바이트인지 한 번 더 확인한다.
         guard FileKind.of(temp) == .regular else { throw BuildLibraryError.changedDuringImport(source.lastPathComponent) }

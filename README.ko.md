@@ -19,7 +19,7 @@ Mac 앱의 **에이전트에 설치…**는 Claude Code와 Codex에 MCP 서버 `
 | `remotedebug_status` | 공유 중인지, 설치 페이지 주소, 연결한 프로젝트와 프로젝트마다 가장 최근에 게시한 버전·빌드 번호 |
 | `remotedebug_schemes` | Xcode 프로젝트(`project_path`)를 연결하고 스킴 목록을 돌려준다 |
 | `remotedebug_feedback_setup` | 앱에 크래시·피드백 보내기를 붙일 때 넣을 코드(이 Mac의 주소와 프로젝트 공개키 포함)와 할 일. `project_path`, 선택 `email` |
-| `remotedebug_build` | `project_path`(선택 `scheme`)를 Debug 기기용으로 빌드해 게시한다. 빌드가 끝날 때까지 기다린다. 응답의 `report.notes`에 점검 사항이 온다: 실행 파일이 바뀌었는데 그대로인 버전, 낮아진 빌드 번호, 곧 만료되는 프로필, 꺼진 공유 |
+| `remotedebug_build` | `project_path`(선택 `scheme`)를 Debug 기기용으로 빌드해 게시한다. 선택 `release_notes`(이번 빌드에서 바뀐 것)는 iPhone 앱의 빌드 줄과 설치 페이지에 보인다. 빌드가 끝날 때까지 기다린다. 응답의 `report.notes`에 점검 사항이 온다: 실행 파일이 바뀌었는데 그대로인 버전, 낮아진 빌드 번호, 곧 만료되는 프로필, 꺼진 공유 |
 | `remotedebug_pairing_code` | 앱이 아직 없는 iPhone용 5분짜리 페어링 코드를 연다. 코드와 설치 페이지 링크(`installPage`)를 돌려준다 |
 | `remotedebug_pair_requests` | 허용을 기다리는 페어링 요청(기기 이름, tailnet 노드 이름, 로그인, 만료 시각) |
 | `remotedebug_pair_decide` | 요청을 거부한다(`request_id`). 허용은 할 수 없다: 허용은 Mac 앱 화면에서만 한다 |
@@ -28,7 +28,7 @@ Mac 앱의 **에이전트에 설치…**는 Claude Code와 Codex에 MCP 서버 `
 | `remotedebug_push_file`, `remotedebug_push_link` | 페어링한 iPhone에 파일(`file_path`)이나 링크(`url`, 선택 `title`)를 보낸다. 선택 `project`(연결한 프로젝트의 이름이나 `.xcodeproj`·`.xcworkspace` 경로)를 주면 그 프로젝트 구역에, 비우면 공통 구역에 넣는다 |
 | `remotedebug_files` | 보낸 목록을 구역과 함께 본다. 선택 `project`로 한 구역만 본다 |
 
-MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 명령을 쓴다(`rd status`, `rd build <프로젝트> [스킴]`, `rd pair`, `rd requests`, `rd deny <id>`, `rd push <파일> [프로젝트]`, `rd link <주소> [이름] [프로젝트]`, `rd files [프로젝트]`).
+MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 명령을 쓴다(`rd status`, `rd build <프로젝트> [스킴] [업데이트 내역|내역 파일]`, `rd pair`, `rd requests`, `rd deny <id>`, `rd push <파일> [프로젝트]`, `rd link <주소> [이름] [프로젝트]`, `rd files [프로젝트]`).
 
 에이전트가 지킬 것:
 

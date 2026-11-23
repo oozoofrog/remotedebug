@@ -189,7 +189,7 @@ extension ScreenTests {
         let container = tmp.url.appendingPathComponent("src/Demo/Demo.xcodeproj")
         try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
         let projects = ProjectsModel(root: tmp.url.appendingPathComponent("projects", isDirectory: true), builder: UIFakeBuilder(),
-                                     scanner: DerivedDataScanner(root: tmp.url.appendingPathComponent("DerivedData"))) { _ in nil }
+                                     scanner: DerivedDataScanner(root: tmp.url.appendingPathComponent("DerivedData"))) { _, _ in nil }
         _ = try #require(await projects.connect(container))
         #expect(AppsView.entries(model: model, projects: projects).map(AppRow.title) == ["Demo", "Sample", "Notes"])
 

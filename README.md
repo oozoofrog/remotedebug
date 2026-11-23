@@ -19,7 +19,7 @@ The Mac app's **에이전트에 설치…** (Install for agents) adds an MCP ser
 | `remotedebug_status` | Whether the Mac is sharing, the install page address, connected projects with the version and build number each last published |
 | `remotedebug_schemes` | Connect an Xcode project (`project_path`) and list its schemes |
 | `remotedebug_feedback_setup` | The code to add crash and feedback reporting to an app (with this Mac's address and the project's public key) and the steps. `project_path`, optional `email` |
-| `remotedebug_build` | Build `project_path` (optional `scheme`) for device in Debug and publish it. Waits until the build ends. `report.notes` in the response lists what to check: a changed binary under an unchanged version, a lowered build number, a profile about to expire, sharing turned off |
+| `remotedebug_build` | Build `project_path` (optional `scheme`) for device in Debug and publish it. Optional `release_notes` (what changed in this build) shows on the build row of the iPhone app and the install page. Waits until the build ends. `report.notes` in the response lists what to check: a changed binary under an unchanged version, a lowered build number, a profile about to expire, sharing turned off |
 | `remotedebug_pairing_code` | Open a 5-minute pairing code for an iPhone without the app. Returns the code and the install page link (`installPage`) |
 | `remotedebug_pair_requests` | Pairing requests waiting for approval (device name, tailnet node name, login, expiry) |
 | `remotedebug_pair_decide` | Deny a request (`request_id`). It cannot approve: approval is only possible on the Mac app's screen |
@@ -28,7 +28,7 @@ The Mac app's **에이전트에 설치…** (Install for agents) adds an MCP ser
 | `remotedebug_push_file`, `remotedebug_push_link` | Send a file (`file_path`) or link (`url`, optional `title`) to the paired iPhone. Optional `project` (a connected project's name or its `.xcodeproj`/`.xcworkspace` path) puts it in that project's area; without it the item goes to the common area |
 | `remotedebug_files` | List what was sent, each item with its project area. Optional `project` filters by area |
 
-Without MCP, the same commands go through `~/Library/Application Support/RemoteDebug/agent/rd` (`rd status`, `rd build <project> [scheme]`, `rd pair`, `rd requests`, `rd deny <id>`, `rd push <file> [project]`, `rd link <url> [title] [project]`, `rd files [project]`).
+Without MCP, the same commands go through `~/Library/Application Support/RemoteDebug/agent/rd` (`rd status`, `rd build <project> [scheme] [release notes|notes file]`, `rd pair`, `rd requests`, `rd deny <id>`, `rd push <file> [project]`, `rd link <url> [title] [project]`, `rd files [project]`).
 
 Rules for agents:
 

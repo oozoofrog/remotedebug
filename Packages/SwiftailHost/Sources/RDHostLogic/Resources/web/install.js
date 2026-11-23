@@ -84,11 +84,15 @@
   function buildItem(doc, build, st, nowMs, handlers) {
     var s = L.buildSummary(build, nowMs);
     var area = el(doc, "div", { className: "install", attrs: { "aria-live": "polite" } }, installArea(doc, build, st, handlers));
+    // 게시한 사람이 적은 업데이트 내역(선택). 일반 글로만 보인다.
+    var notes = typeof build.releaseNotes === "string" && build.releaseNotes.trim() ? build.releaseNotes.trim() : null;
     return el(doc, "li", { className: "build" }, [
       el(doc, "h3", { text: s.name }),
       el(doc, "p", { className: "detail", text: s.detail }),
       el(doc, "p", { className: "bundle", text: s.bundleId }),
       s.warning ? el(doc, "p", { className: "warn", text: s.warning }) : null,
+      notes ? el(doc, "p", { className: "notes-title", text: L.t("업데이트 내역") }) : null,
+      notes ? el(doc, "p", { className: "notes", text: notes }) : null,
       area
     ]);
   }

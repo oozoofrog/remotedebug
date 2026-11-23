@@ -57,7 +57,7 @@ import Testing
         let filer = FakeFiler()
         let model = ProjectsModel(root: tmp.path("state"), builder: AdviceBuilder(app: tmp.path("p/App.app")),
                                   scanner: DerivedDataScanner(root: tmp.path("DerivedData")),
-                                  now: { [start] in start }, crashLogs: store, issueFiler: filer, originURL: { _ in origin }) { _ in nil }
+                                  now: { [start] in start }, crashLogs: store, issueFiler: filer, originURL: { _ in origin }) { _, _ in nil }
         var project = try #require(await model.connect(tmp.path("p/App.xcodeproj")))
         model.notePublished(bundle, by: project)
         if let target { project = try model.setIssueTarget(target, for: project).get() }
@@ -341,7 +341,7 @@ import Testing
         // 저장소와 자동 등록은 프로젝트와 함께 저장된다.
         w.model.setIssueAuto(false, for: w.project)
         let reopened = ProjectsModel(root: w.tmp.path("state"), builder: AdviceBuilder(app: w.tmp.path("p/App.app")),
-                                     scanner: DerivedDataScanner(root: w.tmp.path("DerivedData"))) { _ in nil }
+                                     scanner: DerivedDataScanner(root: w.tmp.path("DerivedData"))) { _, _ in nil }
         reopened.load()
         #expect(reopened.projects.first?.issueTarget == "example/app" && reopened.projects.first?.issueAuto == false)
         guard case .failure(let bad) = w.model.setIssueTarget("not a repo", for: w.project) else { Issue.record("모양이 아닌 저장소를 받았다"); return }

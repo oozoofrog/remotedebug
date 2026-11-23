@@ -78,6 +78,20 @@ import Testing
         #expect(js.eval("typeof RDPage.el").toString() == "function")
     }
 
+    @Test func releaseNotesShowAsPlainTextOnlyWhenPresent() throws {
+        let js = try page()
+        js.eval("var plain = RDPage.buildItem(fakeDocument, build, null, Date.now(), handlers);")
+        #expect(js.eval("all(plain).some(function (n) { return n.className === 'notes'; })").toBool() == false)
+        js.eval("build.releaseNotes = '로그인 고침\\n<b>목록</b> 정렬'; var noted = RDPage.buildItem(fakeDocument, build, null, Date.now(), handlers);")
+        try js.checkNoException()
+        #expect(js.eval("all(noted).filter(function (n) { return n.className === 'notes'; })[0].textContent").toString() == "로그인 고침\n<b>목록</b> 정렬")
+        #expect(js.eval("all(noted).some(function (n) { return n.className === 'notes-title' && n.textContent === '업데이트 내역'; })").toBool())
+        #expect(js.eval("byTag(noted, 'b').length").toInt32() == 0)
+        // 문자열이 아니면 그리지 않는다.
+        js.eval("build.releaseNotes = { a: 1 }; var odd = RDPage.buildItem(fakeDocument, build, null, Date.now(), handlers); build.releaseNotes = undefined;")
+        #expect(js.eval("all(odd).some(function (n) { return n.className === 'notes'; })").toBool() == false)
+    }
+
     @Test func buildTextIsNotMarkup() throws {
         let js = try page()
         js.eval("var item = RDPage.buildItem(fakeDocument, build, null, Date.now(), handlers);")

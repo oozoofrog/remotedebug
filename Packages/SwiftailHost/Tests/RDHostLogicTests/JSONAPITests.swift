@@ -24,7 +24,7 @@ struct JSONAPITests {
         let request = try fixture.writeBuild()
         let body: [String: Any] = ["bundleId": "com.example.app", "debug": true, "configurationEvidence": "future-value",
             "signing": ["getTaskAllow": true, "profileExpires": "unparsed"], "ipa": ["size": request.build.ipa.size, "sha256": request.build.ipa.sha256],
-            "ipaPath": request.ipaPath, "publishedAt": "opaque-time"]
+            "ipaPath": request.ipaPath, "publishedAt": "opaque-time", "releaseNotes": "첫 줄\n둘째 줄 "]
         let id = try fixture.host.publish(json: Data(jsonText(body).utf8))
         let response = await fixture.request("/v1/builds")
         let raw = try JSONSerialization.jsonObject(with: responseData(response)) as? [String: [[String: Any]]]
@@ -34,6 +34,7 @@ struct JSONAPITests {
         #expect(build["publishedAt"] as? String == "opaque-time")
         #expect((build["signing"] as? [String: Any])?["profileExpires"] as? String == "unparsed")
         #expect(build["displayName"] as? String == "")
+        #expect(build["releaseNotes"] as? String == "첫 줄\n둘째 줄")
         expectError("not_debug_build") { try fixture.host.publish(json: Data("{}".utf8)) }
         expectError("bad_request") { try fixture.host.publish(json: Data("{broken".utf8)) }
     }

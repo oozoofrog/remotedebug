@@ -75,6 +75,20 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
     /// `icon`의 최대 크기(바이트). 코어도 같은 값으로 거부한다.
     public static let maxIconBytes = 64 * 1024
 
+    /// 게시한 사람이 적은 업데이트 내역(선택, docs/protocol-addenda.md T). 여러 줄 일반 글이다.
+    public var releaseNotes: String?
+
+    /// `releaseNotes`의 최대 크기(UTF-8 바이트). 코어도 같은 값으로 거부한다.
+    public static let maxReleaseNotesBytes = 4 * 1024
+
+    /// 줄바꿈을 `\n`으로 맞추고 앞뒤 공백을 뗀다. 남는 글이 없으면 `nil`.
+    public static func cleanReleaseNotes(_ text: String?) -> String? {
+        guard let text else { return nil }
+        let cleaned = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
     public init(
         id: String,
         bundleId: String,
@@ -88,7 +102,8 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
         signing: Signing,
         ipa: IPAInfo,
         publishedAt: Date,
-        icon: Data? = nil
+        icon: Data? = nil,
+        releaseNotes: String? = nil
     ) {
         self.id = id
         self.bundleId = bundleId
@@ -103,11 +118,12 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
         self.ipa = ipa
         self.publishedAt = publishedAt
         self.icon = icon
+        self.releaseNotes = releaseNotes
     }
 
     enum CodingKeys: String, CodingKey {
         case id, bundleId, displayName, version, buildNumber, minOS, debug
-        case configuration, configurationEvidence, signing, ipa, publishedAt, icon
+        case configuration, configurationEvidence, signing, ipa, publishedAt, icon, releaseNotes
     }
 
     public init(from decoder: any Decoder) throws {
@@ -129,6 +145,13 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
             icon = data
         } else {
             icon = nil
+        }
+        // 내역도 꾸밈이다. 문자열이 아니거나 너무 길면 빌드는 받고 내역만 버린다.
+        if let text = Self.cleanReleaseNotes(try? c.decodeIfPresent(String.self, forKey: .releaseNotes)),
+           text.utf8.count <= Self.maxReleaseNotesBytes {
+            releaseNotes = text
+        } else {
+            releaseNotes = nil
         }
     }
 
@@ -152,6 +175,7 @@ public struct BuildDescriptor: Codable, Sendable, Hashable, Identifiable {
         try c.encode(ipa, forKey: .ipa)
         try c.encodeRDDate(publishedAt, forKey: .publishedAt)
         try c.encodeIfPresent(icon, forKey: .icon)
+        try c.encodeIfPresent(releaseNotes, forKey: .releaseNotes)
     }
 
     /// protocol §4.1: `"b_"` + `sha256(bundleId + "\n" + ipaSHA256)`의 앞 8자리 16진수.

@@ -1251,13 +1251,13 @@ public final class HostModel {
 
     /// `.app` 폴더나 `.ipa` 파일을 가져온다. `.confirmed`는 사용자가 그 내용을 Debug 빌드로 직접 확인했을 때만 쓴다.
     @discardableResult
-    public func importBuild(_ url: URL, mode: ImportMode = .automatic) async -> ImportOutcome? {
+    public func importBuild(_ url: URL, mode: ImportMode = .automatic, releaseNotes: String? = nil) async -> ImportOutcome? {
         guard !isShutDown else { return nil }
         importsInProgress += 1
         defer { importsInProgress -= 1 }
         await load()
         do {
-            let outcome = try await library.importBuild(at: url, mode: mode)
+            let outcome = try await library.importBuild(at: url, mode: mode, releaseNotes: releaseNotes)
             await refreshLibrary()
             return outcome
         } catch {

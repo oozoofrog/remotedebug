@@ -83,6 +83,9 @@ struct BuildRow: View {
                         .accessibilityLabel(isOlder ? "\(build.displayName) \(published) 빌드 \(installTitle)" : "\(build.displayName) \(installTitle)")
                 }
             }
+            if let notes = build.releaseNotes {
+                ReleaseNotesBlock(notes: notes, appName: build.displayName)
+            }
             if let installed {
                 if isInstalledBuild {
                     Label("이 빌드가 설치되어 있습니다", systemImage: "checkmark.circle.fill")
@@ -217,5 +220,35 @@ struct InstallStatusView: View {
         .font(.footnote)
         .foregroundStyle(.secondary)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// 게시한 사람이 적은 업데이트 내역(protocol-addenda T). 긴 글은 접어 두고 눌러 편다.
+private struct ReleaseNotesBlock: View {
+    var notes: String
+    var appName: String
+    @State private var expanded = false
+
+    /// 네 줄이 넘거나 길면 접는다.
+    private var isLong: Bool {
+        notes.count > 200 || notes.split(separator: "\n", omittingEmptySubsequences: false).count > 4
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("업데이트 내역")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(verbatim: notes)
+                .font(.footnote)
+                .lineLimit(isLong && !expanded ? 4 : nil)
+                .textSelection(.enabled)
+            if isLong {
+                Button(expanded ? "접기" : "더 보기") { expanded.toggle() }
+                    .font(.footnote)
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(expanded ? "\(appName) 업데이트 내역 접기" : "\(appName) 업데이트 내역 더 보기")
+            }
+        }
     }
 }

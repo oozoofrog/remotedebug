@@ -92,6 +92,7 @@ JSON 키는 camelCase, 시각은 UTC ISO-8601(`Z`), 문자열은 UTF-8이다.
 - `id` = `"b_"` + `sha256(bundleId + "\n" + ipa.sha256)`의 앞 8자리 16진수.
 - `configurationEvidence`는 `path`(`<Config>-iphoneos` 폴더 이름), `debug-dylib`(`*.debug.dylib` 존재), `user-confirmed`(사용자가 Debug임을 직접 확인) 중 하나다.
 - 클라이언트에는 IPA 경로를 절대 보내지 않는다. 게시 호출(§9)만 `ipaPath`를 받는다.
+- 선택 필드 `releaseNotes`(게시한 쪽이 적은 업데이트 내역)는 [protocol-addenda.md](protocol-addenda.md)의 T절에 있다. 내역이 없으면 키가 없다.
 
 ### 4.2 `GET /v1/info`, `GET /v1/builds`
 

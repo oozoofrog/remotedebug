@@ -37,6 +37,32 @@ import Testing
         }
     }
 
+    @Test func releaseNotesRoundTripAndDropBadValues() throws {
+        var d = sample()
+        d.releaseNotes = "로그인 화면 고침\n- 목록 정렬"
+        let json = try RDJSON.encoder().encode(d)
+        let object = try #require(JSONSerialization.jsonObject(with: json) as? [String: Any])
+        #expect(object["releaseNotes"] as? String == "로그인 화면 고침\n- 목록 정렬")
+        #expect(try RDJSON.decoder().decode(BuildDescriptor.self, from: json).releaseNotes == d.releaseNotes)
+
+        // 내역이 없으면 키도 없다.
+        let plain = try #require(JSONSerialization.jsonObject(with: RDJSON.encoder().encode(sample())) as? [String: Any])
+        #expect(plain["releaseNotes"] == nil)
+
+        // 문자열이 아니거나, 비었거나, 너무 길면 내역만 버리고 빌드는 받는다.
+        let tooLong = String(repeating: "가", count: BuildDescriptor.maxReleaseNotesBytes / 3 + 1)
+        for bad in ["12", "\"\"", "\"  \\n \"", "\"" + tooLong + "\""] {
+            var dict = object
+            dict["releaseNotes"] = try JSONSerialization.jsonObject(with: Data(bad.utf8), options: .fragmentsAllowed)
+            let decoded = try RDJSON.decoder().decode(BuildDescriptor.self, from: JSONSerialization.data(withJSONObject: dict))
+            #expect(decoded.releaseNotes == nil)
+            #expect(decoded.id == d.id)
+        }
+        #expect(BuildDescriptor.cleanReleaseNotes("  a\r\nb  \n") == "a\nb")
+        #expect(BuildDescriptor.cleanReleaseNotes(" \n") == nil)
+        #expect(BuildDescriptor.cleanReleaseNotes(nil) == nil)
+    }
+
     @Test func deviceLogEventDecodesCoreJSON() throws {
         let json = #"""
         {"type":"device-log","deviceId":"d_1","deviceName":"내 iPhone","nodeName":"rd-phone-1",

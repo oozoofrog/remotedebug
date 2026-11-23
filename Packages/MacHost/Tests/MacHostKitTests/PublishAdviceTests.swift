@@ -55,12 +55,20 @@ struct PublishAdviceTests {
         let next = build("b", number: "7")
         let model = ProjectsModel(root: tmp.path("state"), builder: builder, scanner: DerivedDataScanner(root: tmp.path("DerivedData")),
                                   hostStatus: { .init(sharing: false, installPage: nil) },
-                                  publishedBuilds: { library.withLock { $0 } }) { url in
-            library.withLock { $0.insert(next, at: 0) }
-            return .accepted(LibraryBuild(descriptor: next, sourcePath: url.path))
+                                  publishedBuilds: { library.withLock { $0 } }) { url, releaseNotes in
+            var accepted = next
+            accepted.releaseNotes = releaseNotes
+            library.withLock { $0.insert(accepted, at: 0) }
+            return .accepted(LibraryBuild(descriptor: accepted, sourcePath: url.path))
         }
 
-        let built = await model.handleAgentRequest("build\n\(container.path)\nApp\n")
+        // 넷째 줄부터 끝까지가 업데이트 내역이다. 너무 길면 빌드하지 않는다.
+        let long = await model.handleAgentRequest("build\n\(container.path)\nApp\n" + String(repeating: "a", count: BuildDescriptor.maxReleaseNotesBytes + 1))
+        #expect(!long.ok && long.error?.contains("업데이트 내역이 너무 깁니다") == true && library.withLock { $0.count } == 1)
+
+        let built = await model.handleAgentRequest("build\n\(container.path)\nApp\n로그인 고침\n- 목록 정렬\n")
+        #expect(built.report?.published.first?.releaseNotes == "로그인 고침\n- 목록 정렬")
+        #expect(library.withLock { $0.first?.releaseNotes } == "로그인 고침\n- 목록 정렬")
         let notes = try #require(built.report?.notes)
         #expect(built.ok && notes.count == 2)
         #expect(notes[0].contains("버전과 빌드 번호가 앞서 게시한 빌드와 같습니다") && notes[1].contains("공유가 꺼져"))
@@ -69,8 +77,9 @@ struct PublishAdviceTests {
         #expect(status.projects?.first?.published?.map(\.buildId) == ["b"])
 
         // 결과가 그대로면 새로 게시하지 않았다고 알린다.
-        let again = await model.handleAgentRequest("build\n\(container.path)\nApp\n")
+        let again = await model.handleAgentRequest("build\n\(container.path)\nApp\n붙지 않을 내역")
         #expect(again.ok && again.report?.published.isEmpty == true)
+        #expect(again.report?.notes?.contains { $0.contains("업데이트 내역도 붙지 않았습니다") } == true)
         #expect(again.report?.notes?.contains { $0.contains("새로 게시하지 않았습니다") } == true)
     }
 
@@ -81,7 +90,7 @@ struct PublishAdviceTests {
         try FileManager.default.createDirectory(at: container, withIntermediateDirectories: true)
         let model = ProjectsModel(root: tmp.path("state"), builder: AdviceBuilder(app: tmp.path("p/App.app")),
                                   scanner: DerivedDataScanner(root: tmp.path("DerivedData")),
-                                  feedbackInfo: { _ in ("rd-mac-1a2b3c4d.tail0001.ts.net", "S0VZ") }) { _ in nil }
+                                  feedbackInfo: { _ in ("rd-mac-1a2b3c4d.tail0001.ts.net", "S0VZ") }) { _, _ in nil }
 
         let plain = try #require(await model.handleAgentRequest("feedback\n\(container.path)\n\n").feedback)
         #expect(!plain.added && plain.product == "RemoteDebugFeedback")
@@ -110,7 +119,7 @@ extension PublishAdviceTests {
         let tmp = try TempDir("checklist")
         let model = ProjectsModel(root: tmp.path("state"), builder: AdviceBuilder(app: tmp.path("p/App.app")),
                                   scanner: DerivedDataScanner(root: tmp.path("DerivedData")),
-                                  now: { Date(timeIntervalSince1970: 1_794_478_500) }) { _ in nil }
+                                  now: { Date(timeIntervalSince1970: 1_794_478_500) }) { _, _ in nil }
         let file = FeedbackChecklist.file(bundleId: "com.example.app", publishDirectory: tmp.path("state/Published").path)
 
         let none = await model.handleAgentRequest("checklist\ncom.example.app\n\n")
@@ -158,7 +167,7 @@ extension PublishAdviceTests {
         let model = ProjectsModel(root: tmp.path("state"), builder: AdviceBuilder(app: tmp.path("p/App.app")),
                                   scanner: DerivedDataScanner(root: tmp.path("DerivedData")),
                                   feedbackInfo: { _ in ("rd-mac-1a2b3c4d.tail0001.ts.net", "S0VZ") },
-                                  savedFeedbackEmail: { " dev@example.com " }) { _ in nil }
+                                  savedFeedbackEmail: { " dev@example.com " }) { _, _ in nil }
 
         let saved = try #require(await model.handleAgentRequest("feedback\n\(container.path)\n\n").feedback)
         #expect(saved.email == "dev@example.com" && saved.emailSource == "macSetting")

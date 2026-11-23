@@ -27,6 +27,8 @@ public final class ProjectsModel {
         public var name: String
         public var version: String
         public var buildNumber: String
+        /// 이 빌드에 붙여 게시한 업데이트 내역. 없으면 nil.
+        public var releaseNotes: String?
     }
 
     /// 마지막 빌드·가져오기 결과.
@@ -156,7 +158,8 @@ public final class ProjectsModel {
         public static let unavailable = ReportHandling(mark: { _, _ in nil })
     }
 
-    public typealias Importer = @MainActor (URL) async -> ImportOutcome?
+    /// 둘째 인자는 빌드에 붙일 업데이트 내역(없으면 nil).
+    public typealias Importer = @MainActor (URL, String?) async -> ImportOutcome?
     /// 지금 게시돼 있는 빌드. 새 빌드의 버전을 앞선 빌드와 견준다.
     public typealias PublishedBuilds = @MainActor () -> [BuildDescriptor]
     /// 피드백 패키지 설정에 넣을 이 Mac의 주소와 프로젝트의 공개키. 모르면 빈 글자.
@@ -444,7 +447,7 @@ public final class ProjectsModel {
 
     /// 스킴을 Debug 기기용으로 빌드하고, 만들어진 앱을 가져와 게시한다.
     @discardableResult
-    public func build(_ project: ConnectedProject, scheme: String) async -> Report {
+    public func build(_ project: ConnectedProject, scheme: String, releaseNotes: String? = nil) async -> Report {
         if phases[project.id] != nil {
             return Report(ok: false, scheme: scheme, message: String(localized: "이 프로젝트는 이미 작업 중입니다."))
         }
@@ -461,7 +464,7 @@ public final class ProjectsModel {
             phases[project.id] = .importing
             let built = try await builder.products(container: project.containerURL, scheme: scheme)
             noteProducts(built, of: project)
-            report = await importProducts(of: project, finished: true, built: built)
+            report = await importProducts(of: project, finished: true, built: built, releaseNotes: releaseNotes)
             report.scheme = scheme
         } catch let failure as ProjectBuildFailure {
             report = Report(ok: false, scheme: scheme, message: failure.message, logTail: failure.logTail)
@@ -475,7 +478,7 @@ public final class ProjectsModel {
 
     /// 프로젝트의 DerivedData에서 `Debug-iphoneos/*.app`을 가져온다.
     /// `finished`가 false면(Xcode가 빌드 중일 수 있다) 서명이 끝났거나 지문이 여러 번 그대로일 때만 가져온다.
-    private func importProducts(of project: ConnectedProject, finished: Bool, built: [URL] = []) async -> Report {
+    private func importProducts(of project: ConnectedProject, finished: Bool, built: [URL] = [], releaseNotes: String? = nil) async -> Report {
         let scanner = self.scanner
         let container = project.container
         // 파일 읽기는 메인 스레드 밖에서 한다(외장 디스크나 권한 확인 창에서 멈출 수 있다).
@@ -501,7 +504,7 @@ public final class ProjectsModel {
             if stored.imported[app.path] == fingerprint { continue }
             if !finished, !isSettled(candidate) { continue }
             settling[app.path] = nil
-            let outcome = await importer(app)
+            let outcome = await importer(app, releaseNotes)
             // 가져오기가 실패했으면(nil) 지문을 기억하지 않아 다음에 다시 본다.
             guard let outcome else { continue }
             stored.imported[app.path] = fingerprint
@@ -509,7 +512,8 @@ public final class ProjectsModel {
             case .accepted(let build):
                 let d = build.descriptor
                 notePublished(d.bundleId, by: project)
-                report.published.append(Published(buildId: d.id, bundleId: d.bundleId, name: d.displayName, version: d.version, buildNumber: d.buildNumber))
+                report.published.append(Published(buildId: d.id, bundleId: d.bundleId, name: d.displayName, version: d.version, buildNumber: d.buildNumber,
+                                                  releaseNotes: d.releaseNotes))
                 let notes = PublishAdvice.notes(for: d, others: publishedBuilds(), now: now())
                 if !notes.isEmpty { report.notes = (report.notes ?? []) + notes }
             case .rejected(let rejected):
@@ -869,6 +873,7 @@ public final class ProjectsModel {
     }
 
     /// 요청은 줄 단위다: 명령, 경로, 스킴, 구역(push·link·files의 project).
+    /// `build`는 넷째 줄부터 끝까지가 업데이트 내역이다(여러 줄).
     func handleAgentRequest(_ text: String) async -> AgentResponse {
         let lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
         let command = lines.first ?? ""
@@ -992,11 +997,18 @@ public final class ProjectsModel {
             guard let chosen = scheme.isEmpty ? preferredScheme(for: project) : scheme else {
                 return AgentResponse(ok: false, error: "스킴을 정해 주세요.", schemes: list)
             }
-            var report = await build(project, scheme: chosen)
+            let releaseNotes = BuildDescriptor.cleanReleaseNotes(lines.dropFirst(3).joined(separator: "\n"))
+            if let releaseNotes, releaseNotes.utf8.count > BuildDescriptor.maxReleaseNotesBytes {
+                return AgentResponse(ok: false, error: "업데이트 내역이 너무 깁니다(\(releaseNotes.utf8.count)바이트). UTF-8로 \(BuildDescriptor.maxReleaseNotesBytes)바이트 이하로 줄여 다시 부르세요. 빌드는 하지 않았습니다.")
+            }
+            var report = await build(project, scheme: chosen, releaseNotes: releaseNotes)
             let host = hostStatus()
             // 사람이 놓치기 쉬운 것: 게시는 됐는데 iPhone이 받을 수 없는 상태, 고쳤는데 결과가 그대로인 빌드.
             if report.ok, !host.sharing {
                 report.notes = (report.notes ?? []) + ["공유가 꺼져 있어 iPhone이 이 빌드를 받을 수 없습니다. RemoteDebug Mac 앱에서 공유를 시작해야 합니다."]
+            }
+            if report.ok, report.published.isEmpty, releaseNotes != nil {
+                report.notes = (report.notes ?? []) + ["새로 게시하지 않았으므로 업데이트 내역도 붙지 않았습니다. 내역을 붙이려면 빌드 번호를 올려 다시 게시하세요."]
             }
             if report.ok, report.published.isEmpty {
                 report.notes = (report.notes ?? []) + ["빌드 결과가 앞선 게시와 같아 새로 게시하지 않았습니다. 소스를 고쳤는데도 그렇다면 고친 파일이 이 스킴의 대상에 들어 있는지, 저장됐는지 확인하세요."]
@@ -1047,19 +1059,21 @@ enum AgentScript {
         """
         #!/bin/sh
         # RemoteDebug Mac 앱에 명령을 보낸다. 앱이 이 파일을 실행할 때마다 새로 쓴다.
-        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo] | issue <기록 id> [confirm] | issues | issue-target <경로>
+        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] [업데이트 내역|내역 파일] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo] | issue <기록 id> [confirm] | issues | issue-target <경로>
         dir=\(quoted(agentDir))
         bundle=\(quoted(bundleID))
-        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo] | issue <기록 id> [confirm] | issues | issue-target <경로>" >&2; exit 2; }
+        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] [업데이트 내역|내역 파일] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo] | issue <기록 id> [confirm] | issues | issue-target <경로>" >&2; exit 2; }
         cmd=$1
         path=${2:-}
         scheme=${3:-}
         # 구역(프로젝트 이름이나 경로): push는 셋째, link는 넷째, files는 둘째 인자다. 비우면 push·link는 공통, files는 전체다.
+        # build의 넷째 인자는 업데이트 내역이다. 파일 경로면 그 파일의 글을 쓴다. 같은 넷째 줄에 실어 보낸다.
         project=
         case "$cmd" in
           push) project=$scheme; scheme= ;;
           link) project=${4:-} ;;
           files) project=$path; path= ;;
+          build) project=${4:-}; [ -f "$project" ] && project=$(cat "$project") ;;
         esac
         # checklist의 셋째 인자는 항목 JSON 파일이다(clear와 빈 값은 그대로).
         case "$cmd" in
@@ -1100,6 +1114,7 @@ enum AgentScript {
         ```sh
         \(rd) build \(project)            # 마지막에 쓴 스킴으로 Debug 기기용 빌드 후 게시
         \(rd) build \(project) <스킴>     # 스킴을 정해서 빌드
+        \(rd) build \(project) <스킴> <내역>  # 업데이트 내역(글이나 글이 든 파일 경로)을 붙여 게시. iPhone의 빌드 줄에 보인다
         \(rd) schemes \(project)          # 스킴 목록
         \(rd) status                      # 공유 중인지, 설치 페이지 주소, 연결한 프로젝트
         \(rd) push <파일> \(project)     # 파일을 iPhone RemoteDebug 앱의 이 프로젝트 구역으로 보낸다(프로젝트를 빼면 공통 구역)
