@@ -40,6 +40,8 @@ Rules for agents:
 
 ### Working on this repository
 
+- Follow the [release procedure](docs/release.md) to land on `main`, publish, and verify each affected release destination.
+
 - Requirements: Apple silicon Mac, Xcode. Nothing else needs to be built first. `RemoteDebug.xcodeproj` is in the repository; edit targets and build settings in Xcode. SwiftPM and Xcode fetch [Swiftail](https://github.com/oozoofrog/Swiftail) (BSD-3-Clause) from its public repository at a pinned revision, so the first build needs network access. The revision is set in two places that must change together: the package reference in `RemoteDebug.xcodeproj/project.pbxproj` and `Packages/SwiftailHost/Package.swift`.
 - To build against a local Swiftail checkout: set `SWIFTAIL_PATH=<path to the checkout>` for SwiftPM commands (the folder must be named `Swiftail`). In Xcode, drag the `../Swiftail` folder (next to this repository) into the project navigator; the local copy overrides the remote package of the same name. Do not commit that change.
 - Test-link build (adds test-only tools such as `remotedebug://test?…` links; do not distribute it): put `RD_EXTRA_SWIFT_CONDITIONS = RD_TEST_LINKS` in `Config/Signing.local.xcconfig`. It adds the `RD_TEST_LINKS` compilation condition to `RemoteDebugPhone`, `RemoteDebugTunnel`, and `RemoteDebugVPNTunnel`; with the default empty value the build is unchanged.
@@ -206,9 +208,10 @@ Sending needs the RemoteDebug VPN on the iPhone. Without it the app keeps the re
 | Resource | Install web page | `Packages/SwiftailHost/Sources/RDHostLogic/Resources/web` | HTML, CSS, JS the Mac host serves at `/` |
 | Scripts | | `scripts/` | Document and string checks, IPA checks, release and iPhone install scripts |
 
-| Document (Korean) | Contents |
+| Document | Contents |
 | --- | --- |
 | [docs/setup.md](docs/setup.md) | Requirements, signing, building, first run, installing the iPhone app, pairing, files, updates, troubleshooting |
+| [docs/release.md](docs/release.md) | Landing, publishing, and verifying a release |
 | [Feedback diagnostics keychain decision](docs/decision-feedback-keychain.md) | Fingerprint lookup, key migration, and signing |
 | [docs/device-test.md](docs/device-test.md) | Real-device test procedure |
 | [docs/device-test-results.md](docs/device-test-results.md) | Real-device result sheet |

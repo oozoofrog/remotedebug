@@ -63,6 +63,8 @@ Xcode 자동 서명은 연결한 iPhone을 개발자 계정에 등록할 수 있
 
 ### 다른 Mac에 나눠 줄 Mac 앱(Developer ID)
 
+병합부터 GitHub 릴리스 게시까지의 순서와 완료 기준은 [배포 절차](release.md)를 따른다.
+
 `scripts/release-mac.sh`는 Mac 앱을 Developer ID로 서명하고 Apple 공증을 받아 zip으로 묶는다. 받은 사람은 경고 없이 열 수 있다. App Sandbox는 쓰지 않는다.
 
 - Xcode에 로그인한 계정이 Developer ID 인증서를 만들 수 있어야 한다(계정 소유자). 인증서가 없으면 Xcode가 만든다.

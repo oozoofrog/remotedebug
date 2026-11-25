@@ -40,6 +40,8 @@ MCP가 없으면 `~/Library/Application Support/RemoteDebug/agent/rd`로 같은 
 
 ### 이 저장소에서 작업하기
 
+- `main` 병합부터 배포 확인까지는 [배포 절차](docs/release.md)를 따른다.
+
 - 요구 사항: Apple silicon Mac, Xcode. 먼저 빌드할 것은 없다. `RemoteDebug.xcodeproj`가 저장소에 있고 대상과 빌드 설정은 Xcode에서 고친다. SwiftPM과 Xcode가 [Swiftail](https://github.com/oozoofrog/Swiftail)(BSD-3-Clause)을 공개 저장소의 고정한 리비전으로 받으므로 처음 빌드할 때는 인터넷이 필요하다. 리비전은 `RemoteDebug.xcodeproj/project.pbxproj`의 패키지 참조와 `Packages/SwiftailHost/Package.swift` 두 곳에 있고 함께 바꾼다.
 - 로컬 Swiftail 체크아웃으로 빌드하려면 SwiftPM 명령에 `SWIFTAIL_PATH=<체크아웃 경로>`를 준다(폴더 이름은 `Swiftail`이어야 한다). Xcode에서는 이 저장소 옆의 `../Swiftail` 폴더를 프로젝트 탐색기에 끌어 놓는다. 같은 이름의 원격 패키지를 로컬 사본이 덮어쓴다. 그 변경은 커밋하지 않는다.
 - 시험 링크 빌드(`remotedebug://test?…` 주소 같은 시험 전용 도구를 넣는다. 배포하지 않는다): `Config/Signing.local.xcconfig`에 `RD_EXTRA_SWIFT_CONDITIONS = RD_TEST_LINKS`를 넣는다. `RemoteDebugPhone`, `RemoteDebugTunnel`, `RemoteDebugVPNTunnel`에 컴파일 조건 `RD_TEST_LINKS`가 더해지고, 기본값(빈 값)에서는 빌드가 달라지지 않는다.
@@ -210,6 +212,7 @@ RemoteDebugFeedbackConsentSection()                    // 설정 화면에 두�
 | 문서 | 내용 |
 | --- | --- |
 | [docs/setup.md](docs/setup.md) | 요구 사항, 서명, 빌드, 첫 실행, iPhone 앱 설치, 페어링, 파일, 업데이트, 문제 해결 |
+| [docs/release.md](docs/release.md) | `main` 병합, 배포, 배포 결과 확인 |
 | [docs/device-test.md](docs/device-test.md) | 실기기 확인 절차 |
 | [docs/device-test-results.md](docs/device-test-results.md) | 실기기 확인 결과 기록표 |
 | [docs/protocol.md](docs/protocol.md) | Mac·iPhone 사이의 프로토콜 v1과 Mac 호스트 노드로 가는 Swift 경계 |
