@@ -88,11 +88,15 @@ public final class CrashLogStore {
         purgeHandled()
     }
 
-    /// 받은 기록을 저장한다. 같은 기기가 같은 기록을 다시 보내면 그대로 둔다.
+    /// 받은 기록을 저장하고, 같은 기기가 같은 기록을 다시 보내면 기존 id를 돌려준다.
     /// 받은 시각은 코어가 알려 준 값(`event.receivedAt`), 없으면 지금이다.
-    func receive(_ event: DeviceCrashEvent) {
+    @discardableResult
+    func receive(_ event: DeviceCrashEvent) -> String? {
+        let id = Self.recordID(for: event, among: items)
+        if let existing = items.first(where: { $0.id == id }) {
+            return text(existing) == nil ? nil : id
+        }
         let report = event.report
-        guard let id = Self.recordID(for: event, among: items) else { return }
         // 첨부는 기록 id와 순번을 앞에 붙인 이름으로 같은 폴더에 둔다. 이름은 경로 마디가 없게 고친다.
         let attached: [Attached] = directory == nil ? [] : report.attachments.prefix(CrashReport.maxAttachments).enumerated().map { index, attachment -> Attached in
             let name = CrashReport.Attachment.safeName(attachment.name)
@@ -108,38 +112,45 @@ public final class CrashLogStore {
         item.checks = report.checks.isEmpty ? nil : report.checks
         // 확인 목록의 답은 원문 끝에 붙여, 화면과 에이전트가 같은 글에서 읽는다.
         let stored = report.checks.isEmpty ? report.text : report.text + "\n---\n" + CrashReport.checksText(report.checks) + "\n"
-        if let url = fileURL(item) {
-            try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? Data(stored.utf8).write(to: url, options: .atomic)
-            if let image = report.image, let imageURL = imageURL(item) { try? image.write(to: imageURL, options: .atomic) }
-            for (stored, attachment) in zip(attached, report.attachments) {
-                // 실행 권한 없이 쓴다. 앱은 이 파일을 열거나 실행하지 않고 Finder에서 보여 주기만 한다.
-                guard let target = attachmentURL(stored) else { continue }
-                try? attachment.data.write(to: target, options: .atomic)
-                try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
+        // Commit the index before publishing the id or deleting older records.
+        let candidates = items + [item]
+        let kept = Self.retained(candidates)
+        guard kept.contains(id) else { return nil }
+        let updated = candidates.filter { kept.contains($0.id) }.sorted { $0.crashedAt > $1.crashedAt }
+        do {
+            if let url = fileURL(item) {
+                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try Data(stored.utf8).write(to: url, options: .atomic)
+                if let image = report.image, let imageURL = imageURL(item) { try image.write(to: imageURL, options: .atomic) }
+                for (stored, attachment) in zip(attached, report.attachments) {
+                    // 실행 권한 없이 쓴다. 앱은 이 파일을 열거나 실행하지 않고 Finder에서 보여 주기만 한다.
+                    guard let target = attachmentURL(stored) else { continue }
+                    try attachment.data.write(to: target, options: .atomic)
+                    try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: target.path)
+                }
+            } else {
+                memory[item.id] = stored
             }
-        } else {
-            memory[item.id] = stored
+            try writeIndex(updated)
+        } catch {
+            removeFile(item)
+            return nil
         }
-        items.append(item)
-        // 남길 것은 이 Mac이 받은 시각으로 고른다(보낸 쪽이 적은 `crashedAt`이 아니라).
-        let kept = Self.retained(items)
         for old in items where !kept.contains(old.id) { removeFile(old) }
-        items = items.filter { kept.contains($0.id) }.sorted { $0.crashedAt > $1.crashedAt }
-        save()
+        items = updated
         purgeHandled()
-        if let saved = items.first(where: { $0.id == item.id }) { onReceived?(saved) }
+        onReceived?(item)
+        return id
     }
 
-    /// 받은 기록을 저장할 id. 같은 기기가 같은 기록(글과 첨부가 같은 것)을 다시 보낸 것이면 `nil`.
+    /// 받은 기록을 저장할 id. 같은 기기가 다시 보낸 기록은 같은 id를 받는다.
     ///
     /// 보통은 내용으로 정한 `report.id` 그대로다. 다른 기기가 같은 내용을 보냈으면 버리지 않고, 기기를 섞어 만든 id로 따로 둔다.
-    nonisolated static func recordID(for event: DeviceCrashEvent, among items: [Item]) -> String? {
+    nonisolated static func recordID(for event: DeviceCrashEvent, among items: [Item]) -> String {
         let base = event.report.id
         guard let same = items.first(where: { $0.id == base }) else { return base }
-        guard same.deviceId != event.deviceId else { return nil }
-        let other = "c_" + SHA256.hash(data: Data((base + "\n" + event.deviceId).utf8)).prefix(6).map { String(format: "%02x", $0) }.joined()
-        return items.contains { $0.id == other } ? nil : other
+        guard same.deviceId != event.deviceId else { return base }
+        return "c_" + SHA256.hash(data: Data((base + "\n" + event.deviceId).utf8)).prefix(6).map { String(format: "%02x", $0) }.joined()
     }
 
     /// 이 기록을 올린 이슈의 주소를 적는다. 이미 적혀 있으면 그대로 두고 그 기록을 돌려준다. 그런 기록이 없으면 `nil`.
@@ -244,9 +255,14 @@ public final class CrashLogStore {
     }
 
     private func save() {
-        guard let directory, let data = try? RDJSON.encoder().encode(items) else { return }
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try? data.write(to: directory.appendingPathComponent("index.json"), options: .atomic)
+        try? writeIndex(items)
+    }
+
+    private func writeIndex(_ items: [Item]) throws {
+        guard let directory else { return }
+        let data = try RDJSON.encoder().encode(items)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try data.write(to: directory.appendingPathComponent("index.json"), options: .atomic)
     }
 
     nonisolated static func load(directory: URL) -> [Item] {

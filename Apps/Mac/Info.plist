@@ -24,6 +24,18 @@
 				<string>com.apple.itunes.ipa</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>RemoteDebug Encrypted Diagnostics</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.oozoofrog.app.remotedebug.diagnostics</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
@@ -55,5 +67,25 @@
 	<string>$(RD_PAIR_LINK_BASE)</string>
 	<key>RDSourceRoot</key>
 	<string>$(RD_SOURCE_ROOT)</string>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>com.oozoofrog.app.remotedebug.diagnostics</string>
+			<key>UTTypeDescription</key>
+			<string>RemoteDebug Encrypted Diagnostics</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>afdiag</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -2,6 +2,7 @@ import AppKit
 import MacHostKit
 import RDModels
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// iPhone이 보낸 크래시 기록과 피드백: 목록과 원문.
 struct CrashLogsView: View {
@@ -11,7 +12,7 @@ struct CrashLogsView: View {
     @State private var issueNotice: String?
     @State private var selection: String?
     @State private var search = ""
-    @State private var importError: String?
+    @State private var migrationNotice: String?
 
     private var store: CrashLogStore { model.crashLogs }
 
@@ -55,15 +56,24 @@ struct CrashLogsView: View {
         .navigationTitle("크래시·피드백")
         // 처리한 지 오래된 기록은 목록을 보일 때도 지운다(앱을 오래 켜 두는 경우).
         .task { store.purgeHandled() }
+        .onChange(of: model.diagnosticsOpenedRecordID, initial: true) { _, id in
+            if let id {
+                search = ""
+                selection = id
+                model.diagnosticsOpenedRecordID = nil
+            }
+        }
         .searchable(text: $search, placement: .toolbar, prompt: "앱·기기 검색")
         .dropDestination(for: URL.self) { urls, _ in
-            importDiagnostics(urls)
+            let diagnostics = urls.filter(DiagnosticsFile.matches)
+            guard !diagnostics.isEmpty else { return false }
+            Task { await model.openDiagnostics(diagnostics) }
             return true
         }
-        .alert("암호화된 진단", isPresented: Binding(get: { importError != nil }, set: { if !$0 { importError = nil } })) {
-            Button("확인") { importError = nil }
+        .alert("기존 진단 키 이전", isPresented: Binding(get: { migrationNotice != nil }, set: { if !$0 { migrationNotice = nil } })) {
+            Button("확인") { migrationNotice = nil }
         } message: {
-            Text(importError ?? "")
+            Text(migrationNotice ?? "")
         }
         .alert("이슈로 등록", isPresented: Binding(get: { issueNotice != nil }, set: { if !$0 { issueNotice = nil } })) {
             Button("확인") { issueNotice = nil }
@@ -77,13 +87,28 @@ struct CrashLogsView: View {
             ToolbarItemGroup {
                 Button {
                     let panel = NSOpenPanel()
+                    panel.allowedContentTypes = [UTType(exportedAs: DiagnosticsFile.typeIdentifier)]
                     panel.allowsMultipleSelection = true
                     panel.message = String(localized: "피드백 메일에 붙어 온 암호화된 진단 파일(.afdiag)을 고르세요.")
-                    if panel.runModal() == .OK { importDiagnostics(panel.urls) }
+                    if panel.runModal() == .OK { Task { await model.openDiagnostics(panel.urls) } }
                 } label: {
                     Label("암호화된 진단 열기…", systemImage: "lock.open")
                 }
                 .help("피드백 메일에 붙어 온 암호화된 진단 파일을 이 Mac의 키로 풀어 목록에 넣는다")
+                Button {
+                    Task {
+                        switch await model.migrateFeedbackKeys() {
+                        case .success(let count):
+                            migrationNotice = String(localized: "기존 진단 키 \(count)개를 이전했습니다.")
+                        case .failure(let failure):
+                            migrationNotice = failure.message
+                        }
+                    }
+                } label: {
+                    Label("기존 진단 키 이전", systemImage: "key.horizontal")
+                }
+                .help("이전 버전에서 만든 키를 복사합니다. macOS가 키마다 접근 허용을 요청할 수 있습니다.")
+                .disabled(model.isMigratingFeedbackKeys)
                 Button {
                     guard let selected, let text = store.text(selected) else { return }
                     NSPasteboard.general.clearContents()
@@ -132,16 +157,6 @@ struct CrashLogsView: View {
                 }
                 .disabled(selected == nil)
                 .help("이 Mac에 저장된 이 기록을 지운다")
-            }
-        }
-    }
-}
-
-extension CrashLogsView {
-    private func importDiagnostics(_ urls: [URL]) {
-        Task {
-            for url in urls {
-                if let error = await model.importDiagnostics(url) { importError = error }
             }
         }
     }

@@ -231,12 +231,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     }),
                 publishedBuilds: { [weak model] in (model?.builds ?? []).map(\.descriptor) },
                 feedbackInfo: { [weak model] project in
-                    (model?.status?.fqdn ?? "", (try? model?.feedbackPublicKey(for: project)) ?? "")
+                    (model?.status?.fqdn ?? "", (try? await model?.feedbackPublicKey(for: project)) ?? "")
                 },
                 savedFeedbackEmail: { UserDefaults.standard.string(forKey: FeedbackSetup.emailDefaultsKey) ?? "" },
                 reportHandling: .init(
                     mark: { [weak model] id, handled in model?.crashLogs.setHandled(id, handled) },
                     purge: { [weak model] in model?.crashLogs.purgeHandled() }),
+                importDiagnostics: { [weak model] url in
+                    guard let model else {
+                        return .failure(DiagnosticsFailure(String(localized: "RemoteDebug가 준비되지 않았습니다.")))
+                    }
+                    return await model.importDiagnostics(url)
+                },
                 crashLogs: model.crashLogs,
                 importer: { [weak model] url, notes in await model?.importBuild(url, releaseNotes: notes) })
             // 새로 받은 피드백은 그 프로젝트에 이슈 저장소가 있고 주인이 자동 등록을 켰으면 이슈로 올린다(한도와 줄 서기는 `receivedForIssue`).
@@ -316,9 +322,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func application(_ application: NSApplication, open urls: [URL]) {
         guard let model, let projects else { return }
+        let diagnostics = urls.filter(DiagnosticsFile.matches)
+        if !diagnostics.isEmpty {
+            model.diagnosticsOpenRequested = true
+            application.activate()
+            if let window = application.windows.first(where: { $0.title == "RemoteDebug" }) {
+                window.makeKeyAndOrderFront(nil)
+            } else {
+                NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: .init(), completionHandler: nil)
+            }
+            Task { await model.openDiagnostics(diagnostics) }
+        }
+        let buildsAndProjects = urls.filter { !DiagnosticsFile.matches($0) }
+        guard !buildsAndProjects.isEmpty else { return }
         Task {
             await model.load()
-            for url in urls {
+            for url in buildsAndProjects {
                 if ["app", "ipa"].contains(url.pathExtension.lowercased()) {
                     await model.importBuild(url)
                 } else {

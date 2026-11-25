@@ -45,7 +45,7 @@ ACL 태그는 선택 사항이다. `tag:rd-mac`, `tag:rd-phone`을 쓰면 iPhone
 
 | 대상 | 번들 ID | 서명 |
 | --- | --- | --- |
-| `RemoteDebugMac` | `com.oozoofrog.app.RemoteDebugMac` | 로컬 서명(`CODE_SIGN_IDENTITY = -`). 팀 ID가 필요 없다 |
+| `RemoteDebugMac` | `com.oozoofrog.app.RemoteDebugMac` | Apple Development 서명과 프로비저닝 프로필. 설치용 Developer ID 앱과 키를 공유하려면 두 서명의 팀과 앱 ID 접두사가 같아야 한다 |
 | `RemoteDebugPhone` | `<앞부분>.RemoteDebugPhone` | 자동 서명. Network Extension(Packet Tunnel) 권한 필요 |
 | `RemoteDebugTunnel` | `<앞부분>.RemoteDebugPhone.Tunnel` | 자동 서명. Network Extension(Packet Tunnel) 권한 필요 |
 | `RemoteDebugWidgets` | `<앞부분>.RemoteDebugPhone.Widgets` | 자동 서명 |
@@ -70,6 +70,16 @@ Xcode 자동 서명은 연결한 iPhone을 개발자 계정에 등록할 수 있
 - 서명에는 계정의 법적 이름과 팀 ID가 들어가고, 앱을 받은 사람이 볼 수 있다.
 - 이 빌드에는 저장소 경로가 들어가지 않는다. **iPhone 앱 설치…**에서 **선택…**으로 저장소 폴더를 골라야 한다.
 - `scripts/release-mac.sh --no-notarize`는 서명까지만 한다.
+
+### 기존 진단 키 이전
+
+1. 기존 설치본의 팀과 번들 ID로 새 Mac 앱을 서명한다. Debug는 Apple Development 인증서를 사용한다. Developer ID 설치본은 `scripts/release-mac.sh --no-notarize`로 서명과 내보내기를 확인할 수 있다. Debug와 Developer ID의 프로비저닝 프로필은 각각 `keychain-access-groups`의 앱 전용 그룹을 허용해야 한다.
+2. `codesign -d --entitlements :- <앱 경로>`의 `keychain-access-groups` 값이 두 빌드에서 같은지 확인한다. 각 앱의 `Contents/embedded.provisionprofile`을 `security cms -D -i <프로필 경로>`로 읽어서 이 그룹을 허용하는지 확인한다.
+3. 기존 앱을 종료하고 서명이 확인된 앱으로 교체한 뒤 같은 macOS 계정으로 실행한다. **크래시·피드백**에서 **기존 진단 키 이전**을 누른다.
+4. 아직 이전하지 않은 항목마다 macOS가 접근을 한 번 요청할 수 있다. RemoteDebug가 만든 항목은 `RemoteDebug feedback diagnostics / <프로젝트 이름> v1`로 표시된다. 별도 앱의 진단 키는 서비스 이름이 ` feedback diagnostics`로 끝나고 계정 이름이 16자리 지문이면 이전 대상에 포함된다. 표시된 항목을 확인하고 macOS 창에서 허용한다. 취소하거나 오류가 나면 같은 단추로 재시도한다. 앱은 복사본을 읽어 지문을 확인하며, 이미 확인할 수 있는 복사본은 건너뛴다.
+5. 이전이 끝나면 기존 `.afdiag`를 Finder와 Mac 앱에서 열어 본다. MCP 클라이언트를 다시 연결해 `remotedebug_import_diagnostics`로 같은 파일을 열고, 반환된 `id`를 `remotedebug_crash_logs`에 넘겨 원문을 확인한다.
+
+기존 로그인 키체인 항목은 복구와 롤백을 위해 보관한다. 키가 이전된 뒤 같은 접근 그룹의 빌드에서는 기존 항목에 대한 접근 요청이 발생하지 않는다. 팀과 앱 ID가 달라지거나 macOS 사용자 계정이 바뀌면 같은 키를 쓸 수 없다. 서명 없이 컴파일하려면 `CODE_SIGNING_ALLOWED=NO`를 지정한다. 진단 키를 사용하는 실행 검증은 프로비저닝된 앱에서 한다. [키 저장 결정 기록](decision-feedback-keychain.md)을 참고한다.
 
 ## 빌드와 실행
 

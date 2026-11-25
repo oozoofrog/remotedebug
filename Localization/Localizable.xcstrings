@@ -3179,6 +3179,7 @@
       }
     },
     "%@을 읽지 못했습니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -15650,6 +15651,118 @@
         }
       }
     },
+    "기존 진단 키 %lld개를 이전했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Existing diagnostics keys migrated: %lld."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既存の診断キーを%lld個移行しました。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已迁移 %lld 个现有诊断密钥。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已移轉 %lld 個現有診斷金鑰。"
+          }
+        }
+      }
+    },
+    "기존 진단 키 이전" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Migrate Existing Diagnostics Keys"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既存の診断キーを移行"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "迁移现有诊断密钥"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移轉現有診斷金鑰"
+          }
+        }
+      }
+    },
+    "기존 진단 키를 이전하고 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostics key migration is in progress."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既存の診断キーを移行しています。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在迁移现有诊断密钥。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在移轉現有診斷金鑰。"
+          }
+        }
+      }
+    },
+    "기존 진단 키를 이전하는 중… 키체인 접근 요청이 표시되면 응답하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Migrating existing diagnostics keys… Respond if macOS requests keychain access."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "既存の診断キーを移行中… キーチェーンへのアクセスを求められたら応答してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在迁移现有诊断密钥… 如果 macOS 请求访问钥匙串，请作出回应。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在移轉現有診斷金鑰… 如果 macOS 要求取用鑰匙圈，請回應。"
+          }
+        }
+      }
+    },
     "길이 %@" : {
       "localizations" : {
         "en" : {
@@ -19988,6 +20101,34 @@
         }
       }
     },
+    "복호화한 진단 기록을 저장하지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not save the decrypted diagnostics record."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "復号した診断記録を保存できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法保存解密后的诊断记录。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法儲存解密後的診斷記錄。"
+          }
+        }
+      }
+    },
     "본문" : {
       "localizations" : {
         "en" : {
@@ -24231,6 +24372,7 @@
       }
     },
     "암호화된 진단" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -24282,6 +24424,90 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打開已加密的診斷…"
+          }
+        }
+      }
+    },
+    "암호화된 진단 파일을 읽지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not read the encrypted diagnostics file."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暗号化された診断ファイルを読み込めませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取加密的诊断文件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法讀取已加密的診斷檔案。"
+          }
+        }
+      }
+    },
+    "암호화된 진단을 가져올 수 없습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not import encrypted diagnostics."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暗号化された診断データを読み込めませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法导入加密的诊断数据。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法匯入已加密的診斷資料。"
+          }
+        }
+      }
+    },
+    "암호화된 진단을 복호화하는 중…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Decrypting diagnostics…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "診断データを復号中…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在解密诊断数据…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在解密診斷資料…"
           }
         }
       }
@@ -27260,6 +27486,34 @@
         }
       }
     },
+    "이 RemoteDebug 빌드에 진단 키체인 권한이 없습니다. 서명된 앱에서 다시 시도하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This RemoteDebug build does not have the diagnostics keychain entitlement. Try again with a signed app."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このRemoteDebugビルドには診断用キーチェーンへのアクセス権がありません。署名済みのアプリで再試行してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 RemoteDebug 构建缺少诊断钥匙串访问权限。请使用已签名的应用重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此 RemoteDebug 版本缺少診斷鑰匙圈的取用權限。請使用已簽署的 App 重試。"
+          }
+        }
+      }
+    },
     "이 iPhone에 RemoteDebug 앱이 있나요?" : {
       "localizations" : {
         "en" : {
@@ -29194,6 +29448,34 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "接續請求"
+          }
+        }
+      }
+    },
+    "이전 버전에서 만든 키를 복사합니다. macOS가 키마다 접근 허용을 요청할 수 있습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copies keys created by earlier versions. macOS may request access to each key."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "以前のバージョンで作成したキーをコピーします。macOSがキーごとにアクセスを求めることがあります。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制旧版本创建的密钥。macOS 可能会逐个请求访问密钥。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製舊版建立的金鑰。macOS 可能會逐一要求取用金鑰。"
           }
         }
       }
@@ -31808,6 +32090,90 @@
         }
       }
     },
+    "진단 키를 읽지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not read the diagnostics key."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "診断キーを読み込めませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法读取诊断密钥。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法讀取診斷金鑰。"
+          }
+        }
+      }
+    },
+    "진단 키의 지문을 확인하지 못했습니다." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not verify the diagnostics key fingerprint."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "診断キーのフィンガープリントを確認できませんでした。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法验证诊断密钥的指纹。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法驗證診斷金鑰的指紋。"
+          }
+        }
+      }
+    },
+    "진단 키체인에 접근하지 못했습니다(macOS 오류 %d)." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not access the diagnostics keychain (macOS error %d)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "診断用キーチェーンにアクセスできませんでした（macOSエラー%d）。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法访问诊断钥匙串（macOS 错误 %d）。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "無法取用診斷鑰匙圈（macOS 錯誤 %d）。"
+          }
+        }
+      }
+    },
     "진행" : {
       "localizations" : {
         "en" : {
@@ -33742,6 +34108,34 @@
         }
       }
     },
+    "키체인 접근 요청이 표시되면 응답하세요." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Respond if macOS requests keychain access."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーチェーンへのアクセスを求められたら応答してください。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果 macOS 请求访问钥匙串，请作出回应。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果 macOS 要求取用鑰匙圈，請回應。"
+          }
+        }
+      }
+    },
     "키체인에 저장됨" : {
       "localizations" : {
         "en" : {
@@ -33771,6 +34165,7 @@
       }
     },
     "키체인에 키를 저장하지 못했습니다." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {

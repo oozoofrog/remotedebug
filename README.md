@@ -24,6 +24,7 @@ The Mac app's **에이전트에 설치…** (Install for agents) adds an MCP ser
 | `remotedebug_pair_requests` | Pairing requests waiting for approval (device name, tailnet node name, login, expiry) |
 | `remotedebug_pair_decide` | Deny a request (`request_id`). It cannot approve: approval is only possible on the Mac app's screen |
 | `remotedebug_device_logs` | Diagnostic logs the iPhone app sent (app start, VPN, pairing, build list, install, update) |
+| `remotedebug_import_diagnostics` | Open an encrypted mail attachment on this Mac. Takes the absolute `file_path` of an `.afdiag` file and returns the record `id`. Read the record with `remotedebug_crash_logs`. |
 | `remotedebug_crash_logs` | Crash reports and feedback the iPhone sent: the list, or one report's text. With `id` and `handled` it marks the inquiry as handled; the record and its attachments are deleted 90 days after that day |
 | `remotedebug_push_file`, `remotedebug_push_link` | Send a file (`file_path`) or link (`url`, optional `title`) to the paired iPhone. Optional `project` (a connected project's name or its `.xcodeproj`/`.xcworkspace` path) puts it in that project's area; without it the item goes to the common area |
 | `remotedebug_files` | List what was sent, each item with its project area. Optional `project` filters by area |
@@ -145,7 +146,7 @@ RemoteDebugFeedbackConsentSection()                    // the log recording cons
 ```
 
 - Release builds record no logs until the user turns the consent switch on, and contain neither the Mac upload code nor the test checklist. A feedback with no text can be sent when it carries attachments, logs or checklist answers.
-- Drop an encrypted mail attachment (`.afdiag`) on the Mac app's crash and feedback screen to open it. The key stays in that Mac's keychain.
+- Open an encrypted mail attachment (`.afdiag`) in Finder, drop it on the Mac app’s crash and feedback screen, or use `remotedebug_import_diagnostics`. On the Mac that created the keys, use **기존 진단 키 이전** (Migrate Existing Diagnostics Keys) once after upgrading. See the [Mac signing and migration steps](docs/setup.md#기존-진단-키-이전).
 - Mark a record **처리함으로 표시** (Mark as Handled) once the inquiry is dealt with. The Mac app deletes the record and its attachments 90 days after that day.
 - Setup steps, consent, what is recorded and its limits, the privacy policy checklist and the release check (`scripts/check-feedback-release.sh`) are in the [package guide](Packages/RemoteDebugFeedback/README.md) (Korean).
 - The package needs iOS 17 or later.
@@ -208,6 +209,7 @@ Sending needs the RemoteDebug VPN on the iPhone. Without it the app keeps the re
 | Document (Korean) | Contents |
 | --- | --- |
 | [docs/setup.md](docs/setup.md) | Requirements, signing, building, first run, installing the iPhone app, pairing, files, updates, troubleshooting |
+| [Feedback diagnostics keychain decision](docs/decision-feedback-keychain.md) | Fingerprint lookup, key migration, and signing |
 | [docs/device-test.md](docs/device-test.md) | Real-device test procedure |
 | [docs/device-test-results.md](docs/device-test-results.md) | Real-device result sheet |
 | [docs/protocol.md](docs/protocol.md) | Protocol v1 between the Mac and the iPhone, and the Swift boundary to the Mac host node |

@@ -11,6 +11,7 @@ struct FeedbackSetupSheet: View {
     @AppStorage(FeedbackSetup.emailDefaultsKey) private var email = ""
     @State private var publicKey = ""
     @State private var keyError: String?
+    @State private var isLoadingKey = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -26,9 +27,22 @@ struct FeedbackSetupSheet: View {
                         .textFieldStyle(.roundedBorder)
                         .frame(maxWidth: 280)
                     Button(publicKey.isEmpty ? "암호화 키 만들기" : "키 만들어짐") {
-                        do { publicKey = try model.feedbackPublicKey(for: project); keyError = nil } catch { keyError = String(localized: "키체인에 키를 저장하지 못했습니다.") }
+                        isLoadingKey = true
+                        keyError = nil
+                        Task {
+                            defer { isLoadingKey = false }
+                            do {
+                                publicKey = try await model.feedbackPublicKey(for: project)
+                            } catch {
+                                keyError = error.localizedDescription
+                            }
+                        }
                     }
-                    .disabled(!publicKey.isEmpty)
+                    .disabled(isLoadingKey || !publicKey.isEmpty)
+                    if isLoadingKey { ProgressView().controlSize(.small) }
+                }
+                if isLoadingKey {
+                    Text("키체인 접근 요청이 표시되면 응답하세요.").font(.callout)
                 }
                 if let keyError { Text(keyError).font(.callout).foregroundStyle(.red) }
             }

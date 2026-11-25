@@ -5,10 +5,8 @@
 // 번들 ID 앞부분. 다른 팀으로 서명하면 그 팀에서 쓸 수 있는 값으로 바꾼다(Signing.local.xcconfig 또는 xcodebuild 인자).
 // 앱은 $(RD_BUNDLE_PREFIX).RemoteDebugPhone, 터널은 ….Tunnel, 위젯은 ….Widgets가 된다.
 RD_BUNDLE_PREFIX = com.oozoofrog.app
-// Mac 앱의 서명. 기본은 이 Mac에서만 실행하는 임시 서명(-)이다. 임시 서명은 빌드마다 다른 앱으로 보여서
-// 키체인에 둔 값(Tailscale OAuth 클라이언트, 피드백 진단 키)을 다시 설치할 때마다 허용해야 한다.
-// 개발 인증서로 서명하려면 Signing.local.xcconfig에 RD_MAC_SIGN_IDENTITY = Apple Development 를 넣는다.
-RD_MAC_SIGN_IDENTITY = -
+// 피드백 키체인 그룹을 쓰려면 팀의 인증서와 프로비저닝 프로필이 필요하다.
+RD_MAC_SIGN_IDENTITY = Apple Development
 // 앱 페어링 링크를 연결 도메인(universal link) https 주소로 낸다(docs/setup.md의 "페어링 링크를 웹 주소로"). 기본은 꺼짐이고
 // 그러면 링크는 remotedebug://pair다. 켜려면 Signing.local.xcconfig에 호스트를 넣는다(경로는 바꿀 때만):
 //   RD_PAIR_LINK_HOST = example.com

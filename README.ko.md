@@ -24,6 +24,7 @@ Mac 앱의 **에이전트에 설치…**는 Claude Code와 Codex에 MCP 서버 `
 | `remotedebug_pair_requests` | 허용을 기다리는 페어링 요청(기기 이름, tailnet 노드 이름, 로그인, 만료 시각) |
 | `remotedebug_pair_decide` | 요청을 거부한다(`request_id`). 허용은 할 수 없다: 허용은 Mac 앱 화면에서만 한다 |
 | `remotedebug_device_logs` | iPhone 앱이 보낸 진단 로그(앱 시작, VPN, 페어링, 빌드 목록, 설치, 업데이트) |
+| `remotedebug_import_diagnostics` | 메일에서 받은 `.afdiag`를 Mac 앱에서 연다. `file_path`에 파일의 절대 경로를 준다. 반환된 `id`로 `remotedebug_crash_logs`에서 원문을 읽는다. |
 | `remotedebug_crash_logs` | iPhone이 보낸 크래시 기록과 피드백의 목록과 원문. `id`와 `handled`를 주면 문의를 처리했다고 표시하고, 그날부터 90일 뒤에 기록과 첨부를 지운다 |
 | `remotedebug_push_file`, `remotedebug_push_link` | 페어링한 iPhone에 파일(`file_path`)이나 링크(`url`, 선택 `title`)를 보낸다. 선택 `project`(연결한 프로젝트의 이름이나 `.xcodeproj`·`.xcworkspace` 경로)를 주면 그 프로젝트 구역에, 비우면 공통 구역에 넣는다 |
 | `remotedebug_files` | 보낸 목록을 구역과 함께 본다. 선택 `project`로 한 구역만 본다 |
@@ -145,7 +146,7 @@ RemoteDebugFeedbackConsentSection()                    // 설정 화면에 두�
 ```
 
 - 배포 빌드는 사용자가 동의 스위치를 켜기 전에는 로그를 남기지 않고, Mac으로 보내는 코드와 확인 목록이 들어가지 않는다. 글 없이도 첨부, 로그, 확인 목록의 답이 있으면 보낼 수 있다.
-- 메일로 온 암호화 첨부(`.afdiag`)는 Mac 앱의 **크래시·피드백** 화면에 끌어다 놓으면 풀린다. 키는 그 Mac의 키체인에만 있다.
+- 메일의 암호화 첨부(`.afdiag`)는 Finder에서 열거나 **크래시·피드백** 화면에 끌어다 놓는다. 에이전트는 `remotedebug_import_diagnostics`로 연다. 이전 버전에서 키를 만든 Mac에서는 업데이트 후 **기존 진단 키 이전**을 한 번 실행한다. [서명 및 진단 키 이전 절차](docs/setup.md#기존-진단-키-이전)를 따른다.
 - 문의를 처리한 기록은 **처리함으로 표시**해 둔다. 그날부터 90일 뒤에 Mac 앱이 기록과 첨부를 지운다.
 - 넣는 차례, 동의, 남기는 것과 한도, 처리방침 점검 목록, 배포 전 확인(`scripts/check-feedback-release.sh`)은 [패키지 안내](Packages/RemoteDebugFeedback/README.md)에 있다.
 - 패키지는 iOS 17 이상이다.

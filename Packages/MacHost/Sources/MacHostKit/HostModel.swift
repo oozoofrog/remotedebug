@@ -134,6 +134,12 @@ public final class HostModel {
     @ObservationIgnored private let feedbackKeys: any FeedbackKeyStoring
     @ObservationIgnored private let advertiser: (any DirectAdvertising)?
 
+    public private(set) var diagnosticsImports = 0
+    public private(set) var isMigratingFeedbackKeys = false
+    public var diagnosticsImportErrors: [String] = []
+    public var diagnosticsOpenRequested = false
+    public var diagnosticsOpenedRecordID: String?
+
     /// 저장된 빌드 목록을 읽었다. 한 번 읽으면 다시 읽지 않는다(가져오는 중인 작업 폴더를 건드리지 않는다).
     @ObservationIgnored private var libraryLoaded = false
     /// 저장된 기기 목록을 읽었다.
@@ -1517,25 +1523,72 @@ public struct ShareFileFailure: Error, Sendable, Hashable {
 
 extension HostModel {
     /// 프로젝트의 진단 암호화 공개키(base64). 키가 없으면 만들어 이 Mac의 키체인에 둔다.
-    public func feedbackPublicKey(for project: ConnectedProject) throws -> String {
-        try feedbackKeys.makeKey(account: "\(project.name) v1").publicKey.rawRepresentation.base64EncodedString()
+    public func feedbackPublicKey(for project: ConnectedProject) async throws -> String {
+        let keys = feedbackKeys
+        let account = "\(project.name) v1"
+        do {
+            return try await Task.detached {
+                try keys.makeKey(account: account).publicKey.rawRepresentation.base64EncodedString()
+            }.value
+        } catch {
+            throw DiagnosticsFailure.keyError(error)
+        }
     }
 
-    /// 메일로 받은 암호화된 진단 파일(`.afdiag`)을 풀어 크래시·피드백 목록에 넣는다. 실패하면 안내 문구를 돌려준다.
-    /// 키체인이 허용을 물으면 응답할 때까지 걸릴 수 있어, 키를 읽고 푸는 일은 화면 밖에서 한다.
-    @discardableResult
-    public func importDiagnostics(_ url: URL) async -> String? {
+    public func migrateFeedbackKeys() async -> Result<Int, DiagnosticsFailure> {
+        guard !isMigratingFeedbackKeys else {
+            return .failure(DiagnosticsFailure(String(localized: "기존 진단 키를 이전하고 있습니다.")))
+        }
+        isMigratingFeedbackKeys = true
+        defer { isMigratingFeedbackKeys = false }
         let keys = feedbackKeys
-        // 결과: (푼 내용, 실패 안내). 둘 중 하나만 있다.
-        let (opened, failure) = await Task.detached { () -> (Data?, String?) in
-            guard let sealed = try? Data(contentsOf: url) else { return (nil, String(localized: "\(url.lastPathComponent)을 읽지 못했습니다.")) }
-            do throws(FeedbackEnvelope.Failure) {
-                return (try FeedbackEnvelope.open(sealed, keys: keys.allKeys()), nil)
+        do {
+            return .success(try await Task.detached { try keys.migrateLegacyKeys() }.value)
+        } catch {
+            return .failure(DiagnosticsFailure.keyError(error))
+        }
+    }
+
+    /// Imports the attachment and returns the saved record ID.
+    public func importDiagnostics(_ url: URL) async -> Result<String, DiagnosticsFailure> {
+        diagnosticsImports += 1
+        defer { diagnosticsImports -= 1 }
+        let keys = feedbackKeys
+        let result = await Task.detached { () -> Result<Data, DiagnosticsFailure> in
+            guard DiagnosticsFile.matches(url),
+                  (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true,
+                  let sealed = try? Data(contentsOf: url) else {
+                return .failure(DiagnosticsFailure(String(localized: "암호화된 진단 파일을 읽지 못했습니다.")))
+            }
+            do {
+                return .success(try FeedbackEnvelope.open(sealed, keys: keys))
+            } catch let failure as FeedbackEnvelope.Failure {
+                return .failure(DiagnosticsFailure(failure.message))
             } catch {
-                return (nil, error.message)
+                return .failure(DiagnosticsFailure.keyError(error))
             }
         }.value
-        guard let plain = opened else { return failure }
+        switch result {
+        case .success(let plain):
+            if let id = saveDiagnostics(plain, from: url) { return .success(id) }
+            return .failure(DiagnosticsFailure(String(localized: "복호화한 진단 기록을 저장하지 못했습니다.")))
+        case .failure(let failure):
+            return .failure(failure)
+        }
+    }
+
+    /// Shows file-specific errors in the Mac window. The MCP response uses the error without the filename.
+    public func openDiagnostics(_ urls: [URL]) async {
+        for url in urls {
+            switch await importDiagnostics(url) {
+            case .success(let id): diagnosticsOpenedRecordID = id
+            case .failure(let failure):
+                diagnosticsImportErrors.append("\(url.lastPathComponent) — \(failure.message)")
+            }
+        }
+    }
+
+    private func saveDiagnostics(_ plain: Data, from url: URL) -> String? {
         var image: Data?
         var text = String(decoding: plain, as: UTF8.self)
         var bundleId = "", appVersion = ""
@@ -1553,9 +1606,8 @@ extension HostModel {
         }
         let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate ?? Date()
         let name = url.deletingPathExtension().lastPathComponent + ".json"
-        crashLogs.receive(DeviceCrashEvent(deviceId: "", deviceName: String(localized: "메일 첨부"), nodeName: "",
+        return crashLogs.receive(DeviceCrashEvent(deviceId: "", deviceName: String(localized: "메일 첨부"), nodeName: "",
                                            report: CrashReport(kind: .feedback, name: name, bundleId: bundleId, appVersion: appVersion, crashedAt: modified, text: text, image: image)))
-        return nil
     }
 
     /// 진단 파일의 `app`(`bundleId`, `version`, `build`)에서 번들 ID와 `1.2 (7)` 모양의 버전을 읽는다. 없거나 모양이 다르면 빈 글자.
@@ -1565,6 +1617,34 @@ extension HostModel {
         let version = text("version"), build = text("build")
         return (text("bundleId"), build.isEmpty ? version : "\(version) (\(build))")
     }
+}
+
+public struct DiagnosticsFailure: LocalizedError, Sendable {
+    public let message: String
+    public var errorDescription: String? { message }
+
+    public init(_ message: String) { self.message = message }
+
+    static func keyError(_ error: any Error) -> Self {
+        Self((error as? FeedbackKeyFailure)?.message ?? String(localized: "진단 키를 읽지 못했습니다."))
+    }
+}
+
+public enum DiagnosticsFile {
+    public static let typeIdentifier = "com.oozoofrog.app.remotedebug.diagnostics"
+
+    public static func matches(_ url: URL) -> Bool {
+        url.isFileURL && url.pathExtension.lowercased() == "afdiag"
+    }
+
+    static func localURL(_ path: String) -> URL? {
+        guard path.hasPrefix("/"),
+              !path.unicodeScalars.contains(where: { $0 == "\n" || $0 == "\r" || $0 == "\0" }) else { return nil }
+        let url = URL(fileURLWithPath: path)
+        return matches(url) ? url : nil
+    }
+
+    static let pathRequired = "file_path에 .afdiag 파일의 절대 경로가 필요합니다."
 }
 
 extension HostModel.PairingState {

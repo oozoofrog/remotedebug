@@ -718,7 +718,7 @@ import Testing
         #expect(names == ["remotedebug_status", "remotedebug_pairing_code", "remotedebug_pair_requests", "remotedebug_pair_decide",
                           "remotedebug_push_file", "remotedebug_push_link", "remotedebug_files", "remotedebug_schemes", "remotedebug_build",
                           "remotedebug_feedback_setup", "remotedebug_feedback_checklist", "remotedebug_feedback_issue",
-                          "remotedebug_device_logs", "remotedebug_crash_logs"])
+                          "remotedebug_device_logs", "remotedebug_import_diagnostics", "remotedebug_crash_logs"])
         let tool = try #require(AgentMCPServer.tools.first { $0["name"] as? String == "remotedebug_feedback_issue" })
         let schema = try #require(tool["inputSchema"] as? [String: Any])
         let properties = try #require(schema["properties"] as? [String: Any])

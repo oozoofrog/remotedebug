@@ -4,8 +4,7 @@
 DEVELOPMENT_TEAM = XXXXXXXXXX
 // 번들 ID 앞부분(선택). 다른 팀이면 그 팀이 쓸 수 있는 값으로 바꾼다. 예: dev.<팀 ID 소문자>
 // RD_BUNDLE_PREFIX = dev.xxxxxxxxxx
-// Mac 앱을 개발 인증서로 서명한다(선택). 넣지 않으면 임시 서명이고, 다시 설치할 때마다 키체인 허용을 묻는다.
-// RD_MAC_SIGN_IDENTITY = Apple Development
+// Mac 앱의 기본 서명은 Apple Development다. 설치본과 진단 키를 공유하려면 같은 팀과 앱 ID를 사용한다.
 // 시험 링크 빌드(선택, 배포하지 않는다). 시험 전용 도구를 컴파일한다.
 // RD_EXTRA_SWIFT_CONDITIONS = RD_TEST_LINKS
 // 앱 페어링 링크를 연결 도메인(universal link) https 주소로 낸다(선택, docs/setup.md). https://는 빼고 호스트만 적는다.

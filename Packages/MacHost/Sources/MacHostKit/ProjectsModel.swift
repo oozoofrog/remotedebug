@@ -163,7 +163,7 @@ public final class ProjectsModel {
     /// 지금 게시돼 있는 빌드. 새 빌드의 버전을 앞선 빌드와 견준다.
     public typealias PublishedBuilds = @MainActor () -> [BuildDescriptor]
     /// 피드백 패키지 설정에 넣을 이 Mac의 주소와 프로젝트의 공개키. 모르면 빈 글자.
-    public typealias FeedbackInfo = @MainActor (ConnectedProject) -> (host: String, publicKey: String)
+    public typealias FeedbackInfo = @MainActor (ConnectedProject) async -> (host: String, publicKey: String)
 
     /// 에이전트가 앱에 `RemoteDebugFeedback`을 붙일 때 쓰는 안내(`feedback` 명령).
     public struct FeedbackGuide: Codable, Sendable, Hashable {
@@ -225,6 +225,7 @@ public final class ProjectsModel {
     @ObservationIgnored private let feedbackInfo: FeedbackInfo
     @ObservationIgnored private let savedFeedbackEmail: SavedFeedbackEmail
     @ObservationIgnored private let reportHandling: ReportHandling
+    @ObservationIgnored private let importDiagnostics: @MainActor (URL) async -> Result<String, DiagnosticsFailure>
     @ObservationIgnored private let hostStatus: @MainActor () -> HostStatus
     @ObservationIgnored private let openPairing: PairingOpener
     @ObservationIgnored private let pairingRequests: PairingRequests
@@ -267,6 +268,9 @@ public final class ProjectsModel {
         feedbackInfo: @escaping FeedbackInfo = { _ in ("", "") },
         savedFeedbackEmail: @escaping SavedFeedbackEmail = { "" },
         reportHandling: ReportHandling = .unavailable,
+        importDiagnostics: @escaping @MainActor (URL) async -> Result<String, DiagnosticsFailure> = { _ in
+            .failure(DiagnosticsFailure(String(localized: "암호화된 진단을 가져올 수 없습니다.")))
+        },
         crashLogs: CrashLogStore? = nil,
         issueFiler: any IssueFiling = GHIssueFiler(),
         originURL: @escaping @Sendable (URL) async -> String? = IssueTarget.originURL,
@@ -289,6 +293,7 @@ public final class ProjectsModel {
         self.feedbackInfo = feedbackInfo
         self.savedFeedbackEmail = savedFeedbackEmail
         self.reportHandling = reportHandling
+        self.importDiagnostics = importDiagnostics
     }
 
     public var agentDir: URL { root.appendingPathComponent("agent", isDirectory: true) }
@@ -671,6 +676,7 @@ public final class ProjectsModel {
         var checklist: FeedbackChecklist?
         /// `reports`의 목록이나 `report`의 원문(글).
         var text: String?
+        var id: String?
         /// `issue`가 보여 주거나 올린 이슈.
         var issue: AgentIssue?
         /// `issue-target`이 읽은 이슈 저장소.
@@ -739,8 +745,8 @@ public final class ProjectsModel {
         return AgentResponse(ok: true, text: "\(id) 기록을 \(CrashLogStore.dayText(handled))에 처리한 것으로 표시했습니다. \(CrashLogStore.handledRetentionDays)일이 지난 \(CrashLogStore.dayText(deletes)) 뒤에 이 기록과 첨부를 지웁니다. 되돌리려면 handled \(id) undo.")
     }
 
-    func feedbackGuide(for project: ConnectedProject, email given: String) -> FeedbackGuide {
-        let info = feedbackInfo(project)
+    func feedbackGuide(for project: ConnectedProject, email given: String) async -> FeedbackGuide {
+        let info = await feedbackInfo(project)
         // 부른 쪽이 주소를 주지 않으면 Mac 앱 설정에 저장된 주소를 쓴다.
         let saved = savedFeedbackEmail().trimmingCharacters(in: .whitespaces)
         let email = given.isEmpty ? saved : given
@@ -963,6 +969,14 @@ public final class ProjectsModel {
                 return AgentResponse(ok: false, error: "\(path) 기록이 없습니다. reports로 목록을 확인하세요.")
             }
             return AgentResponse(ok: true, text: text)
+        case "import-diagnostics":
+            guard let url = DiagnosticsFile.localURL(path) else {
+                return AgentResponse(ok: false, error: DiagnosticsFile.pathRequired)
+            }
+            switch await importDiagnostics(url) {
+            case .success(let id): return AgentResponse(ok: true, id: id)
+            case .failure(let failure): return AgentResponse(ok: false, error: failure.message)
+            }
         case "handled":
             // 둘째 줄이 기록 id, 셋째 줄이 `undo`(표시 지우기)나 빈 줄(표시)이다.
             return handledResponse(id: path, argument: scheme)
@@ -984,7 +998,7 @@ public final class ProjectsModel {
             if command == "feedback" {
                 // 셋째 줄이 받을 메일 주소(선택)다.
                 return AgentResponse(ok: true, projects: [agentProject(project)],
-                                     feedback: feedbackGuide(for: project, email: scheme.trimmingCharacters(in: .whitespaces)))
+                                     feedback: await feedbackGuide(for: project, email: scheme.trimmingCharacters(in: .whitespaces)))
             }
             if command == "issue-target" {
                 // 읽기만 한다. 셋째 줄에 무엇이 오면(정하기, 지우기, 자동 등록) 받지 않는다.

@@ -124,6 +124,23 @@ public struct RootView: View {
                         if let message = model.lastError {
                             ErrorBanner(message: message) { model.lastError = nil }
                         }
+                        if model.isMigratingFeedbackKeys || model.diagnosticsImports > 0 {
+                            HStack(spacing: 8) {
+                                ProgressView().controlSize(.small)
+                                if model.isMigratingFeedbackKeys {
+                                    Text("기존 진단 키를 이전하는 중… 키체인 접근 요청이 표시되면 응답하세요.")
+                                } else {
+                                    Text("암호화된 진단을 복호화하는 중…")
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                        }
+                        if !model.diagnosticsImportErrors.isEmpty {
+                            ErrorBanner(message: model.diagnosticsImportErrors.joined(separator: "\n")) {
+                                model.diagnosticsImportErrors.removeAll()
+                            }
+                        }
                     }
                 }
         }
@@ -174,6 +191,12 @@ public struct RootView: View {
         })
         .onChange(of: projects?.suggestions.count ?? 0) { old, new in
             if new > old { selection = .apps }
+        }
+        .onChange(of: model.diagnosticsOpenRequested, initial: true) { _, requested in
+            if requested {
+                selection = .crashes
+                model.diagnosticsOpenRequested = false
+            }
         }
         // 도움말 메뉴에서 시작하기를 다시 열면 그 카드가 있는 앱 화면으로 간다.
         .onChange(of: checklistHidden) { _, hidden in
