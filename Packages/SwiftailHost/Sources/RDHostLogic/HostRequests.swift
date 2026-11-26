@@ -16,6 +16,29 @@ extension HostLogic {
                 return a == b ? $0.descriptor.id < $1.descriptor.id : a > b
             }
             return object(["builds": try sorted.map { try wireObject($0.wire, fallback: $0.descriptor) }])
+        case "updates":
+            // 한 앱(번들 ID)의 가장 최근 게시 빌드 메타데이터만 돌려준다(아이콘 제외). 다른 `/v1/*`처럼 페어링한 기기만 받는다.
+            guard FeedbackChecklist.isValidBundleID(route.parameter) else { throw HostErrors.make("bad_request", "bundleId가 올바르지 않습니다.") }
+            let matching = builds.values.filter { $0.descriptor.bundleId == route.parameter }.sorted {
+                let a = $0.sortTimestamp ?? hostTimestamp($0.descriptor.publishedAt), b = $1.sortTimestamp ?? hostTimestamp($1.descriptor.publishedAt)
+                return a == b ? $0.descriptor.id < $1.descriptor.id : a > b
+            }
+            guard let latest = matching.first else {
+                return object(["bundleId": route.parameter, "latest": NSNull()])
+            }
+            let d = latest.descriptor
+            var summary: [String: Any] = [
+                "id": d.id,
+                "bundleId": d.bundleId,
+                "displayName": d.displayName,
+                "version": d.version,
+                "buildNumber": d.buildNumber,
+                "minOS": d.minOS,
+                "publishedAt": latest.sortTimestamp ?? hostTimestamp(d.publishedAt),
+                "ipaSize": d.ipa.size,
+            ]
+            if let notes = d.releaseNotes { summary["releaseNotes"] = notes }
+            return object(["bundleId": route.parameter, "latest": summary])
         case "resources":
             let sorted = resources.values.sorted {
                 let a = $0.sortTimestamp ?? hostTimestamp($0.descriptor.publishedAt), b = $1.sortTimestamp ?? hostTimestamp($1.descriptor.publishedAt)

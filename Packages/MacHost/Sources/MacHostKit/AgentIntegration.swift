@@ -130,6 +130,13 @@ public struct AgentMCPServer: Sendable {
             ] as [String: Any], "required": ["project_path"]] as [String: Any],
         ],
         [
+            "name": "remotedebug_update_setup",
+            "description": "앱의 Debug 빌드에서 자신의 업데이트 정보를 확인하고 RemoteDebug 앱을 통해 설치하는 기능(Swift 패키지 RemoteDebugUpdate)을 붙일 때 부른다. 프로젝트를 연결하고, 이 Mac의 주소가 #if DEBUG 안에 든 코드(update.snippet), 패키지 주소와 제품 이름, 이미 들어 있는지(update.added), 할 일(update.steps)을 돌려준다. 뷰와 배너는 Debug 빌드에서만 표시되고 배포 빌드(Release)에는 나타나지 않는다.",
+            "inputSchema": ["type": "object", "properties": [
+                "project_path": ["type": "string", "description": "프로젝트 폴더나 .xcodeproj, .xcworkspace의 절대 경로"],
+            ] as [String: Any], "required": ["project_path"]] as [String: Any],
+        ],
+        [
             "name": "remotedebug_feedback_checklist",
             "description": "RemoteDebugFeedback을 붙인 앱의 Debug 빌드에서 사용자가 확인할 것과 고를 답을 남긴다. 빌드를 게시한 뒤 이번에 바뀐 것을 items로 넣으면, 사용자가 앱의 피드백 화면에서 항목마다 답을 고르고 메모를 적어 피드백과 함께 보낸다. 답은 remotedebug_crash_logs에서 그 피드백 원문 끝의 \"확인 목록의 답\"으로 읽는다. items를 주면 목록을 바꿔 넣고, clear가 true면 지우고, 둘 다 없으면 지금 목록을 돌려준다. 배포판에는 보이지 않는다. 항목을 쓰는 규칙: \(AgentScript.checklistRules)",
             "inputSchema": ["type": "object", "properties": [
@@ -323,6 +330,11 @@ public struct AgentMCPServer: Sendable {
                 let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
                 return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
             }
+            if name == "remotedebug_update_setup" {
+                let data = await send("update-setup", arguments["project_path"] as? String ?? "", "", "")
+                let ok = ((try? JSONSerialization.jsonObject(with: data)) as? [String: Any])?["ok"] as? Bool ?? false
+                return result(["content": [["type": "text", "text": String(decoding: data, as: UTF8.self)]], "isError": !ok])
+            }
             let commands = ["remotedebug_files": "files", "remotedebug_status": "status", "remotedebug_pairing_code": "pair", "remotedebug_pair_requests": "requests", "remotedebug_schemes": "schemes", "remotedebug_build": "build"]
             guard let command = commands[name] else {
                 return Self.encode(["jsonrpc": "2.0", "id": id, "error": ["code": -32602, "message": "Unknown tool: \(name)"]])
@@ -484,6 +496,7 @@ extension AgentScript {
         - `remotedebug_build`: `project_path`(프로젝트 폴더의 절대 경로), `scheme`(선택), `release_notes`(선택, 이번 빌드에서 바뀐 것. iPhone의 빌드 줄과 설치 페이지에 보인다)
         - `remotedebug_schemes`: `project_path`
         - `remotedebug_feedback_setup`: `project_path`, `email`(선택). 앱에 크래시·피드백 보내기를 붙일 때 넣을 코드와 할 일
+        - `remotedebug_update_setup`: `project_path`. 앱의 Debug 빌드에서 업데이트 정보를 확인하고 RemoteDebug 앱으로 설치하는 라이브러리(`RemoteDebugUpdate`)를 붙일 때 넣을 코드와 할 일
         - `remotedebug_feedback_checklist`: `bundle_id`, `items`(선택), `clear`(선택). 사용자가 Debug 빌드의 피드백 화면에서 확인할 것과 고를 답을 남긴다. 답은 `remotedebug_crash_logs`의 피드백 원문 끝에 온다
         - `remotedebug_feedback_issue`: `id`(기록 id), `confirm`(선택), `project_path`(선택). 받은 피드백을 그 앱의 GitHub 저장소에 이슈로 올린다. `id`만 주면 올라갈 내용만 보고, `confirm: true`여야 올린다. 인자 없이 부르면 올린 목록, `project_path`만 주면 그 프로젝트의 이슈 저장소와 자동 등록 상태(읽기만. 정하는 것은 사용자가 Mac 앱에서 한다)
         - `remotedebug_pairing_code`: RemoteDebug 앱이 아직 없는 iPhone용 설치 페이지 코드와 그 페이지 링크. 앱이 있는 iPhone은 사용자에게 Mac 앱의 'iPhone 페어링…' > 'RemoteDebug 앱이 있는 iPhone'의 QR로 페어링해 달라고 한다.
@@ -502,6 +515,7 @@ extension AgentScript {
         \(rd) build <프로젝트 폴더> [스킴] [업데이트 내역|내역 파일]
         \(rd) schemes <프로젝트 폴더>
         \(rd) feedback <프로젝트 폴더> [메일]
+        \(rd) update-setup <프로젝트 폴더>
         \(rd) checklist <번들 ID> [항목 JSON 파일|clear]
         \(rd) reports [feedback|crash] [앱 이름이나 번들 ID]
         \(rd) report <기록 id>

@@ -19,6 +19,7 @@ Mac 앱의 **에이전트에 설치…**는 Claude Code와 Codex에 MCP 서버 `
 | `remotedebug_status` | 공유 중인지, 설치 페이지 주소, 연결한 프로젝트와 프로젝트마다 가장 최근에 게시한 버전·빌드 번호 |
 | `remotedebug_schemes` | Xcode 프로젝트(`project_path`)를 연결하고 스킴 목록을 돌려준다 |
 | `remotedebug_feedback_setup` | 앱에 크래시·피드백 보내기를 붙일 때 넣을 코드(이 Mac의 주소와 프로젝트 공개키 포함)와 할 일. `project_path`, 선택 `email` |
+| `remotedebug_update_setup` | 앱의 Debug 빌드에서 자신의 업데이트 정보를 확인하고 RemoteDebug 앱으로 설치하는 라이브러리(`RemoteDebugUpdate`)를 붙일 때 넣을 코드와 할 일. `project_path` |
 | `remotedebug_build` | `project_path`(선택 `scheme`)를 Debug 기기용으로 빌드해 게시한다. 선택 `release_notes`(이번 빌드에서 바뀐 것)는 iPhone 앱의 빌드 줄과 설치 페이지에 보인다. 빌드가 끝날 때까지 기다린다. 응답의 `report.notes`에 점검 사항이 온다: 실행 파일이 바뀌었는데 그대로인 버전, 낮아진 빌드 번호, 곧 만료되는 프로필, 꺼진 공유 |
 | `remotedebug_pairing_code` | 앱이 아직 없는 iPhone용 5분짜리 페어링 코드를 연다. 코드와 설치 페이지 링크(`installPage`)를 돌려준다 |
 | `remotedebug_pair_requests` | 허용을 기다리는 페어링 요청(기기 이름, tailnet 노드 이름, 로그인, 만료 시각) |
@@ -156,6 +157,26 @@ RemoteDebugFeedbackConsentSection()                    // 설정 화면에 두�
 - 패키지를 넣지 않은 앱: iPhone 빌드 목록의 **크래시 기록**에서 iPhone 설정을 열고, 분석 데이터의 `.ips` 파일을 공유로 RemoteDebug에 넘긴다.
 
 보낼 때는 iPhone에서 RemoteDebug 앱의 VPN이 켜져 있어야 한다. 꺼져 있으면 앱이 저장해 두었다가 다음에 보낸다. 패키지를 넣은 다른 앱이 실제 iPhone에서 Mac까지 보내는 것은 아직 확인하지 않았다.
+
+## 앱 안에서 업데이트 확인하고 설치하기
+
+RemoteDebug로 설치한 앱의 **Debug 빌드**가 Mac에 게시된 자신의 최신 빌드 정보와 업데이트 내역을 확인하고, RemoteDebug 앱을 열어 바로 설치할 수 있다. **Debug 빌드에서만 표시되고** 배포 빌드(Release)에는 아무것도 나타나지 않는다.
+
+- 저장소 주소(`https://github.com/oozoofrog/remotedebug`)를 Swift 패키지로 추가해 `RemoteDebugUpdate`를 넣는다.
+- Mac 앱의 앱 목록에서 그 앱 줄의 더 보기 메뉴 > **앱 안 업데이트 추가…**를 누르거나, 에이전트가 `remotedebug_update_setup`(`rd update-setup <프로젝트>`)을 부르면 Mac 주소가 `#if DEBUG` 안에 든 코드가 나온다.
+
+```swift
+import RemoteDebugUpdate
+
+#if DEBUG
+RemoteDebugUpdate.start(macHost: "<Mac 주소>")
+#endif
+
+.remoteDebugUpdateBanner()       // Debug 빌드에서 새 빌드가 있을 때만 배너 표시
+RemoteDebugUpdateSection()       // 설정 화면의 Debug 빌드 업데이트 구역
+```
+
+- 자세한 사용법과 배포 빌드 동작은 [패키지 안내](Packages/RemoteDebugUpdate/README.md)에 있다. iOS 17 이상이다.
 
 ## 현재 상태
 

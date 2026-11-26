@@ -120,6 +120,7 @@ struct RootView: View {
     /// 업데이트 앱의 주소를 열 수 있는가. 설치된 버전을 읽지 못하는 iOS에서도 설치 여부는 이것으로 안다.
     @State private var updaterPresent = false
     @State private var crashNotice: String?
+    @State private var updateNotice: String?
     @State private var tab: PhoneTab = .builds
 
     private var model: ClientModel { services.model }
@@ -253,6 +254,9 @@ struct RootView: View {
                 }
             } else if let request = AppPair.request(from: url) {
                 Task { await handleVPNRequest(request.action, returning: request.returning) }
+            } else if let request = UpdateLink.request(from: url) {
+                tab = .builds
+                Task { await handleUpdateRequest(request) }
             } else {
                 #if RD_TEST_LINKS
                 // 시험 링크 빌드: `remotedebug://test?probe=on|off`로 Mac의 설치 페이지를 1초마다 불러 성공·실패가 바뀌는 시각을 남긴다.
@@ -295,6 +299,11 @@ struct RootView: View {
             Button("확인") { crashNotice = nil }
         } message: {
             Text(crashNotice ?? "")
+        }
+        .alert("업데이트", isPresented: Binding(get: { updateNotice != nil }, set: { if !$0 { updateNotice = nil } })) {
+            Button("확인") { updateNotice = nil }
+        } message: {
+            Text(updateNotice ?? "")
         }
         .onChange(of: model.builds.map(\.bundleId), initial: true) { _, _ in
             reloadInstalledApps()
@@ -399,6 +408,22 @@ struct RootView: View {
         let opened = await services.opener.open(url)
         if !opened { model.log(.warning, "vpn", "업데이트 앱을 열지 못함(설치돼 있지 않을 수 있음)") }
         return opened
+    }
+
+    /// 다른 앱이 `remotedebug://update?bundleId=…`로 요청한 업데이트를 처리한다.
+    /// 빌드 목록을 새로 받은 뒤 해당 앱의 최신(또는 지정한) 빌드를 설치한다.
+    private func handleUpdateRequest(_ request: UpdateLinkRequest) async {
+        model.log(.info, "update", "외부 앱 업데이트 요청: \(request.bundleId)\(request.buildId.map { " (\($0))" } ?? "")")
+        guard model.host != nil else {
+            updateNotice = String(localized: "먼저 RemoteDebug에서 Mac과 페어링하세요.")
+            return
+        }
+        await model.refresh()
+        guard let build = UpdateLink.selectBuild(for: request, in: model.builds, excluding: Bundle.main.bundleIdentifier) else {
+            updateNotice = String(localized: "Mac에 게시된 업데이트 빌드를 찾을 수 없습니다. Mac 앱에서 빌드를 게시했는지 확인하세요.")
+            return
+        }
+        services.installer.install(build, with: model)
     }
 
     /// 업데이트 앱이 보낸 요청: 이 앱의 터널로 VPN을 켜거나 끈다. `returning`이면 마친 뒤 업데이트 앱으로 돌아간다.

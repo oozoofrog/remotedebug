@@ -18,6 +18,7 @@ struct AppRow: View {
     @Environment(HostModel.self) private var host
     @State private var scheme = ""
     @State private var showsFeedbackSetup = false
+    @State private var showsUpdateSetup = false
     @State private var showsIssueTarget = false
     @State private var feedbackAdded = true
     @State private var choosingFiles = false
@@ -131,6 +132,11 @@ struct AppRow: View {
         .sheet(isPresented: $showsFeedbackSetup, onDismiss: refreshFeedback) {
             if let controls {
                 FeedbackSetupSheet(project: controls, host: host.status?.fqdn ?? "")
+            }
+        }
+        .sheet(isPresented: $showsUpdateSetup) {
+            if let controls {
+                UpdateSetupSheet(project: controls, host: host.status?.fqdn ?? "")
             }
         }
         .sheet(isPresented: $showsIssueTarget) {
@@ -266,6 +272,7 @@ struct AppRow: View {
                 Divider()
                 Button("파일 보내기…") { choosingFiles = true }
                 Button("크래시·피드백 보내기 추가…") { showsFeedbackSetup = true }
+                Button("앱 안 업데이트 추가…") { showsUpdateSetup = true }
                 Button("이슈 저장소…") { showsIssueTarget = true }
                 Button("에이전트 연결…") { connectAgents(controls) }
                 Button("스킴 다시 읽기") { Task { await reloadSchemes() } }

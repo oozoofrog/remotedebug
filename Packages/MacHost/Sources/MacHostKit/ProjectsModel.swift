@@ -180,6 +180,17 @@ public final class ProjectsModel {
         public var emailSource: String?
     }
 
+    /// 에이전트가 앱에 `RemoteDebugUpdate`를 붙일 때 쓰는 안내(`update-setup` 명령).
+    public struct UpdateGuide: Codable, Sendable, Hashable {
+        public var packageURL: String
+        public var product: String
+        /// 프로젝트가 이미 패키지를 쓰고 있다.
+        public var added: Bool
+        /// 앱에 넣을 코드. 이 Mac의 주소가 `#if DEBUG` 안에 들어 있다.
+        public var snippet: String
+        public var steps: [String]
+    }
+
     /// Mac 앱 설정에 저장해 둔 피드백 메일 주소. 없으면 빈 글자.
     public typealias SavedFeedbackEmail = @MainActor () -> String
 
@@ -672,6 +683,7 @@ public final class ProjectsModel {
         var file: ResourceDescriptor?
         var files: [ResourceDescriptor]?
         var feedback: FeedbackGuide?
+        var update: UpdateGuide?
         /// `checklist`가 저장했거나 읽은 확인 목록.
         var checklist: FeedbackChecklist?
         /// `reports`의 목록이나 `report`의 원문(글).
@@ -771,6 +783,23 @@ public final class ProjectsModel {
                              added: FeedbackSetup.isAdded(to: project),
                              snippet: FeedbackSetup.snippet(host: info.host, email: email, publicKey: info.publicKey), steps: steps,
                              email: email.isEmpty ? nil : email, emailSource: source)
+    }
+
+    func updateGuide(for project: ConnectedProject) async -> UpdateGuide {
+        let info = await feedbackInfo(project)
+        var steps = [
+            "프로젝트에 Swift 패키지 \(UpdateSetup.packageURL)를 추가하고 제품 \(UpdateSetup.packageName)(iOS 17 이상)을 앱 대상에 연결한다.",
+            "snippet의 RemoteDebugUpdate.start(macHost:) 호출을 #if DEBUG 안에서 앱 시작 코드에 한 번 넣는다.",
+            "업데이트 배너를 띄울 화면에 .remoteDebugUpdateBanner()를 붙이거나, 설정 화면에 RemoteDebugUpdateSection()을 둔다. 두 뷰는 Debug 빌드에서만 표시되고 배포 빌드에서는 아무것도 그리지 않는다.",
+            "코드에서 RemoteDebug 앱 설치 여부(RemoteDebugUpdate.canOpenUpdater)를 확인하려면 Info.plist의 LSApplicationQueriesSchemes에 remotedebug를 넣는다(선택).",
+            "remotedebug_build로 게시하고, iPhone에서 RemoteDebug 앱의 VPN이 켜진 상태로 업데이트 정보 확인과 RemoteDebug 앱을 통한 설치를 확인한다.",
+        ]
+        if info.host.isEmpty {
+            steps.insert("이 Mac의 주소를 아직 모른다(공유가 꺼져 있다). 사용자에게 RemoteDebug Mac 앱에서 공유를 시작해 달라고 한 뒤 다시 부른다.", at: 0)
+        }
+        return UpdateGuide(packageURL: UpdateSetup.packageURL, product: UpdateSetup.packageName,
+                           added: UpdateSetup.isAdded(to: project),
+                           snippet: UpdateSetup.snippet(host: info.host), steps: steps)
     }
 
     struct AgentProject: Codable {
@@ -988,7 +1017,7 @@ public final class ProjectsModel {
             return await issueResponse(id: path, argument: scheme)
         case "issues":
             return issuesResponse()
-        case "connect", "schemes", "build", "feedback", "issue-target":
+        case "connect", "schemes", "build", "feedback", "update-setup", "issue-target":
             guard !path.isEmpty else { return AgentResponse(ok: false, error: "프로젝트 경로가 필요합니다.") }
             lastError = nil
             guard let project = await connect(URL(fileURLWithPath: path)) else {
@@ -999,6 +1028,10 @@ public final class ProjectsModel {
                 // 셋째 줄이 받을 메일 주소(선택)다.
                 return AgentResponse(ok: true, projects: [agentProject(project)],
                                      feedback: await feedbackGuide(for: project, email: scheme.trimmingCharacters(in: .whitespaces)))
+            }
+            if command == "update-setup" {
+                return AgentResponse(ok: true, projects: [agentProject(project)],
+                                     update: await updateGuide(for: project))
             }
             if command == "issue-target" {
                 // 읽기만 한다. 셋째 줄에 무엇이 오면(정하기, 지우기, 자동 등록) 받지 않는다.
@@ -1030,7 +1063,7 @@ public final class ProjectsModel {
             return AgentResponse(ok: report.ok, error: report.ok ? nil : report.message, sharing: host.sharing,
                                  installPage: host.installPage, report: report)
         default:
-            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build, feedback, checklist, reports, report, handled, issue, issues, issue-target 중 하나를 쓰세요.")
+            return AgentResponse(ok: false, error: "알 수 없는 명령입니다: \(command). status, pair, requests, deny, push, link, files, unpush, connect, schemes, build, feedback, update-setup, checklist, reports, report, handled, issue, issues, issue-target 중 하나를 쓰세요.")
         }
     }
 
@@ -1073,10 +1106,10 @@ enum AgentScript {
         """
         #!/bin/sh
         # RemoteDebug Mac 앱에 명령을 보낸다. 앱이 이 파일을 실행할 때마다 새로 쓴다.
-        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] [업데이트 내역|내역 파일] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo] | issue <기록 id> [confirm] | issues | issue-target <경로>
+        # 사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] [업데이트 내역|내역 파일] | feedback <경로> [메일] | update-setup <경로> | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo] | issue <기록 id> [confirm] | issues | issue-target <경로>
         dir=\(quoted(agentDir))
         bundle=\(quoted(bundleID))
-        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] [업데이트 내역|내역 파일] | feedback <경로> [메일] | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo] | issue <기록 id> [confirm] | issues | issue-target <경로>" >&2; exit 2; }
+        [ $# -ge 1 ] || { echo "사용법: rd status | pair | requests | deny <요청 id> | push <파일> [프로젝트] | link <주소> [이름] [프로젝트] | files [프로젝트] | unpush <파일 id> | connect <경로> | schemes <경로> | build <경로> [스킴] [업데이트 내역|내역 파일] | feedback <경로> [메일] | update-setup <경로> | checklist <번들 ID> [항목 JSON 파일|clear] | reports [feedback|crash] [앱] | report <기록 id> | handled <기록 id> [undo] | issue <기록 id> [confirm] | issues | issue-target <경로>" >&2; exit 2; }
         cmd=$1
         path=${2:-}
         scheme=${3:-}
@@ -1095,7 +1128,7 @@ enum AgentScript {
         esac
         # 경로를 받는 명령만 상대 경로를 절대 경로로 바꾼다(id·주소는 그대로).
         case "$cmd" in
-          push|connect|schemes|build|feedback|issue-target) case "$path" in ""|/*) ;; *) path="$PWD/$path" ;; esac ;;
+          push|connect|schemes|build|feedback|update-setup|issue-target) case "$path" in ""|/*) ;; *) path="$PWD/$path" ;; esac ;;
         esac
         alive() { [ -f "$dir/pid" ] && kill -0 "$(cat "$dir/pid")" 2>/dev/null; }
         if ! alive; then
@@ -1135,6 +1168,7 @@ enum AgentScript {
         \(rd) link <주소> <이름> \(project)  # 링크(https://…, 앱스킴://…)를 이 프로젝트 구역으로 보낸다(이름은 ''로 비울 수 있다)
         \(rd) files \(project)           # 이 프로젝트 구역에 보낸 파일·링크(프로젝트를 빼면 전체)
         \(rd) feedback \(project) [메일]  # 이 앱에 크래시·피드백 보내기를 붙이는 안내와 넣을 코드
+        \(rd) update-setup \(project)     # 이 앱의 Debug 빌드에서 업데이트 정보를 확인하고 RemoteDebug 앱으로 설치하는 안내와 코드
         \(rd) reports feedback            # 앱에서 받은 피드백 목록(reports crash는 크래시 기록, report <id>는 원문)
         \(rd) handled <기록 id>           # 문의를 처리했다고 표시한다(\(CrashLogStore.handledRetentionDays)일 뒤에 기록과 첨부를 지운다. 되돌리기는 끝에 undo)
         \(rd) checklist <번들 ID> [항목 JSON 파일|clear]  # 사용자가 Debug 빌드에서 확인할 것과 고를 답을 남긴다(인자 없이 부르면 지금 목록)

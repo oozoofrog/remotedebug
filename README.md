@@ -19,6 +19,7 @@ The Mac app's **에이전트에 설치…** (Install for agents) adds an MCP ser
 | `remotedebug_status` | Whether the Mac is sharing, the install page address, connected projects with the version and build number each last published |
 | `remotedebug_schemes` | Connect an Xcode project (`project_path`) and list its schemes |
 | `remotedebug_feedback_setup` | The code to add crash and feedback reporting to an app (with this Mac's address and the project's public key) and the steps. `project_path`, optional `email` |
+| `remotedebug_update_setup` | The code and steps to add in-app Debug update checks and updates via RemoteDebug (`RemoteDebugUpdate`). `project_path` |
 | `remotedebug_build` | Build `project_path` (optional `scheme`) for device in Debug and publish it. Optional `release_notes` (what changed in this build) shows on the build row of the iPhone app and the install page. Waits until the build ends. `report.notes` in the response lists what to check: a changed binary under an unchanged version, a lowered build number, a profile about to expire, sharing turned off |
 | `remotedebug_pairing_code` | Open a 5-minute pairing code for an iPhone without the app. Returns the code and the install page link (`installPage`) |
 | `remotedebug_pair_requests` | Pairing requests waiting for approval (device name, tailnet node name, login, expiry) |
@@ -156,6 +157,26 @@ RemoteDebugFeedbackConsentSection()                    // the log recording cons
 - Apps without the package: open the crash record button in the iPhone build list, open iPhone Settings, and share the `.ips` file from Analytics Data into RemoteDebug.
 
 Sending needs the RemoteDebug VPN on the iPhone. Without it the app keeps the record and sends it later. Sending from another app with the package on a real iPhone has not been verified yet.
+
+## In-app update check and install (Debug builds only)
+
+A **Debug build** of an app installed through RemoteDebug can check its latest published build and release notes on the Mac and open the RemoteDebug iPhone app to install it. **It is shown only in Debug builds**; Release builds render nothing and contain no networking or URL scheme code.
+
+- Add this repository (`https://github.com/oozoofrog/remotedebug`) as a Swift package and link `RemoteDebugUpdate`.
+- On the Mac's **앱** (Apps) screen, open the app row's More menu > **앱 안 업데이트 추가…** (Add in-app update), or call `remotedebug_update_setup` (`rd update-setup <project>`), to get the `#if DEBUG` snippet with this Mac's address filled in.
+
+```swift
+import RemoteDebugUpdate
+
+#if DEBUG
+RemoteDebugUpdate.start(macHost: "<Mac address>")
+#endif
+
+.remoteDebugUpdateBanner()       // banner shown only in Debug builds when a newer build exists
+RemoteDebugUpdateSection()       // Debug update section for a settings screen
+```
+
+- Details and Release build behavior are in the [package guide](Packages/RemoteDebugUpdate/README.md) (Korean). Requires iOS 17 or later.
 
 ## Current status
 
